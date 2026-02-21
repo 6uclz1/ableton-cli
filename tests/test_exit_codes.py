@@ -23,10 +23,7 @@ def test_remote_error_to_exit_code_mapping() -> None:
         exit_code_from_error_code("REMOTE_SCRIPT_NOT_INSTALLED")
         == ExitCode.REMOTE_SCRIPT_NOT_DETECTED
     )
-    assert (
-        exit_code_from_error_code("REMOTE_SCRIPT_INCOMPATIBLE")
-        == ExitCode.PROTOCOL_MISMATCH
-    )
+    assert exit_code_from_error_code("REMOTE_SCRIPT_INCOMPATIBLE") == ExitCode.PROTOCOL_MISMATCH
     assert exit_code_from_error_code("PROTOCOL_VERSION_MISMATCH") == ExitCode.PROTOCOL_MISMATCH
     assert exit_code_from_error_code("TIMEOUT") == ExitCode.TIMEOUT
     assert exit_code_from_error_code("BATCH_STEP_FAILED") == ExitCode.EXECUTION_FAILED

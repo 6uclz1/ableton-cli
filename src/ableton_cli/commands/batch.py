@@ -94,8 +94,7 @@ def batch_run(
         if selected_sources != 1:
             raise invalid_argument(
                 message=(
-                    "Exactly one of --steps-file, --steps-json, "
-                    "or --steps-stdin must be provided"
+                    "Exactly one of --steps-file, --steps-json, or --steps-stdin must be provided"
                 ),
                 hint="Choose exactly one batch input source.",
             )

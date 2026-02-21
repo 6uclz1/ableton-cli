@@ -221,8 +221,7 @@ class LiveBackend:
         if detected_type != parsed_type:
             raise _invalid_argument(
                 message=(
-                    f"Device synth type mismatch: requested={parsed_type}, "
-                    f"detected={detected_type}"
+                    f"Device synth type mismatch: requested={parsed_type}, detected={detected_type}"
                 ),
                 hint="Select a device that matches the requested synth type.",
             )
@@ -326,9 +325,7 @@ class LiveBackend:
             return True
         return self._normalize_uri(candidate_uri) == self._normalize_uri(expected)
 
-    def _preferred_categories_for_uri(
-        self, uri: str, available_categories: list[str]
-    ) -> list[str]:
+    def _preferred_categories_for_uri(self, uri: str, available_categories: list[str]) -> list[str]:
         mapping = {
             "query:Synths": "instruments",
             "query:Drums": "drums",
@@ -344,9 +341,7 @@ class LiveBackend:
             return []
         return [preferred]
 
-    def _find_path_in_serialized_tree_by_uri(
-        self, tree: dict[str, Any], uri: str
-    ) -> str | None:
+    def _find_path_in_serialized_tree_by_uri(self, tree: dict[str, Any], uri: str) -> str | None:
         stack = [tree]
         while stack:
             node = stack.pop()
@@ -1723,10 +1718,7 @@ class LiveBackend:
         )
         observed = self.observe_synth_parameters(track, device)
         parameters = observed["parameters"]
-        state = {
-            key: float(parameters[index]["value"])
-            for key, index in key_indexes.items()
-        }
+        state = {key: float(parameters[index]["value"]) for key, index in key_indexes.items()}
         return {
             "synth_type": parsed_type,
             "track": track,
@@ -1896,10 +1888,7 @@ class LiveBackend:
         )
         observed = self.observe_effect_parameters(track, device)
         parameters = observed["parameters"]
-        state = {
-            key: float(parameters[index]["value"])
-            for key, index in key_indexes.items()
-        }
+        state = {key: float(parameters[index]["value"]) for key, index in key_indexes.items()}
         return {
             "effect_type": parsed_type,
             "track": track,

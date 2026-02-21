@@ -62,8 +62,7 @@ def validate_clip_note_filters(
     if start_time is not None and end_time is not None and end_time <= start_time:
         raise invalid_argument(
             message=(
-                "end_time must be greater than start_time "
-                f"(start={start_time}, end={end_time})"
+                f"end_time must be greater than start_time (start={start_time}, end={end_time})"
             ),
             hint="Use a time range where --end-time is greater than --start-time.",
         )

@@ -1146,9 +1146,7 @@ def test_synth_foundation_commands_output_json_envelope(runner, cli_app, monkeyp
     assert observed_payload["result"]["detected_type"] == "wavetable"
 
 
-def test_synth_standard_wrapper_commands_output_json_envelope(
-    runner, cli_app, monkeypatch
-) -> None:
+def test_synth_standard_wrapper_commands_output_json_envelope(runner, cli_app, monkeypatch) -> None:
     from ableton_cli.commands import synth
 
     monkeypatch.setattr(synth, "get_client", lambda ctx: _ClientStub())

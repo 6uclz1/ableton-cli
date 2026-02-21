@@ -881,9 +881,7 @@ def test_live_backend_standard_effect_wrapper_rejects_missing_required_key_mappi
     surface = _SurfaceStub()
     _set_track_device_to_effect(surface, track=0, device=0, effect_type="eq8")
     surface.song().tracks[0].devices[0].parameters = [
-        param
-        for param in surface.song().tracks[0].devices[0].parameters
-        if param.name != "1 Q A"
+        param for param in surface.song().tracks[0].devices[0].parameters if param.name != "1 Q A"
     ]
     backend = LiveBackend(surface)
 

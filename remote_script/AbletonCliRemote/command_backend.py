@@ -424,8 +424,7 @@ def _clip_notes_filter(args: dict[str, Any]) -> tuple[float | None, float | None
     if start_time is not None and end_time is not None and end_time <= start_time:
         raise _invalid_argument(
             message=(
-                "end_time must be greater than start_time "
-                f"(start={start_time}, end={end_time})"
+                f"end_time must be greater than start_time (start={start_time}, end={end_time})"
             ),
             hint="Use a valid [start_time, end_time) range.",
         )
@@ -814,9 +813,7 @@ def _handle_get_browser_items(backend: CommandBackend, args: dict[str, Any]) -> 
     return backend.get_browser_items(path, item_type, limit, offset)
 
 
-def _handle_search_browser_items(
-    backend: CommandBackend, args: dict[str, Any]
-) -> dict[str, Any]:
+def _handle_search_browser_items(backend: CommandBackend, args: dict[str, Any]) -> dict[str, Any]:
     query = _non_empty_string("query", args.get("query"))
     path_raw = args.get("path")
     path = _non_empty_string("path", path_raw) if path_raw is not None else None

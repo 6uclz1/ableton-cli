@@ -1,0 +1,11 @@
+{
+  "ok": true,
+  "command": "transport tempo set",
+  "args": {
+    "bpm": 124.0
+  },
+  "result": {
+    "tempo": 124.0
+  },
+  "error": null
+}

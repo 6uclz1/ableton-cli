@@ -1,0 +1,16 @@
+{
+  "ok": true,
+  "command": "song info",
+  "args": {},
+  "result": {
+    "tempo": 120.0,
+    "is_playing": false,
+    "current_time": 0.0,
+    "beat_position": 0.0,
+    "signature": {
+      "numerator": 4,
+      "denominator": 4
+    }
+  },
+  "error": null
+}

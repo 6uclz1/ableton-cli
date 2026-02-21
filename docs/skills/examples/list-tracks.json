@@ -1,0 +1,18 @@
+{
+  "ok": true,
+  "command": "tracks list",
+  "args": {},
+  "result": {
+    "tracks": [
+      {
+        "index": 0,
+        "name": "Track 1",
+        "mute": false,
+        "solo": false,
+        "arm": false,
+        "volume": 0.75
+      }
+    ]
+  },
+  "error": null
+}

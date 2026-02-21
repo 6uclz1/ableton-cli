@@ -1,0 +1,34 @@
+{
+  "ok": true,
+  "command": "browser search",
+  "args": {
+    "query": "drift",
+    "path": null,
+    "item_type": "loadable",
+    "limit": 5,
+    "offset": 0,
+    "exact": false,
+    "case_sensitive": false
+  },
+  "result": {
+    "query": "drift",
+    "path": null,
+    "item_type": "loadable",
+    "limit": 5,
+    "offset": 0,
+    "returned": 1,
+    "total_matches": 1,
+    "has_more": false,
+    "items": [
+      {
+        "name": "Drift",
+        "path": "instruments/Drift",
+        "is_folder": true,
+        "is_device": true,
+        "is_loadable": true,
+        "uri": "query:Synths#Drift"
+      }
+    ]
+  },
+  "error": null
+}

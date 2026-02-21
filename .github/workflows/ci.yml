@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - uses: astral-sh/setup-uv@v4
+
+      - name: Sync dependencies
+        run: uv sync --dev
+
+      - name: Ruff check
+        run: uv run ruff check .
+
+      - name: Ruff format check
+        run: uv run ruff format --check .
+
+      - name: Run tests
+        run: uv run pytest
+
+      - name: CLI help
+        run: uv run ableton-cli --help
+
+      - name: CLI version
+        run: uv run ableton-cli --version
+
+      - name: Build package
+        run: uv run python -m build
+
+      - name: Install help2man (macOS)
+        if: runner.os == 'macOS'
+        run: brew install help2man
+
+      - name: Generate man page (macOS)
+        if: runner.os == 'macOS'
+        run: ./scripts/generate_man.sh

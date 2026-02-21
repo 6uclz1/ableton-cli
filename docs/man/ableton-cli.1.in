@@ -1,0 +1,131 @@
+[DESCRIPTION]
+ableton-cli is a non-interactive command line interface for operating Ableton Live
+through a local Remote Script endpoint.
+
+[EXAMPLES]
+Check connectivity:
+
+  ableton-cli ping
+
+Get structured JSON for automation:
+
+  ableton-cli --output json song info
+
+Global options must come before subcommands:
+
+  ableton-cli --output json doctor
+
+Set tempo:
+
+  ableton-cli transport tempo set 128
+
+Create clip and add notes:
+
+  ableton-cli clip create 0 0 --length 4
+  ableton-cli clip notes add 0 0 --notes-json '[{"pitch":60,"start_time":0.0,"duration":0.5,"velocity":100,"mute":false}]'
+  ableton-cli clip notes add 0 0 --notes-file ./notes.json
+  ableton-cli clip notes get 0 0 --start-time 0.0 --end-time 4.0 --pitch 60
+
+Scenes and mixer operations:
+
+  ableton-cli scenes list
+  ableton-cli scenes create --index 1
+  ableton-cli scenes fire 1
+  ableton-cli session stop-all-clips
+  ableton-cli session snapshot
+  ableton-cli track mute set 0 true
+  ableton-cli track panning set 0 -- -0.25
+
+Config and protocol override:
+
+  ableton-cli config set protocol_version 2
+  ableton-cli --protocol-version 2 ping
+
+Browser/device operations:
+
+  ableton-cli browser tree all
+  ableton-cli browser items-at-path drums/Kits
+  ableton-cli browser search drift --item-type loadable
+  ableton-cli browser item query:Synths#Operator
+  ableton-cli browser load 0 query:Synths#Operator
+  ableton-cli browser load-drum-kit 0 rack:drums --kit-uri kit:acoustic
+  ableton-cli batch run --steps-file ./steps.json
+  ableton-cli batch run --steps-json '{"steps":[{"command":"song_info","args":{}}}'
+  echo '{"steps":[{"command":"song_info","args":{}}]}' | ableton-cli batch run --steps-stdin
+  ableton-cli wait-ready
+  ableton-cli device parameter set 0 0 0 0.25
+  ableton-cli synth find --type wavetable
+  ableton-cli synth parameters list 0 0
+  ableton-cli synth parameter set 0 0 0 0.5
+  ableton-cli synth observe 0 0
+  ableton-cli synth wavetable keys
+  ableton-cli synth wavetable set 0 0 filter_cutoff 0.6
+  ableton-cli synth wavetable observe 0 0
+  ableton-cli synth drift keys
+  ableton-cli synth drift set 0 0 drift_amount 0.4
+  ableton-cli synth drift observe 0 0
+  ableton-cli synth meld keys
+  ableton-cli synth meld set 0 0 spread_amount 0.3
+  ableton-cli synth meld observe 0 0
+  ableton-cli effect find --type eq8
+  ableton-cli effect parameters list 0 0
+  ableton-cli effect parameter set 0 0 0 0.5
+  ableton-cli effect parameter set 0 0 7 -- -2.0
+  ableton-cli effect observe 0 0
+  ableton-cli effect eq8 keys
+  ableton-cli effect eq8 set 0 0 band1_freq 0.6
+  ableton-cli effect eq8 observe 0 0
+  ableton-cli effect limiter keys
+  ableton-cli effect limiter set 0 0 ceiling 0.4
+  ableton-cli effect limiter observe 0 0
+  ableton-cli effect compressor keys
+  ableton-cli effect compressor set 0 0 ratio 0.5
+  ableton-cli effect compressor observe 0 0
+  ableton-cli effect auto-filter keys
+  ableton-cli effect auto-filter set 0 0 lfo_rate 0.25
+  ableton-cli effect auto-filter observe 0 0
+  ableton-cli effect reverb keys
+  ableton-cli effect reverb set 0 0 size 0.55
+  ableton-cli effect reverb observe 0 0
+  ableton-cli effect utility keys
+  ableton-cli effect utility set 0 0 width 0.75
+  ableton-cli effect utility observe 0 0
+
+After updating Remote Script files (install-remote-script), reload Ableton's Control Surface
+selection (`None` then `AbletonCliRemote`) or restart Ableton Live.
+
+To confirm the latest script is active, run:
+
+  ableton-cli --output json ping
+
+and check `result.remote_script_version` plus `result.supported_commands`.
+
+When a positional numeric value starts with "-", insert `--` before the value:
+
+  ableton-cli track panning set 0 -- -0.25
+  ableton-cli effect parameter set 0 0 7 -- -2.0
+
+Standard wrapper commands (`synth <type> ...`, `effect <type> ...`) are strict. If
+you receive "Missing required standard ... keys", use generic indexed commands:
+
+  ableton-cli --output json effect parameters list <track> <device>
+  ableton-cli --output json effect parameter set <track> <device> <parameter> <value>
+
+[FILES]
+Default config file:
+
+  ~/.config/ableton-cli/config.toml
+
+[EXIT STATUS]
+0  Success
+2  Invalid arguments
+3  Invalid configuration
+10 Ableton not connected
+11 Remote Script not installed/detected
+12 Timeout
+13 Protocol mismatch
+20 Execution failure
+99 Internal error
+
+[SEE ALSO]
+ableton-cli --help

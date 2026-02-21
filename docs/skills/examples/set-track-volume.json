@@ -1,0 +1,13 @@
+{
+  "ok": true,
+  "command": "track volume set",
+  "args": {
+    "track": 0,
+    "value": 0.6
+  },
+  "result": {
+    "track": 0,
+    "volume": 0.6
+  },
+  "error": null
+}

@@ -277,39 +277,6 @@ Skill-oriented references are in `docs/skills/`:
 
 All skill command examples assume the `uv run ableton-cli ...` form.
 
-## Practical Session Workflow (Tech House)
-
-Run the practical workflow to build a full `Tech House 126 BPM` session template and emit
-feature-gap issue drafts.
-
-Pre-run checklist:
-
-- Ableton Live is running.
-- Remote Script reports `0.4.0` and protocol version `2`.
-- Open a new empty Set manually before running.
-
-Run:
-
-```bash
-uv run python -m scripts.create_tech_house --timeout-ms 15000
-```
-
-Optional output paths:
-
-```bash
-uv run python -m scripts.create_tech_house \
-  --log-path ./dist/practical-song/command-log.ndjson \
-  --report-path ./dist/practical-song/practical-song-report.md \
-  --issue-drafts-path ./dist/practical-song/improvement-issue-drafts.md
-```
-
-Post-run verification:
-
-- Confirm `uv run ableton-cli --output json session snapshot` includes created scenes and tracks.
-- Confirm both report files exist:
-  - `dist/practical-song/practical-song-report.md`
-  - `dist/practical-song/improvement-issue-drafts.md`
-
 ## Development
 
 ```bash

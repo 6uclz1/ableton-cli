@@ -242,7 +242,7 @@ class LiveBackendTracksClipsMixin:
         return {
             "track": track,
             "clip": clip,
-            "active": not bool(getattr(clip_obj, "muted")),
+            "active": not bool(clip_obj.muted),
         }
 
     def clip_active_set(self, track: int, clip: int, value: bool) -> dict[str, Any]:
@@ -263,7 +263,7 @@ class LiveBackendTracksClipsMixin:
         return {
             "track": track,
             "clip": clip,
-            "active": not bool(getattr(clip_obj, "muted")),
+            "active": not bool(clip_obj.muted),
         }
 
     def clip_duplicate(self, track: int, src_clip: int, dst_clip: int) -> dict[str, Any]:

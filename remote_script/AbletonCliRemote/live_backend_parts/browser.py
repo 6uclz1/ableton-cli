@@ -256,8 +256,7 @@ class LiveBackendBrowserReadMixin:
         if target_track_mode not in _ALLOWED_TARGET_TRACK_MODES:
             raise _invalid_argument(
                 message=(
-                    "target_track_mode must be one of auto/existing/new, "
-                    f"got {target_track_mode}"
+                    f"target_track_mode must be one of auto/existing/new, got {target_track_mode}"
                 ),
                 hint="Use a supported target_track_mode.",
             )

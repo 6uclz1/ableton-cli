@@ -119,6 +119,9 @@ class _ClientStub:
             "duplicated": True,
         }
 
+    def set_clip_name(self, track: int, clip: int, name: str):  # noqa: ANN201
+        return {"track": track, "clip": clip, "name": name}
+
     def clip_notes_quantize(  # noqa: ANN201
         self,
         track: int,
@@ -361,7 +364,13 @@ class _ClientStub:
         return {"track": track, "panning": value}
 
     def scenes_list(self):  # noqa: ANN201
-        return {"scenes": [{"index": 0, "name": "Intro"}]}
+        return {
+            "scenes": [
+                {"index": 0, "name": "Intro"},
+                {"index": 1, "name": "Drop"},
+                {"index": 2, "name": "Peak"},
+            ]
+        }
 
     def create_scene(self, index: int):  # noqa: ANN201
         return {"index": index, "name": "Scene"}
@@ -1407,6 +1416,99 @@ def test_clip_duplicate_supports_multiple_destinations(runner, cli_app, monkeypa
         "src_clip": 1,
         "dst_clips": [2, 4, 5],
         "duplicated": True,
+    }
+
+
+def test_clip_duplicate_many_command_outputs_json_envelope(runner, cli_app, monkeypatch) -> None:
+    from ableton_cli.commands import clip
+
+    monkeypatch.setattr(clip, "get_client", lambda ctx: _ClientStub())
+
+    duplicated = runner.invoke(
+        cli_app,
+        ["--output", "json", "clip", "duplicate-many", "0", "1", "--to", "2,4,5"],
+    )
+    assert duplicated.exit_code == 0
+    payload = json.loads(duplicated.stdout)
+    assert payload["ok"] is True
+    assert payload["result"] == {
+        "track": 0,
+        "src_clip": 1,
+        "dst_clips": [2, 4, 5],
+        "duplicated": True,
+    }
+
+
+def test_clip_place_pattern_supports_scene_ranges(runner, cli_app, monkeypatch) -> None:
+    from ableton_cli.commands import clip
+
+    monkeypatch.setattr(clip, "get_client", lambda ctx: _ClientStub())
+
+    duplicated = runner.invoke(
+        cli_app,
+        ["--output", "json", "clip", "place-pattern", "0", "--clip", "1", "--scenes", "2-4,6"],
+    )
+    assert duplicated.exit_code == 0
+    payload = json.loads(duplicated.stdout)
+    assert payload["ok"] is True
+    assert payload["result"] == {
+        "track": 0,
+        "src_clip": 1,
+        "dst_clips": [2, 3, 4, 6],
+        "duplicated": True,
+    }
+
+
+def test_clip_place_pattern_supports_scene_names(runner, cli_app, monkeypatch) -> None:
+    from ableton_cli.commands import clip
+
+    monkeypatch.setattr(clip, "get_client", lambda ctx: _ClientStub())
+
+    duplicated = runner.invoke(
+        cli_app,
+        [
+            "--output",
+            "json",
+            "clip",
+            "place-pattern",
+            "0",
+            "--clip",
+            "1",
+            "--scenes",
+            "Intro,Peak",
+        ],
+    )
+    assert duplicated.exit_code == 0
+    payload = json.loads(duplicated.stdout)
+    assert payload["ok"] is True
+    assert payload["result"] == {
+        "track": 0,
+        "src_clip": 1,
+        "dst_clips": [0, 2],
+        "duplicated": True,
+    }
+
+
+def test_clip_name_set_many_command_outputs_json_envelope(runner, cli_app, monkeypatch) -> None:
+    from ableton_cli.commands import clip
+
+    monkeypatch.setattr(clip, "get_client", lambda ctx: _ClientStub())
+
+    renamed = runner.invoke(
+        cli_app,
+        ["--output", "json", "clip", "name", "set-many", "0", "--map", "1:Main,2:Var,5:Peak"],
+    )
+    assert renamed.exit_code == 0
+    payload = json.loads(renamed.stdout)
+    assert payload["ok"] is True
+    assert payload["result"] == {
+        "track": 0,
+        "updated_count": 3,
+        "updated": [
+            {"track": 0, "clip": 1, "name": "Main"},
+            {"track": 0, "clip": 2, "name": "Var"},
+            {"track": 0, "clip": 5, "name": "Peak"},
+        ],
     }
 
 

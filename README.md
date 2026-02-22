@@ -123,9 +123,12 @@ uv run ableton-cli clip notes clear 0 0 --start-time 0.0 --end-time 1.0
 uv run ableton-cli clip notes replace 0 0 --notes-json '[{"pitch":65,"start_time":0.25,"duration":0.5,"velocity":100,"mute":false}]' --start-time 0.0 --end-time 1.0
 uv run ableton-cli clip notes import-browser 0 1 "sounds/Bass Loop.alc" --mode replace --import-length --import-groove
 uv run ableton-cli clip name set 0 0 "Hook"
+uv run ableton-cli clip name set-many 0 --map "1:Main,2:Var,5:Peak"
 uv run ableton-cli clip fire 0 0
 uv run ableton-cli clip stop 0 0
 uv run ableton-cli clip duplicate 0 0 1
+uv run ableton-cli clip duplicate-many 0 0 --to 2,4,5,6
+uv run ableton-cli clip place-pattern 0 --clip 0 --scenes "Intro,Drop,Peak"
 uv run ableton-cli scenes list
 uv run ableton-cli scenes create
 uv run ableton-cli scenes create --index 1

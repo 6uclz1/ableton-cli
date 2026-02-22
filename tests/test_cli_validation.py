@@ -465,6 +465,39 @@ def test_clip_duplicate_rejects_invalid_to_list(runner, cli_app) -> None:
     assert payload["error"]["code"] == "INVALID_ARGUMENT"
 
 
+def test_clip_duplicate_many_rejects_empty_to_list(runner, cli_app) -> None:
+    result = runner.invoke(
+        cli_app,
+        ["--output", "json", "clip", "duplicate-many", "0", "1", "--to", ""],
+    )
+
+    assert result.exit_code == 2
+    payload = json.loads(result.stdout)
+    assert payload["error"]["code"] == "INVALID_ARGUMENT"
+
+
+def test_clip_place_pattern_rejects_descending_range(runner, cli_app) -> None:
+    result = runner.invoke(
+        cli_app,
+        ["--output", "json", "clip", "place-pattern", "0", "--clip", "1", "--scenes", "5-2"],
+    )
+
+    assert result.exit_code == 2
+    payload = json.loads(result.stdout)
+    assert payload["error"]["code"] == "INVALID_ARGUMENT"
+
+
+def test_clip_name_set_many_rejects_invalid_map_entry(runner, cli_app) -> None:
+    result = runner.invoke(
+        cli_app,
+        ["--output", "json", "clip", "name", "set-many", "0", "--map", "1Main,2:Var"],
+    )
+
+    assert result.exit_code == 2
+    payload = json.loads(result.stdout)
+    assert payload["error"]["code"] == "INVALID_ARGUMENT"
+
+
 def test_clip_notes_import_browser_rejects_invalid_mode(runner, cli_app) -> None:
     result = runner.invoke(
         cli_app,

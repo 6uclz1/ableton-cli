@@ -196,6 +196,78 @@ def _clip_notes_filter(args: dict[str, Any]) -> tuple[float | None, float | None
     return start_time, end_time, pitch
 
 
+def _non_negative_float(name: str, value: Any) -> float:
+    parsed = _as_float(name, value)
+    if parsed < 0:
+        raise _invalid_argument(
+            message=f"{name} must be >= 0",
+            hint=f"Pass a non-negative value for '{name}'.",
+        )
+    return parsed
+
+
+def _unit_interval(name: str, value: Any) -> float:
+    return _bounded_float(
+        name=name,
+        value=value,
+        minimum=0.0,
+        maximum=1.0,
+        hint=f"Use a value in [0.0, 1.0] for '{name}'.",
+    )
+
+
+def _humanize_velocity_amount(value: Any) -> int:
+    return _bounded_int(
+        name="velocity",
+        value=value,
+        minimum=0,
+        maximum=NOTE_VELOCITY_MAX,
+        hint="Use a velocity amount between 0 and 127.",
+    )
+
+
+def _clip_quantize_grid(value: Any) -> float:
+    if isinstance(value, str):
+        raw = value.strip()
+        if not raw:
+            raise _invalid_argument(
+                message="grid must not be empty",
+                hint="Use a value like '1/16' or 0.25 beats.",
+            )
+        if "/" in raw:
+            numerator_raw, separator, denominator_raw = raw.partition("/")
+            if not separator:
+                raise _invalid_argument(
+                    message="grid must use a valid fraction format",
+                    hint="Use a value like '1/16'.",
+                )
+            try:
+                numerator = int(numerator_raw.strip())
+                denominator = int(denominator_raw.strip())
+            except ValueError as exc:
+                raise _invalid_argument(
+                    message="grid fraction must contain integers",
+                    hint="Use a value like '1/16'.",
+                ) from exc
+            if numerator <= 0 or denominator <= 0:
+                raise _invalid_argument(
+                    message="grid fraction values must be > 0",
+                    hint="Use a value like '1/16'.",
+                )
+            grid = (4.0 * float(numerator)) / float(denominator)
+        else:
+            grid = _as_float("grid", raw)
+    else:
+        grid = _as_float("grid", value)
+
+    if grid <= 0:
+        raise _invalid_argument(
+            message="grid must be > 0",
+            hint="Use a positive grid in beats.",
+        )
+    return float(grid)
+
+
 def _validate_clip_time_range(*, start_time: float | None, end_time: float | None) -> None:
     if start_time is not None and start_time < 0:
         raise _invalid_argument(

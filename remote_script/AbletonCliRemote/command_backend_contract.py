@@ -126,6 +126,49 @@ class _TracksClipsBackend(Protocol):
         pitch: int | None,
     ) -> dict[str, Any]: ...
 
+    def clip_notes_quantize(
+        self,
+        track: int,
+        clip: int,
+        grid: float,
+        strength: float,
+        start_time: float | None,
+        end_time: float | None,
+        pitch: int | None,
+    ) -> dict[str, Any]: ...
+
+    def clip_notes_humanize(
+        self,
+        track: int,
+        clip: int,
+        timing: float,
+        velocity: int,
+        start_time: float | None,
+        end_time: float | None,
+        pitch: int | None,
+    ) -> dict[str, Any]: ...
+
+    def clip_notes_velocity_scale(
+        self,
+        track: int,
+        clip: int,
+        scale: float,
+        offset: int,
+        start_time: float | None,
+        end_time: float | None,
+        pitch: int | None,
+    ) -> dict[str, Any]: ...
+
+    def clip_notes_transpose(
+        self,
+        track: int,
+        clip: int,
+        semitones: int,
+        start_time: float | None,
+        end_time: float | None,
+        pitch: int | None,
+    ) -> dict[str, Any]: ...
+
     def set_clip_name(self, track: int, clip: int, name: str) -> dict[str, Any]: ...
 
     def fire_clip(self, track: int, clip: int) -> dict[str, Any]: ...

@@ -1121,6 +1121,93 @@ def test_live_backend_clip_notes_get_clear_replace_with_filters() -> None:
     assert pitches == [62, 65]
 
 
+def test_live_backend_clip_note_transform_commands_with_filters() -> None:
+    backend = LiveBackend(_SurfaceStub())
+    backend.create_clip(0, 0, 4.0)
+    backend.add_notes_to_clip(
+        0,
+        0,
+        [
+            {
+                "pitch": 60,
+                "start_time": 0.12,
+                "duration": 0.5,
+                "velocity": 100,
+                "mute": False,
+            },
+            {
+                "pitch": 60,
+                "start_time": 0.62,
+                "duration": 0.5,
+                "velocity": 90,
+                "mute": False,
+            },
+            {
+                "pitch": 64,
+                "start_time": 1.1,
+                "duration": 0.5,
+                "velocity": 80,
+                "mute": False,
+            },
+        ],
+    )
+
+    quantized = backend.clip_notes_quantize(
+        0,
+        0,
+        grid=0.5,
+        strength=1.0,
+        start_time=0.0,
+        end_time=1.0,
+        pitch=60,
+    )
+    assert quantized["changed_count"] == 2
+
+    humanized = backend.clip_notes_humanize(
+        0,
+        0,
+        timing=0.1,
+        velocity=5,
+        start_time=0.0,
+        end_time=1.0,
+        pitch=60,
+    )
+    assert humanized["changed_count"] == 2
+
+    velocity_scaled = backend.clip_notes_velocity_scale(
+        0,
+        0,
+        scale=1.0,
+        offset=10,
+        start_time=0.0,
+        end_time=1.0,
+        pitch=60,
+    )
+    assert velocity_scaled["changed_count"] == 2
+
+    transposed = backend.clip_notes_transpose(
+        0,
+        0,
+        semitones=2,
+        start_time=0.0,
+        end_time=1.0,
+        pitch=60,
+    )
+    assert transposed["changed_count"] == 2
+
+    after = backend.get_clip_notes(0, 0, None, None, None)
+    notes = sorted(after["notes"], key=lambda note: float(note["start_time"]))
+    assert notes[0]["pitch"] == 62
+    assert notes[0]["start_time"] == 0.1
+    assert notes[0]["velocity"] == 115
+    assert notes[1]["pitch"] == 62
+    assert notes[1]["start_time"] == 0.4
+    assert notes[1]["velocity"] == 95
+    assert notes[2]["pitch"] == 64
+    assert notes[2]["start_time"] == 1.1
+    assert notes[2]["velocity"] == 80
+
+
 def test_live_backend_load_drum_kit_requires_explicit_selection() -> None:
     backend = LiveBackend(_SurfaceStub())
     by_uri = backend.load_drum_kit(0, "rack:drums", kit_uri="kit:acoustic", kit_path=None)

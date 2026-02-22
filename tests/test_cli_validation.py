@@ -136,6 +136,78 @@ def test_clip_notes_add_rejects_invalid_notes_file_json(runner, cli_app, tmp_pat
     assert payload["error"]["code"] == "INVALID_ARGUMENT"
 
 
+def test_clip_notes_quantize_rejects_invalid_strength(runner, cli_app) -> None:
+    result = runner.invoke(
+        cli_app,
+        [
+            "--output",
+            "json",
+            "clip",
+            "notes",
+            "quantize",
+            "0",
+            "0",
+            "--grid",
+            "1/16",
+            "--strength",
+            "1.5",
+        ],
+    )
+
+    assert result.exit_code == 2
+    payload = json.loads(result.stdout)
+    assert payload["ok"] is False
+    assert payload["error"]["code"] == "INVALID_ARGUMENT"
+
+
+def test_clip_notes_humanize_rejects_invalid_velocity(runner, cli_app) -> None:
+    result = runner.invoke(
+        cli_app,
+        [
+            "--output",
+            "json",
+            "clip",
+            "notes",
+            "humanize",
+            "0",
+            "0",
+            "--timing",
+            "0.1",
+            "--velocity",
+            "128",
+        ],
+    )
+
+    assert result.exit_code == 2
+    payload = json.loads(result.stdout)
+    assert payload["ok"] is False
+    assert payload["error"]["code"] == "INVALID_ARGUMENT"
+
+
+def test_clip_notes_velocity_scale_rejects_negative_scale(runner, cli_app) -> None:
+    result = runner.invoke(
+        cli_app,
+        [
+            "--output",
+            "json",
+            "clip",
+            "notes",
+            "velocity-scale",
+            "0",
+            "0",
+            "--scale",
+            "-0.5",
+            "--offset",
+            "0",
+        ],
+    )
+
+    assert result.exit_code == 2
+    payload = json.loads(result.stdout)
+    assert payload["ok"] is False
+    assert payload["error"]["code"] == "INVALID_ARGUMENT"
+
+
 def test_browser_item_requires_target(runner, cli_app) -> None:
     result = runner.invoke(
         cli_app,

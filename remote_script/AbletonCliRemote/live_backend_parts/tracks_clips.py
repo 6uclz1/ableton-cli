@@ -1,8 +1,15 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import Any
 
-from ..command_backend import CommandError
+from ..command_backend import (
+    NOTE_PITCH_MAX,
+    NOTE_PITCH_MIN,
+    NOTE_VELOCITY_MAX,
+    NOTE_VELOCITY_MIN,
+    CommandError,
+)
 from .base import _invalid_argument, _not_supported_by_live_api
 
 
@@ -58,6 +65,76 @@ class LiveBackendTracksClipsMixin:
             for note in self._clip_notes_extended(clip_obj)
             if self._clip_note_matches_filter(note, start_time, end_time, pitch)
         ]
+
+    @staticmethod
+    def _clamp_int(value: int, minimum: int, maximum: int) -> int:
+        return max(minimum, min(maximum, value))
+
+    def _clip_note_tuple(self, note: dict[str, Any]) -> tuple[int, float, float, int, bool]:
+        return (
+            int(note["pitch"]),
+            float(note["start_time"]),
+            float(note["duration"]),
+            int(note["velocity"]),
+            bool(note["mute"]),
+        )
+
+    def _normalized_note_payload(self, note: dict[str, Any]) -> dict[str, Any]:
+        return {
+            "pitch": self._clamp_int(int(note["pitch"]), NOTE_PITCH_MIN, NOTE_PITCH_MAX),
+            "start_time": max(0.0, float(note["start_time"])),
+            "duration": max(float(note["duration"]), 0.000001),
+            "velocity": self._clamp_int(
+                int(note["velocity"]),
+                NOTE_VELOCITY_MIN,
+                NOTE_VELOCITY_MAX,
+            ),
+            "mute": bool(note["mute"]),
+        }
+
+    def _transform_filtered_clip_notes(
+        self,
+        *,
+        track: int,
+        clip: int,
+        start_time: float | None,
+        end_time: float | None,
+        pitch: int | None,
+        transform: Callable[[dict[str, Any], int], dict[str, Any]],
+        metadata: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        slot = self._clip_slot_at(track, clip)
+        if not slot.has_clip:
+            raise _invalid_argument(
+                message="No clip in slot",
+                hint="Create a clip in the target slot before transforming notes.",
+            )
+        clip_obj = slot.clip
+        assert clip_obj is not None
+        filtered = self._filtered_clip_notes(clip_obj, start_time, end_time, pitch)
+        changed_note_ids: list[int] = []
+        replacement_notes: list[tuple[int, float, float, int, bool]] = []
+
+        for index, note in enumerate(filtered):
+            transformed = self._normalized_note_payload(transform(dict(note), index))
+            if self._clip_note_tuple(note) == self._clip_note_tuple(transformed):
+                continue
+            changed_note_ids.append(int(note["note_id"]))
+            replacement_notes.append(self._clip_note_tuple(transformed))
+
+        if changed_note_ids:
+            clip_obj.remove_notes_by_id(changed_note_ids)
+            clip_obj.set_notes(tuple(replacement_notes))
+
+        return {
+            "track": track,
+            "clip": clip,
+            "start_time": start_time,
+            "end_time": end_time,
+            "pitch": pitch,
+            **(metadata or {}),
+            "changed_count": len(changed_note_ids),
+        }
 
     def create_clip(self, track: int, clip: int, length: float) -> dict[str, Any]:
         slot = self._clip_slot_at(track, clip)
@@ -193,6 +270,108 @@ class LiveBackendTracksClipsMixin:
             "cleared_count": int(cleared["cleared_count"]),
             "added_count": int(added["note_count"]),
         }
+
+    def clip_notes_quantize(
+        self,
+        track: int,
+        clip: int,
+        grid: float,
+        strength: float,
+        start_time: float | None,
+        end_time: float | None,
+        pitch: int | None,
+    ) -> dict[str, Any]:
+        def _quantize(note: dict[str, Any], _index: int) -> dict[str, Any]:
+            original_start = float(note["start_time"])
+            snapped_start = round(round(original_start / grid) * grid, 6)
+            note["start_time"] = round(
+                original_start + ((snapped_start - original_start) * strength),
+                6,
+            )
+            return note
+
+        return self._transform_filtered_clip_notes(
+            track=track,
+            clip=clip,
+            start_time=start_time,
+            end_time=end_time,
+            pitch=pitch,
+            transform=_quantize,
+            metadata={"grid": grid, "strength": strength},
+        )
+
+    def clip_notes_humanize(
+        self,
+        track: int,
+        clip: int,
+        timing: float,
+        velocity: int,
+        start_time: float | None,
+        end_time: float | None,
+        pitch: int | None,
+    ) -> dict[str, Any]:
+        def _humanize(note: dict[str, Any], index: int) -> dict[str, Any]:
+            direction = 1 if index % 2 == 0 else -1
+            note["start_time"] = round(float(note["start_time"]) + (timing * direction), 6)
+            note["velocity"] = int(note["velocity"]) + (velocity * direction)
+            return note
+
+        return self._transform_filtered_clip_notes(
+            track=track,
+            clip=clip,
+            start_time=start_time,
+            end_time=end_time,
+            pitch=pitch,
+            transform=_humanize,
+            metadata={"timing": timing, "velocity": velocity},
+        )
+
+    def clip_notes_velocity_scale(
+        self,
+        track: int,
+        clip: int,
+        scale: float,
+        offset: int,
+        start_time: float | None,
+        end_time: float | None,
+        pitch: int | None,
+    ) -> dict[str, Any]:
+        def _velocity_scale(note: dict[str, Any], _index: int) -> dict[str, Any]:
+            note["velocity"] = int(round(float(note["velocity"]) * scale + offset))
+            return note
+
+        return self._transform_filtered_clip_notes(
+            track=track,
+            clip=clip,
+            start_time=start_time,
+            end_time=end_time,
+            pitch=pitch,
+            transform=_velocity_scale,
+            metadata={"scale": scale, "offset": offset},
+        )
+
+    def clip_notes_transpose(
+        self,
+        track: int,
+        clip: int,
+        semitones: int,
+        start_time: float | None,
+        end_time: float | None,
+        pitch: int | None,
+    ) -> dict[str, Any]:
+        def _transpose(note: dict[str, Any], _index: int) -> dict[str, Any]:
+            note["pitch"] = int(note["pitch"]) + semitones
+            return note
+
+        return self._transform_filtered_clip_notes(
+            track=track,
+            clip=clip,
+            start_time=start_time,
+            end_time=end_time,
+            pitch=pitch,
+            transform=_transpose,
+            metadata={"semitones": semitones},
+        )
 
     def set_clip_name(self, track: int, clip: int, name: str) -> dict[str, Any]:
         slot = self._clip_slot_at(track, clip)

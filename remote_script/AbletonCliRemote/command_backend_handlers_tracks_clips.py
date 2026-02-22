@@ -5,13 +5,18 @@ from typing import Any
 
 from .command_backend_contract import CommandBackend
 from .command_backend_validators import (
+    _as_int,
     _as_bool,
     _clip_length,
     _clip_notes_filter,
+    _clip_quantize_grid,
+    _humanize_velocity_amount,
     _insert_index,
+    _non_negative_float,
     _non_empty_string,
     _notes,
     _track_index,
+    _unit_interval,
 )
 
 Handler = Callable[[CommandBackend, dict[str, Any]], dict[str, Any]]
@@ -51,6 +56,41 @@ def _handle_replace_clip_notes(backend: CommandBackend, args: dict[str, Any]) ->
     notes = _notes(args.get("notes"))
     start_time, end_time, pitch = _clip_notes_filter(args)
     return backend.replace_clip_notes(track, clip, notes, start_time, end_time, pitch)
+
+
+def _handle_clip_notes_quantize(backend: CommandBackend, args: dict[str, Any]) -> dict[str, Any]:
+    track = _track_index("track", args.get("track"))
+    clip = _track_index("clip", args.get("clip"))
+    grid = _clip_quantize_grid(args.get("grid"))
+    strength = _unit_interval("strength", args.get("strength", 1.0))
+    start_time, end_time, pitch = _clip_notes_filter(args)
+    return backend.clip_notes_quantize(track, clip, grid, strength, start_time, end_time, pitch)
+
+
+def _handle_clip_notes_humanize(backend: CommandBackend, args: dict[str, Any]) -> dict[str, Any]:
+    track = _track_index("track", args.get("track"))
+    clip = _track_index("clip", args.get("clip"))
+    timing = _non_negative_float("timing", args.get("timing"))
+    velocity = _humanize_velocity_amount(args.get("velocity"))
+    start_time, end_time, pitch = _clip_notes_filter(args)
+    return backend.clip_notes_humanize(track, clip, timing, velocity, start_time, end_time, pitch)
+
+
+def _handle_clip_notes_velocity_scale(backend: CommandBackend, args: dict[str, Any]) -> dict[str, Any]:
+    track = _track_index("track", args.get("track"))
+    clip = _track_index("clip", args.get("clip"))
+    scale = _non_negative_float("scale", args.get("scale"))
+    offset = _as_int("offset", args.get("offset"))
+    start_time, end_time, pitch = _clip_notes_filter(args)
+    return backend.clip_notes_velocity_scale(track, clip, scale, offset, start_time, end_time, pitch)
+
+
+def _handle_clip_notes_transpose(backend: CommandBackend, args: dict[str, Any]) -> dict[str, Any]:
+    track = _track_index("track", args.get("track"))
+    clip = _track_index("clip", args.get("clip"))
+    semitones = _as_int("semitones", args.get("semitones"))
+    start_time, end_time, pitch = _clip_notes_filter(args)
+    return backend.clip_notes_transpose(track, clip, semitones, start_time, end_time, pitch)
 
 
 def _handle_set_clip_name(backend: CommandBackend, args: dict[str, Any]) -> dict[str, Any]:
@@ -147,6 +187,10 @@ TRACKS_CLIPS_HANDLERS: dict[str, Handler] = {
     "get_clip_notes": _handle_get_clip_notes,
     "clear_clip_notes": _handle_clear_clip_notes,
     "replace_clip_notes": _handle_replace_clip_notes,
+    "clip_notes_quantize": _handle_clip_notes_quantize,
+    "clip_notes_humanize": _handle_clip_notes_humanize,
+    "clip_notes_velocity_scale": _handle_clip_notes_velocity_scale,
+    "clip_notes_transpose": _handle_clip_notes_transpose,
     "set_clip_name": _handle_set_clip_name,
     "fire_clip": _handle_fire_clip,
     "stop_clip": _handle_stop_clip,

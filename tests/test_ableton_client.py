@@ -293,6 +293,43 @@ def test_client_sends_request_timeout_meta(monkeypatch) -> None:
                 "preserve_track_name": True,
             },
         ),
+        (
+            lambda client: client.clip_notes_quantize(
+                track=0,
+                clip=1,
+                grid="1/16",
+                strength=0.75,
+                start_time=0.0,
+                end_time=4.0,
+                pitch=60,
+            ),
+            "clip_notes_quantize",
+            {
+                "track": 0,
+                "clip": 1,
+                "grid": "1/16",
+                "strength": 0.75,
+                "start_time": 0.0,
+                "end_time": 4.0,
+                "pitch": 60,
+            },
+        ),
+        (
+            lambda client: client.clip_notes_transpose(
+                track=0,
+                clip=1,
+                semitones=-12,
+                start_time=None,
+                end_time=None,
+                pitch=None,
+            ),
+            "clip_notes_transpose",
+            {
+                "track": 0,
+                "clip": 1,
+                "semitones": -12,
+            },
+        ),
     ],
 )
 def test_client_builds_optional_arguments_deterministically(

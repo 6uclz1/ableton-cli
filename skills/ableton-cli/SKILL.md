@@ -99,6 +99,10 @@ uv run ableton-cli clip notes add 0 0 --notes-file ./notes.json
 uv run ableton-cli clip notes get 0 0 --start-time 0.0 --end-time 4.0 --pitch 60
 uv run ableton-cli clip notes clear 0 0 --start-time 0.0 --end-time 1.0
 uv run ableton-cli clip notes replace 0 0 --notes-json '[{"pitch":65,"start_time":0.25,"duration":0.5,"velocity":100,"mute":false}]' --start-time 0.0 --end-time 1.0
+uv run ableton-cli clip notes quantize 0 0 --grid 1/16 --strength 0.8 --start-time 0.0 --end-time 4.0
+uv run ableton-cli clip notes humanize 0 0 --timing 0.05 --velocity 5
+uv run ableton-cli clip notes velocity-scale 0 0 --scale 1.1 --offset -3
+uv run ableton-cli clip notes transpose 0 0 --semitones 2 --start-time 0.0 --end-time 4.0
 uv run ableton-cli clip name set 0 0 "Hook"
 uv run ableton-cli clip fire 0 0
 uv run ableton-cli clip stop 0 0

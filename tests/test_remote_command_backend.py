@@ -8,7 +8,17 @@ from remote_script.AbletonCliRemote.command_backend import CommandError, dispatc
 
 class _BackendStub:
     def ping_info(self):  # noqa: ANN201
-        return {"pong": True}
+        return {
+            "pong": True,
+            "api_support": {
+                "song_new_supported": True,
+                "song_save_supported": True,
+                "song_export_audio_supported": True,
+                "arrangement_record_start_supported": True,
+                "arrangement_record_stop_supported": True,
+                "arrangement_record_supported": True,
+            },
+        }
 
     def get_session_info(self):  # noqa: ANN201
         return {"tempo": 120.0}
@@ -512,6 +522,9 @@ def test_dispatch_ping_includes_supported_commands_and_hash() -> None:
     result = dispatch_command(backend, "ping", {})
 
     assert result["pong"] is True
+    assert result["api_support"]["song_save_supported"] is True
+    assert result["api_support"]["song_export_audio_supported"] is True
+    assert result["api_support"]["arrangement_record_supported"] is True
     assert "supported_commands" in result
     assert "command_set_hash" in result
     assert isinstance(result["supported_commands"], list)

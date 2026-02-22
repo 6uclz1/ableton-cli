@@ -12,8 +12,9 @@ if ! command -v help2man >/dev/null 2>&1; then
 fi
 
 mkdir -p "${OUTPUT_DIR}"
-WRAPPER_SCRIPT="$(mktemp)"
-trap 'rm -f "${WRAPPER_SCRIPT}"' EXIT
+WRAPPER_DIR="$(mktemp -d)"
+WRAPPER_SCRIPT="${WRAPPER_DIR}/ableton-cli"
+trap 'rm -rf "${WRAPPER_DIR}"' EXIT
 
 cat >"${WRAPPER_SCRIPT}" <<'WRAP'
 #!/usr/bin/env bash

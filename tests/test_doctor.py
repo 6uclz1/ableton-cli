@@ -1,9 +1,22 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 from ableton_cli.capabilities import compute_command_set_hash, required_remote_commands
 from ableton_cli.config import Settings
 from ableton_cli.doctor import run_doctor
 from ableton_cli.errors import AppError, ExitCode
+
+
+class _PlatformPathsStub:
+    def __init__(self, candidates: list[str] | None = None) -> None:
+        self._candidates = [Path(path) for path in (candidates or [])]
+
+    def remote_script_candidate_dirs(self) -> list[Path]:
+        return self._candidates
+
+    def claude_home_dir(self) -> Path:
+        return Path("/unused")
 
 
 class _ClientStub:
@@ -33,7 +46,8 @@ def test_doctor_handles_unreachable_remote(monkeypatch) -> None:
             log_file=None,
             protocol_version=2,
             config_path="/tmp/not-found.toml",
-        )
+        ),
+        platform_paths=_PlatformPathsStub(),
     )
 
     assert "summary" in result
@@ -63,7 +77,8 @@ def test_doctor_fails_when_ping_has_no_supported_commands(monkeypatch) -> None:
             log_file=None,
             protocol_version=2,
             config_path="/tmp/not-found.toml",
-        )
+        ),
+        platform_paths=_PlatformPathsStub(),
     )
 
     checks = {item["name"]: item for item in result["checks"]}
@@ -94,7 +109,8 @@ def test_doctor_fails_when_remote_is_missing_required_commands(monkeypatch) -> N
             log_file=None,
             protocol_version=2,
             config_path="/tmp/not-found.toml",
-        )
+        ),
+        platform_paths=_PlatformPathsStub(),
     )
 
     checks = {item["name"]: item for item in result["checks"]}
@@ -126,7 +142,8 @@ def test_doctor_protocol_mismatch_hint_mentions_protocol_setter(monkeypatch) -> 
             log_file=None,
             protocol_version=2,
             config_path="/tmp/not-found.toml",
-        )
+        ),
+        platform_paths=_PlatformPathsStub(),
     )
     checks = {item["name"]: item for item in result["checks"]}
     assert checks["protocol_version"]["status"] == "FAIL"

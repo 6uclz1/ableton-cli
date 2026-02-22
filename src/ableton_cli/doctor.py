@@ -12,7 +12,8 @@ from .capabilities import (
 from .client.ableton_client import AbletonClient
 from .config import Settings
 from .errors import AppError
-from .installer import REMOTE_SCRIPT_DIR_NAME, remote_script_candidate_dirs
+from .installer import REMOTE_SCRIPT_DIR_NAME
+from .platform_paths import PlatformPaths
 
 
 @dataclass(slots=True)
@@ -43,7 +44,7 @@ def _fail(name: str, hint: str, details: dict[str, Any]) -> DoctorCheck:
     return DoctorCheck(name=name, status="FAIL", hint=hint, details=details)
 
 
-def run_doctor(settings: Settings) -> dict[str, Any]:
+def run_doctor(settings: Settings, *, platform_paths: PlatformPaths) -> dict[str, Any]:
     checks: list[DoctorCheck] = []
 
     config_path = Path(settings.config_path) if settings.config_path else None
@@ -88,7 +89,7 @@ def run_doctor(settings: Settings) -> dict[str, Any]:
     else:
         checks.append(_pass("timeout_ms", {"timeout_ms": settings.timeout_ms}))
 
-    candidates = remote_script_candidate_dirs()
+    candidates = platform_paths.remote_script_candidate_dirs()
     installed_paths = [
         str(path / REMOTE_SCRIPT_DIR_NAME)
         for path in candidates

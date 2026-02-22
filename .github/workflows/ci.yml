@@ -25,7 +25,26 @@ jobs:
         run: uv sync --dev
 
       - name: Run lint and tests
-        run: uv run python -m ableton_cli.dev_checks
+        run: |
+          uv run python -m ableton_cli.dev_checks \
+            --report dev-checks-report.json \
+            --pytest-junitxml pytest-report.xml
+
+      - name: Upload dev checks report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dev-checks-report-${{ matrix.os }}
+          path: dev-checks-report.json
+          if-no-files-found: error
+
+      - name: Upload pytest report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-report-${{ matrix.os }}
+          path: pytest-report.xml
+          if-no-files-found: error
 
       - name: CLI help
         run: uv run ableton-cli --help
@@ -68,3 +87,66 @@ jobs:
         with:
           name: quality-harness-report
           path: quality-harness-report.json
+          if-no-files-found: error
+
+  summary:
+    if: always()
+    needs: [test, quality-harness]
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - uses: astral-sh/setup-uv@v4
+
+      - name: Sync dependencies
+        run: uv sync --dev
+
+      - name: Download quality harness report
+        uses: actions/download-artifact@v4
+        with:
+          name: quality-harness-report
+          path: artifacts/quality-harness-report
+          if-no-files-found: error
+
+      - name: Download dev checks report (macOS)
+        uses: actions/download-artifact@v4
+        with:
+          name: dev-checks-report-macos-latest
+          path: artifacts/dev-checks-report-macos-latest
+          if-no-files-found: error
+
+      - name: Download dev checks report (Windows)
+        uses: actions/download-artifact@v4
+        with:
+          name: dev-checks-report-windows-latest
+          path: artifacts/dev-checks-report-windows-latest
+          if-no-files-found: error
+
+      - name: Download pytest report (macOS)
+        uses: actions/download-artifact@v4
+        with:
+          name: pytest-report-macos-latest
+          path: artifacts/pytest-report-macos-latest
+          if-no-files-found: error
+
+      - name: Download pytest report (Windows)
+        uses: actions/download-artifact@v4
+        with:
+          name: pytest-report-windows-latest
+          path: artifacts/pytest-report-windows-latest
+          if-no-files-found: error
+
+      - name: Generate CI summary
+        run: |
+          uv run python -m ableton_cli.ci_summary \
+            --quality-harness-report artifacts/quality-harness-report/quality-harness-report.json \
+            --dev-checks-report artifacts/dev-checks-report-macos-latest/dev-checks-report.json \
+            --dev-checks-report artifacts/dev-checks-report-windows-latest/dev-checks-report.json \
+            --pytest-junit-report artifacts/pytest-report-macos-latest/pytest-report.xml \
+            --pytest-junit-report artifacts/pytest-report-windows-latest/pytest-report.xml \
+            --summary-file "$GITHUB_STEP_SUMMARY"

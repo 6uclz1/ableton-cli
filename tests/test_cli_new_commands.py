@@ -106,6 +106,88 @@ class _ClientStub:
     def clip_duplicate(self, track: int, src_clip: int, dst_clip: int):  # noqa: ANN201
         return {"track": track, "src_clip": src_clip, "dst_clip": dst_clip, "duplicated": True}
 
+    def clip_notes_quantize(  # noqa: ANN201
+        self,
+        track: int,
+        clip: int,
+        grid: str,
+        strength: float,
+        start_time: float | None,
+        end_time: float | None,
+        pitch: int | None,
+    ):
+        return {
+            "track": track,
+            "clip": clip,
+            "grid": grid,
+            "strength": strength,
+            "start_time": start_time,
+            "end_time": end_time,
+            "pitch": pitch,
+            "changed_count": 2,
+        }
+
+    def clip_notes_humanize(  # noqa: ANN201
+        self,
+        track: int,
+        clip: int,
+        timing: float,
+        velocity: int,
+        start_time: float | None,
+        end_time: float | None,
+        pitch: int | None,
+    ):
+        return {
+            "track": track,
+            "clip": clip,
+            "timing": timing,
+            "velocity": velocity,
+            "start_time": start_time,
+            "end_time": end_time,
+            "pitch": pitch,
+            "changed_count": 2,
+        }
+
+    def clip_notes_velocity_scale(  # noqa: ANN201
+        self,
+        track: int,
+        clip: int,
+        scale: float,
+        offset: int,
+        start_time: float | None,
+        end_time: float | None,
+        pitch: int | None,
+    ):
+        return {
+            "track": track,
+            "clip": clip,
+            "scale": scale,
+            "offset": offset,
+            "start_time": start_time,
+            "end_time": end_time,
+            "pitch": pitch,
+            "changed_count": 2,
+        }
+
+    def clip_notes_transpose(  # noqa: ANN201
+        self,
+        track: int,
+        clip: int,
+        semitones: int,
+        start_time: float | None,
+        end_time: float | None,
+        pitch: int | None,
+    ):
+        return {
+            "track": track,
+            "clip": clip,
+            "semitones": semitones,
+            "start_time": start_time,
+            "end_time": end_time,
+            "pitch": pitch,
+            "changed_count": 2,
+        }
+
     def clip_active_get(self, track: int, clip: int):  # noqa: ANN201
         return {"track": track, "clip": clip, "active": True}
 
@@ -728,6 +810,99 @@ def test_clip_notes_replace_accepts_notes_file(
     payload = json.loads(result.stdout)
     assert payload["ok"] is True
     assert payload["result"]["added_count"] == 1
+
+
+def test_clip_note_transform_commands_output_json_envelope(runner, cli_app, monkeypatch) -> None:
+    from ableton_cli.commands import clip
+
+    monkeypatch.setattr(clip, "get_client", lambda ctx: _ClientStub())
+
+    quantize = runner.invoke(
+        cli_app,
+        [
+            "--output",
+            "json",
+            "clip",
+            "notes",
+            "quantize",
+            "0",
+            "1",
+            "--grid",
+            "1/16",
+            "--strength",
+            "0.8",
+            "--start-time",
+            "0.0",
+            "--end-time",
+            "4.0",
+            "--pitch",
+            "60",
+        ],
+    )
+    humanize = runner.invoke(
+        cli_app,
+        [
+            "--output",
+            "json",
+            "clip",
+            "notes",
+            "humanize",
+            "0",
+            "1",
+            "--timing",
+            "0.1",
+            "--velocity",
+            "5",
+        ],
+    )
+    velocity_scale = runner.invoke(
+        cli_app,
+        [
+            "--output",
+            "json",
+            "clip",
+            "notes",
+            "velocity-scale",
+            "0",
+            "1",
+            "--scale",
+            "1.2",
+            "--offset",
+            "-3",
+        ],
+    )
+    transpose = runner.invoke(
+        cli_app,
+        [
+            "--output",
+            "json",
+            "clip",
+            "notes",
+            "transpose",
+            "0",
+            "1",
+            "--semitones",
+            "7",
+        ],
+    )
+
+    assert quantize.exit_code == 0
+    assert humanize.exit_code == 0
+    assert velocity_scale.exit_code == 0
+    assert transpose.exit_code == 0
+
+    quantize_payload = json.loads(quantize.stdout)
+    humanize_payload = json.loads(humanize.stdout)
+    velocity_scale_payload = json.loads(velocity_scale.stdout)
+    transpose_payload = json.loads(transpose.stdout)
+
+    assert quantize_payload["result"]["changed_count"] == 2
+    assert quantize_payload["result"]["grid"] == "1/16"
+    assert humanize_payload["result"]["timing"] == 0.1
+    assert humanize_payload["result"]["velocity"] == 5
+    assert velocity_scale_payload["result"]["scale"] == 1.2
+    assert velocity_scale_payload["result"]["offset"] == -3
+    assert transpose_payload["result"]["semitones"] == 7
 
 
 def test_browser_item_supports_uri_and_path_target(runner, cli_app, monkeypatch) -> None:

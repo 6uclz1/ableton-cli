@@ -157,6 +157,88 @@ class _BackendStub:
     def clip_duplicate(self, track: int, src_clip: int, dst_clip: int):  # noqa: ANN201
         return {"track": track, "src_clip": src_clip, "dst_clip": dst_clip, "duplicated": True}
 
+    def clip_notes_quantize(  # noqa: ANN201
+        self,
+        track: int,
+        clip: int,
+        grid: float,
+        strength: float,
+        start_time: float | None,
+        end_time: float | None,
+        pitch: int | None,
+    ):
+        return {
+            "track": track,
+            "clip": clip,
+            "grid": grid,
+            "strength": strength,
+            "start_time": start_time,
+            "end_time": end_time,
+            "pitch": pitch,
+            "changed_count": 1,
+        }
+
+    def clip_notes_humanize(  # noqa: ANN201
+        self,
+        track: int,
+        clip: int,
+        timing: float,
+        velocity: int,
+        start_time: float | None,
+        end_time: float | None,
+        pitch: int | None,
+    ):
+        return {
+            "track": track,
+            "clip": clip,
+            "timing": timing,
+            "velocity": velocity,
+            "start_time": start_time,
+            "end_time": end_time,
+            "pitch": pitch,
+            "changed_count": 1,
+        }
+
+    def clip_notes_velocity_scale(  # noqa: ANN201
+        self,
+        track: int,
+        clip: int,
+        scale: float,
+        offset: int,
+        start_time: float | None,
+        end_time: float | None,
+        pitch: int | None,
+    ):
+        return {
+            "track": track,
+            "clip": clip,
+            "scale": scale,
+            "offset": offset,
+            "start_time": start_time,
+            "end_time": end_time,
+            "pitch": pitch,
+            "changed_count": 1,
+        }
+
+    def clip_notes_transpose(  # noqa: ANN201
+        self,
+        track: int,
+        clip: int,
+        semitones: int,
+        start_time: float | None,
+        end_time: float | None,
+        pitch: int | None,
+    ):
+        return {
+            "track": track,
+            "clip": clip,
+            "semitones": semitones,
+            "start_time": start_time,
+            "end_time": end_time,
+            "pitch": pitch,
+            "changed_count": 1,
+        }
+
     def load_instrument_or_effect(  # noqa: ANN201
         self,
         track: int,
@@ -972,6 +1054,62 @@ def test_dispatch_calls_backend_for_new_todo_commands() -> None:
     assert tracks_delete == {"track": 0, "deleted": True}
 
 
+def test_dispatch_calls_backend_for_clip_note_transform_commands() -> None:
+    backend = _BackendStub()
+
+    quantized = dispatch_command(
+        backend,
+        "clip_notes_quantize",
+        {
+            "track": 0,
+            "clip": 1,
+            "grid": "1/16",
+            "strength": 0.75,
+            "start_time": 0.0,
+            "end_time": 4.0,
+            "pitch": 60,
+        },
+    )
+    humanized = dispatch_command(
+        backend,
+        "clip_notes_humanize",
+        {
+            "track": 0,
+            "clip": 1,
+            "timing": 0.1,
+            "velocity": 5,
+        },
+    )
+    velocity_scaled = dispatch_command(
+        backend,
+        "clip_notes_velocity_scale",
+        {
+            "track": 0,
+            "clip": 1,
+            "scale": 1.2,
+            "offset": -3,
+        },
+    )
+    transposed = dispatch_command(
+        backend,
+        "clip_notes_transpose",
+        {
+            "track": 0,
+            "clip": 1,
+            "semitones": 7,
+        },
+    )
+
+    assert quantized["grid"] == 0.25
+    assert quantized["strength"] == 0.75
+    assert quantized["changed_count"] == 1
+    assert humanized["timing"] == 0.1
+    assert humanized["velocity"] == 5
+    assert velocity_scaled["scale"] == 1.2
+    assert velocity_scaled["offset"] == -3
+    assert transposed["semitones"] == 7
+
+
 def test_dispatch_validates_new_todo_command_arguments() -> None:
     backend = _BackendStub()
 
@@ -1002,6 +1140,40 @@ def test_dispatch_validates_new_todo_command_arguments() -> None:
     assert clip_active_set_exc.value.code == "INVALID_ARGUMENT"
     assert scenes_move_exc.value.code == "INVALID_ARGUMENT"
     assert tracks_delete_exc.value.code == "INVALID_ARGUMENT"
+
+
+def test_dispatch_rejects_invalid_clip_note_transform_arguments() -> None:
+    backend = _BackendStub()
+
+    with pytest.raises(CommandError) as invalid_grid:
+        dispatch_command(
+            backend,
+            "clip_notes_quantize",
+            {"track": 0, "clip": 0, "grid": "0/16", "strength": 1.0},
+        )
+    with pytest.raises(CommandError) as invalid_strength:
+        dispatch_command(
+            backend,
+            "clip_notes_quantize",
+            {"track": 0, "clip": 0, "grid": "1/16", "strength": 2.0},
+        )
+    with pytest.raises(CommandError) as invalid_humanize_velocity:
+        dispatch_command(
+            backend,
+            "clip_notes_humanize",
+            {"track": 0, "clip": 0, "timing": 0.1, "velocity": 128},
+        )
+    with pytest.raises(CommandError) as invalid_scale:
+        dispatch_command(
+            backend,
+            "clip_notes_velocity_scale",
+            {"track": 0, "clip": 0, "scale": -0.1, "offset": 0},
+        )
+
+    assert invalid_grid.value.code == "INVALID_ARGUMENT"
+    assert invalid_strength.value.code == "INVALID_ARGUMENT"
+    assert invalid_humanize_velocity.value.code == "INVALID_ARGUMENT"
+    assert invalid_scale.value.code == "INVALID_ARGUMENT"
 
 
 def test_dispatch_rejects_unknown_command() -> None:

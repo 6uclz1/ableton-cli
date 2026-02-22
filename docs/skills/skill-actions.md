@@ -84,6 +84,10 @@ Stable action names and CLI mappings for automation wrappers.
 - `uv run ableton-cli transport tempo get`: Read current tempo only.
 - `uv run ableton-cli track volume get <track>`: Read current track volume only.
 - `uv run ableton-cli session snapshot`: Fetch song/session/tracks/scenes in one call.
+- `uv run ableton-cli clip notes quantize <track> <clip> --grid <fraction-or-beats> --strength <0.0-1.0>`: Quantize matching note start times.
+- `uv run ableton-cli clip notes humanize <track> <clip> --timing <beats> --velocity <0-127>`: Humanize timing and velocity for matching notes.
+- `uv run ableton-cli clip notes velocity-scale <track> <clip> --scale <float> --offset <int>`: Scale and offset note velocities for matching notes.
+- `uv run ableton-cli clip notes transpose <track> <clip> --semitones <int>`: Transpose matching note pitches.
 
 Operational note: after `install-remote-script --yes`, reload Ableton's Control Surface assignment (`None` -> `AbletonCliRemote`) or restart Ableton Live to apply updated Remote Script code.
 

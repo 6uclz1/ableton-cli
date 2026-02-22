@@ -6,6 +6,7 @@ import typer
 
 from ..runtime import execute_command, get_client
 from ._validation import (
+    invalid_argument,
     parse_notes_input,
     require_non_empty_string,
     require_non_negative,
@@ -30,6 +31,68 @@ def _validate_note_filters(
         end_time=end_time,
         pitch=pitch,
     )
+
+
+def _validated_transform_filters(
+    *,
+    track: int,
+    clip: int,
+    start_time: float | None,
+    end_time: float | None,
+    pitch: int | None,
+) -> dict[str, float | int | None]:
+    require_non_negative(
+        "track",
+        track,
+        hint="Use a valid track index from 'ableton-cli tracks list'.",
+    )
+    require_non_negative(
+        "clip",
+        clip,
+        hint="Use a valid clip slot index.",
+    )
+    return _validate_note_filters(start_time=start_time, end_time=end_time, pitch=pitch)
+
+
+def _require_float_in_range(
+    *,
+    name: str,
+    value: float,
+    minimum: float,
+    maximum: float,
+    hint: str,
+) -> float:
+    if value < minimum or value > maximum:
+        raise invalid_argument(
+            message=f"{name} must be between {minimum} and {maximum}, got {value}",
+            hint=hint,
+        )
+    return value
+
+
+def _require_non_negative_float(*, name: str, value: float, hint: str) -> float:
+    if value < 0:
+        raise invalid_argument(
+            message=f"{name} must be >= 0, got {value}",
+            hint=hint,
+        )
+    return value
+
+
+def _require_int_in_range(
+    *,
+    name: str,
+    value: int,
+    minimum: int,
+    maximum: int,
+    hint: str,
+) -> int:
+    if value < minimum or value > maximum:
+        raise invalid_argument(
+            message=f"{name} must be between {minimum} and {maximum}, got {value}",
+            hint=hint,
+        )
+    return value
 
 
 @clip_app.command("create")
@@ -258,6 +321,269 @@ def clip_notes_replace(
         args={
             "track": track,
             "clip": clip,
+            "start_time": start_time,
+            "end_time": end_time,
+            "pitch": pitch,
+        },
+        action=_run,
+    )
+
+
+@notes_app.command("quantize")
+def clip_notes_quantize(
+    ctx: typer.Context,
+    track: Annotated[int, typer.Argument(help="Track index (0-based)")],
+    clip: Annotated[int, typer.Argument(help="Clip slot index (0-based)")],
+    grid: Annotated[
+        str,
+        typer.Option("--grid", help="Quantize grid as fraction (for example 1/16) or beats"),
+    ] = "1/16",
+    strength: Annotated[
+        float,
+        typer.Option("--strength", help="Quantize strength in [0.0, 1.0]"),
+    ] = 1.0,
+    start_time: Annotated[
+        float | None,
+        typer.Option("--start-time", help="Inclusive start time filter in beats"),
+    ] = None,
+    end_time: Annotated[
+        float | None,
+        typer.Option("--end-time", help="Exclusive end time filter in beats"),
+    ] = None,
+    pitch: Annotated[
+        int | None,
+        typer.Option("--pitch", help="Exact MIDI pitch filter"),
+    ] = None,
+) -> None:
+    def _run() -> dict[str, object]:
+        filters = _validated_transform_filters(
+            track=track,
+            clip=clip,
+            start_time=start_time,
+            end_time=end_time,
+            pitch=pitch,
+        )
+        valid_grid = require_non_empty_string(
+            "grid",
+            grid,
+            hint="Pass a value like '1/16' or a positive beat value.",
+        )
+        valid_strength = _require_float_in_range(
+            name="strength",
+            value=strength,
+            minimum=0.0,
+            maximum=1.0,
+            hint="Use --strength in [0.0, 1.0].",
+        )
+        return get_client(ctx).clip_notes_quantize(
+            track=track,
+            clip=clip,
+            grid=valid_grid,
+            strength=valid_strength,
+            start_time=filters["start_time"],
+            end_time=filters["end_time"],
+            pitch=filters["pitch"],
+        )
+
+    execute_command(
+        ctx,
+        command="clip notes quantize",
+        args={
+            "track": track,
+            "clip": clip,
+            "grid": grid,
+            "strength": strength,
+            "start_time": start_time,
+            "end_time": end_time,
+            "pitch": pitch,
+        },
+        action=_run,
+    )
+
+
+@notes_app.command("humanize")
+def clip_notes_humanize(
+    ctx: typer.Context,
+    track: Annotated[int, typer.Argument(help="Track index (0-based)")],
+    clip: Annotated[int, typer.Argument(help="Clip slot index (0-based)")],
+    timing: Annotated[
+        float,
+        typer.Option("--timing", help="Maximum timing shift in beats (>= 0)"),
+    ],
+    velocity: Annotated[
+        int,
+        typer.Option("--velocity", help="Maximum velocity shift amount (0-127)"),
+    ],
+    start_time: Annotated[
+        float | None,
+        typer.Option("--start-time", help="Inclusive start time filter in beats"),
+    ] = None,
+    end_time: Annotated[
+        float | None,
+        typer.Option("--end-time", help="Exclusive end time filter in beats"),
+    ] = None,
+    pitch: Annotated[
+        int | None,
+        typer.Option("--pitch", help="Exact MIDI pitch filter"),
+    ] = None,
+) -> None:
+    def _run() -> dict[str, object]:
+        filters = _validated_transform_filters(
+            track=track,
+            clip=clip,
+            start_time=start_time,
+            end_time=end_time,
+            pitch=pitch,
+        )
+        valid_timing = _require_non_negative_float(
+            name="timing",
+            value=timing,
+            hint="Use a non-negative --timing value.",
+        )
+        valid_velocity = _require_int_in_range(
+            name="velocity",
+            value=velocity,
+            minimum=0,
+            maximum=127,
+            hint="Use --velocity in the 0-127 range.",
+        )
+        return get_client(ctx).clip_notes_humanize(
+            track=track,
+            clip=clip,
+            timing=valid_timing,
+            velocity=valid_velocity,
+            start_time=filters["start_time"],
+            end_time=filters["end_time"],
+            pitch=filters["pitch"],
+        )
+
+    execute_command(
+        ctx,
+        command="clip notes humanize",
+        args={
+            "track": track,
+            "clip": clip,
+            "timing": timing,
+            "velocity": velocity,
+            "start_time": start_time,
+            "end_time": end_time,
+            "pitch": pitch,
+        },
+        action=_run,
+    )
+
+
+@notes_app.command("velocity-scale")
+def clip_notes_velocity_scale(
+    ctx: typer.Context,
+    track: Annotated[int, typer.Argument(help="Track index (0-based)")],
+    clip: Annotated[int, typer.Argument(help="Clip slot index (0-based)")],
+    scale: Annotated[
+        float,
+        typer.Option("--scale", help="Velocity multiplier (>= 0)"),
+    ],
+    offset: Annotated[
+        int,
+        typer.Option("--offset", help="Velocity offset (can be negative)"),
+    ],
+    start_time: Annotated[
+        float | None,
+        typer.Option("--start-time", help="Inclusive start time filter in beats"),
+    ] = None,
+    end_time: Annotated[
+        float | None,
+        typer.Option("--end-time", help="Exclusive end time filter in beats"),
+    ] = None,
+    pitch: Annotated[
+        int | None,
+        typer.Option("--pitch", help="Exact MIDI pitch filter"),
+    ] = None,
+) -> None:
+    def _run() -> dict[str, object]:
+        filters = _validated_transform_filters(
+            track=track,
+            clip=clip,
+            start_time=start_time,
+            end_time=end_time,
+            pitch=pitch,
+        )
+        valid_scale = _require_non_negative_float(
+            name="scale",
+            value=scale,
+            hint="Use a non-negative --scale value.",
+        )
+        return get_client(ctx).clip_notes_velocity_scale(
+            track=track,
+            clip=clip,
+            scale=valid_scale,
+            offset=offset,
+            start_time=filters["start_time"],
+            end_time=filters["end_time"],
+            pitch=filters["pitch"],
+        )
+
+    execute_command(
+        ctx,
+        command="clip notes velocity-scale",
+        args={
+            "track": track,
+            "clip": clip,
+            "scale": scale,
+            "offset": offset,
+            "start_time": start_time,
+            "end_time": end_time,
+            "pitch": pitch,
+        },
+        action=_run,
+    )
+
+
+@notes_app.command("transpose")
+def clip_notes_transpose(
+    ctx: typer.Context,
+    track: Annotated[int, typer.Argument(help="Track index (0-based)")],
+    clip: Annotated[int, typer.Argument(help="Clip slot index (0-based)")],
+    semitones: Annotated[
+        int,
+        typer.Option("--semitones", help="Semitone offset (can be negative)"),
+    ],
+    start_time: Annotated[
+        float | None,
+        typer.Option("--start-time", help="Inclusive start time filter in beats"),
+    ] = None,
+    end_time: Annotated[
+        float | None,
+        typer.Option("--end-time", help="Exclusive end time filter in beats"),
+    ] = None,
+    pitch: Annotated[
+        int | None,
+        typer.Option("--pitch", help="Exact MIDI pitch filter"),
+    ] = None,
+) -> None:
+    def _run() -> dict[str, object]:
+        filters = _validated_transform_filters(
+            track=track,
+            clip=clip,
+            start_time=start_time,
+            end_time=end_time,
+            pitch=pitch,
+        )
+        return get_client(ctx).clip_notes_transpose(
+            track=track,
+            clip=clip,
+            semitones=semitones,
+            start_time=filters["start_time"],
+            end_time=filters["end_time"],
+            pitch=filters["pitch"],
+        )
+
+    execute_command(
+        ctx,
+        command="clip notes transpose",
+        args={
+            "track": track,
+            "clip": clip,
+            "semitones": semitones,
             "start_time": start_time,
             "end_time": end_time,
             "pitch": pitch,

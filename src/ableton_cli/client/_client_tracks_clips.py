@@ -4,6 +4,28 @@ from typing import Any
 
 
 class _AbletonClientTracksClipsMixin:
+    def _call_clip_note_transform(
+        self,
+        command_name: str,
+        *,
+        track: int,
+        clip: int,
+        extra_args: dict[str, Any],
+        start_time: float | None,
+        end_time: float | None,
+        pitch: int | None,
+    ) -> dict[str, Any]:
+        args = self._build_clip_note_args(
+            track=track,
+            clip=clip,
+            notes=None,
+            start_time=start_time,
+            end_time=end_time,
+            pitch=pitch,
+        )
+        args.update(extra_args)
+        return self._call(command_name, args)
+
     def get_track_info(self, track: int) -> dict[str, Any]:
         return self._call("get_track_info", {"track": track})
 
@@ -122,6 +144,85 @@ class _AbletonClientTracksClipsMixin:
             pitch=pitch,
         )
         return self._call("replace_clip_notes", args)
+
+    def clip_notes_quantize(
+        self,
+        track: int,
+        clip: int,
+        grid: str,
+        strength: float,
+        start_time: float | None,
+        end_time: float | None,
+        pitch: int | None,
+    ) -> dict[str, Any]:
+        return self._call_clip_note_transform(
+            "clip_notes_quantize",
+            track=track,
+            clip=clip,
+            extra_args={"grid": grid, "strength": strength},
+            start_time=start_time,
+            end_time=end_time,
+            pitch=pitch,
+        )
+
+    def clip_notes_humanize(
+        self,
+        track: int,
+        clip: int,
+        timing: float,
+        velocity: int,
+        start_time: float | None,
+        end_time: float | None,
+        pitch: int | None,
+    ) -> dict[str, Any]:
+        return self._call_clip_note_transform(
+            "clip_notes_humanize",
+            track=track,
+            clip=clip,
+            extra_args={"timing": timing, "velocity": velocity},
+            start_time=start_time,
+            end_time=end_time,
+            pitch=pitch,
+        )
+
+    def clip_notes_velocity_scale(
+        self,
+        track: int,
+        clip: int,
+        scale: float,
+        offset: int,
+        start_time: float | None,
+        end_time: float | None,
+        pitch: int | None,
+    ) -> dict[str, Any]:
+        return self._call_clip_note_transform(
+            "clip_notes_velocity_scale",
+            track=track,
+            clip=clip,
+            extra_args={"scale": scale, "offset": offset},
+            start_time=start_time,
+            end_time=end_time,
+            pitch=pitch,
+        )
+
+    def clip_notes_transpose(
+        self,
+        track: int,
+        clip: int,
+        semitones: int,
+        start_time: float | None,
+        end_time: float | None,
+        pitch: int | None,
+    ) -> dict[str, Any]:
+        return self._call_clip_note_transform(
+            "clip_notes_transpose",
+            track=track,
+            clip=clip,
+            extra_args={"semitones": semitones},
+            start_time=start_time,
+            end_time=end_time,
+            pitch=pitch,
+        )
 
     def set_clip_name(self, track: int, clip: int, name: str) -> dict[str, Any]:
         return self._call("set_clip_name", {"track": track, "clip": clip, "name": name})

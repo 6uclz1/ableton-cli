@@ -257,11 +257,17 @@ class _AbletonClientTracksClipsMixin:
             {"track": track, "clip": clip, "value": value},
         )
 
-    def clip_duplicate(self, track: int, src_clip: int, dst_clip: int) -> dict[str, Any]:
-        return self._call(
-            "clip_duplicate",
-            {"track": track, "src_clip": src_clip, "dst_clip": dst_clip},
-        )
+    def clip_duplicate(
+        self,
+        track: int,
+        src_clip: int,
+        dst_clip: int | None = None,
+        dst_clips: list[int] | None = None,
+    ) -> dict[str, Any]:
+        args: dict[str, Any] = {"track": track, "src_clip": src_clip}
+        self._add_if_not_none(args, "dst_clip", dst_clip)
+        self._add_if_not_none(args, "dst_clips", dst_clips)
+        return self._call("clip_duplicate", args)
 
     def execute_batch(self, steps: list[dict[str, Any]]) -> dict[str, Any]:
         return self._call("execute_batch", {"steps": steps})

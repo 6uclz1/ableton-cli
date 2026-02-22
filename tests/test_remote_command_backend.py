@@ -154,8 +154,21 @@ class _BackendStub:
     def clip_active_set(self, track: int, clip: int, value: bool):  # noqa: ANN201
         return {"track": track, "clip": clip, "active": value}
 
-    def clip_duplicate(self, track: int, src_clip: int, dst_clip: int):  # noqa: ANN201
-        return {"track": track, "src_clip": src_clip, "dst_clip": dst_clip, "duplicated": True}
+    def clip_duplicate(  # noqa: ANN201
+        self,
+        track: int,
+        src_clip: int,
+        dst_clip: int | None,
+        dst_clips: list[int] | None,
+    ):
+        if dst_clip is not None:
+            return {"track": track, "src_clip": src_clip, "dst_clip": dst_clip, "duplicated": True}
+        return {
+            "track": track,
+            "src_clip": src_clip,
+            "dst_clips": dst_clips or [],
+            "duplicated": True,
+        }
 
     def clip_notes_quantize(  # noqa: ANN201
         self,
@@ -1128,6 +1141,23 @@ def test_dispatch_calls_backend_for_new_todo_commands() -> None:
     assert tracks_delete == {"track": 0, "deleted": True}
 
 
+def test_dispatch_calls_backend_for_clip_duplicate_many() -> None:
+    backend = _BackendStub()
+
+    duplicate_many = dispatch_command(
+        backend,
+        "clip_duplicate",
+        {"track": 1, "src_clip": 2, "dst_clips": [3, 4, 5]},
+    )
+
+    assert duplicate_many == {
+        "track": 1,
+        "src_clip": 2,
+        "dst_clips": [3, 4, 5],
+        "duplicated": True,
+    }
+
+
 def test_dispatch_calls_backend_for_clip_note_transform_commands() -> None:
     backend = _BackendStub()
 
@@ -1220,6 +1250,18 @@ def test_dispatch_validates_new_todo_command_arguments() -> None:
             "clip_duplicate",
             {"track": 0, "src_clip": 1, "dst_clip": -1},
         )
+    with pytest.raises(CommandError) as clip_duplicate_conflict_exc:
+        dispatch_command(
+            backend,
+            "clip_duplicate",
+            {"track": 0, "src_clip": 1, "dst_clip": 2, "dst_clips": [3]},
+        )
+    with pytest.raises(CommandError) as clip_duplicate_missing_dst_exc:
+        dispatch_command(
+            backend,
+            "clip_duplicate",
+            {"track": 0, "src_clip": 1},
+        )
     with pytest.raises(CommandError) as clip_active_set_exc:
         dispatch_command(
             backend,
@@ -1234,6 +1276,8 @@ def test_dispatch_validates_new_todo_command_arguments() -> None:
     assert song_save_exc.value.code == "INVALID_ARGUMENT"
     assert song_export_exc.value.code == "INVALID_ARGUMENT"
     assert clip_duplicate_exc.value.code == "INVALID_ARGUMENT"
+    assert clip_duplicate_conflict_exc.value.code == "INVALID_ARGUMENT"
+    assert clip_duplicate_missing_dst_exc.value.code == "INVALID_ARGUMENT"
     assert clip_active_set_exc.value.code == "INVALID_ARGUMENT"
     assert scenes_move_exc.value.code == "INVALID_ARGUMENT"
     assert tracks_delete_exc.value.code == "INVALID_ARGUMENT"

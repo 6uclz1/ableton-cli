@@ -431,6 +431,17 @@ def test_browser_load_drum_kit_requires_exactly_one_kit_selector(runner, cli_app
     assert json.loads(both_selected.stdout)["error"]["code"] == "INVALID_ARGUMENT"
 
 
+def test_clip_duplicate_rejects_invalid_to_list(runner, cli_app) -> None:
+    result = runner.invoke(
+        cli_app,
+        ["--output", "json", "clip", "duplicate", "0", "1", "--to", "1,2"],
+    )
+
+    assert result.exit_code == 2
+    payload = json.loads(result.stdout)
+    assert payload["error"]["code"] == "INVALID_ARGUMENT"
+
+
 def test_clip_notes_filters_reject_invalid_range(runner, cli_app) -> None:
     result = runner.invoke(
         cli_app,

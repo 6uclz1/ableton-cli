@@ -11,6 +11,7 @@ from .command_backend_validators import (
     _clip_notes_filter,
     _clip_quantize_grid,
     _humanize_velocity_amount,
+    _invalid_argument,
     _insert_index,
     _non_empty_string,
     _non_negative_float,
@@ -153,8 +154,49 @@ def _handle_stop_clip(backend: CommandBackend, args: dict[str, Any]) -> dict[str
 def _handle_clip_duplicate(backend: CommandBackend, args: dict[str, Any]) -> dict[str, Any]:
     track = _track_index("track", args.get("track"))
     src_clip = _track_index("src_clip", args.get("src_clip"))
-    dst_clip = _track_index("dst_clip", args.get("dst_clip"))
-    return backend.clip_duplicate(track, src_clip, dst_clip)
+    dst_clip_raw = args.get("dst_clip")
+    dst_clips_raw = args.get("dst_clips")
+    if dst_clip_raw is None and dst_clips_raw is None:
+        raise _invalid_argument(
+            message="Either dst_clip or dst_clips must be provided",
+            hint="Provide one destination clip slot or multiple destination clip slots.",
+        )
+    if dst_clip_raw is not None and dst_clips_raw is not None:
+        raise _invalid_argument(
+            message="dst_clip and dst_clips are mutually exclusive",
+            hint="Provide either dst_clip or dst_clips.",
+        )
+    if dst_clip_raw is not None:
+        dst_clip = _track_index("dst_clip", dst_clip_raw)
+        return backend.clip_duplicate(track, src_clip, dst_clip, None)
+
+    if not isinstance(dst_clips_raw, list):
+        raise _invalid_argument(
+            message="dst_clips must be an array of clip indexes",
+            hint="Pass dst_clips as a list of non-negative integers.",
+        )
+    if not dst_clips_raw:
+        raise _invalid_argument(
+            message="dst_clips must not be empty",
+            hint="Pass at least one destination clip index.",
+        )
+    parsed_dst_clips: list[int] = []
+    seen: set[int] = set()
+    for index, value in enumerate(dst_clips_raw):
+        parsed_value = _track_index(f"dst_clips[{index}]", value)
+        if parsed_value == src_clip:
+            raise _invalid_argument(
+                message=f"dst_clips[{index}] must differ from src_clip ({src_clip})",
+                hint="Use destination clip slots that are not the source clip.",
+            )
+        if parsed_value in seen:
+            raise _invalid_argument(
+                message=f"dst_clips[{index}] duplicates clip index {parsed_value}",
+                hint="Remove duplicate destination clip indexes.",
+            )
+        seen.add(parsed_value)
+        parsed_dst_clips.append(parsed_value)
+    return backend.clip_duplicate(track, src_clip, None, parsed_dst_clips)
 
 
 def _handle_clip_active_get(backend: CommandBackend, args: dict[str, Any]) -> dict[str, Any]:

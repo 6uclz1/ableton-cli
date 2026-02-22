@@ -103,8 +103,21 @@ class _ClientStub:
             "added_count": len(notes),
         }
 
-    def clip_duplicate(self, track: int, src_clip: int, dst_clip: int):  # noqa: ANN201
-        return {"track": track, "src_clip": src_clip, "dst_clip": dst_clip, "duplicated": True}
+    def clip_duplicate(  # noqa: ANN201
+        self,
+        track: int,
+        src_clip: int,
+        dst_clip: int | None = None,
+        dst_clips: list[int] | None = None,
+    ):
+        if dst_clip is not None:
+            return {"track": track, "src_clip": src_clip, "dst_clip": dst_clip, "duplicated": True}
+        return {
+            "track": track,
+            "src_clip": src_clip,
+            "dst_clips": dst_clips or [],
+            "duplicated": True,
+        }
 
     def clip_notes_quantize(  # noqa: ANN201
         self,
@@ -1295,6 +1308,26 @@ def test_clip_duplicate_command_outputs_json_envelope(runner, cli_app, monkeypat
     payload = json.loads(duplicated.stdout)
     assert payload["ok"] is True
     assert payload["result"] == {"track": 0, "src_clip": 1, "dst_clip": 2, "duplicated": True}
+
+
+def test_clip_duplicate_supports_multiple_destinations(runner, cli_app, monkeypatch) -> None:
+    from ableton_cli.commands import clip
+
+    monkeypatch.setattr(clip, "get_client", lambda ctx: _ClientStub())
+
+    duplicated = runner.invoke(
+        cli_app,
+        ["--output", "json", "clip", "duplicate", "0", "1", "--to", "2,4,5"],
+    )
+    assert duplicated.exit_code == 0
+    payload = json.loads(duplicated.stdout)
+    assert payload["ok"] is True
+    assert payload["result"] == {
+        "track": 0,
+        "src_clip": 1,
+        "dst_clips": [2, 4, 5],
+        "duplicated": True,
+    }
 
 
 def test_clip_active_commands_output_json_envelope(runner, cli_app, monkeypatch) -> None:

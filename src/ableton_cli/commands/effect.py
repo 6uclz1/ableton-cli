@@ -1,11 +1,18 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import Annotated
 
 import typer
 
 from ..runtime import execute_command, get_client
-from ._validation import invalid_argument, require_non_empty_string, require_non_negative
+from ._validation import (
+    invalid_argument,
+    require_device_index,
+    require_non_empty_string,
+    require_parameter_index,
+    require_track_index,
+)
 
 _SUPPORTED_EFFECT_TYPES = (
     "eq8",
@@ -15,6 +22,10 @@ _SUPPORTED_EFFECT_TYPES = (
     "reverb",
     "utility",
 )
+
+TrackArgument = Annotated[int, typer.Argument(help="Track index (0-based)")]
+DeviceArgument = Annotated[int, typer.Argument(help="Device index (0-based)")]
+ParameterArgument = Annotated[int, typer.Argument(help="Parameter index (0-based)")]
 
 effect_app = typer.Typer(help="Effect control commands", no_args_is_help=True)
 parameters_app = typer.Typer(help="Effect parameter listing commands", no_args_is_help=True)
@@ -30,6 +41,46 @@ def _normalize_effect_type(value: str) -> str:
             hint="Use a supported effect type.",
         )
     return normalized
+
+
+def _require_optional_track_index(track: int | None) -> int | None:
+    if track is None:
+        return None
+    return require_track_index(track)
+
+
+def _require_track_and_device_index(track: int, device: int) -> tuple[int, int]:
+    return (
+        require_track_index(track),
+        require_device_index(device),
+    )
+
+
+def _require_effect_parameter_index(parameter: int) -> int:
+    return require_parameter_index(
+        parameter,
+        hint="Use a valid parameter index from 'ableton-cli effect parameters list'.",
+    )
+
+
+def _execute_track_device_command(
+    ctx: typer.Context,
+    *,
+    command: str,
+    track: int,
+    device: int,
+    action: Callable[[int, int], dict[str, object]],
+) -> None:
+    def _run() -> dict[str, object]:
+        valid_track, valid_device = _require_track_and_device_index(track, device)
+        return action(valid_track, valid_device)
+
+    execute_command(
+        ctx,
+        command=command,
+        args={"track": track, "device": device},
+        action=_run,
+    )
 
 
 @effect_app.command("find")
@@ -48,14 +99,9 @@ def effect_find(
     ] = None,
 ) -> None:
     def _run() -> dict[str, object]:
-        if track is not None:
-            require_non_negative(
-                "track",
-                track,
-                hint="Use a valid track index from 'ableton-cli tracks list'.",
-            )
+        valid_track = _require_optional_track_index(track)
         valid_type = _normalize_effect_type(effect_type) if effect_type is not None else None
-        return get_client(ctx).find_effect_devices(track=track, effect_type=valid_type)
+        return get_client(ctx).find_effect_devices(track=valid_track, effect_type=valid_type)
 
     execute_command(
         ctx,
@@ -68,58 +114,36 @@ def effect_find(
 @parameters_app.command("list")
 def effect_parameters_list(
     ctx: typer.Context,
-    track: Annotated[int, typer.Argument(help="Track index (0-based)")],
-    device: Annotated[int, typer.Argument(help="Device index (0-based)")],
+    track: TrackArgument,
+    device: DeviceArgument,
 ) -> None:
-    def _run() -> dict[str, object]:
-        require_non_negative(
-            "track",
-            track,
-            hint="Use a valid track index from 'ableton-cli tracks list'.",
-        )
-        require_non_negative(
-            "device",
-            device,
-            hint="Use a valid device index from 'ableton-cli track info'.",
-        )
-        return get_client(ctx).list_effect_parameters(track=track, device=device)
-
-    execute_command(
+    _execute_track_device_command(
         ctx,
         command="effect parameters list",
-        args={"track": track, "device": device},
-        action=_run,
+        track=track,
+        device=device,
+        action=lambda valid_track, valid_device: get_client(ctx).list_effect_parameters(
+            track=valid_track,
+            device=valid_device,
+        ),
     )
 
 
 @parameter_app.command("set")
 def effect_parameter_set(
     ctx: typer.Context,
-    track: Annotated[int, typer.Argument(help="Track index (0-based)")],
-    device: Annotated[int, typer.Argument(help="Device index (0-based)")],
-    parameter: Annotated[int, typer.Argument(help="Parameter index (0-based)")],
+    track: TrackArgument,
+    device: DeviceArgument,
+    parameter: ParameterArgument,
     value: Annotated[float, typer.Argument(help="Target parameter value")],
 ) -> None:
     def _run() -> dict[str, object]:
-        require_non_negative(
-            "track",
-            track,
-            hint="Use a valid track index from 'ableton-cli tracks list'.",
-        )
-        require_non_negative(
-            "device",
-            device,
-            hint="Use a valid device index from 'ableton-cli track info'.",
-        )
-        require_non_negative(
-            "parameter",
-            parameter,
-            hint="Use a valid parameter index from 'ableton-cli effect parameters list'.",
-        )
+        valid_track, valid_device = _require_track_and_device_index(track, device)
+        valid_parameter = _require_effect_parameter_index(parameter)
         return get_client(ctx).set_effect_parameter_safe(
-            track=track,
-            device=device,
-            parameter=parameter,
+            track=valid_track,
+            device=valid_device,
+            parameter=valid_parameter,
             value=value,
         )
 
@@ -134,27 +158,18 @@ def effect_parameter_set(
 @effect_app.command("observe")
 def effect_observe(
     ctx: typer.Context,
-    track: Annotated[int, typer.Argument(help="Track index (0-based)")],
-    device: Annotated[int, typer.Argument(help="Device index (0-based)")],
+    track: TrackArgument,
+    device: DeviceArgument,
 ) -> None:
-    def _run() -> dict[str, object]:
-        require_non_negative(
-            "track",
-            track,
-            hint="Use a valid track index from 'ableton-cli tracks list'.",
-        )
-        require_non_negative(
-            "device",
-            device,
-            hint="Use a valid device index from 'ableton-cli track info'.",
-        )
-        return get_client(ctx).observe_effect_parameters(track=track, device=device)
-
-    execute_command(
+    _execute_track_device_command(
         ctx,
         command="effect observe",
-        args={"track": track, "device": device},
-        action=_run,
+        track=track,
+        device=device,
+        action=lambda valid_track, valid_device: get_client(ctx).observe_effect_parameters(
+            track=valid_track,
+            device=valid_device,
+        ),
     )
 
 
@@ -176,22 +191,13 @@ def _build_standard_effect_app(effect_type: str, cli_name: str) -> typer.Typer:
     @standard_app.command("set")
     def standard_set(
         ctx: typer.Context,
-        track: Annotated[int, typer.Argument(help="Track index (0-based)")],
-        device: Annotated[int, typer.Argument(help="Device index (0-based)")],
+        track: TrackArgument,
+        device: DeviceArgument,
         key: Annotated[str, typer.Argument(help="Stable effect key")],
         value: Annotated[float, typer.Argument(help="Target parameter value")],
     ) -> None:
         def _run() -> dict[str, object]:
-            require_non_negative(
-                "track",
-                track,
-                hint="Use a valid track index from 'ableton-cli tracks list'.",
-            )
-            require_non_negative(
-                "device",
-                device,
-                hint="Use a valid device index from 'ableton-cli track info'.",
-            )
+            valid_track, valid_device = _require_track_and_device_index(track, device)
             valid_key = require_non_empty_string(
                 "key",
                 key,
@@ -199,8 +205,8 @@ def _build_standard_effect_app(effect_type: str, cli_name: str) -> typer.Typer:
             )
             return get_client(ctx).set_standard_effect_parameter_safe(
                 effect_type=effect_type,
-                track=track,
-                device=device,
+                track=valid_track,
+                device=valid_device,
                 key=valid_key,
                 value=value,
             )
@@ -215,31 +221,19 @@ def _build_standard_effect_app(effect_type: str, cli_name: str) -> typer.Typer:
     @standard_app.command("observe")
     def standard_observe(
         ctx: typer.Context,
-        track: Annotated[int, typer.Argument(help="Track index (0-based)")],
-        device: Annotated[int, typer.Argument(help="Device index (0-based)")],
+        track: TrackArgument,
+        device: DeviceArgument,
     ) -> None:
-        def _run() -> dict[str, object]:
-            require_non_negative(
-                "track",
-                track,
-                hint="Use a valid track index from 'ableton-cli tracks list'.",
-            )
-            require_non_negative(
-                "device",
-                device,
-                hint="Use a valid device index from 'ableton-cli track info'.",
-            )
-            return get_client(ctx).observe_standard_effect_state(
-                effect_type=effect_type,
-                track=track,
-                device=device,
-            )
-
-        execute_command(
+        _execute_track_device_command(
             ctx,
             command=f"effect {cli_name} observe",
-            args={"track": track, "device": device},
-            action=_run,
+            track=track,
+            device=device,
+            action=lambda valid_track, valid_device: get_client(ctx).observe_standard_effect_state(
+                effect_type=effect_type,
+                track=valid_track,
+                device=valid_device,
+            ),
         )
 
     return standard_app

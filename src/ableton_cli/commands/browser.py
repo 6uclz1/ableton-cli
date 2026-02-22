@@ -12,6 +12,10 @@ browser_app = typer.Typer(help="Ableton browser commands", no_args_is_help=True)
 
 def _resolve_browser_target(target: str) -> tuple[str | None, str | None]:
     parsed = require_non_empty_string("target", target, hint="Pass a non-empty target.")
+    first_colon = parsed.find(":")
+    first_slash = parsed.find("/")
+    if first_colon >= 0 and (first_slash < 0 or first_colon < first_slash):
+        return parsed, None
     if "/" in parsed:
         return None, parsed
     if ":" in parsed:

@@ -1,0 +1,210 @@
+from __future__ import annotations
+
+from typing import Annotated
+
+import typer
+
+from .._validation import require_non_negative, require_positive_float
+from ._parsers import parse_duplicate_destinations, parse_place_pattern_destinations
+from ._shared import (
+    execute_clip_command,
+    execute_track_clip_command,
+    resolve_client,
+    validate_track_and_clip,
+)
+
+
+def register_clip_root_commands(clip_app: typer.Typer) -> None:
+    clip_app.command("create")(clip_create)
+    clip_app.command("fire")(clip_fire)
+    clip_app.command("stop")(clip_stop)
+    clip_app.command("duplicate")(clip_duplicate)
+    clip_app.command("duplicate-many")(clip_duplicate_many)
+    clip_app.command("place-pattern")(clip_place_pattern)
+
+
+def clip_create(
+    ctx: typer.Context,
+    track: Annotated[int, typer.Argument(help="Track index (0-based)")],
+    clip: Annotated[int, typer.Argument(help="Clip slot index (0-based)")],
+    length: Annotated[
+        float,
+        typer.Option("--length", help="Clip length in beats"),
+    ] = 4.0,
+) -> None:
+    def _run() -> dict[str, object]:
+        valid_track, valid_clip = validate_track_and_clip(track=track, clip=clip)
+        valid_length = require_positive_float(
+            "length",
+            length,
+            hint="Use a positive clip length in beats.",
+        )
+        return resolve_client(ctx).create_clip(valid_track, valid_clip, valid_length)
+
+    execute_clip_command(
+        ctx,
+        command="clip create",
+        args={"track": track, "clip": clip, "length": length},
+        action=_run,
+    )
+
+
+def clip_fire(
+    ctx: typer.Context,
+    track: Annotated[int, typer.Argument(help="Track index (0-based)")],
+    clip: Annotated[int, typer.Argument(help="Clip slot index (0-based)")],
+) -> None:
+    execute_track_clip_command(
+        ctx,
+        command="clip fire",
+        args={"track": track, "clip": clip},
+        track_clip=(track, clip),
+        action=lambda client, valid_track, valid_clip: client.fire_clip(valid_track, valid_clip),
+    )
+
+
+def clip_stop(
+    ctx: typer.Context,
+    track: Annotated[int, typer.Argument(help="Track index (0-based)")],
+    clip: Annotated[int, typer.Argument(help="Clip slot index (0-based)")],
+) -> None:
+    execute_track_clip_command(
+        ctx,
+        command="clip stop",
+        args={"track": track, "clip": clip},
+        track_clip=(track, clip),
+        action=lambda client, valid_track, valid_clip: client.stop_clip(valid_track, valid_clip),
+    )
+
+
+def clip_duplicate(
+    ctx: typer.Context,
+    track: Annotated[int, typer.Argument(help="Track index (0-based)")],
+    src_clip: Annotated[int, typer.Argument(help="Source clip slot index (0-based)")],
+    dst_clip: Annotated[
+        int | None,
+        typer.Argument(help="Destination clip slot index (0-based)"),
+    ] = None,
+    to: Annotated[
+        str | None,
+        typer.Option("--to", help="Comma-separated destination clip slot indexes (0-based)"),
+    ] = None,
+) -> None:
+    def _run() -> dict[str, object]:
+        valid_track = require_non_negative(
+            "track",
+            track,
+            hint="Use a valid track index from 'ableton-cli tracks list'.",
+        )
+        valid_src_clip = require_non_negative(
+            "src_clip",
+            src_clip,
+            hint="Use a valid source clip slot index.",
+        )
+        single_dst_clip, many_dst_clips = parse_duplicate_destinations(
+            src_clip=valid_src_clip,
+            dst_clip=dst_clip,
+            to=to,
+        )
+        return resolve_client(ctx).clip_duplicate(
+            track=valid_track,
+            src_clip=valid_src_clip,
+            dst_clip=single_dst_clip,
+            dst_clips=many_dst_clips,
+        )
+
+    execute_clip_command(
+        ctx,
+        command="clip duplicate",
+        args={"track": track, "src_clip": src_clip, "dst_clip": dst_clip, "to": to},
+        action=_run,
+    )
+
+
+def clip_duplicate_many(
+    ctx: typer.Context,
+    track: Annotated[int, typer.Argument(help="Track index (0-based)")],
+    src_clip: Annotated[int, typer.Argument(help="Source clip slot index (0-based)")],
+    to: Annotated[
+        str,
+        typer.Option("--to", help="Comma-separated destination clip slot indexes (0-based)"),
+    ],
+) -> None:
+    def _run() -> dict[str, object]:
+        valid_track = require_non_negative(
+            "track",
+            track,
+            hint="Use a valid track index from 'ableton-cli tracks list'.",
+        )
+        valid_src_clip = require_non_negative(
+            "src_clip",
+            src_clip,
+            hint="Use a valid source clip slot index.",
+        )
+        _single_dst_clip, many_dst_clips = parse_duplicate_destinations(
+            src_clip=valid_src_clip,
+            dst_clip=None,
+            to=to,
+        )
+        assert many_dst_clips is not None
+        return resolve_client(ctx).clip_duplicate(
+            track=valid_track,
+            src_clip=valid_src_clip,
+            dst_clips=many_dst_clips,
+        )
+
+    execute_clip_command(
+        ctx,
+        command="clip duplicate-many",
+        args={"track": track, "src_clip": src_clip, "to": to},
+        action=_run,
+    )
+
+
+def clip_place_pattern(
+    ctx: typer.Context,
+    track: Annotated[int, typer.Argument(help="Track index (0-based)")],
+    clip: Annotated[
+        int,
+        typer.Option("--clip", help="Source clip slot index to place (0-based)"),
+    ],
+    scenes: Annotated[
+        str,
+        typer.Option(
+            "--scenes",
+            help=(
+                "Scene selectors: comma-separated indexes/ranges/names "
+                "(e.g. 2,4,6 or 2-6 or Intro,Drop)"
+            ),
+        ),
+    ],
+) -> None:
+    def _run() -> dict[str, object]:
+        valid_track = require_non_negative(
+            "track",
+            track,
+            hint="Use a valid track index from 'ableton-cli tracks list'.",
+        )
+        src_clip = require_non_negative(
+            "clip",
+            clip,
+            hint="Use a valid source clip slot index.",
+        )
+        client = resolve_client(ctx)
+        dst_clips = parse_place_pattern_destinations(
+            src_clip=src_clip,
+            scenes=scenes,
+            load_scenes=client.scenes_list,
+        )
+        return client.clip_duplicate(
+            track=valid_track,
+            src_clip=src_clip,
+            dst_clips=dst_clips,
+        )
+
+    execute_clip_command(
+        ctx,
+        command="clip place-pattern",
+        args={"track": track, "clip": clip, "scenes": scenes},
+        action=_run,
+    )

@@ -121,9 +121,7 @@ def config_set(
     )
 
 
-def register(app: typer.Typer) -> None:
-    app.add_typer(config_app, name="config")
-
+def _register_doctor_command(app: typer.Typer) -> None:
     @app.command("doctor")
     def doctor(ctx: typer.Context) -> None:
         def _run() -> dict[str, object]:
@@ -138,6 +136,8 @@ def register(app: typer.Typer) -> None:
             human_formatter=_format_doctor_human,
         )
 
+
+def _register_install_remote_script_command(app: typer.Typer) -> None:
     @app.command("install-remote-script")
     def install_remote_script_command(
         ctx: typer.Context,
@@ -186,6 +186,8 @@ def register(app: typer.Typer) -> None:
             action=_run,
         )
 
+
+def _register_install_skill_command(app: typer.Typer) -> None:
     @app.command("install-skill")
     def install_skill_command(
         ctx: typer.Context,
@@ -231,6 +233,8 @@ def register(app: typer.Typer) -> None:
             action=_run,
         )
 
+
+def _register_ping_command(app: typer.Typer) -> None:
     @app.command("ping")
     def ping(ctx: typer.Context) -> None:
         def _run() -> dict[str, object]:
@@ -256,6 +260,8 @@ def register(app: typer.Typer) -> None:
             action=_run,
         )
 
+
+def _register_wait_ready_command(app: typer.Typer) -> None:
     @app.command("wait-ready")
     def wait_ready(
         ctx: typer.Context,
@@ -328,6 +334,8 @@ def register(app: typer.Typer) -> None:
             action=_run,
         )
 
+
+def _register_completion_command(app: typer.Typer) -> None:
     @app.command("completion")
     def completion(ctx: typer.Context) -> None:
         execute_command(
@@ -336,3 +344,13 @@ def register(app: typer.Typer) -> None:
             args={},
             action=lambda: {"message": completion_help()},
         )
+
+
+def register(app: typer.Typer) -> None:
+    app.add_typer(config_app, name="config")
+    _register_doctor_command(app)
+    _register_install_remote_script_command(app)
+    _register_install_skill_command(app)
+    _register_ping_command(app)
+    _register_wait_ready_command(app)
+    _register_completion_command(app)

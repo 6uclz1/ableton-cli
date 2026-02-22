@@ -577,6 +577,18 @@ def test_live_backend_browser_uri_lookup_normalizes_percent_encoding() -> None:
     assert load["loaded"] is True
 
 
+def test_live_backend_browser_unknown_uri_is_deterministic_without_fallback() -> None:
+    backend = LiveBackend(_SurfaceStub())
+    uri = "query:Synths#Missing-Device"
+
+    item = backend.get_browser_item(uri=uri, path=None)
+    assert item == {"uri": uri, "path": None, "found": False}
+
+    with pytest.raises(CommandError) as exc_info:
+        backend.load_instrument_or_effect(0, uri=uri, path=None)
+    assert exc_info.value.code == "INVALID_ARGUMENT"
+
+
 def test_live_backend_browser_search_matches_query_and_order() -> None:
     backend = LiveBackend(_SurfaceStub())
 

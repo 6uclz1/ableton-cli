@@ -277,6 +277,40 @@ Skill-oriented references are in `docs/skills/`:
 
 All skill command examples assume the `uv run ableton-cli ...` form.
 
+## Quality Harness (Phase 2)
+
+Phase 2 extends the AST-based quality harness with:
+
+- baseline comparison (`--baseline`)
+- internal dependency cycle detection
+- layer violation detection
+- existing Phase 1 metrics (complexity, nesting, args, imports, token estimate, duplication, god class risk)
+
+Run locally:
+
+```bash
+uv run python tools/quality_harness.py --config .quality-harness.yml --report quality-harness-report.json
+```
+
+Run with baseline comparison:
+
+```bash
+uv run python tools/quality_harness.py --config .quality-harness.yml --report quality-harness-report.json --baseline ./baseline-quality-harness-report.json
+```
+
+Exit codes:
+
+- `0`: no fail-level violations
+- `1`: fail-level violations detected
+- `2`: invalid config/runtime error
+
+Default thresholds in `.quality-harness.yml` are calibrated for this repository's current shape (warn-heavy, fail-guarded).
+They are intended to keep CI fail-level guardrails active while surfacing refactoring candidates as warnings.
+
+Detailed specification and known limits:
+
+- `docs/quality-harness-phase2.md`
+
 ## Development
 
 ```bash

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import pytest
 
+from ableton_cli.capabilities import required_remote_commands
 from remote_script.AbletonCliRemote.command_backend import CommandError, dispatch_command
 
 
@@ -499,6 +500,13 @@ def test_dispatch_ping_includes_supported_commands_and_hash() -> None:
     assert "clip_duplicate" in result["supported_commands"]
     assert "scenes_move" in result["supported_commands"]
     assert "tracks_delete" in result["supported_commands"]
+
+
+def test_dispatch_ping_supported_commands_match_required_set() -> None:
+    backend = _BackendStub()
+    result = dispatch_command(backend, "ping", {})
+
+    assert set(result["supported_commands"]) == required_remote_commands()
 
 
 def test_dispatch_calls_backend_for_audio_track_creation() -> None:

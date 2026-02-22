@@ -51,12 +51,21 @@ def test_ping_unreachable_outputs_json_error(runner, cli_app) -> None:
 
 
 def test_install_remote_script_verify_includes_doctor_result(runner, cli_app, monkeypatch) -> None:
+    import ableton_cli.app as app_module
     from ableton_cli.commands import setup
 
-    monkeypatch.setattr(
-        setup,
-        "install_remote_script",
-        lambda yes, dry_run: {
+    class _PlatformPathsSentinel:
+        pass
+
+    platform_paths = _PlatformPathsSentinel()
+    seen: dict[str, object] = {}
+
+    def _install_remote_script_stub(
+        *, yes: bool, dry_run: bool, platform_paths
+    ) -> dict[str, object]:
+        del yes
+        seen["install"] = platform_paths
+        return {
             "action": "install",
             "dry_run": dry_run,
             "target": "/tmp/AbletonCliRemote",
@@ -64,16 +73,27 @@ def test_install_remote_script_verify_includes_doctor_result(runner, cli_app, mo
             "backup": None,
             "backups": [],
             "candidates": ["/tmp"],
-        },
+        }
+
+    def _run_doctor_stub(settings, *, platform_paths) -> dict[str, object]:
+        del settings
+        seen["doctor"] = platform_paths
+        return {
+            "summary": {"pass": 1, "warn": 0, "fail": 0},
+            "checks": [],
+        }
+
+    monkeypatch.setattr(
+        setup,
+        "install_remote_script",
+        _install_remote_script_stub,
     )
     monkeypatch.setattr(
         setup,
         "run_doctor",
-        lambda settings: {
-            "summary": {"pass": 1, "warn": 0, "fail": 0},
-            "checks": [],
-        },
+        _run_doctor_stub,
     )
+    monkeypatch.setattr(app_module, "_build_platform_paths_for_current_os", lambda: platform_paths)
 
     result = runner.invoke(
         cli_app,
@@ -86,6 +106,8 @@ def test_install_remote_script_verify_includes_doctor_result(runner, cli_app, mo
     assert payload["command"] == "install-remote-script"
     assert payload["result"]["dry_run"] is True
     assert payload["result"]["verification"]["summary"]["pass"] == 1
+    assert seen["install"] is platform_paths
+    assert seen["doctor"] is platform_paths
 
 
 def test_install_skill_outputs_json_envelope(runner, cli_app, monkeypatch) -> None:
@@ -94,7 +116,7 @@ def test_install_skill_outputs_json_envelope(runner, cli_app, monkeypatch) -> No
     monkeypatch.setattr(
         setup,
         "install_skill",
-        lambda yes, dry_run, target: {
+        lambda yes, dry_run, platform_paths, target: {
             "action": "install",
             "dry_run": dry_run,
             "target_type": target,
@@ -117,6 +139,23 @@ def test_install_skill_outputs_json_envelope(runner, cli_app, monkeypatch) -> No
     assert payload["result"]["dry_run"] is True
     assert payload["result"]["target_type"] == "claude"
     assert payload["result"]["target"] == "/tmp/.claude/skills/ableton-cli/SKILL.md"
+
+
+def test_bootstrap_fails_for_unsupported_os(runner, cli_app, monkeypatch) -> None:
+    import ableton_cli.app as app_module
+
+    monkeypatch.setattr(app_module.platform, "system", lambda: "Solaris")
+
+    result = runner.invoke(
+        cli_app,
+        ["--output", "json", "config", "show"],
+    )
+
+    assert result.exit_code == 20
+    payload = json.loads(result.stdout)
+    assert payload["ok"] is False
+    assert payload["command"] == "bootstrap"
+    assert payload["error"]["code"] == "UNSUPPORTED_OS"
 
 
 def test_ping_includes_capabilities_when_remote_reports_them(runner, cli_app, monkeypatch) -> None:

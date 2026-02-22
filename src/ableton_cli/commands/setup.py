@@ -126,11 +126,15 @@ def register(app: typer.Typer) -> None:
 
     @app.command("doctor")
     def doctor(ctx: typer.Context) -> None:
+        def _run() -> dict[str, object]:
+            runtime = get_runtime(ctx)
+            return run_doctor(runtime.settings, platform_paths=runtime.platform_paths)
+
         execute_command(
             ctx,
             command="doctor",
             args={},
-            action=lambda: run_doctor(get_runtime(ctx).settings),
+            action=_run,
             human_formatter=_format_doctor_human,
         )
 
@@ -161,10 +165,15 @@ def register(app: typer.Typer) -> None:
         ] = False,
     ) -> None:
         def _run() -> dict[str, object]:
-            install_result = install_remote_script(yes=yes, dry_run=dry_run)
+            runtime = get_runtime(ctx)
+            install_result = install_remote_script(
+                yes=yes,
+                dry_run=dry_run,
+                platform_paths=runtime.platform_paths,
+            )
             if not verify:
                 return install_result
-            doctor_result = run_doctor(get_runtime(ctx).settings)
+            doctor_result = run_doctor(runtime.settings, platform_paths=runtime.platform_paths)
             return {
                 **install_result,
                 "verification": doctor_result,
@@ -205,11 +214,21 @@ def register(app: typer.Typer) -> None:
         ] = "codex",
     ) -> None:
         normalized_target = target.strip().lower()
+
+        def _run() -> dict[str, object]:
+            runtime = get_runtime(ctx)
+            return install_skill(
+                yes=yes,
+                dry_run=dry_run,
+                platform_paths=runtime.platform_paths,
+                target=normalized_target,
+            )
+
         execute_command(
             ctx,
             command="install-skill",
             args={"yes": yes, "dry_run": dry_run, "target": normalized_target},
-            action=lambda: install_skill(yes=yes, dry_run=dry_run, target=normalized_target),
+            action=_run,
         )
 
     @app.command("ping")

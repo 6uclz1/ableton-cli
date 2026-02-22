@@ -1,40 +1,22 @@
 from __future__ import annotations
 
 import os
-import platform
 import shutil
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 from .errors import AppError, ExitCode
+from .platform_paths import PlatformPaths
 
 REMOTE_SCRIPT_DIR_NAME = "AbletonCliRemote"
 SKILL_DIR_NAME = "ableton-cli"
 SKILL_FILE_NAME = "SKILL.md"
 CODEX_HOME_ENV_VAR = "CODEX_HOME"
-CLAUDE_HOME_DIR_NAME = ".claude"
 
 
 def remote_script_source_dir() -> Path:
     return Path(__file__).resolve().parents[2] / "remote_script" / REMOTE_SCRIPT_DIR_NAME
-
-
-def remote_script_candidate_dirs(home: Path | None = None) -> list[Path]:
-    home = home or Path.home()
-    system = platform.system().lower()
-
-    if system == "darwin":
-        return [
-            home / "Music" / "Ableton" / "User Library" / "Remote Scripts",
-            home / "Documents" / "Ableton" / "User Library" / "Remote Scripts",
-        ]
-    if system == "windows":
-        return [
-            home / "Documents" / "Ableton" / "User Library" / "Remote Scripts",
-        ]
-
-    return [home / "Ableton" / "User Library" / "Remote Scripts"]
 
 
 def _select_target_roots(candidates: list[Path]) -> list[Path]:
@@ -55,7 +37,12 @@ def _select_target_roots(candidates: list[Path]) -> list[Path]:
     )
 
 
-def install_remote_script(*, dry_run: bool, yes: bool) -> dict[str, Any]:
+def install_remote_script(
+    *,
+    dry_run: bool,
+    yes: bool,
+    platform_paths: PlatformPaths,
+) -> dict[str, Any]:
     del yes  # reserved for explicit confirmation flows; command stays non-interactive.
 
     source = remote_script_source_dir()
@@ -67,7 +54,7 @@ def install_remote_script(*, dry_run: bool, yes: bool) -> dict[str, Any]:
             exit_code=ExitCode.REMOTE_SCRIPT_NOT_DETECTED,
         )
 
-    candidates = remote_script_candidate_dirs()
+    candidates = platform_paths.remote_script_candidate_dirs()
     target_roots = _select_target_roots(candidates)
 
     targets: list[str] = []
@@ -121,14 +108,15 @@ def _resolve_codex_home(codex_home: Path | None) -> Path:
     return Path(raw_value)
 
 
-def _resolve_claude_home(claude_home: Path | None) -> Path:
+def _resolve_claude_home(*, claude_home: Path | None, platform_paths: PlatformPaths) -> Path:
     if claude_home is not None:
         return claude_home
-    return Path.home() / CLAUDE_HOME_DIR_NAME
+    return platform_paths.claude_home_dir()
 
 
 def _resolve_skill_home(
     *,
+    platform_paths: PlatformPaths,
     target: str,
     codex_home: Path | None,
     claude_home: Path | None,
@@ -136,7 +124,7 @@ def _resolve_skill_home(
     if target == "codex":
         return _resolve_codex_home(codex_home)
     if target == "claude":
-        return _resolve_claude_home(claude_home)
+        return _resolve_claude_home(claude_home=claude_home, platform_paths=platform_paths)
     raise AppError(
         error_code="INVALID_ARGUMENT",
         message=f"target must be one of: codex, claude (got {target!r})",
@@ -149,6 +137,7 @@ def install_skill(
     *,
     dry_run: bool,
     yes: bool,
+    platform_paths: PlatformPaths,
     target: str = "codex",
     codex_home: Path | None = None,
     claude_home: Path | None = None,
@@ -165,6 +154,7 @@ def install_skill(
         )
 
     resolved_home = _resolve_skill_home(
+        platform_paths=platform_paths,
         target=target,
         codex_home=codex_home,
         claude_home=claude_home,

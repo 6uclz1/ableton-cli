@@ -18,11 +18,13 @@ from .output import (
     error_payload,
     success_payload,
 )
+from .platform_paths import PlatformPaths
 
 
 @dataclass(slots=True)
 class RuntimeContext:
     settings: Settings
+    platform_paths: PlatformPaths
     output_mode: OutputMode
     quiet: bool
     no_color: bool

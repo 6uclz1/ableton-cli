@@ -109,11 +109,14 @@ uv run ableton-cli clip groove set 0 0 grooves/Hip\ Hop\ Boom\ Bap\ 16ths\ 90\ b
 uv run ableton-cli clip groove amount set 0 0 0.6
 uv run ableton-cli clip groove clear 0 0
 uv run ableton-cli clip name set 0 0 "Hook"
+uv run ableton-cli clip name set-many 0 --map "1:Main,2:Var,5:Peak"
 uv run ableton-cli clip fire 0 0
 uv run ableton-cli clip stop 0 0
 uv run ableton-cli clip active get 0 0
 uv run ableton-cli clip active set 0 0 false
 uv run ableton-cli clip duplicate 0 0 1
+uv run ableton-cli clip duplicate-many 0 0 --to 2,4,5,6
+uv run ableton-cli clip place-pattern 0 --clip 0 --scenes Intro,Drop,Peak
 ```
 
 ### Scenes

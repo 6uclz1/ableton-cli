@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import Annotated
 
 import typer
@@ -129,14 +130,17 @@ def _parse_duplicate_destinations(
             hint="Use either a single dst_clip argument or --to for multiple destinations.",
         )
     if dst_clip is not None:
-        return (
-            require_non_negative(
-                "dst_clip",
-                dst_clip,
-                hint="Use a valid destination clip slot index.",
-            ),
-            None,
+        normalized_dst_clip = require_non_negative(
+            "dst_clip",
+            dst_clip,
+            hint="Use a valid destination clip slot index.",
         )
+        if normalized_dst_clip == src_clip:
+            raise invalid_argument(
+                message=f"Destination clip index must differ from src_clip ({src_clip})",
+                hint="Use a destination index that is not the source clip.",
+            )
+        return (normalized_dst_clip, None)
 
     assert to is not None
     parsed = require_non_empty_string("to", to, hint="Use comma-separated clip slots like 2,4,5.")
@@ -153,29 +157,220 @@ def _parse_duplicate_destinations(
                 message=f"Invalid destination clip index in --to: {token!r}",
                 hint="Use comma-separated non-negative integers like 2,4,5.",
             ) from exc
-        if value < 0:
-            raise invalid_argument(
-                message=f"Destination clip index must be >= 0, got {value}",
-                hint="Use non-negative destination clip indexes.",
-            )
-        if value == src_clip:
-            raise invalid_argument(
-                message=f"Destination clip index must differ from src_clip ({src_clip})",
-                hint="Use destination indexes that are not the source clip.",
-            )
-        if value in seen:
-            raise invalid_argument(
-                message=f"Duplicate destination clip index in --to: {value}",
-                hint="Remove duplicated destination indexes.",
-            )
-        seen.add(value)
-        destinations.append(value)
+        _append_destination_index(
+            src_clip=src_clip,
+            value=value,
+            seen=seen,
+            destinations=destinations,
+            source_label="--to",
+        )
     if not destinations:
         raise invalid_argument(
             message="--to must include at least one destination clip index",
             hint="Use comma-separated indexes like --to 2,4,5.",
         )
     return None, destinations
+
+
+def _append_destination_index(
+    *,
+    src_clip: int,
+    value: int,
+    seen: set[int],
+    destinations: list[int],
+    source_label: str,
+) -> None:
+    if value < 0:
+        raise invalid_argument(
+            message=f"Destination clip index must be >= 0, got {value}",
+            hint="Use non-negative destination clip indexes.",
+        )
+    if value == src_clip:
+        raise invalid_argument(
+            message=f"Destination clip index must differ from src_clip ({src_clip})",
+            hint="Use destination indexes that are not the source clip.",
+        )
+    if value in seen:
+        raise invalid_argument(
+            message=f"Duplicate destination clip index in {source_label}: {value}",
+            hint="Remove duplicated destination indexes.",
+        )
+    seen.add(value)
+    destinations.append(value)
+
+
+def _parse_scene_token_as_range(token: str) -> tuple[int, int] | None:
+    parts = token.split("-", 1)
+    if len(parts) != 2:
+        return None
+    start_text = parts[0].strip()
+    end_text = parts[1].strip()
+    if not start_text or not end_text:
+        return None
+    if not start_text.isdigit() or not end_text.isdigit():
+        return None
+    start = int(start_text)
+    end = int(end_text)
+    if end < start:
+        raise invalid_argument(
+            message=f"Scene range must be ascending, got {token!r}",
+            hint="Use scene ranges like 2-6.",
+        )
+    return (start, end)
+
+
+def _extract_scene_index_by_name(
+    *,
+    scenes_payload: dict[str, object],
+    name: str,
+) -> int:
+    raw_scenes = scenes_payload.get("scenes")
+    if not isinstance(raw_scenes, list):
+        raise invalid_argument(
+            message="scenes list response is invalid",
+            hint="Retry after confirming Ableton scenes are available.",
+        )
+    normalized_name = name.casefold()
+    matches: list[int] = []
+    for raw_scene in raw_scenes:
+        if not isinstance(raw_scene, dict):
+            continue
+        raw_index = raw_scene.get("index")
+        raw_scene_name = raw_scene.get("name")
+        if not isinstance(raw_index, int) or raw_index < 0:
+            continue
+        if not isinstance(raw_scene_name, str):
+            continue
+        if raw_scene_name.strip().casefold() == normalized_name:
+            matches.append(raw_index)
+
+    if not matches:
+        raise invalid_argument(
+            message=f"Unknown scene name in --scenes: {name!r}",
+            hint="Use scene indexes/ranges or existing scene names from 'ableton-cli scenes list'.",
+        )
+    if len(matches) > 1:
+        raise invalid_argument(
+            message=f"Scene name is ambiguous in --scenes: {name!r}",
+            hint="Use numeric scene indexes for duplicated scene names.",
+        )
+    return matches[0]
+
+
+def _parse_place_pattern_destinations(
+    *,
+    src_clip: int,
+    scenes: str,
+    load_scenes: Callable[[], dict[str, object]],
+) -> list[int]:
+    parsed = require_non_empty_string(
+        "scenes",
+        scenes,
+        hint="Use scene selectors like 2,4,6 or 2-6 or Intro,Drop.",
+    )
+    tokens = [token.strip() for token in parsed.split(",")]
+    if any(not token for token in tokens):
+        raise invalid_argument(
+            message="--scenes contains an empty selector",
+            hint="Use comma-separated selectors like 2,4 or Intro,Drop.",
+        )
+
+    destinations: list[int] = []
+    seen: set[int] = set()
+    scenes_payload: dict[str, object] | None = None
+    for token in tokens:
+        parsed_range = _parse_scene_token_as_range(token)
+        if parsed_range is not None:
+            start, end = parsed_range
+            for value in range(start, end + 1):
+                _append_destination_index(
+                    src_clip=src_clip,
+                    value=value,
+                    seen=seen,
+                    destinations=destinations,
+                    source_label="--scenes",
+                )
+            continue
+
+        if token.isdigit():
+            _append_destination_index(
+                src_clip=src_clip,
+                value=int(token),
+                seen=seen,
+                destinations=destinations,
+                source_label="--scenes",
+            )
+            continue
+
+        if scenes_payload is None:
+            scenes_payload = load_scenes()
+        scene_index = _extract_scene_index_by_name(scenes_payload=scenes_payload, name=token)
+        _append_destination_index(
+            src_clip=src_clip,
+            value=scene_index,
+            seen=seen,
+            destinations=destinations,
+            source_label="--scenes",
+        )
+
+    if not destinations:
+        raise invalid_argument(
+            message="--scenes must include at least one destination",
+            hint="Use scene selectors like 2,4 or Intro,Drop.",
+        )
+    return destinations
+
+
+def _parse_clip_name_assignments(mapping: str) -> list[tuple[int, str]]:
+    parsed = require_non_empty_string(
+        "map",
+        mapping,
+        hint="Use clip:name pairs like 1:Main,2:Var.",
+    )
+    tokens = [token.strip() for token in parsed.split(",")]
+    if any(not token for token in tokens):
+        raise invalid_argument(
+            message="--map contains an empty assignment",
+            hint="Use clip:name pairs like 1:Main,2:Var.",
+        )
+
+    assignments: list[tuple[int, str]] = []
+    seen: set[int] = set()
+    for token in tokens:
+        if ":" not in token:
+            raise invalid_argument(
+                message=f"Invalid clip:name pair in --map: {token!r}",
+                hint="Use clip:name pairs like 1:Main,2:Var.",
+            )
+        clip_token, name_token = token.split(":", 1)
+        clip_raw = clip_token.strip()
+        try:
+            clip = int(clip_raw)
+        except ValueError as exc:
+            raise invalid_argument(
+                message=f"Invalid clip index in --map: {clip_raw!r}",
+                hint="Use non-negative clip indexes like 1:Main.",
+            ) from exc
+        clip = require_non_negative("clip", clip, hint="Use non-negative clip indexes in --map.")
+        if clip in seen:
+            raise invalid_argument(
+                message=f"Duplicate clip index in --map: {clip}",
+                hint="Assign each clip index once in --map.",
+            )
+        seen.add(clip)
+        name = require_non_empty_string(
+            "name",
+            name_token,
+            hint="Use non-empty names in --map, e.g. 1:Main.",
+        )
+        assignments.append((clip, name))
+
+    if not assignments:
+        raise invalid_argument(
+            message="--map must include at least one clip:name pair",
+            hint="Use clip:name pairs like 1:Main,2:Var.",
+        )
+    return assignments
 
 
 @clip_app.command("create")
@@ -899,6 +1094,41 @@ def clip_name_set(
     )
 
 
+@name_app.command("set-many")
+def clip_name_set_many(
+    ctx: typer.Context,
+    track: Annotated[int, typer.Argument(help="Track index (0-based)")],
+    map_: Annotated[
+        str,
+        typer.Option("--map", help="Comma-separated clip:name pairs (e.g. 1:Main,2:Var)"),
+    ],
+) -> None:
+    def _run() -> dict[str, object]:
+        require_non_negative(
+            "track",
+            track,
+            hint="Use a valid track index from 'ableton-cli tracks list'.",
+        )
+        assignments = _parse_clip_name_assignments(map_)
+        client = get_client(ctx)
+        updated = [
+            client.set_clip_name(track=track, clip=clip_index, name=clip_name)
+            for clip_index, clip_name in assignments
+        ]
+        return {
+            "track": track,
+            "updated_count": len(updated),
+            "updated": updated,
+        }
+
+    execute_command(
+        ctx,
+        command="clip name set-many",
+        args={"track": track, "map": map_},
+        action=_run,
+    )
+
+
 @clip_app.command("fire")
 def clip_fire(
     ctx: typer.Context,
@@ -994,6 +1224,97 @@ def clip_duplicate(
         ctx,
         command="clip duplicate",
         args={"track": track, "src_clip": src_clip, "dst_clip": dst_clip, "to": to},
+        action=_run,
+    )
+
+
+@clip_app.command("duplicate-many")
+def clip_duplicate_many(
+    ctx: typer.Context,
+    track: Annotated[int, typer.Argument(help="Track index (0-based)")],
+    src_clip: Annotated[int, typer.Argument(help="Source clip slot index (0-based)")],
+    to: Annotated[
+        str,
+        typer.Option("--to", help="Comma-separated destination clip slot indexes (0-based)"),
+    ],
+) -> None:
+    def _run() -> dict[str, object]:
+        require_non_negative(
+            "track",
+            track,
+            hint="Use a valid track index from 'ableton-cli tracks list'.",
+        )
+        require_non_negative(
+            "src_clip",
+            src_clip,
+            hint="Use a valid source clip slot index.",
+        )
+        _single_dst_clip, many_dst_clips = _parse_duplicate_destinations(
+            src_clip=src_clip,
+            dst_clip=None,
+            to=to,
+        )
+        assert many_dst_clips is not None
+        return get_client(ctx).clip_duplicate(
+            track=track,
+            src_clip=src_clip,
+            dst_clips=many_dst_clips,
+        )
+
+    execute_command(
+        ctx,
+        command="clip duplicate-many",
+        args={"track": track, "src_clip": src_clip, "to": to},
+        action=_run,
+    )
+
+
+@clip_app.command("place-pattern")
+def clip_place_pattern(
+    ctx: typer.Context,
+    track: Annotated[int, typer.Argument(help="Track index (0-based)")],
+    clip: Annotated[
+        int,
+        typer.Option("--clip", help="Source clip slot index to place (0-based)"),
+    ],
+    scenes: Annotated[
+        str,
+        typer.Option(
+            "--scenes",
+            help=(
+                "Scene selectors: comma-separated indexes/ranges/names "
+                "(e.g. 2,4,6 or 2-6 or Intro,Drop)"
+            ),
+        ),
+    ],
+) -> None:
+    def _run() -> dict[str, object]:
+        require_non_negative(
+            "track",
+            track,
+            hint="Use a valid track index from 'ableton-cli tracks list'.",
+        )
+        src_clip = require_non_negative(
+            "clip",
+            clip,
+            hint="Use a valid source clip slot index.",
+        )
+        client = get_client(ctx)
+        dst_clips = _parse_place_pattern_destinations(
+            src_clip=src_clip,
+            scenes=scenes,
+            load_scenes=client.scenes_list,
+        )
+        return client.clip_duplicate(
+            track=track,
+            src_clip=src_clip,
+            dst_clips=dst_clips,
+        )
+
+    execute_command(
+        ctx,
+        command="clip place-pattern",
+        args={"track": track, "clip": clip, "scenes": scenes},
         action=_run,
     )
 

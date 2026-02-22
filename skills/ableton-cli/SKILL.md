@@ -102,6 +102,8 @@ uv run ableton-cli clip notes replace 0 0 --notes-json '[{"pitch":65,"start_time
 uv run ableton-cli clip name set 0 0 "Hook"
 uv run ableton-cli clip fire 0 0
 uv run ableton-cli clip stop 0 0
+uv run ableton-cli clip active get 0 0
+uv run ableton-cli clip active set 0 0 false
 uv run ableton-cli clip duplicate 0 0 1
 ```
 

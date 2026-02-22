@@ -60,6 +60,7 @@ class _Clip:
         self.length = float(length)
         self.is_playing = False
         self.is_recording = False
+        self.muted = False
         self._notes: list[_MidiNote] = []
         self._next_note_id = 1
 
@@ -592,6 +593,18 @@ def test_live_backend_clip_lifecycle() -> None:
     assert backend.set_clip_name(0, 0, "Hook") == {"track": 0, "clip": 0, "name": "Hook"}
     assert backend.fire_clip(0, 0) == {"track": 0, "clip": 0, "fired": True}
     assert backend.stop_clip(0, 0) == {"track": 0, "clip": 0, "stopped": True}
+
+
+def test_live_backend_clip_active_toggle_is_non_destructive() -> None:
+    backend = LiveBackend(_SurfaceStub())
+    backend.create_clip(0, 0, 4.0)
+    backend.add_notes_to_clip(0, 0, [_note()])
+
+    assert backend.clip_active_get(0, 0) == {"track": 0, "clip": 0, "active": True}
+    assert backend.clip_active_set(0, 0, False) == {"track": 0, "clip": 0, "active": False}
+    assert backend.get_clip_notes(0, 0, None, None, None)["note_count"] == 1
+    assert backend.clip_active_set(0, 0, True) == {"track": 0, "clip": 0, "active": True}
+    assert backend.get_clip_notes(0, 0, None, None, None)["note_count"] == 1
 
 
 def test_live_backend_browser_and_loading_operations() -> None:

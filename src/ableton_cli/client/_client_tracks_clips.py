@@ -132,6 +132,15 @@ class _AbletonClientTracksClipsMixin:
     def stop_clip(self, track: int, clip: int) -> dict[str, Any]:
         return self._call("stop_clip", {"track": track, "clip": clip})
 
+    def clip_active_get(self, track: int, clip: int) -> dict[str, Any]:
+        return self._call("clip_active_get", {"track": track, "clip": clip})
+
+    def clip_active_set(self, track: int, clip: int, value: bool) -> dict[str, Any]:
+        return self._call(
+            "clip_active_set",
+            {"track": track, "clip": clip, "value": value},
+        )
+
     def clip_duplicate(self, track: int, src_clip: int, dst_clip: int) -> dict[str, Any]:
         return self._call(
             "clip_duplicate",

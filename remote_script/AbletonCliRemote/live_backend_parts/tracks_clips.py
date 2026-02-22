@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from ..command_backend import CommandError
-from .base import _invalid_argument
+from .base import _invalid_argument, _not_supported_by_live_api
 
 
 class LiveBackendTracksClipsMixin:
@@ -224,6 +224,47 @@ class LiveBackendTracksClipsMixin:
             )
         slot.stop()
         return {"track": track, "clip": clip, "stopped": True}
+
+    def clip_active_get(self, track: int, clip: int) -> dict[str, Any]:
+        slot = self._clip_slot_at(track, clip)
+        if not slot.has_clip:
+            raise _invalid_argument(
+                message="No clip in slot",
+                hint="Create a clip in the target slot before reading active state.",
+            )
+        clip_obj = slot.clip
+        assert clip_obj is not None
+        if not hasattr(clip_obj, "muted"):
+            raise _not_supported_by_live_api(
+                message="Clip active API is not available in Live API",
+                hint="Use Ableton Live version exposing clip muted state.",
+            )
+        return {
+            "track": track,
+            "clip": clip,
+            "active": not bool(getattr(clip_obj, "muted")),
+        }
+
+    def clip_active_set(self, track: int, clip: int, value: bool) -> dict[str, Any]:
+        slot = self._clip_slot_at(track, clip)
+        if not slot.has_clip:
+            raise _invalid_argument(
+                message="No clip in slot",
+                hint="Create a clip in the target slot before updating active state.",
+            )
+        clip_obj = slot.clip
+        assert clip_obj is not None
+        if not hasattr(clip_obj, "muted"):
+            raise _not_supported_by_live_api(
+                message="Clip active API is not available in Live API",
+                hint="Use Ableton Live version exposing clip muted state.",
+            )
+        clip_obj.muted = not bool(value)
+        return {
+            "track": track,
+            "clip": clip,
+            "active": not bool(getattr(clip_obj, "muted")),
+        }
 
     def clip_duplicate(self, track: int, src_clip: int, dst_clip: int) -> dict[str, Any]:
         source_slot = self._clip_slot_at(track, src_clip)

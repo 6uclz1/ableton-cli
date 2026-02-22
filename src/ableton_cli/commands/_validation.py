@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
+from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import Any
 
 from ..errors import AppError, ExitCode
@@ -36,11 +36,31 @@ def require_positive_float(name: str, value: float, *, hint: str) -> float:
     return value
 
 
+def require_non_negative_float(name: str, value: float, *, hint: str) -> float:
+    if value < 0:
+        raise invalid_argument(message=f"{name} must be >= 0, got {value}", hint=hint)
+    return value
+
+
 def require_non_empty_string(name: str, value: str, *, hint: str) -> str:
     stripped = value.strip()
     if not stripped:
         raise invalid_argument(message=f"{name} must not be empty", hint=hint)
     return stripped
+
+
+def _is_absolute_filesystem_path(value: str) -> bool:
+    return PurePosixPath(value).is_absolute() or PureWindowsPath(value).is_absolute()
+
+
+def require_absolute_path(name: str, value: str, *, hint: str) -> str:
+    parsed = require_non_empty_string(name, value, hint=hint)
+    if not _is_absolute_filesystem_path(parsed):
+        raise invalid_argument(
+            message=f"{name} must be an absolute path, got {parsed!r}",
+            hint=hint,
+        )
+    return parsed
 
 
 def resolve_uri_or_path_target(

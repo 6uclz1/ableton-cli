@@ -59,6 +59,15 @@ class _MidiNote:
     mute: bool
 
 
+@dataclass(slots=True)
+class _ArrangementClip:
+    name: str
+    start_time: float
+    length: float
+    is_audio_clip: bool
+    is_midi_clip: bool
+
+
 class _Clip:
     def __init__(self, length: float, name: str = "") -> None:
         self.name = name or "Clip"
@@ -167,6 +176,36 @@ class _Track:
     devices: list[_Device] = field(
         default_factory=lambda: [_Device("Utility", "AudioEffect", [_Parameter("Gain", 0.0)])]
     )
+    arrangement_clips: list[_ArrangementClip] = field(default_factory=list)
+    arrangement_midi_clips: list[tuple[float, float]] = field(default_factory=list)
+    arrangement_audio_clips: list[tuple[str, float]] = field(default_factory=list)
+
+    def create_midi_clip(self, start_time: float, length: float) -> None:
+        normalized_start = float(start_time)
+        normalized_length = float(length)
+        self.arrangement_midi_clips.append((normalized_start, normalized_length))
+        self.arrangement_clips.append(
+            _ArrangementClip(
+                name=f"MIDI {len(self.arrangement_clips)}",
+                start_time=normalized_start,
+                length=normalized_length,
+                is_audio_clip=False,
+                is_midi_clip=True,
+            )
+        )
+
+    def create_audio_clip(self, path: str, start_time: float) -> None:
+        normalized_start = float(start_time)
+        self.arrangement_audio_clips.append((str(path), normalized_start))
+        self.arrangement_clips.append(
+            _ArrangementClip(
+                name=str(path),
+                start_time=normalized_start,
+                length=0.0,
+                is_audio_clip=True,
+                is_midi_clip=False,
+            )
+        )
 
 
 @dataclass(slots=True)
@@ -449,9 +488,18 @@ class _Scene:
         self.fired = True
 
 
+class _ApplicationView:
+    def __init__(self) -> None:
+        self.focused_views: list[str] = []
+
+    def focus_view(self, view_name: str) -> None:
+        self.focused_views.append(str(view_name))
+
+
 class _Application:
     def __init__(self, song: _Song) -> None:
         self.browser = _Browser(song)
+        self.view = _ApplicationView()
 
 
 class _SurfaceStub:
@@ -2214,6 +2262,179 @@ def test_live_backend_scenes_move_and_not_supported_error() -> None:
         unsupported_backend.scenes_move(from_index=0, to_index=1)
     assert unsupported_exc.value.code == "INVALID_ARGUMENT"
     assert unsupported_exc.value.details == {"reason": "not_supported_by_live_api"}
+
+
+def test_live_backend_arrangement_clip_create_midi_focuses_arranger_view() -> None:
+    surface = _SurfaceStub()
+    backend = LiveBackend(surface)
+
+    result = backend.arrangement_clip_create(track=0, start_time=8.0, length=4.0, audio_path=None)
+
+    assert result == {
+        "track": 0,
+        "start_time": 8.0,
+        "length": 4.0,
+        "kind": "midi",
+        "arrangement_view_focused": True,
+        "created": True,
+    }
+    assert surface.song().tracks[0].arrangement_midi_clips == [(8.0, 4.0)]
+    assert surface.application().view.focused_views == ["Arranger"]
+
+
+@pytest.mark.parametrize("audio_path", ["/tmp/loop.wav", "C:/tmp/loop.wav"])
+def test_live_backend_arrangement_clip_create_audio_uses_absolute_audio_path(
+    audio_path: str,
+) -> None:
+    surface = _SurfaceStub()
+    backend = LiveBackend(surface)
+
+    result = backend.arrangement_clip_create(
+        track=1,
+        start_time=16.0,
+        length=8.0,
+        audio_path=audio_path,
+    )
+
+    assert result == {
+        "track": 1,
+        "start_time": 16.0,
+        "length": 8.0,
+        "kind": "audio",
+        "audio_path": audio_path,
+        "arrangement_view_focused": True,
+        "created": True,
+    }
+    assert surface.song().tracks[1].arrangement_audio_clips == [(audio_path, 16.0)]
+    assert surface.application().view.focused_views == ["Arranger"]
+
+
+def test_live_backend_arrangement_clip_create_rejects_track_kind_audio_path_mismatch() -> None:
+    backend = LiveBackend(_SurfaceStub())
+
+    with pytest.raises(CommandError) as midi_with_audio_path_exc:
+        backend.arrangement_clip_create(
+            track=0,
+            start_time=0.0,
+            length=4.0,
+            audio_path="/tmp/x.wav",
+        )
+    with pytest.raises(CommandError) as audio_without_audio_path_exc:
+        backend.arrangement_clip_create(track=1, start_time=0.0, length=4.0, audio_path=None)
+
+    assert midi_with_audio_path_exc.value.code == "INVALID_ARGUMENT"
+    assert audio_without_audio_path_exc.value.code == "INVALID_ARGUMENT"
+
+
+def test_live_backend_arrangement_clip_create_requires_arranger_focus_api() -> None:
+    surface = _SurfaceStub()
+    surface.application().view = object()
+    backend = LiveBackend(surface)
+
+    with pytest.raises(CommandError) as exc_info:
+        backend.arrangement_clip_create(track=0, start_time=0.0, length=4.0, audio_path=None)
+
+    assert exc_info.value.code == "INVALID_ARGUMENT"
+    assert exc_info.value.details == {"reason": "not_supported_by_live_api"}
+
+
+def test_live_backend_arrangement_clip_create_requires_track_create_api() -> None:
+    class _TrackWithoutMidiArrangementClip:
+        def __init__(self, original: _Track) -> None:
+            self.name = original.name
+            self.has_audio_input = original.has_audio_input
+            self.has_midi_input = original.has_midi_input
+            self.mute = original.mute
+            self.solo = original.solo
+            self.arm = original.arm
+            self.mixer_device = original.mixer_device
+            self.clip_slots = original.clip_slots
+            self.devices = original.devices
+
+    class _TrackWithoutAudioArrangementClip:
+        def __init__(self, original: _Track) -> None:
+            self.name = original.name
+            self.has_audio_input = original.has_audio_input
+            self.has_midi_input = original.has_midi_input
+            self.mute = original.mute
+            self.solo = original.solo
+            self.arm = original.arm
+            self.mixer_device = original.mixer_device
+            self.clip_slots = original.clip_slots
+            self.devices = original.devices
+            self.create_midi_clip = original.create_midi_clip
+
+    midi_surface = _SurfaceStub()
+    midi_surface.song().tracks[0] = _TrackWithoutMidiArrangementClip(midi_surface.song().tracks[0])
+    midi_backend = LiveBackend(midi_surface)
+    with pytest.raises(CommandError) as midi_exc:
+        midi_backend.arrangement_clip_create(track=0, start_time=0.0, length=4.0, audio_path=None)
+
+    audio_surface = _SurfaceStub()
+    audio_surface.song().tracks[1] = _TrackWithoutAudioArrangementClip(
+        audio_surface.song().tracks[1]
+    )
+    audio_backend = LiveBackend(audio_surface)
+    with pytest.raises(CommandError) as audio_exc:
+        audio_backend.arrangement_clip_create(
+            track=1,
+            start_time=0.0,
+            length=4.0,
+            audio_path="/tmp/clip.wav",
+        )
+
+    assert midi_exc.value.code == "INVALID_ARGUMENT"
+    assert midi_exc.value.details == {"reason": "not_supported_by_live_api"}
+    assert audio_exc.value.code == "INVALID_ARGUMENT"
+    assert audio_exc.value.details == {"reason": "not_supported_by_live_api"}
+
+
+def test_live_backend_arrangement_clip_list_supports_all_tracks_and_filter() -> None:
+    surface = _SurfaceStub()
+    backend = LiveBackend(surface)
+    backend.arrangement_clip_create(track=0, start_time=8.0, length=4.0, audio_path=None)
+    backend.arrangement_clip_create(track=1, start_time=16.0, length=8.0, audio_path="/tmp/x.wav")
+
+    listed_all = backend.arrangement_clip_list(track=None)
+    listed_track_1 = backend.arrangement_clip_list(track=1)
+
+    assert listed_all["track"] is None
+    assert listed_all["clip_count"] == 2
+    assert listed_all["clips"][0]["track"] == 0
+    assert listed_all["clips"][0]["start_time"] == 8.0
+    assert listed_all["clips"][1]["track"] == 1
+    assert listed_all["clips"][1]["is_audio_clip"] is True
+
+    assert listed_track_1["track"] == 1
+    assert listed_track_1["clip_count"] == 1
+    assert listed_track_1["clips"][0]["track"] == 1
+    assert listed_track_1["clips"][0]["is_midi_clip"] is False
+
+
+def test_live_backend_arrangement_clip_list_requires_arrangement_clips_api() -> None:
+    class _TrackWithoutArrangementClips:
+        def __init__(self, original: _Track) -> None:
+            self.name = original.name
+            self.has_audio_input = original.has_audio_input
+            self.has_midi_input = original.has_midi_input
+            self.mute = original.mute
+            self.solo = original.solo
+            self.arm = original.arm
+            self.mixer_device = original.mixer_device
+            self.clip_slots = original.clip_slots
+            self.devices = original.devices
+            self.create_midi_clip = original.create_midi_clip
+            self.create_audio_clip = original.create_audio_clip
+
+    surface = _SurfaceStub()
+    surface.song().tracks[0] = _TrackWithoutArrangementClips(surface.song().tracks[0])
+    backend = LiveBackend(surface)
+
+    with pytest.raises(CommandError) as exc_info:
+        backend.arrangement_clip_list(track=None)
+
+    assert exc_info.value.code == "INVALID_ARGUMENT"
+    assert exc_info.value.details == {"reason": "not_supported_by_live_api"}
 
 
 @pytest.mark.parametrize(

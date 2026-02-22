@@ -95,6 +95,10 @@ uv run ableton-cli transport tempo set 128
 ```bash
 uv run ableton-cli arrangement record start
 uv run ableton-cli arrangement record stop
+uv run ableton-cli arrangement clip create 0 --start 8 --length 4
+uv run ableton-cli arrangement clip create 1 --start 16 --length 8 --audio-path /tmp/loop.wav
+uv run ableton-cli arrangement clip list
+uv run ableton-cli arrangement clip list --track 0
 ```
 
 ### Track Volume

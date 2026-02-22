@@ -411,6 +411,52 @@ class _BackendStub:
     def arrangement_record_stop(self):  # noqa: ANN201
         return {"recording": False}
 
+    def arrangement_clip_create(  # noqa: ANN201
+        self,
+        track: int,
+        start_time: float,
+        length: float,
+        audio_path: str | None,
+    ):
+        payload = {
+            "track": track,
+            "start_time": start_time,
+            "length": length,
+            "arrangement_view_focused": True,
+            "created": True,
+        }
+        if audio_path is None:
+            payload["kind"] = "midi"
+            return payload
+        payload["kind"] = "audio"
+        payload["audio_path"] = audio_path
+        return payload
+
+    def arrangement_clip_list(self, track: int | None):  # noqa: ANN201
+        clips = [
+            {
+                "track": 0,
+                "index": 0,
+                "name": "Clip A",
+                "start_time": 8.0,
+                "length": 4.0,
+                "is_audio_clip": False,
+                "is_midi_clip": True,
+            },
+            {
+                "track": 1,
+                "index": 0,
+                "name": "Clip B",
+                "start_time": 16.0,
+                "length": 8.0,
+                "is_audio_clip": True,
+                "is_midi_clip": False,
+            },
+        ]
+        if track is not None:
+            clips = [clip for clip in clips if clip["track"] == track]
+        return {"track": track, "clip_count": len(clips), "clips": clips}
+
     def track_mute_get(self, track: int):  # noqa: ANN201
         return {"track": track, "mute": False}
 
@@ -678,6 +724,8 @@ def test_dispatch_ping_includes_supported_commands_and_hash() -> None:
     assert "get_clip_notes" in result["supported_commands"]
     assert "song_new" in result["supported_commands"]
     assert "arrangement_record_start" in result["supported_commands"]
+    assert "arrangement_clip_create" in result["supported_commands"]
+    assert "arrangement_clip_list" in result["supported_commands"]
     assert "clip_duplicate" in result["supported_commands"]
     assert "scenes_move" in result["supported_commands"]
     assert "tracks_delete" in result["supported_commands"]
@@ -1162,6 +1210,26 @@ def test_dispatch_calls_backend_for_new_todo_commands() -> None:
     song_export = dispatch_command(backend, "song_export_audio", {"path": "/tmp/song.wav"})
     record_start = dispatch_command(backend, "arrangement_record_start", {})
     record_stop = dispatch_command(backend, "arrangement_record_stop", {})
+    arrangement_clip = dispatch_command(
+        backend,
+        "arrangement_clip_create",
+        {"track": 0, "start_time": 8.0, "length": 4.0},
+    )
+    arrangement_clip_audio = dispatch_command(
+        backend,
+        "arrangement_clip_create",
+        {"track": 1, "start_time": 16.0, "length": 8.0, "audio_path": "C:/tmp/loop.wav"},
+    )
+    arrangement_clip_list = dispatch_command(
+        backend,
+        "arrangement_clip_list",
+        {},
+    )
+    arrangement_clip_list_track = dispatch_command(
+        backend,
+        "arrangement_clip_list",
+        {"track": 1},
+    )
     duplicate = dispatch_command(
         backend,
         "clip_duplicate",
@@ -1175,6 +1243,27 @@ def test_dispatch_calls_backend_for_new_todo_commands() -> None:
     assert song_export == {"exported": True, "path": "/tmp/song.wav"}
     assert record_start == {"recording": True}
     assert record_stop == {"recording": False}
+    assert arrangement_clip == {
+        "track": 0,
+        "start_time": 8.0,
+        "length": 4.0,
+        "kind": "midi",
+        "arrangement_view_focused": True,
+        "created": True,
+    }
+    assert arrangement_clip_audio == {
+        "track": 1,
+        "start_time": 16.0,
+        "length": 8.0,
+        "kind": "audio",
+        "audio_path": "C:/tmp/loop.wav",
+        "arrangement_view_focused": True,
+        "created": True,
+    }
+    assert arrangement_clip_list["track"] is None
+    assert arrangement_clip_list["clip_count"] == 2
+    assert arrangement_clip_list_track["track"] == 1
+    assert arrangement_clip_list_track["clip_count"] == 1
     assert duplicate == {"track": 1, "src_clip": 2, "dst_clip": 3, "duplicated": True}
     assert scenes_move == {"from": 3, "to": 1, "moved": True}
     assert tracks_delete == {"track": 0, "deleted": True}
@@ -1311,6 +1400,24 @@ def test_dispatch_validates_new_todo_command_arguments() -> None:
         dispatch_command(backend, "scenes_move", {"from": -1, "to": 0})
     with pytest.raises(CommandError) as tracks_delete_exc:
         dispatch_command(backend, "tracks_delete", {"track": -1})
+    with pytest.raises(CommandError) as arrangement_clip_start_exc:
+        dispatch_command(
+            backend,
+            "arrangement_clip_create",
+            {"track": 0, "start_time": -1, "length": 4.0},
+        )
+    with pytest.raises(CommandError) as arrangement_clip_audio_path_exc:
+        dispatch_command(
+            backend,
+            "arrangement_clip_create",
+            {"track": 1, "start_time": 0, "length": 4.0, "audio_path": "loops/amen.wav"},
+        )
+    with pytest.raises(CommandError) as arrangement_clip_list_track_exc:
+        dispatch_command(
+            backend,
+            "arrangement_clip_list",
+            {"track": -1},
+        )
 
     assert song_save_exc.value.code == "INVALID_ARGUMENT"
     assert song_export_exc.value.code == "INVALID_ARGUMENT"
@@ -1320,6 +1427,9 @@ def test_dispatch_validates_new_todo_command_arguments() -> None:
     assert clip_active_set_exc.value.code == "INVALID_ARGUMENT"
     assert scenes_move_exc.value.code == "INVALID_ARGUMENT"
     assert tracks_delete_exc.value.code == "INVALID_ARGUMENT"
+    assert arrangement_clip_start_exc.value.code == "INVALID_ARGUMENT"
+    assert arrangement_clip_audio_path_exc.value.code == "INVALID_ARGUMENT"
+    assert arrangement_clip_list_track_exc.value.code == "INVALID_ARGUMENT"
 
 
 def test_dispatch_rejects_invalid_clip_note_transform_arguments() -> None:

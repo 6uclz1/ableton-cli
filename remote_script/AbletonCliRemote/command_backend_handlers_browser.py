@@ -17,6 +17,7 @@ from .command_backend_validators import (
 Handler = Callable[[CommandBackend, dict[str, Any]], dict[str, Any]]
 _ALLOWED_ITEM_TYPES = frozenset({"all", "folder", "device", "loadable"})
 _ALLOWED_TARGET_TRACK_MODES = frozenset({"auto", "existing", "new"})
+_ALLOWED_NOTES_MODES = frozenset({"replace", "append"})
 
 
 def _parse_target_track_mode(args: dict[str, Any]) -> str:
@@ -36,6 +37,19 @@ def _parse_optional_clip_slot(args: dict[str, Any]) -> int | None:
     return _non_negative_int("clip_slot", raw)
 
 
+def _parse_optional_notes_mode(args: dict[str, Any]) -> str | None:
+    raw = args.get("notes_mode")
+    if raw is None:
+        return None
+    parsed = _non_empty_string("notes_mode", raw).lower()
+    if parsed not in _ALLOWED_NOTES_MODES:
+        raise _invalid_argument(
+            message=f"notes_mode must be one of replace/append, got {parsed}",
+            hint="Use notes_mode replace or append.",
+        )
+    return parsed
+
+
 def _handle_load_instrument_or_effect(
     backend: CommandBackend,
     args: dict[str, Any],
@@ -49,6 +63,7 @@ def _handle_load_instrument_or_effect(
     )
     target_track_mode = _parse_target_track_mode(args)
     clip_slot = _parse_optional_clip_slot(args)
+    notes_mode = _parse_optional_notes_mode(args)
     preserve_track_name = _as_bool("preserve_track_name", args.get("preserve_track_name", False))
     return backend.load_instrument_or_effect(
         track,
@@ -57,6 +72,7 @@ def _handle_load_instrument_or_effect(
         target_track_mode,
         clip_slot,
         preserve_track_name,
+        notes_mode,
     )
 
 

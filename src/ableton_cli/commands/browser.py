@@ -211,6 +211,13 @@ def browser_load(
         int | None,
         typer.Option("--clip-slot", help="Clip slot (scene index, 0-based)"),
     ] = None,
+    notes_mode: Annotated[
+        str | None,
+        typer.Option(
+            "--notes-mode",
+            help="Import .alc notes into the target clip using replace|append",
+        ),
+    ] = None,
     preserve_track_name: Annotated[
         bool,
         typer.Option("--preserve-track-name", help="Restore original track name after loading"),
@@ -243,6 +250,20 @@ def browser_load(
             if clip_slot is not None
             else None
         )
+        valid_notes_mode = (
+            require_non_empty_string(
+                "notes_mode",
+                notes_mode,
+                hint="Use --notes-mode replace or append.",
+            ).lower()
+            if notes_mode is not None
+            else None
+        )
+        if valid_notes_mode is not None and valid_notes_mode not in {"replace", "append"}:
+            raise invalid_argument(
+                message=f"notes_mode must be one of replace/append, got {notes_mode}",
+                hint="Use --notes-mode replace or append.",
+            )
         valid_uri, valid_path = _resolve_browser_target(target)
         return get_client(ctx).load_instrument_or_effect(
             track,
@@ -250,6 +271,7 @@ def browser_load(
             path=valid_path,
             target_track_mode=valid_mode,
             clip_slot=valid_clip_slot,
+            notes_mode=valid_notes_mode,
             preserve_track_name=preserve_track_name,
         )
 
@@ -261,6 +283,7 @@ def browser_load(
             "target": target,
             "target_track_mode": target_track_mode,
             "clip_slot": clip_slot,
+            "notes_mode": notes_mode,
             "preserve_track_name": preserve_track_name,
         },
         action=_run,

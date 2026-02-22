@@ -12,6 +12,7 @@ class _AbletonClientBrowserScenesMixin:
         target_track_mode: str = "auto",
         clip_slot: int | None = None,
         preserve_track_name: bool = False,
+        notes_mode: str | None = None,
     ) -> dict[str, Any]:
         args: dict[str, Any] = {
             "track": track,
@@ -21,6 +22,7 @@ class _AbletonClientBrowserScenesMixin:
         self._add_if_not_none(args, "uri", uri)
         self._add_if_not_none(args, "path", path)
         self._add_if_not_none(args, "clip_slot", clip_slot)
+        self._add_if_not_none(args, "notes_mode", notes_mode)
         return self._call("load_instrument_or_effect", args)
 
     def get_browser_tree(self, category_type: str = "all") -> dict[str, Any]:

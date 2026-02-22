@@ -380,6 +380,30 @@ def test_browser_load_rejects_negative_clip_slot(runner, cli_app) -> None:
     assert payload["error"]["code"] == "INVALID_ARGUMENT"
 
 
+def test_browser_load_rejects_invalid_notes_mode(runner, cli_app) -> None:
+    result = runner.invoke(
+        cli_app,
+        [
+            "--output",
+            "json",
+            "browser",
+            "load",
+            "0",
+            "sounds/Bass Loop.alc",
+            "--target-track-mode",
+            "existing",
+            "--clip-slot",
+            "1",
+            "--notes-mode",
+            "merge",
+        ],
+    )
+
+    assert result.exit_code == 2
+    payload = json.loads(result.stdout)
+    assert payload["error"]["code"] == "INVALID_ARGUMENT"
+
+
 def test_browser_load_drum_kit_requires_exactly_one_kit_selector(runner, cli_app) -> None:
     none_selected = runner.invoke(
         cli_app,

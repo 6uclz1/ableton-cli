@@ -292,6 +292,7 @@ class _BackendStub:
         target_track_mode: str,
         clip_slot: int | None,
         preserve_track_name: bool,
+        notes_mode: str | None,
     ):
         return {
             "track": track,
@@ -300,6 +301,7 @@ class _BackendStub:
             "target_track_mode": target_track_mode,
             "clip_slot": clip_slot,
             "preserve_track_name": preserve_track_name,
+            "notes_mode": notes_mode,
             "loaded": True,
         }
 
@@ -859,6 +861,7 @@ def test_dispatch_calls_backend_for_browser_load_with_path() -> None:
         "target_track_mode": "auto",
         "clip_slot": None,
         "preserve_track_name": False,
+        "notes_mode": None,
         "loaded": True,
     }
 
@@ -883,6 +886,32 @@ def test_dispatch_calls_backend_for_browser_load_with_existing_mode_and_clip_slo
         "target_track_mode": "existing",
         "clip_slot": 3,
         "preserve_track_name": True,
+        "notes_mode": None,
+        "loaded": True,
+    }
+
+
+def test_dispatch_calls_backend_for_browser_load_with_notes_mode() -> None:
+    backend = _BackendStub()
+    result = dispatch_command(
+        backend,
+        "load_instrument_or_effect",
+        {
+            "track": 1,
+            "path": "sounds/Bass Loop.alc",
+            "target_track_mode": "existing",
+            "clip_slot": 2,
+            "notes_mode": "append",
+        },
+    )
+    assert result == {
+        "track": 1,
+        "uri": None,
+        "path": "sounds/Bass Loop.alc",
+        "target_track_mode": "existing",
+        "clip_slot": 2,
+        "preserve_track_name": False,
+        "notes_mode": "append",
         "loaded": True,
     }
 
@@ -1417,6 +1446,24 @@ def test_dispatch_rejects_browser_load_with_negative_clip_slot() -> None:
                 "track": 0,
                 "path": "instruments/Drift",
                 "clip_slot": -1,
+            },
+        )
+
+    assert exc_info.value.code == "INVALID_ARGUMENT"
+
+
+def test_dispatch_rejects_browser_load_with_invalid_notes_mode() -> None:
+    backend = _BackendStub()
+    with pytest.raises(CommandError) as exc_info:
+        dispatch_command(
+            backend,
+            "load_instrument_or_effect",
+            {
+                "track": 0,
+                "path": "sounds/Bass Loop.alc",
+                "target_track_mode": "existing",
+                "clip_slot": 1,
+                "notes_mode": "merge",
             },
         )
 

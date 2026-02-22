@@ -330,6 +330,19 @@ def test_client_sends_request_timeout_meta(monkeypatch) -> None:
                 "semitones": -12,
             },
         ),
+        (
+            lambda client: client.clip_groove_set(
+                track=0,
+                clip=2,
+                target="grooves/Hip Hop Boom Bap 16ths 90 bpm.agr",
+            ),
+            "clip_groove_set",
+            {
+                "track": 0,
+                "clip": 2,
+                "target": "grooves/Hip Hop Boom Bap 16ths 90 bpm.agr",
+            },
+        ),
     ],
 )
 def test_client_builds_optional_arguments_deterministically(

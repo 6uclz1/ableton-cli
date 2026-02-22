@@ -136,6 +136,125 @@ class LiveBackendTracksClipsMixin:
             "changed_count": len(changed_note_ids),
         }
 
+    @staticmethod
+    def _clip_groove_attr_name(clip_obj: Any) -> str | None:
+        for attribute in ("groove", "groove_assignment"):
+            if hasattr(clip_obj, attribute):
+                return attribute
+        return None
+
+    @staticmethod
+    def _clip_groove_amount_attr_name(clip_obj: Any) -> str | None:
+        for attribute in ("groove_amount", "groove_amount_value"):
+            if hasattr(clip_obj, attribute):
+                return attribute
+        return None
+
+    def _require_clip_with_groove_support(self, *, track: int, clip: int) -> tuple[Any, str]:
+        slot = self._clip_slot_at(track, clip)
+        if not slot.has_clip:
+            raise _invalid_argument(
+                message="No clip in slot",
+                hint="Create a clip in the target slot before using groove commands.",
+            )
+        clip_obj = slot.clip
+        assert clip_obj is not None
+        groove_attr = self._clip_groove_attr_name(clip_obj)
+        if groove_attr is None:
+            raise _not_supported_by_live_api(
+                message="Clip groove API is not available in Live API",
+                hint="Use a Live version exposing clip groove assignment.",
+            )
+        return clip_obj, groove_attr
+
+    @staticmethod
+    def _is_groove_item_name(name: str) -> bool:
+        return name.lower().endswith(".agr")
+
+    def _resolve_groove_target(self, target: str) -> dict[str, str | None]:
+        parsed_target = str(target).strip()
+        if "/" in parsed_target:
+            item = self._resolve_browser_path(parsed_target)
+            item_path = parsed_target
+            uri_raw = getattr(item, "uri", None)
+            item_uri = str(uri_raw).strip() if uri_raw is not None else None
+        elif ":" in parsed_target:
+            item = self._find_browser_item_by_uri(parsed_target)
+            if item is None:
+                raise _invalid_argument(
+                    message=f"Browser item with URI '{parsed_target}' not found",
+                    hint="Use browser search/items to choose a valid groove URI.",
+                )
+            item_path = self._item_path_by_uri(parsed_target)
+            uri_raw = getattr(item, "uri", None)
+            item_uri = str(uri_raw).strip() if uri_raw is not None else parsed_target
+        else:
+            raise _invalid_argument(
+                message=f"target must include '/' (path) or ':' (uri), got {parsed_target!r}",
+                hint="Use a groove path like grooves/Hip Hop Boom Bap 16ths 90 bpm.agr.",
+            )
+
+        item_name = str(getattr(item, "name", "")).strip()
+        if not self._is_groove_item_name(item_name):
+            raise _invalid_argument(
+                message=f"Target is not a groove .agr item: {item_name or parsed_target}",
+                hint="Select a .agr groove file from browser search/items.",
+            )
+
+        return {
+            "uri": item_uri,
+            "path": item_path,
+            "name": item_name,
+        }
+
+    def _clip_groove_payload(
+        self,
+        *,
+        track: int,
+        clip: int,
+        clip_obj: Any,
+        groove_attr: str,
+    ) -> dict[str, Any]:
+        current_groove = getattr(clip_obj, groove_attr, None)
+        stored_uri = getattr(clip_obj, "_ableton_cli_groove_uri", None)
+        stored_path = getattr(clip_obj, "_ableton_cli_groove_path", None)
+        stored_name = getattr(clip_obj, "_ableton_cli_groove_name", None)
+        groove_uri = (
+            str(stored_uri).strip()
+            if isinstance(stored_uri, str) and str(stored_uri).strip()
+            else None
+        )
+        if groove_uri is None and isinstance(current_groove, str):
+            normalized_current = current_groove.strip()
+            groove_uri = normalized_current or None
+        groove_path = (
+            str(stored_path).strip()
+            if isinstance(stored_path, str) and str(stored_path).strip()
+            else None
+        )
+        groove_name = (
+            str(stored_name).strip()
+            if isinstance(stored_name, str) and str(stored_name).strip()
+            else None
+        )
+
+        amount_attr = self._clip_groove_amount_attr_name(clip_obj)
+        amount: float | None = None
+        if amount_attr is not None:
+            raw_amount = getattr(clip_obj, amount_attr, None)
+            if isinstance(raw_amount, (int, float)):
+                amount = float(raw_amount)
+
+        return {
+            "track": track,
+            "clip": clip,
+            "has_groove": bool(groove_uri or groove_path or current_groove),
+            "groove_uri": groove_uri,
+            "groove_path": groove_path,
+            "groove_name": groove_name,
+            "amount": amount,
+        }
+
     def create_clip(self, track: int, clip: int, length: float) -> dict[str, Any]:
         slot = self._clip_slot_at(track, clip)
         if slot.has_clip:
@@ -371,6 +490,70 @@ class LiveBackendTracksClipsMixin:
             pitch=pitch,
             transform=_transpose,
             metadata={"semitones": semitones},
+        )
+
+    def clip_groove_get(self, track: int, clip: int) -> dict[str, Any]:
+        clip_obj, groove_attr = self._require_clip_with_groove_support(track=track, clip=clip)
+        return self._clip_groove_payload(
+            track=track,
+            clip=clip,
+            clip_obj=clip_obj,
+            groove_attr=groove_attr,
+        )
+
+    def clip_groove_set(self, track: int, clip: int, target: str) -> dict[str, Any]:
+        clip_obj, groove_attr = self._require_clip_with_groove_support(track=track, clip=clip)
+        target_info = self._resolve_groove_target(target)
+        groove_value = target_info["uri"] or target_info["path"]
+        setattr(clip_obj, groove_attr, groove_value)
+        clip_obj._ableton_cli_groove_uri = target_info["uri"]  # noqa: SLF001
+        clip_obj._ableton_cli_groove_path = target_info["path"]  # noqa: SLF001
+        clip_obj._ableton_cli_groove_name = target_info["name"]  # noqa: SLF001
+        return self._clip_groove_payload(
+            track=track,
+            clip=clip,
+            clip_obj=clip_obj,
+            groove_attr=groove_attr,
+        )
+
+    def clip_groove_amount_set(self, track: int, clip: int, value: float) -> dict[str, Any]:
+        clip_obj, groove_attr = self._require_clip_with_groove_support(track=track, clip=clip)
+        current_payload = self._clip_groove_payload(
+            track=track,
+            clip=clip,
+            clip_obj=clip_obj,
+            groove_attr=groove_attr,
+        )
+        if not current_payload["has_groove"]:
+            raise _invalid_argument(
+                message="No groove is assigned to this clip",
+                hint="Set a groove with 'clip groove set' before changing amount.",
+            )
+        amount_attr = self._clip_groove_amount_attr_name(clip_obj)
+        if amount_attr is None:
+            raise _not_supported_by_live_api(
+                message="Clip groove amount API is not available in Live API",
+                hint="Use a Live version exposing clip groove amount.",
+            )
+        setattr(clip_obj, amount_attr, float(value))
+        return self._clip_groove_payload(
+            track=track,
+            clip=clip,
+            clip_obj=clip_obj,
+            groove_attr=groove_attr,
+        )
+
+    def clip_groove_clear(self, track: int, clip: int) -> dict[str, Any]:
+        clip_obj, groove_attr = self._require_clip_with_groove_support(track=track, clip=clip)
+        setattr(clip_obj, groove_attr, None)
+        clip_obj._ableton_cli_groove_uri = None  # noqa: SLF001
+        clip_obj._ableton_cli_groove_path = None  # noqa: SLF001
+        clip_obj._ableton_cli_groove_name = None  # noqa: SLF001
+        return self._clip_groove_payload(
+            track=track,
+            clip=clip,
+            clip_obj=clip_obj,
+            groove_attr=groove_attr,
         )
 
     def set_clip_name(self, track: int, clip: int, name: str) -> dict[str, Any]:

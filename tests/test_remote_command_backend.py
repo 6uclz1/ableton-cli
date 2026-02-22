@@ -239,6 +239,51 @@ class _BackendStub:
             "changed_count": 1,
         }
 
+    def clip_groove_get(self, track: int, clip: int):  # noqa: ANN201
+        return {
+            "track": track,
+            "clip": clip,
+            "has_groove": True,
+            "groove_uri": "groove:hip-hop-boom-bap-16ths-90",
+            "groove_path": "grooves/Hip Hop Boom Bap 16ths 90 bpm.agr",
+            "groove_name": "Hip Hop Boom Bap 16ths 90 bpm.agr",
+            "amount": 0.5,
+        }
+
+    def clip_groove_set(self, track: int, clip: int, target: str):  # noqa: ANN201
+        return {
+            "track": track,
+            "clip": clip,
+            "has_groove": True,
+            "target": target,
+            "groove_uri": "groove:hip-hop-boom-bap-16ths-90",
+            "groove_path": "grooves/Hip Hop Boom Bap 16ths 90 bpm.agr",
+            "groove_name": "Hip Hop Boom Bap 16ths 90 bpm.agr",
+            "amount": 0.5,
+        }
+
+    def clip_groove_amount_set(self, track: int, clip: int, value: float):  # noqa: ANN201
+        return {
+            "track": track,
+            "clip": clip,
+            "has_groove": True,
+            "groove_uri": "groove:hip-hop-boom-bap-16ths-90",
+            "groove_path": "grooves/Hip Hop Boom Bap 16ths 90 bpm.agr",
+            "groove_name": "Hip Hop Boom Bap 16ths 90 bpm.agr",
+            "amount": value,
+        }
+
+    def clip_groove_clear(self, track: int, clip: int):  # noqa: ANN201
+        return {
+            "track": track,
+            "clip": clip,
+            "has_groove": False,
+            "groove_uri": None,
+            "groove_path": None,
+            "groove_name": None,
+            "amount": 0.5,
+        }
+
     def load_instrument_or_effect(  # noqa: ANN201
         self,
         track: int,
@@ -1110,6 +1155,29 @@ def test_dispatch_calls_backend_for_clip_note_transform_commands() -> None:
     assert transposed["semitones"] == 7
 
 
+def test_dispatch_calls_backend_for_clip_groove_commands() -> None:
+    backend = _BackendStub()
+
+    gotten = dispatch_command(backend, "clip_groove_get", {"track": 0, "clip": 1})
+    set_result = dispatch_command(
+        backend,
+        "clip_groove_set",
+        {"track": 0, "clip": 1, "target": "grooves/Hip Hop Boom Bap 16ths 90 bpm.agr"},
+    )
+    amount_result = dispatch_command(
+        backend,
+        "clip_groove_amount_set",
+        {"track": 0, "clip": 1, "value": 0.7},
+    )
+    cleared = dispatch_command(backend, "clip_groove_clear", {"track": 0, "clip": 1})
+
+    assert gotten["has_groove"] is True
+    assert set_result["has_groove"] is True
+    assert set_result["target"] == "grooves/Hip Hop Boom Bap 16ths 90 bpm.agr"
+    assert amount_result["amount"] == 0.7
+    assert cleared["has_groove"] is False
+
+
 def test_dispatch_validates_new_todo_command_arguments() -> None:
     backend = _BackendStub()
 
@@ -1174,6 +1242,18 @@ def test_dispatch_rejects_invalid_clip_note_transform_arguments() -> None:
     assert invalid_strength.value.code == "INVALID_ARGUMENT"
     assert invalid_humanize_velocity.value.code == "INVALID_ARGUMENT"
     assert invalid_scale.value.code == "INVALID_ARGUMENT"
+
+
+def test_dispatch_rejects_invalid_clip_groove_arguments() -> None:
+    backend = _BackendStub()
+
+    with pytest.raises(CommandError) as invalid_target:
+        dispatch_command(backend, "clip_groove_set", {"track": 0, "clip": 0, "target": "hiphop"})
+    with pytest.raises(CommandError) as invalid_amount:
+        dispatch_command(backend, "clip_groove_amount_set", {"track": 0, "clip": 0, "value": 1.5})
+
+    assert invalid_target.value.code == "INVALID_ARGUMENT"
+    assert invalid_amount.value.code == "INVALID_ARGUMENT"
 
 
 def test_dispatch_rejects_unknown_command() -> None:

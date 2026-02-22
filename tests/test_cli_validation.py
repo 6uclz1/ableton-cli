@@ -208,6 +208,30 @@ def test_clip_notes_velocity_scale_rejects_negative_scale(runner, cli_app) -> No
     assert payload["error"]["code"] == "INVALID_ARGUMENT"
 
 
+def test_clip_groove_set_rejects_invalid_target(runner, cli_app) -> None:
+    result = runner.invoke(
+        cli_app,
+        ["--output", "json", "clip", "groove", "set", "0", "0", "hiphop"],
+    )
+
+    assert result.exit_code == 2
+    payload = json.loads(result.stdout)
+    assert payload["ok"] is False
+    assert payload["error"]["code"] == "INVALID_ARGUMENT"
+
+
+def test_clip_groove_amount_set_rejects_out_of_range_value(runner, cli_app) -> None:
+    result = runner.invoke(
+        cli_app,
+        ["--output", "json", "clip", "groove", "amount", "set", "0", "0", "1.5"],
+    )
+
+    assert result.exit_code == 2
+    payload = json.loads(result.stdout)
+    assert payload["ok"] is False
+    assert payload["error"]["code"] == "INVALID_ARGUMENT"
+
+
 def test_browser_item_requires_target(runner, cli_app) -> None:
     result = runner.invoke(
         cli_app,

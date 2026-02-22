@@ -226,8 +226,7 @@ def browser_load(
         if valid_mode not in {"auto", "existing", "new"}:
             raise invalid_argument(
                 message=(
-                    "target_track_mode must be one of auto/existing/new, "
-                    f"got {target_track_mode}"
+                    f"target_track_mode must be one of auto/existing/new, got {target_track_mode}"
                 ),
                 hint="Use --target-track-mode auto, existing, or new.",
             )

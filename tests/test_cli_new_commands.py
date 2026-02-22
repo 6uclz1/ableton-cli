@@ -291,6 +291,7 @@ class _ClientStub:
         target_track_mode: str = "auto",
         clip_slot: int | None = None,
         preserve_track_name: bool = False,
+        notes_mode: str | None = None,
     ):
         return {
             "track": track,
@@ -299,6 +300,7 @@ class _ClientStub:
             "target_track_mode": target_track_mode,
             "clip_slot": clip_slot,
             "preserve_track_name": preserve_track_name,
+            "notes_mode": notes_mode,
             "loaded": True,
         }
 
@@ -1150,6 +1152,36 @@ def test_browser_load_supports_target_track_mode_clip_slot_and_preserve_track_na
     assert payload["result"]["target_track_mode"] == "existing"
     assert payload["result"]["clip_slot"] == 3
     assert payload["result"]["preserve_track_name"] is True
+
+
+def test_browser_load_supports_notes_mode(runner, cli_app, monkeypatch) -> None:
+    from ableton_cli.commands import browser
+
+    monkeypatch.setattr(browser, "get_client", lambda ctx: _ClientStub())
+
+    result = runner.invoke(
+        cli_app,
+        [
+            "--output",
+            "json",
+            "browser",
+            "load",
+            "1",
+            "sounds/Bass Loop.alc",
+            "--target-track-mode",
+            "existing",
+            "--clip-slot",
+            "2",
+            "--notes-mode",
+            "append",
+        ],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["ok"] is True
+    assert payload["result"]["notes_mode"] == "append"
+    assert payload["result"]["clip_slot"] == 2
 
 
 def test_browser_load_drum_kit_supports_kit_uri_or_path(runner, cli_app, monkeypatch) -> None:

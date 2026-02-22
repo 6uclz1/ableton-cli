@@ -217,6 +217,7 @@ class _BrowserBackend(Protocol):
         target_track_mode: str,
         clip_slot: int | None,
         preserve_track_name: bool,
+        notes_mode: str | None,
     ) -> dict[str, Any]: ...
 
     def get_browser_tree(self, category_type: str) -> dict[str, Any]: ...

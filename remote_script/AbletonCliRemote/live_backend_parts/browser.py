@@ -356,31 +356,129 @@ class LiveBackendBrowserReadMixin:
                 return slot_index, clip_obj
         return None
 
-    def _replace_clip_notes(self, *, source_clip: Any, target_clip: Any) -> None:
+    @staticmethod
+    def _clip_note_tuples(notes: list[dict[str, Any]]) -> tuple[tuple[int, float, float, int, bool], ...]:
+        return tuple(
+            (
+                int(note["pitch"]),
+                float(note["start_time"]),
+                float(note["duration"]),
+                int(note["velocity"]),
+                bool(note["mute"]),
+            )
+            for note in notes
+        )
+
+    def _import_clip_notes(
+        self,
+        *,
+        source_clip: Any,
+        target_clip: Any,
+        notes_mode: str,
+    ) -> int:
         source_notes = list(self._clip_notes_extended(source_clip))
-        existing_notes = list(self._clip_notes_extended(target_clip))
-        note_ids_to_remove = [int(note["note_id"]) for note in existing_notes]
-        remove_notes_by_id = getattr(target_clip, "remove_notes_by_id", None)
-        if note_ids_to_remove and callable(remove_notes_by_id):
-            remove_notes_by_id(note_ids_to_remove)
+        if notes_mode == "replace":
+            existing_notes = list(self._clip_notes_extended(target_clip))
+            note_ids_to_remove = [int(note["note_id"]) for note in existing_notes]
+            remove_notes_by_id = getattr(target_clip, "remove_notes_by_id", None)
+            if note_ids_to_remove and callable(remove_notes_by_id):
+                remove_notes_by_id(note_ids_to_remove)
+        elif notes_mode != "append":
+            raise _invalid_argument(
+                message=f"notes_mode must be one of replace/append, got {notes_mode}",
+                hint="Use notes_mode replace or append.",
+            )
+
         set_notes = getattr(target_clip, "set_notes", None)
         if not callable(set_notes):
             raise _not_supported_by_live_api(
                 message="Clip note write API is not available in Live API",
                 hint="Use a Live version exposing clip.set_notes for MIDI clips.",
             )
-        set_notes(
-            tuple(
-                (
-                    int(note["pitch"]),
-                    float(note["start_time"]),
-                    float(note["duration"]),
-                    int(note["velocity"]),
-                    bool(note["mute"]),
-                )
-                for note in source_notes
+        note_payload = self._clip_note_tuples(source_notes)
+        if note_payload:
+            set_notes(note_payload)
+        return len(note_payload)
+
+    @staticmethod
+    def _delete_track(song: Any, track_index: int) -> None:
+        delete_track = getattr(song, "delete_track", None)
+        if not callable(delete_track):
+            raise _not_supported_by_live_api(
+                message="Track delete API is not available in Live API",
+                hint="Use a Live version exposing song.delete_track.",
             )
+        delete_track(track_index)
+
+    def _target_clip_for_import(
+        self,
+        *,
+        target_track: Any,
+        clip_slot: int,
+        source_clip: Any,
+        require_existing_clip: bool,
+    ) -> Any:
+        target_slots = list(getattr(target_track, "clip_slots", []))
+        if clip_slot < 0 or clip_slot >= len(target_slots):
+            raise _invalid_argument(
+                message=f"clip_slot out of range after load: {clip_slot}",
+                hint="Use a valid clip slot index for the target track.",
+            )
+        target_slot = target_slots[clip_slot]
+        if not bool(getattr(target_slot, "has_clip", False)):
+            if require_existing_clip:
+                raise _invalid_argument(
+                    message="No clip in slot",
+                    hint="Create a clip before importing browser MIDI notes.",
+                )
+            create_clip = getattr(target_slot, "create_clip", None)
+            if not callable(create_clip):
+                raise _not_supported_by_live_api(
+                    message="Clip creation API is not available in Live API",
+                    hint="Use a Live version exposing clip_slot.create_clip.",
+                )
+            source_length = max(float(getattr(source_clip, "length", 1.0)), 0.000001)
+            create_clip(source_length)
+        target_clip = getattr(target_slot, "clip", None)
+        if target_clip is None:
+            raise _invalid_argument(
+                message="Target clip slot did not contain a clip after creation",
+                hint="Retry with an existing or creatable MIDI clip slot.",
+            )
+        return target_clip
+
+    def _load_midi_clip_to_temporary_track(self, *, song: Any, item: Any) -> tuple[int, Any]:
+        tracks_before_load = list(getattr(song, "tracks", []))
+        view = getattr(song, "view", None)
+        had_selected_scene = bool(view is not None and hasattr(view, "selected_scene"))
+        previous_selected_scene = getattr(view, "selected_scene", None) if had_selected_scene else None
+        if had_selected_scene:
+            view.selected_scene = None
+        try:
+            self._browser().load_item(item)
+        finally:
+            if had_selected_scene:
+                view.selected_scene = previous_selected_scene
+
+        tracks_after_load = list(getattr(song, "tracks", []))
+        created_tracks = self._created_tracks_since(
+            before=tracks_before_load,
+            after=tracks_after_load,
         )
+        if len(created_tracks) != 1:
+            raise _invalid_argument(
+                message="MIDI clip import did not create a deterministic source track",
+                hint="Retry with a loadable .alc target from browser items/search.",
+            )
+        source_track_index, source_track = created_tracks[0]
+        source_clip_entry = self._first_track_clip(source_track)
+        if source_clip_entry is None:
+            raise _invalid_argument(
+                message="Imported source track did not contain a clip",
+                hint="Retry with a loadable MIDI clip target.",
+            )
+        _source_slot_index, source_clip = source_clip_entry
+        return source_track_index, source_clip
 
     def _rehome_loaded_midi_clip_if_needed(
         self,
@@ -391,13 +489,13 @@ class LiveBackendBrowserReadMixin:
         target_track_mode: str,
         clip_slot: int | None,
         tracks_before_load: list[Any],
-    ) -> None:
+    ) -> int | None:
         if target_track_mode != "existing":
-            return
+            return None
         if clip_slot is None:
-            return
+            return None
         if not self._is_midi_clip_browser_item(item):
-            return
+            return None
 
         tracks_after_load = list(getattr(song, "tracks", []))
         created_tracks = self._created_tracks_since(
@@ -405,7 +503,7 @@ class LiveBackendBrowserReadMixin:
             after=tracks_after_load,
         )
         if not created_tracks:
-            return
+            return None
         if len(created_tracks) != 1:
             raise _invalid_argument(
                 message="Clip load created an unexpected number of tracks",
@@ -421,40 +519,22 @@ class LiveBackendBrowserReadMixin:
             )
         _source_slot_index, source_clip = source_clip_entry
 
-        target_slots = list(getattr(target_track, "clip_slots", []))
-        if clip_slot < 0 or clip_slot >= len(target_slots):
-            raise _invalid_argument(
-                message=f"clip_slot out of range after load: {clip_slot}",
-                hint="Use a valid clip slot index for the target track.",
-            )
-        target_slot = target_slots[clip_slot]
-        if not bool(getattr(target_slot, "has_clip", False)):
-            create_clip = getattr(target_slot, "create_clip", None)
-            if not callable(create_clip):
-                raise _not_supported_by_live_api(
-                    message="Clip creation API is not available in Live API",
-                    hint="Use a Live version exposing clip_slot.create_clip.",
-                )
-            source_length = max(float(getattr(source_clip, "length", 1.0)), 0.000001)
-            create_clip(source_length)
-        target_clip = getattr(target_slot, "clip", None)
-        if target_clip is None:
-            raise _invalid_argument(
-                message="Target clip slot did not contain a clip after creation",
-                hint="Retry with an existing or creatable MIDI clip slot.",
-            )
-
-        self._replace_clip_notes(source_clip=source_clip, target_clip=target_clip)
+        target_clip = self._target_clip_for_import(
+            target_track=target_track,
+            clip_slot=clip_slot,
+            source_clip=source_clip,
+            require_existing_clip=False,
+        )
+        imported_note_count = self._import_clip_notes(
+            source_clip=source_clip,
+            target_clip=target_clip,
+            notes_mode="replace",
+        )
         if hasattr(target_clip, "name"):
             target_clip.name = str(getattr(source_clip, "name", ""))
 
-        delete_track = getattr(song, "delete_track", None)
-        if not callable(delete_track):
-            raise _not_supported_by_live_api(
-                message="Track delete API is not available in Live API",
-                hint="Use a Live version exposing song.delete_track.",
-            )
-        delete_track(source_track_index)
+        self._delete_track(song, source_track_index)
+        return imported_note_count
 
     def load_instrument_or_effect(
         self,
@@ -464,6 +544,7 @@ class LiveBackendBrowserReadMixin:
         target_track_mode: str = "auto",
         clip_slot: int | None = None,
         preserve_track_name: bool = False,
+        notes_mode: str | None = None,
     ) -> dict[str, Any]:
         if uri is None and path is None:
             raise _invalid_argument(
@@ -496,6 +577,13 @@ class LiveBackendBrowserReadMixin:
                 )
             uri = serialized["uri"]
 
+        resolved_notes_mode = notes_mode.lower() if isinstance(notes_mode, str) else None
+        if resolved_notes_mode is not None and resolved_notes_mode not in {"replace", "append"}:
+            raise _invalid_argument(
+                message=f"notes_mode must be one of replace/append, got {notes_mode}",
+                hint="Use notes_mode replace or append.",
+            )
+
         song = self._song()
         tracks_before_load = list(getattr(song, "tracks", []))
         track_count_before = len(list(getattr(song, "tracks", [])))
@@ -510,15 +598,58 @@ class LiveBackendBrowserReadMixin:
             target_track=target,
             clip_slot=clip_slot,
         )
-        self._browser().load_item(item)
-        self._rehome_loaded_midi_clip_if_needed(
-            song=song,
-            item=item,
-            target_track=target,
-            target_track_mode=target_track_mode,
-            clip_slot=resolved_clip_slot,
-            tracks_before_load=tracks_before_load,
-        )
+        imported_note_count: int | None = None
+        length_imported: bool | None = None
+        groove_imported: bool | None = None
+        if resolved_notes_mode is None:
+            self._browser().load_item(item)
+            imported_note_count = self._rehome_loaded_midi_clip_if_needed(
+                song=song,
+                item=item,
+                target_track=target,
+                target_track_mode=target_track_mode,
+                clip_slot=resolved_clip_slot,
+                tracks_before_load=tracks_before_load,
+            )
+        else:
+            if target_track_mode != "existing":
+                raise _invalid_argument(
+                    message="notes_mode requires target_track_mode=existing",
+                    hint="Use --target-track-mode existing when importing notes.",
+                )
+            if resolved_clip_slot is None:
+                raise _invalid_argument(
+                    message="notes_mode requires clip_slot",
+                    hint="Use --clip-slot to select the destination clip.",
+                )
+            if not self._is_midi_clip_browser_item(item):
+                raise _invalid_argument(
+                    message="notes_mode is supported only for MIDI clip (.alc) browser items",
+                    hint="Choose a .alc target from browser search/items.",
+                )
+            source_track_index, source_clip = self._load_midi_clip_to_temporary_track(
+                song=song,
+                item=item,
+            )
+            try:
+                target_clip = self._target_clip_for_import(
+                    target_track=target,
+                    clip_slot=resolved_clip_slot,
+                    source_clip=source_clip,
+                    require_existing_clip=True,
+                )
+                imported_note_count = self._import_clip_notes(
+                    source_clip=source_clip,
+                    target_clip=target_clip,
+                    notes_mode=resolved_notes_mode,
+                )
+                if hasattr(target_clip, "name"):
+                    target_clip.name = str(getattr(source_clip, "name", ""))
+            finally:
+                self._delete_track(song, source_track_index)
+            length_imported = False
+            groove_imported = False
+
         if track_name_before is not None and hasattr(target, "name"):
             target.name = track_name_before
         track_count_after = len(list(getattr(song, "tracks", [])))
@@ -532,6 +663,10 @@ class LiveBackendBrowserReadMixin:
             "clip_slot": resolved_clip_slot,
             "target_track_mode": target_track_mode,
             "preserve_track_name": preserve_track_name,
+            "notes_mode": resolved_notes_mode,
+            "notes_imported": imported_note_count,
+            "length_imported": length_imported,
+            "groove_imported": groove_imported,
             "track_name": str(getattr(target, "name", "")),
             "track_count": track_count_after,
             "track_count_delta": track_count_after - track_count_before,

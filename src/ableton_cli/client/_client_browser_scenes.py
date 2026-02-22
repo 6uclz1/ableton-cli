@@ -113,5 +113,25 @@ class _AbletonClientBrowserScenesMixin:
     def arrangement_record_stop(self) -> dict[str, Any]:
         return self._call("arrangement_record_stop")
 
+    def arrangement_clip_create(
+        self,
+        track: int,
+        start_time: float,
+        length: float,
+        audio_path: str | None,
+    ) -> dict[str, Any]:
+        args: dict[str, Any] = {
+            "track": track,
+            "start_time": start_time,
+            "length": length,
+        }
+        self._add_if_not_none(args, "audio_path", audio_path)
+        return self._call("arrangement_clip_create", args)
+
+    def arrangement_clip_list(self, track: int | None) -> dict[str, Any]:
+        args: dict[str, Any] = {}
+        self._add_if_not_none(args, "track", track)
+        return self._call("arrangement_clip_list", args)
+
     def tracks_delete(self, track: int) -> dict[str, Any]:
         return self._call("tracks_delete", {"track": track})

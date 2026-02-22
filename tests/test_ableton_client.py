@@ -294,6 +294,45 @@ def test_client_sends_request_timeout_meta(monkeypatch) -> None:
                 "target": "grooves/Hip Hop Boom Bap 16ths 90 bpm.agr",
             },
         ),
+        (
+            lambda client: client.arrangement_clip_create(
+                track=0,
+                start_time=8.0,
+                length=4.0,
+                audio_path=None,
+            ),
+            "arrangement_clip_create",
+            {
+                "track": 0,
+                "start_time": 8.0,
+                "length": 4.0,
+            },
+        ),
+        (
+            lambda client: client.arrangement_clip_create(
+                track=1,
+                start_time=16.0,
+                length=8.0,
+                audio_path="/tmp/loop.wav",
+            ),
+            "arrangement_clip_create",
+            {
+                "track": 1,
+                "start_time": 16.0,
+                "length": 8.0,
+                "audio_path": "/tmp/loop.wav",
+            },
+        ),
+        (
+            lambda client: client.arrangement_clip_list(track=None),
+            "arrangement_clip_list",
+            {},
+        ),
+        (
+            lambda client: client.arrangement_clip_list(track=1),
+            "arrangement_clip_list",
+            {"track": 1},
+        ),
     ],
 )
 def test_client_builds_optional_arguments_deterministically(

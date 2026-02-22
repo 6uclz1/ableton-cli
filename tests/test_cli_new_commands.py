@@ -393,6 +393,66 @@ class _ClientStub:
     def arrangement_record_stop(self):  # noqa: ANN201
         return {"recording": False}
 
+    def arrangement_clip_create(  # noqa: ANN201
+        self,
+        track: int,
+        start_time: float,
+        length: float,
+        audio_path: str | None,
+    ):
+        if track == 0 and audio_path is not None:
+            raise AppError(
+                error_code="INVALID_ARGUMENT",
+                message="audio_path must not be provided for MIDI tracks",
+                hint="Remove --audio-path for MIDI arrangement clip creation.",
+                exit_code=ExitCode.INVALID_ARGUMENT,
+            )
+        if track == 1 and audio_path is None:
+            raise AppError(
+                error_code="INVALID_ARGUMENT",
+                message="audio_path is required for audio tracks",
+                hint="Pass --audio-path with an absolute audio file path.",
+                exit_code=ExitCode.INVALID_ARGUMENT,
+            )
+        payload = {
+            "track": track,
+            "start_time": start_time,
+            "length": length,
+            "arrangement_view_focused": True,
+            "created": True,
+        }
+        if audio_path is None:
+            payload["kind"] = "midi"
+            return payload
+        payload["kind"] = "audio"
+        payload["audio_path"] = audio_path
+        return payload
+
+    def arrangement_clip_list(self, track: int | None):  # noqa: ANN201
+        clips = [
+            {
+                "track": 0,
+                "index": 0,
+                "name": "Clip A",
+                "start_time": 8.0,
+                "length": 4.0,
+                "is_audio_clip": False,
+                "is_midi_clip": True,
+            },
+            {
+                "track": 1,
+                "index": 0,
+                "name": "Clip B",
+                "start_time": 16.0,
+                "length": 8.0,
+                "is_audio_clip": True,
+                "is_midi_clip": False,
+            },
+        ]
+        if track is not None:
+            clips = [clip for clip in clips if clip["track"] == track]
+        return {"track": track, "clip_count": len(clips), "clips": clips}
+
     def execute_batch(self, steps: list[dict[str, object]]):  # noqa: ANN201
         return {
             "step_count": len(steps),
@@ -1572,6 +1632,179 @@ def test_arrangement_record_commands_output_json_envelope(runner, cli_app, monke
     stopped_payload = json.loads(stopped.stdout)
     assert started_payload["result"]["recording"] is True
     assert stopped_payload["result"]["recording"] is False
+
+
+def test_arrangement_clip_create_command_outputs_json_envelope(
+    runner, cli_app, monkeypatch
+) -> None:
+    from ableton_cli.commands import arrangement
+
+    monkeypatch.setattr(arrangement, "get_client", lambda ctx: _ClientStub())
+
+    midi_result = runner.invoke(
+        cli_app,
+        [
+            "--output",
+            "json",
+            "arrangement",
+            "clip",
+            "create",
+            "0",
+            "--start",
+            "8",
+            "--length",
+            "4",
+        ],
+    )
+    audio_result = runner.invoke(
+        cli_app,
+        [
+            "--output",
+            "json",
+            "arrangement",
+            "clip",
+            "create",
+            "1",
+            "--start",
+            "16",
+            "--length",
+            "8",
+            "--audio-path",
+            "/tmp/loop.wav",
+        ],
+    )
+
+    assert midi_result.exit_code == 0
+    assert audio_result.exit_code == 0
+
+    midi_payload = json.loads(midi_result.stdout)
+    audio_payload = json.loads(audio_result.stdout)
+    assert midi_payload["ok"] is True
+    assert audio_payload["ok"] is True
+    assert midi_payload["result"] == {
+        "track": 0,
+        "start_time": 8.0,
+        "length": 4.0,
+        "kind": "midi",
+        "arrangement_view_focused": True,
+        "created": True,
+    }
+    assert audio_payload["result"] == {
+        "track": 1,
+        "start_time": 16.0,
+        "length": 8.0,
+        "kind": "audio",
+        "audio_path": "/tmp/loop.wav",
+        "arrangement_view_focused": True,
+        "created": True,
+    }
+
+
+def test_arrangement_clip_create_rejects_track_kind_audio_path_mismatch(
+    runner, cli_app, monkeypatch
+) -> None:
+    from ableton_cli.commands import arrangement
+
+    monkeypatch.setattr(arrangement, "get_client", lambda ctx: _ClientStub())
+
+    midi_with_audio_path = runner.invoke(
+        cli_app,
+        [
+            "--output",
+            "json",
+            "arrangement",
+            "clip",
+            "create",
+            "0",
+            "--start",
+            "0",
+            "--length",
+            "4",
+            "--audio-path",
+            "/tmp/loop.wav",
+        ],
+    )
+    audio_without_audio_path = runner.invoke(
+        cli_app,
+        [
+            "--output",
+            "json",
+            "arrangement",
+            "clip",
+            "create",
+            "1",
+            "--start",
+            "0",
+            "--length",
+            "4",
+        ],
+    )
+
+    assert midi_with_audio_path.exit_code == 2
+    assert audio_without_audio_path.exit_code == 2
+    assert json.loads(midi_with_audio_path.stdout)["error"]["code"] == "INVALID_ARGUMENT"
+    assert json.loads(audio_without_audio_path.stdout)["error"]["code"] == "INVALID_ARGUMENT"
+
+
+def test_arrangement_clip_list_command_outputs_json_envelope(runner, cli_app, monkeypatch) -> None:
+    from ableton_cli.commands import arrangement
+
+    monkeypatch.setattr(arrangement, "get_client", lambda ctx: _ClientStub())
+
+    all_tracks = runner.invoke(
+        cli_app,
+        ["--output", "json", "arrangement", "clip", "list"],
+    )
+    filtered = runner.invoke(
+        cli_app,
+        ["--output", "json", "arrangement", "clip", "list", "--track", "1"],
+    )
+
+    assert all_tracks.exit_code == 0
+    assert filtered.exit_code == 0
+    all_payload = json.loads(all_tracks.stdout)
+    filtered_payload = json.loads(filtered.stdout)
+    assert all_payload["ok"] is True
+    assert filtered_payload["ok"] is True
+    assert all_payload["result"] == {
+        "track": None,
+        "clip_count": 2,
+        "clips": [
+            {
+                "track": 0,
+                "index": 0,
+                "name": "Clip A",
+                "start_time": 8.0,
+                "length": 4.0,
+                "is_audio_clip": False,
+                "is_midi_clip": True,
+            },
+            {
+                "track": 1,
+                "index": 0,
+                "name": "Clip B",
+                "start_time": 16.0,
+                "length": 8.0,
+                "is_audio_clip": True,
+                "is_midi_clip": False,
+            },
+        ],
+    }
+    assert filtered_payload["result"] == {
+        "track": 1,
+        "clip_count": 1,
+        "clips": [
+            {
+                "track": 1,
+                "index": 0,
+                "name": "Clip B",
+                "start_time": 16.0,
+                "length": 8.0,
+                "is_audio_clip": True,
+                "is_midi_clip": False,
+            }
+        ],
+    }
 
 
 def test_new_commands_validate_arguments_with_exit_code_2(runner, cli_app, monkeypatch) -> None:

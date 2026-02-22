@@ -1,11 +1,28 @@
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
 from .base import _invalid_argument, _not_supported_by_live_api
 
 
 class LiveBackendScenesArrangementMixin:
+    def _focus_arranger_view(self) -> None:
+        app = self._application()
+        view = getattr(app, "view", None)
+        if view is None:
+            raise _not_supported_by_live_api(
+                message="Application view API is not available in Live API",
+                hint="Use a Live version exposing application.view.",
+            )
+        focus_view = getattr(view, "focus_view", None)
+        if not callable(focus_view):
+            raise _not_supported_by_live_api(
+                message="Application focus_view API is not available in Live API",
+                hint="Use a Live version exposing application.view.focus_view.",
+            )
+        focus_view("Arranger")
+
     def scenes_list(self) -> dict[str, Any]:
         scenes = []
         for index, scene in enumerate(list(getattr(self._song(), "scenes", []))):
@@ -85,6 +102,115 @@ class LiveBackendScenesArrangementMixin:
             message="Arrangement record stop API is not available in Live API",
             hint="Stop arrangement recording manually in Ableton Live.",
         )
+
+    def arrangement_clip_create(
+        self,
+        track: int,
+        start_time: float,
+        length: float,
+        audio_path: str | None,
+    ) -> dict[str, Any]:
+        self._focus_arranger_view()
+        target_track = self._track_at(track)
+        is_midi_track = bool(getattr(target_track, "has_midi_input", False))
+        is_audio_track = bool(getattr(target_track, "has_audio_input", False))
+        normalized_start_time = float(start_time)
+        normalized_length = float(length)
+
+        if is_midi_track and not is_audio_track:
+            if audio_path is not None:
+                raise _invalid_argument(
+                    message="audio_path must not be provided for MIDI tracks",
+                    hint="Remove --audio-path for MIDI arrangement clip creation.",
+                )
+            create_midi_clip = getattr(target_track, "create_midi_clip", None)
+            if not callable(create_midi_clip):
+                raise _not_supported_by_live_api(
+                    message="Arrangement MIDI clip creation API is not available in Live API",
+                    hint="Use a Live version exposing track.create_midi_clip.",
+                )
+            create_midi_clip(normalized_start_time, normalized_length)
+            return {
+                "track": track,
+                "start_time": normalized_start_time,
+                "length": normalized_length,
+                "kind": "midi",
+                "arrangement_view_focused": True,
+                "created": True,
+            }
+
+        if is_audio_track and not is_midi_track:
+            if audio_path is None:
+                raise _invalid_argument(
+                    message="audio_path is required for audio tracks",
+                    hint="Pass --audio-path with an absolute audio file path.",
+                )
+            normalized_audio_path = str(audio_path).strip()
+            if not Path(normalized_audio_path).is_absolute():
+                raise _invalid_argument(
+                    message=f"audio_path must be an absolute path, got {normalized_audio_path!r}",
+                    hint="Pass an absolute filesystem path for --audio-path.",
+                )
+            create_audio_clip = getattr(target_track, "create_audio_clip", None)
+            if not callable(create_audio_clip):
+                raise _not_supported_by_live_api(
+                    message="Arrangement audio clip creation API is not available in Live API",
+                    hint="Use a Live version exposing track.create_audio_clip.",
+                )
+            create_audio_clip(normalized_audio_path, normalized_start_time)
+            return {
+                "track": track,
+                "start_time": normalized_start_time,
+                "length": normalized_length,
+                "kind": "audio",
+                "audio_path": normalized_audio_path,
+                "arrangement_view_focused": True,
+                "created": True,
+            }
+
+        raise _invalid_argument(
+            message=(
+                f"track {track} must be exclusively MIDI or audio "
+                f"(has_midi_input={is_midi_track}, has_audio_input={is_audio_track})"
+            ),
+            hint="Use a standard MIDI or audio track for arrangement clip creation.",
+        )
+
+    def arrangement_clip_list(self, track: int | None) -> dict[str, Any]:
+        if track is None:
+            target_tracks = [
+                (index, target_track)
+                for index, target_track in enumerate(list(self._song().tracks))
+            ]
+        else:
+            target_tracks = [(track, self._track_at(track))]
+
+        clips: list[dict[str, Any]] = []
+        for track_index, target_track in target_tracks:
+            arrangement_clips = getattr(target_track, "arrangement_clips", None)
+            if arrangement_clips is None:
+                raise _not_supported_by_live_api(
+                    message="Arrangement clip list API is not available in Live API",
+                    hint="Use a Live version exposing track.arrangement_clips.",
+                )
+            for clip_index, clip in enumerate(list(arrangement_clips)):
+                clips.append(
+                    {
+                        "track": track_index,
+                        "index": clip_index,
+                        "name": str(getattr(clip, "name", "")),
+                        "start_time": self._safe_float(getattr(clip, "start_time", None)),
+                        "length": self._safe_float(getattr(clip, "length", None)),
+                        "is_audio_clip": bool(getattr(clip, "is_audio_clip", False)),
+                        "is_midi_clip": bool(getattr(clip, "is_midi_clip", False)),
+                    }
+                )
+
+        return {
+            "track": track,
+            "clip_count": len(clips),
+            "clips": clips,
+        }
 
     def tracks_delete(self, track: int) -> dict[str, Any]:
         self._track_at(track)

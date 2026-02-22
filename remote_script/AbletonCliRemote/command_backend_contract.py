@@ -211,6 +211,16 @@ class _TracksClipsBackend(Protocol):
 
     def arrangement_record_stop(self) -> dict[str, Any]: ...
 
+    def arrangement_clip_create(
+        self,
+        track: int,
+        start_time: float,
+        length: float,
+        audio_path: str | None,
+    ) -> dict[str, Any]: ...
+
+    def arrangement_clip_list(self, track: int | None) -> dict[str, Any]: ...
+
     def tracks_delete(self, track: int) -> dict[str, Any]: ...
 
 

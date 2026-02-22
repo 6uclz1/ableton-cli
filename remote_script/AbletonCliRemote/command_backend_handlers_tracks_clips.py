@@ -5,6 +5,7 @@ from typing import Any
 
 from .command_backend_contract import CommandBackend
 from .command_backend_validators import (
+    _absolute_path_or_none,
     _as_bool,
     _as_int,
     _clip_length,
@@ -16,6 +17,7 @@ from .command_backend_validators import (
     _non_empty_string,
     _non_negative_float,
     _notes,
+    _optional_track_index,
     _track_index,
     _unit_interval,
     _uri_or_path_target,
@@ -256,6 +258,25 @@ def _handle_arrangement_record_stop(
     return backend.arrangement_record_stop()
 
 
+def _handle_arrangement_clip_create(
+    backend: CommandBackend,
+    args: dict[str, Any],
+) -> dict[str, Any]:
+    track = _track_index("track", args.get("track"))
+    start_time = _non_negative_float("start_time", args.get("start_time"))
+    length = _clip_length(args.get("length"))
+    audio_path = _absolute_path_or_none("audio_path", args.get("audio_path"))
+    return backend.arrangement_clip_create(track, start_time, length, audio_path)
+
+
+def _handle_arrangement_clip_list(
+    backend: CommandBackend,
+    args: dict[str, Any],
+) -> dict[str, Any]:
+    track = _optional_track_index("track", args.get("track"))
+    return backend.arrangement_clip_list(track)
+
+
 def _handle_tracks_delete(backend: CommandBackend, args: dict[str, Any]) -> dict[str, Any]:
     track = _track_index("track", args.get("track"))
     return backend.tracks_delete(track)
@@ -289,5 +310,7 @@ TRACKS_CLIPS_HANDLERS: dict[str, Handler] = {
     "stop_all_clips": _handle_stop_all_clips,
     "arrangement_record_start": _handle_arrangement_record_start,
     "arrangement_record_stop": _handle_arrangement_record_stop,
+    "arrangement_clip_create": _handle_arrangement_clip_create,
+    "arrangement_clip_list": _handle_arrangement_clip_list,
     "tracks_delete": _handle_tracks_delete,
 }

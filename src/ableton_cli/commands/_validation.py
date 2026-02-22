@@ -36,11 +36,27 @@ def require_positive_float(name: str, value: float, *, hint: str) -> float:
     return value
 
 
+def require_non_negative_float(name: str, value: float, *, hint: str) -> float:
+    if value < 0:
+        raise invalid_argument(message=f"{name} must be >= 0, got {value}", hint=hint)
+    return value
+
+
 def require_non_empty_string(name: str, value: str, *, hint: str) -> str:
     stripped = value.strip()
     if not stripped:
         raise invalid_argument(message=f"{name} must not be empty", hint=hint)
     return stripped
+
+
+def require_absolute_path(name: str, value: str, *, hint: str) -> str:
+    parsed = require_non_empty_string(name, value, hint=hint)
+    if not Path(parsed).is_absolute():
+        raise invalid_argument(
+            message=f"{name} must be an absolute path, got {parsed!r}",
+            hint=hint,
+        )
+    return parsed
 
 
 def resolve_uri_or_path_target(

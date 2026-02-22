@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
 from .command_backend_contract import (
@@ -71,6 +72,18 @@ def _uri_or_path_target(name: str, value: Any) -> str:
         message=f"{name} must include '/' (path) or ':' (uri)",
         hint="Use a browser path like grooves/My Groove.agr or URI like groove:example.",
     )
+
+
+def _absolute_path_or_none(name: str, value: Any) -> str | None:
+    if value is None:
+        return None
+    parsed = _non_empty_string(name, value)
+    if not Path(parsed).is_absolute():
+        raise _invalid_argument(
+            message=f"{name} must be an absolute path",
+            hint=f"Pass an absolute filesystem path for '{name}'.",
+        )
+    return parsed
 
 
 def _track_index(name: str, value: Any) -> int:

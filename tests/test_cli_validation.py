@@ -695,3 +695,118 @@ def test_effect_standard_set_rejects_empty_key(runner, cli_app) -> None:
     payload = json.loads(result.stdout)
     assert payload["ok"] is False
     assert payload["error"]["code"] == "INVALID_ARGUMENT"
+
+
+def test_arrangement_clip_create_rejects_negative_track(runner, cli_app) -> None:
+    result = runner.invoke(
+        cli_app,
+        [
+            "--output",
+            "json",
+            "arrangement",
+            "clip",
+            "create",
+            "--start",
+            "0",
+            "--length",
+            "4",
+            "--",
+            "-1",
+        ],
+    )
+
+    assert result.exit_code == 2
+    payload = json.loads(result.stdout)
+    assert payload["ok"] is False
+    assert payload["error"]["code"] == "INVALID_ARGUMENT"
+
+
+def test_arrangement_clip_create_rejects_negative_start(runner, cli_app) -> None:
+    result = runner.invoke(
+        cli_app,
+        [
+            "--output",
+            "json",
+            "arrangement",
+            "clip",
+            "create",
+            "0",
+            "--start",
+            "-1",
+            "--length",
+            "4",
+        ],
+    )
+
+    assert result.exit_code == 2
+    payload = json.loads(result.stdout)
+    assert payload["ok"] is False
+    assert payload["error"]["code"] == "INVALID_ARGUMENT"
+
+
+def test_arrangement_clip_create_rejects_non_positive_length(runner, cli_app) -> None:
+    result = runner.invoke(
+        cli_app,
+        [
+            "--output",
+            "json",
+            "arrangement",
+            "clip",
+            "create",
+            "0",
+            "--start",
+            "0",
+            "--length",
+            "0",
+        ],
+    )
+
+    assert result.exit_code == 2
+    payload = json.loads(result.stdout)
+    assert payload["ok"] is False
+    assert payload["error"]["code"] == "INVALID_ARGUMENT"
+
+
+def test_arrangement_clip_create_rejects_relative_audio_path(runner, cli_app) -> None:
+    result = runner.invoke(
+        cli_app,
+        [
+            "--output",
+            "json",
+            "arrangement",
+            "clip",
+            "create",
+            "1",
+            "--start",
+            "0",
+            "--length",
+            "4",
+            "--audio-path",
+            "loops/amen.wav",
+        ],
+    )
+
+    assert result.exit_code == 2
+    payload = json.loads(result.stdout)
+    assert payload["ok"] is False
+    assert payload["error"]["code"] == "INVALID_ARGUMENT"
+
+
+def test_arrangement_clip_list_rejects_negative_track_option(runner, cli_app) -> None:
+    result = runner.invoke(
+        cli_app,
+        [
+            "--output",
+            "json",
+            "arrangement",
+            "clip",
+            "list",
+            "--track",
+            "-1",
+        ],
+    )
+
+    assert result.exit_code == 2
+    payload = json.loads(result.stdout)
+    assert payload["ok"] is False
+    assert payload["error"]["code"] == "INVALID_ARGUMENT"

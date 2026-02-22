@@ -32,6 +32,16 @@ class FailedTest:
     message: str
 
 
+@dataclass(frozen=True)
+class QualityViolation:
+    severity: str
+    metric: str
+    target: str
+    value: float
+    threshold: float | None
+    message: str
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Generate GitHub Actions summary from quality harness and pytest artifacts.",
@@ -58,7 +68,56 @@ def _read_json(path: Path) -> dict[str, Any]:
     return payload
 
 
-def _read_quality_harness_report(path: Path) -> dict[str, Any]:
+def _to_float(value: Any, *, label: str) -> float:
+    try:
+        return float(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"invalid float value for '{label}': {value!r}") from exc
+
+
+def _parse_quality_violation(value: Any, *, artifact_path: Path) -> QualityViolation:
+    if not isinstance(value, dict):
+        raise ValueError(f"quality harness violation must be an object: {artifact_path}")
+
+    severity = value.get("severity")
+    if severity not in {"warn", "fail"}:
+        raise ValueError(f"quality harness violation has invalid severity: {artifact_path}")
+
+    scope = value.get("scope")
+    metric = value.get("metric")
+    message = value.get("message")
+    if not isinstance(scope, str) or not scope:
+        raise ValueError(f"quality harness violation missing scope: {artifact_path}")
+    if not isinstance(metric, str) or not metric:
+        raise ValueError(f"quality harness violation missing metric: {artifact_path}")
+    if not isinstance(message, str) or not message:
+        raise ValueError(f"quality harness violation missing message: {artifact_path}")
+
+    path = value.get("path")
+    qualname = value.get("qualname")
+    if path is not None and not isinstance(path, str):
+        raise ValueError(f"quality harness violation has invalid path: {artifact_path}")
+    if qualname is not None and not isinstance(qualname, str):
+        raise ValueError(f"quality harness violation has invalid qualname: {artifact_path}")
+
+    target_parts = [item for item in (path, qualname) if item]
+    target = "::".join(target_parts) if target_parts else "-"
+
+    threshold_key = "fail_threshold" if severity == "fail" else "warn_threshold"
+    threshold_raw = value.get(threshold_key)
+    threshold = None if threshold_raw is None else _to_float(threshold_raw, label=threshold_key)
+
+    return QualityViolation(
+        severity=severity,
+        metric=f"{scope}.{metric}",
+        target=target,
+        value=_to_float(value.get("value"), label="value"),
+        threshold=threshold,
+        message=message,
+    )
+
+
+def _read_quality_harness_report(path: Path) -> tuple[dict[str, Any], tuple[QualityViolation, ...]]:
     payload = _read_json(path)
     summary = payload.get("summary")
     if not isinstance(summary, dict):
@@ -76,7 +135,23 @@ def _read_quality_harness_report(path: Path) -> dict[str, Any]:
     for key in required_keys:
         if key not in summary:
             raise ValueError(f"quality harness artifact missing summary key '{key}': {path}")
-    return summary
+
+    violations_payload = payload.get("violations")
+    if not isinstance(violations_payload, list):
+        raise ValueError(f"quality harness artifact missing violations list: {path}")
+    violations = tuple(
+        _parse_quality_violation(item, artifact_path=path) for item in violations_payload
+    )
+
+    status = str(summary["status"])
+    if status == "pass" and violations:
+        raise ValueError(f"quality harness status is pass but violations are present: {path}")
+    if status == "warn" and not any(item.severity == "warn" for item in violations):
+        raise ValueError(f"quality harness status is warn but warn violations are missing: {path}")
+    if status == "fail" and not any(item.severity == "fail" for item in violations):
+        raise ValueError(f"quality harness status is fail but fail violations are missing: {path}")
+
+    return summary, violations
 
 
 def _read_dev_checks_reports(paths: list[Path]) -> DevChecksMetrics:
@@ -200,9 +275,36 @@ def _escape_cell(value: str) -> str:
     return value.replace("|", "\\|").replace("\n", " ").strip()
 
 
+def _format_metric_number(value: float | None) -> str:
+    if value is None:
+        return "-"
+    if value.is_integer():
+        return str(int(value))
+    return f"{value:g}"
+
+
+def _quality_violations_for_next_actions(
+    quality_status: str,
+    *,
+    quality_violations: tuple[QualityViolation, ...],
+) -> tuple[QualityViolation, ...]:
+    if quality_status == "fail":
+        result = tuple(item for item in quality_violations if item.severity == "fail")
+        if not result:
+            raise ValueError("quality status is fail but no fail metrics are available")
+        return result
+    if quality_status == "warn":
+        result = tuple(item for item in quality_violations if item.severity == "warn")
+        if not result:
+            raise ValueError("quality status is warn but no warn metrics are available")
+        return result
+    return tuple()
+
+
 def _build_summary_markdown(
     *,
     quality_summary: dict[str, Any],
+    quality_violations: tuple[QualityViolation, ...],
     dev_metrics: DevChecksMetrics,
     pytest_totals: PytestTotals,
     failed_tests: list[FailedTest],
@@ -275,6 +377,20 @@ def _build_summary_markdown(
     else:
         if quality_status in {"warn", "fail"}:
             lines.append("- Review quality harness violations and resolve fail-level metrics.")
+            lines.append("- Quality metrics to address:")
+            lines.append("| Severity | Metric | Target | Value | Threshold | Message |")
+            lines.append("| --- | --- | --- | --- | --- | --- |")
+            for violation in _quality_violations_for_next_actions(
+                quality_status,
+                quality_violations=quality_violations,
+            ):
+                lines.append(
+                    f"| {_escape_cell(violation.severity)} | {_escape_cell(violation.metric)} | "
+                    f"{_escape_cell(violation.target)} | "
+                    f"{_format_metric_number(violation.value)} | "
+                    f"{_format_metric_number(violation.threshold)} | "
+                    f"{_escape_cell(violation.message)} |"
+                )
         if dev_metrics.failed_reports > 0:
             lines.append("- Re-run failed dev check commands locally and fix lint/test issues.")
         if pytest_totals.failures > 0 or pytest_totals.errors > 0:
@@ -290,11 +406,12 @@ def generate_summary(
     pytest_junit_reports: list[Path],
     summary_file: Path,
 ) -> int:
-    quality_summary = _read_quality_harness_report(quality_harness_report)
+    quality_summary, quality_violations = _read_quality_harness_report(quality_harness_report)
     dev_metrics = _read_dev_checks_reports(dev_checks_reports)
     pytest_totals, failed_tests = _merge_pytest_reports(pytest_junit_reports)
     summary, exit_code = _build_summary_markdown(
         quality_summary=quality_summary,
+        quality_violations=quality_violations,
         dev_metrics=dev_metrics,
         pytest_totals=pytest_totals,
         failed_tests=failed_tests,

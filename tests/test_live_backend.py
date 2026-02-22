@@ -326,6 +326,37 @@ class _Song:
         self.scenes.insert(to_index, scene)
 
 
+class _EventuallyConsistentSong(_Song):
+    def __init__(self) -> None:
+        self._actual_is_playing = False
+        self._reported_is_playing = False
+        self._stale_reads_remaining = 0
+        super().__init__()
+
+    @property
+    def is_playing(self) -> bool:
+        if self._stale_reads_remaining > 0:
+            self._stale_reads_remaining -= 1
+            return bool(self._reported_is_playing)
+        self._reported_is_playing = bool(self._actual_is_playing)
+        return bool(self._actual_is_playing)
+
+    @is_playing.setter
+    def is_playing(self, value: bool) -> None:
+        state = bool(value)
+        self._actual_is_playing = state
+        self._reported_is_playing = state
+        self._stale_reads_remaining = 0
+
+    def start_playing(self) -> None:
+        self._actual_is_playing = True
+        self._stale_reads_remaining = 1
+
+    def stop_playing(self) -> None:
+        self._actual_is_playing = False
+        self._stale_reads_remaining = 1
+
+
 @dataclass(slots=True)
 class _Scene:
     name: str
@@ -350,6 +381,12 @@ class _SurfaceStub:
 
     def application(self) -> _Application:
         return self._app
+
+
+class _EventuallyConsistentSurfaceStub(_SurfaceStub):
+    def __init__(self) -> None:
+        self._song_obj = _EventuallyConsistentSong()
+        self._app = _Application(self._song_obj)
 
 
 def _note() -> dict[str, Any]:
@@ -497,6 +534,13 @@ def test_live_backend_transport_and_tempo() -> None:
     assert backend.transport_tempo_set(128.0)["tempo"] == 128.0
     assert backend.transport_tempo_get()["tempo"] == 128.0
     assert backend.stop_playback()["is_playing"] is False
+
+
+def test_live_backend_transport_waits_for_committed_state() -> None:
+    backend = LiveBackend(_EventuallyConsistentSurfaceStub())
+
+    assert backend.transport_play()["is_playing"] is True
+    assert backend.transport_stop()["is_playing"] is False
 
 
 def test_live_backend_track_volume_set() -> None:

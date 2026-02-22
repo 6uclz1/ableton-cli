@@ -1,11 +1,89 @@
 from __future__ import annotations
 
-from typing import Annotated
+from collections.abc import Callable
+from typing import Annotated, TypeVar
 
 import typer
 
 from ..runtime import execute_command, get_client
-from ._validation import invalid_argument, require_non_empty_string, require_non_negative
+from ._validation import require_float_in_range, require_non_empty_string, require_track_index
+
+TValue = TypeVar("TValue")
+
+TrackArgument = Annotated[int, typer.Argument(help="Track index (0-based)")]
+VolumeValueArgument = Annotated[float, typer.Argument(help="Volume value in [0.0, 1.0]")]
+PanningValueArgument = Annotated[float, typer.Argument(help="Panning value in [-1.0, 1.0]")]
+
+
+def _execute_track_get(
+    ctx: typer.Context,
+    *,
+    command: str,
+    track: int,
+    action: Callable[[int], dict[str, object]],
+) -> None:
+    def _run() -> dict[str, object]:
+        valid_track = require_track_index(track)
+        return action(valid_track)
+
+    execute_command(
+        ctx,
+        command=command,
+        args={"track": track},
+        action=_run,
+    )
+
+
+def _execute_track_set(
+    ctx: typer.Context,
+    *,
+    command: str,
+    track: int,
+    value: TValue,
+    action: Callable[[int, TValue], dict[str, object]],
+    value_name: str = "value",
+    validator: Callable[[TValue], TValue] | None = None,
+) -> None:
+    def _run() -> dict[str, object]:
+        valid_track = require_track_index(track)
+        valid_value = validator(value) if validator is not None else value
+        return action(valid_track, valid_value)
+
+    execute_command(
+        ctx,
+        command=command,
+        args={"track": track, value_name: value},
+        action=_run,
+    )
+
+
+def _require_volume_value(value: float) -> float:
+    return require_float_in_range(
+        "value",
+        value,
+        minimum=0.0,
+        maximum=1.0,
+        hint="Use a normalized volume value such as 0.75.",
+    )
+
+
+def _require_panning_value(value: float) -> float:
+    return require_float_in_range(
+        "value",
+        value,
+        minimum=-1.0,
+        maximum=1.0,
+        hint="Use a normalized panning value such as -0.25.",
+    )
+
+
+def _require_track_name(value: str) -> str:
+    return require_non_empty_string(
+        "name",
+        value,
+        hint="Pass a non-empty track name.",
+    )
+
 
 track_app = typer.Typer(help="Single-track commands", no_args_is_help=True)
 volume_app = typer.Typer(help="Track volume commands", no_args_is_help=True)
@@ -19,273 +97,190 @@ panning_app = typer.Typer(help="Track panning commands", no_args_is_help=True)
 @track_app.command("info")
 def track_info(
     ctx: typer.Context,
-    track: Annotated[int, typer.Argument(help="Track index (0-based)")],
+    track: TrackArgument,
 ) -> None:
-    def _run() -> dict[str, object]:
-        require_non_negative(
-            "track",
-            track,
-            hint="Use a valid track index from 'ableton-cli tracks list'.",
-        )
-        return get_client(ctx).get_track_info(track)
-
-    execute_command(
+    _execute_track_get(
         ctx,
         command="track info",
-        args={"track": track},
-        action=_run,
+        track=track,
+        action=lambda valid_track: get_client(ctx).get_track_info(valid_track),
     )
 
 
 @volume_app.command("get")
 def volume_get(
     ctx: typer.Context,
-    track: Annotated[int, typer.Argument(help="Track index (0-based)")],
+    track: TrackArgument,
 ) -> None:
-    def _run() -> dict[str, float | int]:
-        require_non_negative(
-            "track",
-            track,
-            hint="Use a valid track index from 'ableton-cli tracks list'.",
-        )
-        return get_client(ctx).track_volume_get(track)
-
-    execute_command(
+    _execute_track_get(
         ctx,
         command="track volume get",
-        args={"track": track},
-        action=_run,
+        track=track,
+        action=lambda valid_track: get_client(ctx).track_volume_get(valid_track),
     )
 
 
 @volume_app.command("set")
 def volume_set(
     ctx: typer.Context,
-    track: Annotated[int, typer.Argument(help="Track index (0-based)")],
-    value: Annotated[float, typer.Argument(help="Volume value in [0.0, 1.0]")],
+    track: TrackArgument,
+    value: VolumeValueArgument,
 ) -> None:
-    def _run() -> dict[str, float | int]:
-        require_non_negative(
-            "track",
-            track,
-            hint="Use a valid track index from 'ableton-cli tracks list'.",
-        )
-        if value < 0.0 or value > 1.0:
-            raise invalid_argument(
-                message=f"value must be between 0.0 and 1.0, got {value}",
-                hint="Use a normalized volume value such as 0.75.",
-            )
-        return get_client(ctx).track_volume_set(track, value)
-
-    execute_command(
+    _execute_track_set(
         ctx,
         command="track volume set",
-        args={"track": track, "value": value},
-        action=_run,
+        track=track,
+        value=value,
+        validator=_require_volume_value,
+        action=lambda valid_track, valid_value: get_client(ctx).track_volume_set(
+            valid_track,
+            valid_value,
+        ),
     )
 
 
 @name_app.command("set")
 def track_name_set(
     ctx: typer.Context,
-    track: Annotated[int, typer.Argument(help="Track index (0-based)")],
+    track: TrackArgument,
     name: Annotated[str, typer.Argument(help="New track name")],
 ) -> None:
-    def _run() -> dict[str, object]:
-        require_non_negative(
-            "track",
-            track,
-            hint="Use a valid track index from 'ableton-cli tracks list'.",
-        )
-        valid_name = require_non_empty_string(
-            "name",
-            name,
-            hint="Pass a non-empty track name.",
-        )
-        return get_client(ctx).set_track_name(track, valid_name)
-
-    execute_command(
+    _execute_track_set(
         ctx,
         command="track name set",
-        args={"track": track, "name": name},
-        action=_run,
+        track=track,
+        value=name,
+        value_name="name",
+        validator=_require_track_name,
+        action=lambda valid_track, valid_name: get_client(ctx).set_track_name(
+            valid_track,
+            valid_name,
+        ),
     )
 
 
 @mute_app.command("get")
 def mute_get(
     ctx: typer.Context,
-    track: Annotated[int, typer.Argument(help="Track index (0-based)")],
+    track: TrackArgument,
 ) -> None:
-    def _run() -> dict[str, object]:
-        require_non_negative(
-            "track",
-            track,
-            hint="Use a valid track index from 'ableton-cli tracks list'.",
-        )
-        return get_client(ctx).track_mute_get(track)
-
-    execute_command(
+    _execute_track_get(
         ctx,
         command="track mute get",
-        args={"track": track},
-        action=_run,
+        track=track,
+        action=lambda valid_track: get_client(ctx).track_mute_get(valid_track),
     )
 
 
 @mute_app.command("set")
 def mute_set(
     ctx: typer.Context,
-    track: Annotated[int, typer.Argument(help="Track index (0-based)")],
+    track: TrackArgument,
     value: Annotated[bool, typer.Argument(help="Mute value: true|false")],
 ) -> None:
-    def _run() -> dict[str, object]:
-        require_non_negative(
-            "track",
-            track,
-            hint="Use a valid track index from 'ableton-cli tracks list'.",
-        )
-        return get_client(ctx).track_mute_set(track, value)
-
-    execute_command(
+    _execute_track_set(
         ctx,
         command="track mute set",
-        args={"track": track, "value": value},
-        action=_run,
+        track=track,
+        value=value,
+        action=lambda valid_track, valid_value: get_client(ctx).track_mute_set(
+            valid_track,
+            valid_value,
+        ),
     )
 
 
 @solo_app.command("get")
 def solo_get(
     ctx: typer.Context,
-    track: Annotated[int, typer.Argument(help="Track index (0-based)")],
+    track: TrackArgument,
 ) -> None:
-    def _run() -> dict[str, object]:
-        require_non_negative(
-            "track",
-            track,
-            hint="Use a valid track index from 'ableton-cli tracks list'.",
-        )
-        return get_client(ctx).track_solo_get(track)
-
-    execute_command(
+    _execute_track_get(
         ctx,
         command="track solo get",
-        args={"track": track},
-        action=_run,
+        track=track,
+        action=lambda valid_track: get_client(ctx).track_solo_get(valid_track),
     )
 
 
 @solo_app.command("set")
 def solo_set(
     ctx: typer.Context,
-    track: Annotated[int, typer.Argument(help="Track index (0-based)")],
+    track: TrackArgument,
     value: Annotated[bool, typer.Argument(help="Solo value: true|false")],
 ) -> None:
-    def _run() -> dict[str, object]:
-        require_non_negative(
-            "track",
-            track,
-            hint="Use a valid track index from 'ableton-cli tracks list'.",
-        )
-        return get_client(ctx).track_solo_set(track, value)
-
-    execute_command(
+    _execute_track_set(
         ctx,
         command="track solo set",
-        args={"track": track, "value": value},
-        action=_run,
+        track=track,
+        value=value,
+        action=lambda valid_track, valid_value: get_client(ctx).track_solo_set(
+            valid_track,
+            valid_value,
+        ),
     )
 
 
 @arm_app.command("get")
 def arm_get(
     ctx: typer.Context,
-    track: Annotated[int, typer.Argument(help="Track index (0-based)")],
+    track: TrackArgument,
 ) -> None:
-    def _run() -> dict[str, object]:
-        require_non_negative(
-            "track",
-            track,
-            hint="Use a valid track index from 'ableton-cli tracks list'.",
-        )
-        return get_client(ctx).track_arm_get(track)
-
-    execute_command(
+    _execute_track_get(
         ctx,
         command="track arm get",
-        args={"track": track},
-        action=_run,
+        track=track,
+        action=lambda valid_track: get_client(ctx).track_arm_get(valid_track),
     )
 
 
 @arm_app.command("set")
 def arm_set(
     ctx: typer.Context,
-    track: Annotated[int, typer.Argument(help="Track index (0-based)")],
+    track: TrackArgument,
     value: Annotated[bool, typer.Argument(help="Arm value: true|false")],
 ) -> None:
-    def _run() -> dict[str, object]:
-        require_non_negative(
-            "track",
-            track,
-            hint="Use a valid track index from 'ableton-cli tracks list'.",
-        )
-        return get_client(ctx).track_arm_set(track, value)
-
-    execute_command(
+    _execute_track_set(
         ctx,
         command="track arm set",
-        args={"track": track, "value": value},
-        action=_run,
+        track=track,
+        value=value,
+        action=lambda valid_track, valid_value: get_client(ctx).track_arm_set(
+            valid_track,
+            valid_value,
+        ),
     )
 
 
 @panning_app.command("get")
 def panning_get(
     ctx: typer.Context,
-    track: Annotated[int, typer.Argument(help="Track index (0-based)")],
+    track: TrackArgument,
 ) -> None:
-    def _run() -> dict[str, object]:
-        require_non_negative(
-            "track",
-            track,
-            hint="Use a valid track index from 'ableton-cli tracks list'.",
-        )
-        return get_client(ctx).track_panning_get(track)
-
-    execute_command(
+    _execute_track_get(
         ctx,
         command="track panning get",
-        args={"track": track},
-        action=_run,
+        track=track,
+        action=lambda valid_track: get_client(ctx).track_panning_get(valid_track),
     )
 
 
 @panning_app.command("set")
 def panning_set(
     ctx: typer.Context,
-    track: Annotated[int, typer.Argument(help="Track index (0-based)")],
-    value: Annotated[float, typer.Argument(help="Panning value in [-1.0, 1.0]")],
+    track: TrackArgument,
+    value: PanningValueArgument,
 ) -> None:
-    def _run() -> dict[str, object]:
-        require_non_negative(
-            "track",
-            track,
-            hint="Use a valid track index from 'ableton-cli tracks list'.",
-        )
-        if value < -1.0 or value > 1.0:
-            raise invalid_argument(
-                message=f"value must be between -1.0 and 1.0, got {value}",
-                hint="Use a normalized panning value such as -0.25.",
-            )
-        return get_client(ctx).track_panning_set(track, value)
-
-    execute_command(
+    _execute_track_set(
         ctx,
         command="track panning set",
-        args={"track": track, "value": value},
-        action=_run,
+        track=track,
+        value=value,
+        validator=_require_panning_value,
+        action=lambda valid_track, valid_value: get_client(ctx).track_panning_set(
+            valid_track,
+            valid_value,
+        ),
     )
 
 

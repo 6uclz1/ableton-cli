@@ -1,13 +1,24 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import Annotated
 
 import typer
 
 from ..runtime import execute_command, get_client
-from ._validation import invalid_argument, require_non_empty_string, require_non_negative
+from ._validation import (
+    invalid_argument,
+    require_device_index,
+    require_non_empty_string,
+    require_parameter_index,
+    require_track_index,
+)
 
 _SUPPORTED_SYNTH_TYPES = ("wavetable", "drift", "meld")
+
+TrackArgument = Annotated[int, typer.Argument(help="Track index (0-based)")]
+DeviceArgument = Annotated[int, typer.Argument(help="Device index (0-based)")]
+ParameterArgument = Annotated[int, typer.Argument(help="Parameter index (0-based)")]
 
 synth_app = typer.Typer(help="Synth control commands", no_args_is_help=True)
 parameters_app = typer.Typer(help="Synth parameter listing commands", no_args_is_help=True)
@@ -25,6 +36,46 @@ def _normalize_synth_type(value: str) -> str:
     return normalized
 
 
+def _require_optional_track_index(track: int | None) -> int | None:
+    if track is None:
+        return None
+    return require_track_index(track)
+
+
+def _require_track_and_device_index(track: int, device: int) -> tuple[int, int]:
+    return (
+        require_track_index(track),
+        require_device_index(device),
+    )
+
+
+def _require_synth_parameter_index(parameter: int) -> int:
+    return require_parameter_index(
+        parameter,
+        hint="Use a valid parameter index from 'ableton-cli synth parameters list'.",
+    )
+
+
+def _execute_track_device_command(
+    ctx: typer.Context,
+    *,
+    command: str,
+    track: int,
+    device: int,
+    action: Callable[[int, int], dict[str, object]],
+) -> None:
+    def _run() -> dict[str, object]:
+        valid_track, valid_device = _require_track_and_device_index(track, device)
+        return action(valid_track, valid_device)
+
+    execute_command(
+        ctx,
+        command=command,
+        args={"track": track, "device": device},
+        action=_run,
+    )
+
+
 @synth_app.command("find")
 def synth_find(
     ctx: typer.Context,
@@ -38,14 +89,9 @@ def synth_find(
     ] = None,
 ) -> None:
     def _run() -> dict[str, object]:
-        if track is not None:
-            require_non_negative(
-                "track",
-                track,
-                hint="Use a valid track index from 'ableton-cli tracks list'.",
-            )
+        valid_track = _require_optional_track_index(track)
         valid_type = _normalize_synth_type(synth_type) if synth_type is not None else None
-        return get_client(ctx).find_synth_devices(track=track, synth_type=valid_type)
+        return get_client(ctx).find_synth_devices(track=valid_track, synth_type=valid_type)
 
     execute_command(
         ctx,
@@ -58,58 +104,36 @@ def synth_find(
 @parameters_app.command("list")
 def synth_parameters_list(
     ctx: typer.Context,
-    track: Annotated[int, typer.Argument(help="Track index (0-based)")],
-    device: Annotated[int, typer.Argument(help="Device index (0-based)")],
+    track: TrackArgument,
+    device: DeviceArgument,
 ) -> None:
-    def _run() -> dict[str, object]:
-        require_non_negative(
-            "track",
-            track,
-            hint="Use a valid track index from 'ableton-cli tracks list'.",
-        )
-        require_non_negative(
-            "device",
-            device,
-            hint="Use a valid device index from 'ableton-cli track info'.",
-        )
-        return get_client(ctx).list_synth_parameters(track=track, device=device)
-
-    execute_command(
+    _execute_track_device_command(
         ctx,
         command="synth parameters list",
-        args={"track": track, "device": device},
-        action=_run,
+        track=track,
+        device=device,
+        action=lambda valid_track, valid_device: get_client(ctx).list_synth_parameters(
+            track=valid_track,
+            device=valid_device,
+        ),
     )
 
 
 @parameter_app.command("set")
 def synth_parameter_set(
     ctx: typer.Context,
-    track: Annotated[int, typer.Argument(help="Track index (0-based)")],
-    device: Annotated[int, typer.Argument(help="Device index (0-based)")],
-    parameter: Annotated[int, typer.Argument(help="Parameter index (0-based)")],
+    track: TrackArgument,
+    device: DeviceArgument,
+    parameter: ParameterArgument,
     value: Annotated[float, typer.Argument(help="Target parameter value")],
 ) -> None:
     def _run() -> dict[str, object]:
-        require_non_negative(
-            "track",
-            track,
-            hint="Use a valid track index from 'ableton-cli tracks list'.",
-        )
-        require_non_negative(
-            "device",
-            device,
-            hint="Use a valid device index from 'ableton-cli track info'.",
-        )
-        require_non_negative(
-            "parameter",
-            parameter,
-            hint="Use a valid parameter index from 'ableton-cli synth parameters list'.",
-        )
+        valid_track, valid_device = _require_track_and_device_index(track, device)
+        valid_parameter = _require_synth_parameter_index(parameter)
         return get_client(ctx).set_synth_parameter_safe(
-            track=track,
-            device=device,
-            parameter=parameter,
+            track=valid_track,
+            device=valid_device,
+            parameter=valid_parameter,
             value=value,
         )
 
@@ -124,27 +148,18 @@ def synth_parameter_set(
 @synth_app.command("observe")
 def synth_observe(
     ctx: typer.Context,
-    track: Annotated[int, typer.Argument(help="Track index (0-based)")],
-    device: Annotated[int, typer.Argument(help="Device index (0-based)")],
+    track: TrackArgument,
+    device: DeviceArgument,
 ) -> None:
-    def _run() -> dict[str, object]:
-        require_non_negative(
-            "track",
-            track,
-            hint="Use a valid track index from 'ableton-cli tracks list'.",
-        )
-        require_non_negative(
-            "device",
-            device,
-            hint="Use a valid device index from 'ableton-cli track info'.",
-        )
-        return get_client(ctx).observe_synth_parameters(track=track, device=device)
-
-    execute_command(
+    _execute_track_device_command(
         ctx,
         command="synth observe",
-        args={"track": track, "device": device},
-        action=_run,
+        track=track,
+        device=device,
+        action=lambda valid_track, valid_device: get_client(ctx).observe_synth_parameters(
+            track=valid_track,
+            device=valid_device,
+        ),
     )
 
 
@@ -166,22 +181,13 @@ def _build_standard_synth_app(synth_type: str) -> typer.Typer:
     @standard_app.command("set")
     def standard_set(
         ctx: typer.Context,
-        track: Annotated[int, typer.Argument(help="Track index (0-based)")],
-        device: Annotated[int, typer.Argument(help="Device index (0-based)")],
+        track: TrackArgument,
+        device: DeviceArgument,
         key: Annotated[str, typer.Argument(help="Stable synth key")],
         value: Annotated[float, typer.Argument(help="Target parameter value")],
     ) -> None:
         def _run() -> dict[str, object]:
-            require_non_negative(
-                "track",
-                track,
-                hint="Use a valid track index from 'ableton-cli tracks list'.",
-            )
-            require_non_negative(
-                "device",
-                device,
-                hint="Use a valid device index from 'ableton-cli track info'.",
-            )
+            valid_track, valid_device = _require_track_and_device_index(track, device)
             valid_key = require_non_empty_string(
                 "key",
                 key,
@@ -189,8 +195,8 @@ def _build_standard_synth_app(synth_type: str) -> typer.Typer:
             )
             return get_client(ctx).set_standard_synth_parameter_safe(
                 synth_type=synth_type,
-                track=track,
-                device=device,
+                track=valid_track,
+                device=valid_device,
                 key=valid_key,
                 value=value,
             )
@@ -205,31 +211,19 @@ def _build_standard_synth_app(synth_type: str) -> typer.Typer:
     @standard_app.command("observe")
     def standard_observe(
         ctx: typer.Context,
-        track: Annotated[int, typer.Argument(help="Track index (0-based)")],
-        device: Annotated[int, typer.Argument(help="Device index (0-based)")],
+        track: TrackArgument,
+        device: DeviceArgument,
     ) -> None:
-        def _run() -> dict[str, object]:
-            require_non_negative(
-                "track",
-                track,
-                hint="Use a valid track index from 'ableton-cli tracks list'.",
-            )
-            require_non_negative(
-                "device",
-                device,
-                hint="Use a valid device index from 'ableton-cli track info'.",
-            )
-            return get_client(ctx).observe_standard_synth_state(
-                synth_type=synth_type,
-                track=track,
-                device=device,
-            )
-
-        execute_command(
+        _execute_track_device_command(
             ctx,
             command=f"synth {synth_type} observe",
-            args={"track": track, "device": device},
-            action=_run,
+            track=track,
+            device=device,
+            action=lambda valid_track, valid_device: get_client(ctx).observe_standard_synth_state(
+                synth_type=synth_type,
+                track=valid_track,
+                device=valid_device,
+            ),
         )
 
     return standard_app

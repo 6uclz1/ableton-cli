@@ -7,6 +7,8 @@ from typing import Any
 from ..errors import AppError, ExitCode
 
 NOTE_KEYS = {"pitch", "start_time", "duration", "velocity", "mute"}
+TRACK_INDEX_HINT = "Use a valid track index from 'ableton-cli tracks list'."
+DEVICE_INDEX_HINT = "Use a valid device index from 'ableton-cli track info'."
 
 
 def invalid_argument(message: str, hint: str) -> AppError:
@@ -24,6 +26,18 @@ def require_non_negative(name: str, value: int, *, hint: str) -> int:
     return value
 
 
+def require_track_index(value: int, *, hint: str = TRACK_INDEX_HINT) -> int:
+    return require_non_negative("track", value, hint=hint)
+
+
+def require_device_index(value: int, *, hint: str = DEVICE_INDEX_HINT) -> int:
+    return require_non_negative("device", value, hint=hint)
+
+
+def require_parameter_index(value: int, *, hint: str) -> int:
+    return require_non_negative("parameter", value, hint=hint)
+
+
 def require_minus_one_or_non_negative(name: str, value: int, *, hint: str) -> int:
     if value < -1:
         raise invalid_argument(message=f"{name} must be >= -1, got {value}", hint=hint)
@@ -39,6 +53,22 @@ def require_positive_float(name: str, value: float, *, hint: str) -> float:
 def require_non_negative_float(name: str, value: float, *, hint: str) -> float:
     if value < 0:
         raise invalid_argument(message=f"{name} must be >= 0, got {value}", hint=hint)
+    return value
+
+
+def require_float_in_range(
+    name: str,
+    value: float,
+    *,
+    minimum: float,
+    maximum: float,
+    hint: str,
+) -> float:
+    if value < minimum or value > maximum:
+        raise invalid_argument(
+            message=f"{name} must be between {minimum} and {maximum}, got {value}",
+            hint=hint,
+        )
     return value
 
 

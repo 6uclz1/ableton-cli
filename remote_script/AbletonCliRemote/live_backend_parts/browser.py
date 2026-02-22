@@ -340,11 +340,7 @@ class LiveBackendBrowserReadMixin:
         after: list[Any],
     ) -> list[tuple[int, Any]]:
         before_ids = {id(track) for track in before}
-        return [
-            (index, track)
-            for index, track in enumerate(after)
-            if id(track) not in before_ids
-        ]
+        return [(index, track) for index, track in enumerate(after) if id(track) not in before_ids]
 
     @staticmethod
     def _first_track_clip(track: Any) -> tuple[int, Any] | None:
@@ -357,7 +353,9 @@ class LiveBackendBrowserReadMixin:
         return None
 
     @staticmethod
-    def _clip_note_tuples(notes: list[dict[str, Any]]) -> tuple[tuple[int, float, float, int, bool], ...]:
+    def _clip_note_tuples(
+        notes: list[dict[str, Any]],
+    ) -> tuple[tuple[int, float, float, int, bool], ...]:
         return tuple(
             (
                 int(note["pitch"]),
@@ -451,7 +449,9 @@ class LiveBackendBrowserReadMixin:
         tracks_before_load = list(getattr(song, "tracks", []))
         view = getattr(song, "view", None)
         had_selected_scene = bool(view is not None and hasattr(view, "selected_scene"))
-        previous_selected_scene = getattr(view, "selected_scene", None) if had_selected_scene else None
+        previous_selected_scene = (
+            getattr(view, "selected_scene", None) if had_selected_scene else None
+        )
         if had_selected_scene:
             view.selected_scene = None
         try:

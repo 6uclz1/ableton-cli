@@ -1128,7 +1128,10 @@ def test_browser_load_treats_uri_with_slash_as_uri(runner, cli_app, monkeypatch)
     assert result.exit_code == 0
     payload = json.loads(result.stdout)
     assert payload["ok"] is True
-    assert payload["result"]["uri"] == "query:LivePacks#www.ableton.com/272:Drum%20Racks:Fuji%20Kit.adg"
+    assert (
+        payload["result"]["uri"]
+        == "query:LivePacks#www.ableton.com/272:Drum%20Racks:Fuji%20Kit.adg"
+    )
     assert payload["result"]["path"] is None
 
 

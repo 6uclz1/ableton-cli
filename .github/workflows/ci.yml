@@ -25,10 +25,7 @@ jobs:
         run: uv sync --dev
 
       - name: Run lint and tests
-        run: |
-          uv run python -m ableton_cli.dev_checks \
-            --report dev-checks-report.json \
-            --pytest-junitxml pytest-report.xml
+        run: uv run python -m ableton_cli.dev_checks --report dev-checks-report.json --pytest-junitxml pytest-report.xml
 
       - name: Upload dev checks report
         if: always()
@@ -111,35 +108,30 @@ jobs:
         with:
           name: quality-harness-report
           path: artifacts/quality-harness-report
-          if-no-files-found: error
 
       - name: Download dev checks report (macOS)
         uses: actions/download-artifact@v4
         with:
           name: dev-checks-report-macos-latest
           path: artifacts/dev-checks-report-macos-latest
-          if-no-files-found: error
 
       - name: Download dev checks report (Windows)
         uses: actions/download-artifact@v4
         with:
           name: dev-checks-report-windows-latest
           path: artifacts/dev-checks-report-windows-latest
-          if-no-files-found: error
 
       - name: Download pytest report (macOS)
         uses: actions/download-artifact@v4
         with:
           name: pytest-report-macos-latest
           path: artifacts/pytest-report-macos-latest
-          if-no-files-found: error
 
       - name: Download pytest report (Windows)
         uses: actions/download-artifact@v4
         with:
           name: pytest-report-windows-latest
           path: artifacts/pytest-report-windows-latest
-          if-no-files-found: error
 
       - name: Generate CI summary
         run: |

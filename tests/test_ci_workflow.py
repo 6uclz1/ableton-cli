@@ -19,8 +19,11 @@ def test_ci_workflow_configures_dev_checks_reports() -> None:
     steps = test_job["steps"]
 
     run_lint_and_tests = next(step for step in steps if step.get("name") == "Run lint and tests")
-    assert "--report dev-checks-report.json" in run_lint_and_tests["run"]
-    assert "--pytest-junitxml pytest-report.xml" in run_lint_and_tests["run"]
+    assert run_lint_and_tests["run"] == (
+        "uv run python -m ableton_cli.dev_checks "
+        "--report dev-checks-report.json "
+        "--pytest-junitxml pytest-report.xml"
+    )
 
     assert any(step.get("name") == "Upload dev checks report" for step in steps)
     assert any(step.get("name") == "Upload pytest report" for step in steps)
@@ -39,3 +42,7 @@ def test_ci_workflow_has_summary_job() -> None:
     assert "--dev-checks-report" in run
     assert "--pytest-junit-report" in run
     assert '--summary-file "$GITHUB_STEP_SUMMARY"' in run
+
+    download_steps = [step for step in steps if step.get("uses") == "actions/download-artifact@v4"]
+    assert len(download_steps) >= 1
+    assert all("if-no-files-found" not in step.get("with", {}) for step in download_steps)

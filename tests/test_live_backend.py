@@ -725,6 +725,20 @@ def test_live_backend_browser_uri_lookup_normalizes_percent_encoding() -> None:
     assert load["loaded"] is True
 
 
+def test_live_backend_browser_uri_lookup_normalizes_nested_percent_encoding() -> None:
+    surface = _SurfaceStub()
+    surface.application().browser.instruments.children[
+        0
+    ].uri = "query:LivePacks#www.ableton.com/272:Drum%2520Racks:Fuji%2520Kit.adg"
+    backend = LiveBackend(surface)
+
+    resolved_uri = "query:LivePacks#www.ableton.com/272:Drum%20Racks:Fuji%20Kit.adg"
+    item = backend.get_browser_item(uri=resolved_uri, path=None)
+    assert item["found"] is True
+    load = backend.load_instrument_or_effect(0, uri=resolved_uri, path=None)
+    assert load["loaded"] is True
+
+
 def test_live_backend_browser_unknown_uri_is_deterministic_without_fallback() -> None:
     backend = LiveBackend(_SurfaceStub())
     uri = "query:Synths#Missing-Device"

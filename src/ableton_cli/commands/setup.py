@@ -10,7 +10,7 @@ from ..completion import completion_help
 from ..config import default_config_path, init_config_file, update_config_value
 from ..doctor import run_doctor
 from ..errors import AppError, ExitCode
-from ..installer import install_remote_script
+from ..installer import install_remote_script, install_skill
 from ..runtime import execute_command, get_client, get_runtime
 from ._validation import invalid_argument, require_non_empty_string
 
@@ -175,6 +175,41 @@ def register(app: typer.Typer) -> None:
             command="install-remote-script",
             args={"yes": yes, "dry_run": dry_run, "verify": verify},
             action=_run,
+        )
+
+    @app.command("install-skill")
+    def install_skill_command(
+        ctx: typer.Context,
+        yes: Annotated[
+            bool,
+            typer.Option(
+                "--yes",
+                "-y",
+                help="Confirm installation in non-interactive runs.",
+            ),
+        ] = False,
+        dry_run: Annotated[
+            bool,
+            typer.Option(
+                "--dry-run",
+                help="Print the installation plan without modifying files.",
+            ),
+        ] = False,
+        target: Annotated[
+            str,
+            typer.Option(
+                "--target",
+                help="Skill installation target (codex or claude).",
+                case_sensitive=False,
+            ),
+        ] = "codex",
+    ) -> None:
+        normalized_target = target.strip().lower()
+        execute_command(
+            ctx,
+            command="install-skill",
+            args={"yes": yes, "dry_run": dry_run, "target": normalized_target},
+            action=lambda: install_skill(yes=yes, dry_run=dry_run, target=normalized_target),
         )
 
     @app.command("ping")

@@ -88,6 +88,37 @@ def test_install_remote_script_verify_includes_doctor_result(runner, cli_app, mo
     assert payload["result"]["verification"]["summary"]["pass"] == 1
 
 
+def test_install_skill_outputs_json_envelope(runner, cli_app, monkeypatch) -> None:
+    from ableton_cli.commands import setup
+
+    monkeypatch.setattr(
+        setup,
+        "install_skill",
+        lambda yes, dry_run, target: {
+            "action": "install",
+            "dry_run": dry_run,
+            "target_type": target,
+            "source": "/tmp/repo/skills/ableton-cli/SKILL.md",
+            "target": "/tmp/.claude/skills/ableton-cli/SKILL.md",
+            "home": "/tmp/.claude",
+        },
+    )
+
+    result = runner.invoke(
+        cli_app,
+        ["--output", "json", "install-skill", "--target", "claude", "--dry-run"],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["ok"] is True
+    assert payload["command"] == "install-skill"
+    assert payload["args"]["target"] == "claude"
+    assert payload["result"]["dry_run"] is True
+    assert payload["result"]["target_type"] == "claude"
+    assert payload["result"]["target"] == "/tmp/.claude/skills/ableton-cli/SKILL.md"
+
+
 def test_ping_includes_capabilities_when_remote_reports_them(runner, cli_app, monkeypatch) -> None:
     from ableton_cli.commands import setup
 

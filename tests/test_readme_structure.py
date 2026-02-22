@@ -22,6 +22,8 @@ def test_readme_excludes_developer_only_sections() -> None:
 def test_readme_has_skill_installation_path_and_contributing_reference() -> None:
     markdown = _read(README_DOC)
     assert "## Skills Integration" in markdown
+    assert "uv run ableton-cli install-skill --yes" in markdown
+    assert "uv run ableton-cli install-skill --target claude --yes" in markdown
     assert "docs/skills/install.md" in markdown
     assert "CONTRIBUTING.md" in markdown
 

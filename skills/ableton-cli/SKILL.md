@@ -23,6 +23,9 @@ uv run ableton-cli transport stop
 uv run ableton-cli doctor
 uv run ableton-cli install-remote-script --yes
 uv run ableton-cli install-remote-script --dry-run
+uv run ableton-cli install-skill --yes
+uv run ableton-cli install-skill --target claude --yes
+uv run ableton-cli install-skill --dry-run
 uv run ableton-cli ping
 uv run ableton-cli wait-ready
 ```

@@ -44,6 +44,8 @@ uv run ableton-cli ping
 ```bash
 uv run ableton-cli doctor
 uv run ableton-cli install-remote-script --yes
+uv run ableton-cli install-skill --yes
+uv run ableton-cli install-skill --target claude --yes
 uv run ableton-cli wait-ready
 uv run ableton-cli config init
 uv run ableton-cli config show
@@ -301,8 +303,15 @@ man ableton-cli
 Use these steps to enable the `ableton-cli` skill for agent workflows:
 
 1. Complete Quick Setup and confirm connectivity with `uv run ableton-cli ping`.
-2. Install the skill by following `docs/skills/install.md`.
-3. Run agent automation using `uv run ableton-cli ...` commands.
+2. Install the skill:
+
+```bash
+uv run ableton-cli install-skill --yes
+uv run ableton-cli install-skill --target claude --yes
+```
+
+3. Confirm detailed install notes in `docs/skills/install.md`.
+4. Run agent automation using `uv run ableton-cli ...` commands.
 
 Skill-oriented references:
 

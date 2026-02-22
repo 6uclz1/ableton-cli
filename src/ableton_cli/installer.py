@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import platform
 import shutil
 from datetime import UTC, datetime
@@ -9,6 +10,10 @@ from typing import Any
 from .errors import AppError, ExitCode
 
 REMOTE_SCRIPT_DIR_NAME = "AbletonCliRemote"
+SKILL_DIR_NAME = "ableton-cli"
+SKILL_FILE_NAME = "SKILL.md"
+CODEX_HOME_ENV_VAR = "CODEX_HOME"
+CLAUDE_HOME_DIR_NAME = ".claude"
 
 
 def remote_script_source_dir() -> Path:
@@ -94,4 +99,88 @@ def install_remote_script(*, dry_run: bool, yes: bool) -> dict[str, Any]:
         "backup": backups[0] if backups else None,
         "backups": backups,
         "candidates": [str(path) for path in candidates],
+    }
+
+
+def skill_source_file() -> Path:
+    return Path(__file__).resolve().parents[2] / "skills" / SKILL_DIR_NAME / SKILL_FILE_NAME
+
+
+def _resolve_codex_home(codex_home: Path | None) -> Path:
+    if codex_home is not None:
+        return codex_home
+
+    raw_value = os.environ.get(CODEX_HOME_ENV_VAR)
+    if raw_value is None or not raw_value.strip():
+        raise AppError(
+            error_code="CONFIG_INVALID",
+            message=f"{CODEX_HOME_ENV_VAR} is not set",
+            hint=f"Set {CODEX_HOME_ENV_VAR} before running install-skill.",
+            exit_code=ExitCode.CONFIG_INVALID,
+        )
+    return Path(raw_value)
+
+
+def _resolve_claude_home(claude_home: Path | None) -> Path:
+    if claude_home is not None:
+        return claude_home
+    return Path.home() / CLAUDE_HOME_DIR_NAME
+
+
+def _resolve_skill_home(
+    *,
+    target: str,
+    codex_home: Path | None,
+    claude_home: Path | None,
+) -> Path:
+    if target == "codex":
+        return _resolve_codex_home(codex_home)
+    if target == "claude":
+        return _resolve_claude_home(claude_home)
+    raise AppError(
+        error_code="INVALID_ARGUMENT",
+        message=f"target must be one of: codex, claude (got {target!r})",
+        hint="Use --target codex or --target claude.",
+        exit_code=ExitCode.INVALID_ARGUMENT,
+    )
+
+
+def install_skill(
+    *,
+    dry_run: bool,
+    yes: bool,
+    target: str = "codex",
+    codex_home: Path | None = None,
+    claude_home: Path | None = None,
+) -> dict[str, Any]:
+    del yes  # reserved for explicit confirmation flows; command stays non-interactive.
+
+    source = skill_source_file()
+    if not source.exists():
+        raise AppError(
+            error_code="SKILL_SOURCE_NOT_FOUND",
+            message=f"Skill source not found: {source}",
+            hint="Reinstall ableton-cli package including skills assets.",
+            exit_code=ExitCode.EXECUTION_FAILED,
+        )
+
+    resolved_home = _resolve_skill_home(
+        target=target,
+        codex_home=codex_home,
+        claude_home=claude_home,
+    )
+    target_path = resolved_home / "skills" / SKILL_DIR_NAME / SKILL_FILE_NAME
+    action = "update" if target_path.exists() else "install"
+
+    if not dry_run:
+        target_path.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(source, target_path)
+
+    return {
+        "action": action,
+        "dry_run": dry_run,
+        "target_type": target,
+        "source": str(source),
+        "target": str(target_path),
+        "home": str(resolved_home),
     }

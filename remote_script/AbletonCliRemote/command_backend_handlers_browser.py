@@ -16,6 +16,24 @@ from .command_backend_validators import (
 
 Handler = Callable[[CommandBackend, dict[str, Any]], dict[str, Any]]
 _ALLOWED_ITEM_TYPES = frozenset({"all", "folder", "device", "loadable"})
+_ALLOWED_TARGET_TRACK_MODES = frozenset({"auto", "existing", "new"})
+
+
+def _parse_target_track_mode(args: dict[str, Any]) -> str:
+    parsed = _non_empty_string("target_track_mode", args.get("target_track_mode", "auto")).lower()
+    if parsed not in _ALLOWED_TARGET_TRACK_MODES:
+        raise _invalid_argument(
+            message=f"target_track_mode must be one of auto/existing/new, got {parsed}",
+            hint="Use a supported target_track_mode.",
+        )
+    return parsed
+
+
+def _parse_optional_clip_slot(args: dict[str, Any]) -> int | None:
+    raw = args.get("clip_slot")
+    if raw is None:
+        return None
+    return _non_negative_int("clip_slot", raw)
 
 
 def _handle_load_instrument_or_effect(
@@ -29,7 +47,17 @@ def _handle_load_instrument_or_effect(
         second_key="path",
         required_hint="Provide --uri or --path.",
     )
-    return backend.load_instrument_or_effect(track, uri, path)
+    target_track_mode = _parse_target_track_mode(args)
+    clip_slot = _parse_optional_clip_slot(args)
+    preserve_track_name = _as_bool("preserve_track_name", args.get("preserve_track_name", False))
+    return backend.load_instrument_or_effect(
+        track,
+        uri,
+        path,
+        target_track_mode,
+        clip_slot,
+        preserve_track_name,
+    )
 
 
 def _handle_get_browser_tree(backend: CommandBackend, args: dict[str, Any]) -> dict[str, Any]:

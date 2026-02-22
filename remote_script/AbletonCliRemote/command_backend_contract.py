@@ -159,6 +159,9 @@ class _BrowserBackend(Protocol):
         track: int,
         uri: str | None,
         path: str | None,
+        target_track_mode: str,
+        clip_slot: int | None,
+        preserve_track_name: bool,
     ) -> dict[str, Any]: ...
 
     def get_browser_tree(self, category_type: str) -> dict[str, Any]: ...

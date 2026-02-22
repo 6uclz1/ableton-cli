@@ -5,9 +5,10 @@ from time import perf_counter
 from typing import Any
 from urllib.parse import unquote
 
-from .base import _invalid_argument
+from .base import _invalid_argument, _not_supported_by_live_api
 
 _ALLOWED_ITEM_TYPES = frozenset({"all", "folder", "device", "loadable"})
+_ALLOWED_TARGET_TRACK_MODES = frozenset({"auto", "existing", "new"})
 
 
 class LiveBackendBrowserCatalogMixin:
@@ -251,11 +252,91 @@ class LiveBackendBrowserSearchIndexMixin:
 
 
 class LiveBackendBrowserReadMixin:
+    def _resolve_load_target_track(self, *, track: int, target_track_mode: str) -> tuple[Any, int]:
+        if target_track_mode not in _ALLOWED_TARGET_TRACK_MODES:
+            raise _invalid_argument(
+                message=(
+                    "target_track_mode must be one of auto/existing/new, "
+                    f"got {target_track_mode}"
+                ),
+                hint="Use a supported target_track_mode.",
+            )
+
+        if target_track_mode != "new":
+            return self._track_at(track), track
+
+        song = self._song()
+        tracks = list(getattr(song, "tracks", []))
+        if track > len(tracks):
+            raise _invalid_argument(
+                message=f"track out of range: {track}",
+                hint="Use a non-negative insertion index up to the current track count.",
+            )
+        create_midi_track = getattr(song, "create_midi_track", None)
+        if not callable(create_midi_track):
+            raise _not_supported_by_live_api(
+                message="Track creation API is not available in Live API",
+                hint="Use target_track_mode auto or existing instead.",
+            )
+        create_midi_track(track)
+        return self._track_at(track), track
+
+    def _select_track_for_load(self, *, song: Any, target_track: Any) -> None:
+        view = getattr(song, "view", None)
+        if view is None or not hasattr(view, "selected_track"):
+            raise _not_supported_by_live_api(
+                message="Song view selected_track API is not available in Live API",
+                hint="Use a Live version exposing song.view.selected_track.",
+            )
+        view.selected_track = target_track
+
+    def _select_clip_slot_for_load(
+        self,
+        *,
+        song: Any,
+        target_track: Any,
+        clip_slot: int | None,
+    ) -> int | None:
+        if clip_slot is None:
+            return None
+
+        slots = list(getattr(target_track, "clip_slots", []))
+        if clip_slot < 0 or clip_slot >= len(slots):
+            raise _invalid_argument(
+                message=f"clip_slot out of range: {clip_slot}",
+                hint="Use a valid clip slot index for the target track.",
+            )
+
+        view = getattr(song, "view", None)
+        if view is None:
+            raise _not_supported_by_live_api(
+                message="Song view is not available in Live API",
+                hint="Use --clip-slot only on versions exposing song.view.",
+            )
+
+        selected = False
+        scenes = list(getattr(song, "scenes", []))
+        if clip_slot < len(scenes) and hasattr(view, "selected_scene"):
+            view.selected_scene = scenes[clip_slot]
+            selected = True
+        if hasattr(view, "highlighted_clip_slot"):
+            view.highlighted_clip_slot = slots[clip_slot]
+            selected = True
+        if not selected:
+            raise _not_supported_by_live_api(
+                message="Clip slot selection API is not available in Live API",
+                hint="Use a Live version exposing selected_scene or highlighted_clip_slot.",
+            )
+        return clip_slot
+
     def load_instrument_or_effect(
         self,
         track: int,
         uri: str | None,
         path: str | None,
+        target_track_mode: str = "auto",
+        clip_slot: int | None = None,
+        preserve_track_name: bool = False,
     ) -> dict[str, Any]:
         if uri is None and path is None:
             raise _invalid_argument(
@@ -268,7 +349,6 @@ class LiveBackendBrowserReadMixin:
                 hint="Provide only one of uri or path.",
             )
 
-        target = self._track_at(track)
         if uri is not None:
             item = self._find_browser_item_by_uri(uri)
             if item is None:
@@ -290,16 +370,35 @@ class LiveBackendBrowserReadMixin:
             uri = serialized["uri"]
 
         song = self._song()
-        if hasattr(song, "view") and hasattr(song.view, "selected_track"):
-            song.view.selected_track = target
+        track_count_before = len(list(getattr(song, "tracks", [])))
+        target, resolved_track = self._resolve_load_target_track(
+            track=track,
+            target_track_mode=target_track_mode,
+        )
+        track_name_before = str(getattr(target, "name", "")) if preserve_track_name else None
+        self._select_track_for_load(song=song, target_track=target)
+        resolved_clip_slot = self._select_clip_slot_for_load(
+            song=song,
+            target_track=target,
+            clip_slot=clip_slot,
+        )
         self._browser().load_item(item)
+        if track_name_before is not None and hasattr(target, "name"):
+            target.name = track_name_before
+        track_count_after = len(list(getattr(song, "tracks", [])))
 
         return {
-            "track": track,
+            "track": resolved_track,
             "loaded": True,
             "item_name": str(getattr(item, "name", "")),
             "uri": uri,
             "path": serialized["path"],
+            "clip_slot": resolved_clip_slot,
+            "target_track_mode": target_track_mode,
+            "preserve_track_name": preserve_track_name,
+            "track_name": str(getattr(target, "name", "")),
+            "track_count": track_count_after,
+            "track_count_delta": track_count_after - track_count_before,
         }
 
     def get_browser_tree(self, category_type: str) -> dict[str, Any]:

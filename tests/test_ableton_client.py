@@ -275,6 +275,24 @@ def test_client_sends_request_timeout_meta(monkeypatch) -> None:
                 "case_sensitive": True,
             },
         ),
+        (
+            lambda client: client.load_instrument_or_effect(
+                track=2,
+                uri=None,
+                path="sounds/Bass Loop.alc",
+                target_track_mode="existing",
+                clip_slot=4,
+                preserve_track_name=True,
+            ),
+            "load_instrument_or_effect",
+            {
+                "track": 2,
+                "path": "sounds/Bass Loop.alc",
+                "target_track_mode": "existing",
+                "clip_slot": 4,
+                "preserve_track_name": True,
+            },
+        ),
     ],
 )
 def test_client_builds_optional_arguments_deterministically(

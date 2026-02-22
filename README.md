@@ -315,9 +315,7 @@ Detailed specification and known limits:
 
 ```bash
 uv sync
-uv run ruff check .
-uv run ruff format --check .
-uv run pytest
+uv run python -m ableton_cli.dev_checks
 uv run ableton-cli --help
 uv run ableton-cli --version
 ```

@@ -37,6 +37,19 @@ uv run ableton-cli doctor
 uv run ableton-cli ping
 ```
 
+## Commit Hook (Ruff)
+
+Enable repository-managed git hooks to run Ruff on every commit:
+
+```bash
+./scripts/install_git_hooks.sh
+```
+
+This installs `.githooks/pre-commit`, which runs:
+
+- `uv run ruff check .`
+- `uv run ruff format --check .`
+
 ## Core Commands
 
 ### Setup / Diagnostics

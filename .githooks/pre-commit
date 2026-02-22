@@ -1,0 +1,15 @@
+#!/usr/bin/env sh
+set -eu
+
+repo_root="$(git rev-parse --show-toplevel)"
+cd "${repo_root}"
+
+if ! command -v uv >/dev/null 2>&1; then
+  echo "[pre-commit] 'uv' is required but was not found in PATH." >&2
+  echo "[pre-commit] Install uv: https://docs.astral.sh/uv/" >&2
+  exit 1
+fi
+
+echo "[pre-commit] Running Ruff checks..."
+uv run ruff check .
+uv run ruff format --check .

@@ -859,6 +859,46 @@ def test_live_backend_load_existing_mode_targets_clip_slot_and_preserves_track_n
     assert target_track.clip_slots[1].has_clip is True
 
 
+def test_live_backend_load_existing_mode_rehomes_clip_when_live_creates_new_track() -> None:
+    surface = _SurfaceStub()
+    browser = surface.application().browser
+    original_load_item = browser.load_item
+
+    def _load_item_force_new_track(item: _BrowserItem) -> None:
+        uri = str(getattr(item, "uri", ""))
+        if uri != "clip:bass-loop-alc":
+            original_load_item(item)
+            return
+        new_track = _Track(name="Imported Clip", has_audio_input=False, has_midi_input=True)
+        source_slot = new_track.clip_slots[0]
+        source_slot.create_clip(length=2.0)
+        assert source_slot.clip is not None
+        source_slot.clip.set_notes(((60, 0.0, 0.5, 100, False),))
+        surface.song().tracks.append(new_track)
+
+    browser.load_item = _load_item_force_new_track  # type: ignore[method-assign]
+
+    backend = LiveBackend(surface)
+    loaded = backend.load_instrument_or_effect(
+        0,
+        uri=None,
+        path="sounds/Bass Loop.alc",
+        target_track_mode="existing",
+        clip_slot=1,
+        preserve_track_name=True,
+    )
+
+    assert loaded["loaded"] is True
+    assert loaded["track"] == 0
+    assert loaded["clip_slot"] == 1
+    assert loaded["track_count_delta"] == 0
+    assert loaded["track_count"] == 2
+    assert loaded["track_name"] == "Track 1"
+    assert surface.song().tracks[0].clip_slots[1].has_clip is True
+    notes = backend.get_clip_notes(0, 1, None, None, None)
+    assert notes["note_count"] == 1
+
+
 def test_live_backend_load_existing_mode_rejects_invalid_clip_slot() -> None:
     backend = LiveBackend(_SurfaceStub())
 

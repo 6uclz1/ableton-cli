@@ -371,26 +371,30 @@ def _build_summary_markdown(
     else:
         lines.append("| - | - | No failed tests |")
     lines.append("")
+    if quality_status in {"warn", "fail"}:
+        lines.append("## Quality Harness Results")
+        lines.append("| Severity | Metric | Target | Value | Threshold | Message |")
+        lines.append("| --- | --- | --- | --- | --- | --- |")
+        for violation in _quality_violations_for_next_actions(
+            quality_status,
+            quality_violations=quality_violations,
+        ):
+            lines.append(
+                f"| {_escape_cell(violation.severity)} | {_escape_cell(violation.metric)} | "
+                f"{_escape_cell(violation.target)} | "
+                f"{_format_metric_number(violation.value)} | "
+                f"{_format_metric_number(violation.threshold)} | "
+                f"{_escape_cell(violation.message)} |"
+            )
+        lines.append("")
     lines.append("## Next Actions")
     if overall_status == "PASS":
         lines.append("- No action required.")
     else:
         if quality_status in {"warn", "fail"}:
-            lines.append("- Review quality harness violations and resolve fail-level metrics.")
-            lines.append("- Quality metrics to address:")
-            lines.append("| Severity | Metric | Target | Value | Threshold | Message |")
-            lines.append("| --- | --- | --- | --- | --- | --- |")
-            for violation in _quality_violations_for_next_actions(
-                quality_status,
-                quality_violations=quality_violations,
-            ):
-                lines.append(
-                    f"| {_escape_cell(violation.severity)} | {_escape_cell(violation.metric)} | "
-                    f"{_escape_cell(violation.target)} | "
-                    f"{_format_metric_number(violation.value)} | "
-                    f"{_format_metric_number(violation.threshold)} | "
-                    f"{_escape_cell(violation.message)} |"
-                )
+            lines.append(
+                "- Review the Quality Harness Results section and resolve fail-level metrics."
+            )
         if dev_metrics.failed_reports > 0:
             lines.append("- Re-run failed dev check commands locally and fix lint/test issues.")
         if pytest_totals.failures > 0 or pytest_totals.errors > 0:

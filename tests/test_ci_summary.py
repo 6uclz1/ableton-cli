@@ -112,6 +112,7 @@ def test_main_generates_summary_for_success_case(tmp_path: Path) -> None:
     assert "## Key Metrics" in summary
     assert "## Failed Tests" in summary
     assert "## Next Actions" in summary
+    assert "## Quality Harness Results" not in summary
     assert "- Status: PASS" in summary
 
 
@@ -159,11 +160,13 @@ def test_main_lists_failed_tests_with_file_test_name_and_message(tmp_path: Path)
     summary = summary_path.read_text(encoding="utf-8")
     assert "| tests/test_transport.py | test_play | AssertionError: expected 120 |" in summary
     assert "- Status: FAIL" in summary
+    assert "## Quality Harness Results" in summary
     assert (
         "| fail | function.complexity | src/ableton_cli/commands/transport.py::heavy_transport |"
         in summary
     )
     assert "| 42 | 35 | function complexity exceeded fail threshold |" in summary
+    assert "- Review the Quality Harness Results section and resolve fail-level metrics." in summary
 
 
 def test_main_fails_when_required_artifact_is_missing(tmp_path: Path, capsys) -> None:

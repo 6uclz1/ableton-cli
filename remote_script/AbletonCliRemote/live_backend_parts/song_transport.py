@@ -1,9 +1,13 @@
 from __future__ import annotations
 
+import time
 from typing import Any
 
 from ..command_backend import MAX_BPM, MAX_PANNING, MAX_VOLUME, MIN_BPM, MIN_PANNING, MIN_VOLUME
 from .base import _invalid_argument, _not_supported_by_live_api
+
+_TRANSPORT_STATE_TIMEOUT_SECONDS = 0.25
+_TRANSPORT_STATE_POLL_INTERVAL_SECONDS = 0.01
 
 
 class LiveBackendSongSessionMixin:
@@ -179,6 +183,16 @@ class LiveBackendSongSessionMixin:
 
 
 class LiveBackendTransportMixerMixin:
+    def _wait_for_transport_state(self, *, expected: bool | None = None) -> bool:
+        deadline = time.monotonic() + _TRANSPORT_STATE_TIMEOUT_SECONDS
+        while True:
+            is_playing = bool(self._song().is_playing)
+            if expected is None or is_playing is expected:
+                return is_playing
+            if time.monotonic() >= deadline:
+                return is_playing
+            time.sleep(_TRANSPORT_STATE_POLL_INTERVAL_SECONDS)
+
     def transport_play(self) -> dict[str, Any]:
         return self.start_playback()
 
@@ -187,21 +201,23 @@ class LiveBackendTransportMixerMixin:
 
     def transport_toggle(self) -> dict[str, Any]:
         song = self._song()
-        if song.is_playing:
+        if self._wait_for_transport_state():
             song.stop_playing()
+            expected = False
         else:
             song.start_playing()
-        return {"is_playing": bool(song.is_playing)}
+            expected = True
+        return {"is_playing": self._wait_for_transport_state(expected=expected)}
 
     def start_playback(self) -> dict[str, Any]:
         song = self._song()
         song.start_playing()
-        return {"is_playing": bool(song.is_playing)}
+        return {"is_playing": self._wait_for_transport_state(expected=True)}
 
     def stop_playback(self) -> dict[str, Any]:
         song = self._song()
         song.stop_playing()
-        return {"is_playing": bool(song.is_playing)}
+        return {"is_playing": self._wait_for_transport_state(expected=False)}
 
     def transport_tempo_get(self) -> dict[str, Any]:
         return {"tempo": float(self._song().tempo)}

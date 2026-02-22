@@ -628,19 +628,58 @@ class LiveBackendTracksClipsMixin:
             "active": not bool(clip_obj.muted),
         }
 
-    def clip_duplicate(self, track: int, src_clip: int, dst_clip: int) -> dict[str, Any]:
+    def _duplicate_clip_to_destination(
+        self,
+        *,
+        track: int,
+        destination_clip: int,
+        source_clip: Any,
+        source_length: float,
+        live_notes: list[tuple[int, float, float, int, bool]],
+    ) -> None:
+        destination_slot = self._clip_slot_at(track, destination_clip)
+        if destination_slot.has_clip:
+            raise _invalid_argument(
+                message=f"Destination clip slot already has a clip: {destination_clip}",
+                hint="Use empty destination clip slots.",
+            )
+
+        destination_slot.create_clip(source_length)
+        if not destination_slot.has_clip:
+            raise CommandError(
+                code="INTERNAL_ERROR",
+                message="Clip duplication did not create destination clip",
+                hint="Retry and check Ableton logs.",
+            )
+        destination_clip_obj = destination_slot.clip
+        assert destination_clip_obj is not None
+        if live_notes:
+            destination_clip_obj.set_notes(tuple(live_notes))
+        destination_clip_obj.name = str(getattr(source_clip, "name", ""))
+
+    def clip_duplicate(
+        self,
+        track: int,
+        src_clip: int,
+        dst_clip: int | None = None,
+        dst_clips: list[int] | None = None,
+    ) -> dict[str, Any]:
+        if dst_clip is None and dst_clips is None:
+            raise _invalid_argument(
+                message="Either dst_clip or dst_clips must be provided",
+                hint="Provide one destination clip slot or multiple destination clip slots.",
+            )
+        if dst_clip is not None and dst_clips is not None:
+            raise _invalid_argument(
+                message="dst_clip and dst_clips are mutually exclusive",
+                hint="Provide either dst_clip or dst_clips.",
+            )
+
         source_slot = self._clip_slot_at(track, src_clip)
         if not source_slot.has_clip:
             raise _invalid_argument(
                 message="Source clip does not exist",
                 hint="Create a clip in the source slot before duplicating.",
-            )
-
-        destination_slot = self._clip_slot_at(track, dst_clip)
-        if destination_slot.has_clip:
-            raise _invalid_argument(
-                message="Destination clip slot already has a clip",
-                hint="Use an empty destination clip slot.",
             )
 
         source_clip = source_slot.clip
@@ -651,16 +690,6 @@ class LiveBackendTracksClipsMixin:
                 message="Source clip length must be > 0",
                 hint="Duplicate only clips with positive length.",
             )
-
-        destination_slot.create_clip(source_length)
-        if not destination_slot.has_clip:
-            raise CommandError(
-                code="INTERNAL_ERROR",
-                message="Clip duplication did not create destination clip",
-                hint="Retry and check Ableton logs.",
-            )
-        destination_clip = destination_slot.clip
-        assert destination_clip is not None
 
         source_notes = self._clip_notes_extended(source_clip)
         live_notes = [
@@ -673,14 +702,46 @@ class LiveBackendTracksClipsMixin:
             )
             for note in source_notes
         ]
-        if live_notes:
-            destination_clip.set_notes(tuple(live_notes))
-        destination_clip.name = str(getattr(source_clip, "name", ""))
+        destination_clips = [dst_clip] if dst_clip is not None else list(dst_clips or [])
+        if not destination_clips:
+            raise _invalid_argument(
+                message="dst_clips must not be empty",
+                hint="Pass at least one destination clip index.",
+            )
+        seen: set[int] = set()
+        for destination in destination_clips:
+            if destination == src_clip:
+                raise _invalid_argument(
+                    message=f"Destination clip index must differ from src_clip ({src_clip})",
+                    hint="Use destination clip slots that are not the source clip.",
+                )
+            if destination in seen:
+                raise _invalid_argument(
+                    message=f"Duplicate destination clip index: {destination}",
+                    hint="Remove duplicate destination clip indexes.",
+                )
+            seen.add(destination)
+            self._duplicate_clip_to_destination(
+                track=track,
+                destination_clip=destination,
+                source_clip=source_clip,
+                source_length=source_length,
+                live_notes=live_notes,
+            )
 
+        if len(destination_clips) == 1:
+            return {
+                "track": track,
+                "src_clip": src_clip,
+                "dst_clip": destination_clips[0],
+                "duplicated": True,
+                "note_count": len(live_notes),
+            }
         return {
             "track": track,
             "src_clip": src_clip,
-            "dst_clip": dst_clip,
+            "dst_clips": destination_clips,
             "duplicated": True,
+            "duplicated_count": len(destination_clips),
             "note_count": len(live_notes),
         }

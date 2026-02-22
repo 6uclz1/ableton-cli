@@ -1437,6 +1437,28 @@ def test_live_backend_clip_duplicate() -> None:
     assert occupied_dst.value.code == "INVALID_ARGUMENT"
 
 
+def test_live_backend_clip_duplicate_many() -> None:
+    surface = _SurfaceStub()
+    surface.song().tracks[0].clip_slots.append(_ClipSlot())
+    backend = LiveBackend(surface)
+    backend.create_clip(0, 0, 4.0)
+    backend.add_notes_to_clip(0, 0, [_note()])
+
+    duplicated = backend.clip_duplicate(track=0, src_clip=0, dst_clips=[1, 2])
+    assert duplicated == {
+        "track": 0,
+        "src_clip": 0,
+        "dst_clips": [1, 2],
+        "duplicated": True,
+        "duplicated_count": 2,
+        "note_count": 1,
+    }
+    duplicated_notes_1 = backend.get_clip_notes(0, 1, None, None, None)
+    duplicated_notes_2 = backend.get_clip_notes(0, 2, None, None, None)
+    assert duplicated_notes_1["note_count"] == 1
+    assert duplicated_notes_2["note_count"] == 1
+
+
 def test_live_backend_tracks_delete_and_not_supported_error() -> None:
     backend = LiveBackend(_SurfaceStub())
     deleted = backend.tracks_delete(0)

@@ -111,6 +111,72 @@ def _require_uri_or_path_target(target: str) -> str:
     )
 
 
+def _parse_duplicate_destinations(
+    *,
+    src_clip: int,
+    dst_clip: int | None,
+    to: str | None,
+) -> tuple[int | None, list[int] | None]:
+    if dst_clip is None and to is None:
+        raise invalid_argument(
+            message="Either dst_clip or --to must be provided",
+            hint="Provide one destination clip slot or --to 2,4,5.",
+        )
+    if dst_clip is not None and to is not None:
+        raise invalid_argument(
+            message="dst_clip and --to are mutually exclusive",
+            hint="Use either a single dst_clip argument or --to for multiple destinations.",
+        )
+    if dst_clip is not None:
+        return (
+            require_non_negative(
+                "dst_clip",
+                dst_clip,
+                hint="Use a valid destination clip slot index.",
+            ),
+            None,
+        )
+
+    assert to is not None
+    parsed = require_non_empty_string("to", to, hint="Use comma-separated clip slots like 2,4,5.")
+    destinations: list[int] = []
+    seen: set[int] = set()
+    for raw_value in parsed.split(","):
+        token = raw_value.strip()
+        if not token:
+            continue
+        try:
+            value = int(token)
+        except ValueError as exc:
+            raise invalid_argument(
+                message=f"Invalid destination clip index in --to: {token!r}",
+                hint="Use comma-separated non-negative integers like 2,4,5.",
+            ) from exc
+        if value < 0:
+            raise invalid_argument(
+                message=f"Destination clip index must be >= 0, got {value}",
+                hint="Use non-negative destination clip indexes.",
+            )
+        if value == src_clip:
+            raise invalid_argument(
+                message=f"Destination clip index must differ from src_clip ({src_clip})",
+                hint="Use destination indexes that are not the source clip.",
+            )
+        if value in seen:
+            raise invalid_argument(
+                message=f"Duplicate destination clip index in --to: {value}",
+                hint="Remove duplicated destination indexes.",
+            )
+        seen.add(value)
+        destinations.append(value)
+    if not destinations:
+        raise invalid_argument(
+            message="--to must include at least one destination clip index",
+            hint="Use comma-separated indexes like --to 2,4,5.",
+        )
+    return None, destinations
+
+
 @clip_app.command("create")
 def clip_create(
     ctx: typer.Context,
@@ -814,7 +880,14 @@ def clip_duplicate(
     ctx: typer.Context,
     track: Annotated[int, typer.Argument(help="Track index (0-based)")],
     src_clip: Annotated[int, typer.Argument(help="Source clip slot index (0-based)")],
-    dst_clip: Annotated[int, typer.Argument(help="Destination clip slot index (0-based)")],
+    dst_clip: Annotated[
+        int | None,
+        typer.Argument(help="Destination clip slot index (0-based)"),
+    ] = None,
+    to: Annotated[
+        str | None,
+        typer.Option("--to", help="Comma-separated destination clip slot indexes (0-based)"),
+    ] = None,
 ) -> None:
     def _run() -> dict[str, object]:
         require_non_negative(
@@ -827,17 +900,22 @@ def clip_duplicate(
             src_clip,
             hint="Use a valid source clip slot index.",
         )
-        require_non_negative(
-            "dst_clip",
-            dst_clip,
-            hint="Use a valid destination clip slot index.",
+        single_dst_clip, many_dst_clips = _parse_duplicate_destinations(
+            src_clip=src_clip,
+            dst_clip=dst_clip,
+            to=to,
         )
-        return get_client(ctx).clip_duplicate(track, src_clip, dst_clip)
+        return get_client(ctx).clip_duplicate(
+            track=track,
+            src_clip=src_clip,
+            dst_clip=single_dst_clip,
+            dst_clips=many_dst_clips,
+        )
 
     execute_command(
         ctx,
         command="clip duplicate",
-        args={"track": track, "src_clip": src_clip, "dst_clip": dst_clip},
+        args={"track": track, "src_clip": src_clip, "dst_clip": dst_clip, "to": to},
         action=_run,
     )
 

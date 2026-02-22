@@ -187,7 +187,13 @@ class _TracksClipsBackend(Protocol):
 
     def clip_active_set(self, track: int, clip: int, value: bool) -> dict[str, Any]: ...
 
-    def clip_duplicate(self, track: int, src_clip: int, dst_clip: int) -> dict[str, Any]: ...
+    def clip_duplicate(
+        self,
+        track: int,
+        src_clip: int,
+        dst_clip: int | None,
+        dst_clips: list[int] | None,
+    ) -> dict[str, Any]: ...
 
     def scenes_list(self) -> dict[str, Any]: ...
 

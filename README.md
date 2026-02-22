@@ -320,6 +320,22 @@ uv run ableton-cli --help
 uv run ableton-cli --version
 ```
 
+## Merge Gate
+
+Before merge, wait until all required checks are green on the PR head commit:
+
+```bash
+gh pr checks --watch
+```
+
+`main` is protected with required status checks:
+
+- `test (macos-latest)`
+- `test (windows-latest)`
+- `quality-harness`
+
+Do not merge while any required check is pending or failing.
+
 ## Troubleshooting
 
 1. Run `uv run ableton-cli doctor`.

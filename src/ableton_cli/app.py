@@ -30,10 +30,21 @@ from .output import OutputMode, emit_human_error, emit_json, error_payload
 from .platform_paths import PlatformPaths, PosixPlatformPaths, WindowsPlatformPaths
 from .runtime import RuntimeContext
 
-app = typer.Typer(
-    help="Control and inspect Ableton Live through a local Remote Script.",
-    no_args_is_help=True,
-    add_completion=True,
+_COMMAND_MODULES = (
+    setup,
+    batch,
+    song,
+    arrangement,
+    session,
+    scenes,
+    tracks,
+    transport,
+    track,
+    clip,
+    browser,
+    device,
+    synth,
+    effect,
 )
 
 
@@ -71,7 +82,11 @@ def _build_platform_paths_for_current_os() -> PlatformPaths:
     )
 
 
-@app.callback()
+def _register_subcommands(app: typer.Typer) -> None:
+    for command_module in _COMMAND_MODULES:
+        command_module.register(app)
+
+
 def main(
     ctx: typer.Context,
     host: Annotated[str | None, typer.Option("--host", help="Remote host")] = None,
@@ -142,17 +157,12 @@ def main(
     )
 
 
-setup.register(app)
-batch.register(app)
-song.register(app)
-arrangement.register(app)
-session.register(app)
-scenes.register(app)
-tracks.register(app)
-transport.register(app)
-track.register(app)
-clip.register(app)
-browser.register(app)
-device.register(app)
-synth.register(app)
-effect.register(app)
+def create_app() -> typer.Typer:
+    app = typer.Typer(
+        help="Control and inspect Ableton Live through a local Remote Script.",
+        no_args_is_help=True,
+        add_completion=True,
+    )
+    app.callback()(main)
+    _register_subcommands(app)
+    return app

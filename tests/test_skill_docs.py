@@ -5,7 +5,7 @@ from pathlib import Path
 
 from typer.main import get_command
 
-from ableton_cli.app import app
+from ableton_cli.cli import app
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SKILL_DOC = REPO_ROOT / "skills" / "ableton-cli" / "SKILL.md"

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typer.testing import CliRunner
 
-import ableton_cli.app as app_module
+import ableton_cli.app_factory as app_module
 
 
 def test_create_app_returns_new_instances() -> None:

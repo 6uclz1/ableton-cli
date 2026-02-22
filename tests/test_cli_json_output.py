@@ -51,7 +51,7 @@ def test_ping_unreachable_outputs_json_error(runner, cli_app) -> None:
 
 
 def test_install_remote_script_verify_includes_doctor_result(runner, cli_app, monkeypatch) -> None:
-    import ableton_cli.app as app_module
+    import ableton_cli.bootstrap as bootstrap_module
     from ableton_cli.commands import setup
 
     class _PlatformPathsSentinel:
@@ -93,7 +93,11 @@ def test_install_remote_script_verify_includes_doctor_result(runner, cli_app, mo
         "run_doctor",
         _run_doctor_stub,
     )
-    monkeypatch.setattr(app_module, "_build_platform_paths_for_current_os", lambda: platform_paths)
+    monkeypatch.setattr(
+        bootstrap_module,
+        "build_platform_paths_for_current_os",
+        lambda: platform_paths,
+    )
 
     result = runner.invoke(
         cli_app,
@@ -142,9 +146,9 @@ def test_install_skill_outputs_json_envelope(runner, cli_app, monkeypatch) -> No
 
 
 def test_bootstrap_fails_for_unsupported_os(runner, cli_app, monkeypatch) -> None:
-    import ableton_cli.app as app_module
+    import ableton_cli.platform_detection as platform_detection_module
 
-    monkeypatch.setattr(app_module.platform, "system", lambda: "Solaris")
+    monkeypatch.setattr(platform_detection_module.platform, "system", lambda: "Solaris")
 
     result = runner.invoke(
         cli_app,

@@ -42,6 +42,7 @@ layers:
     - name: commands
       include:
         - "src/ableton_cli/commands/**/*.py"
+        - "src/ableton_cli/app_factory.py"
         - "src/ableton_cli/app.py"
         - "src/ableton_cli/cli.py"
     - name: core

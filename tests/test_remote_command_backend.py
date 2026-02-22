@@ -141,8 +141,24 @@ class _BackendStub:
     def clip_duplicate(self, track: int, src_clip: int, dst_clip: int):  # noqa: ANN201
         return {"track": track, "src_clip": src_clip, "dst_clip": dst_clip, "duplicated": True}
 
-    def load_instrument_or_effect(self, track: int, uri: str | None, path: str | None):  # noqa: ANN201
-        return {"track": track, "uri": uri, "path": path, "loaded": True}
+    def load_instrument_or_effect(  # noqa: ANN201
+        self,
+        track: int,
+        uri: str | None,
+        path: str | None,
+        target_track_mode: str,
+        clip_slot: int | None,
+        preserve_track_name: bool,
+    ):
+        return {
+            "track": track,
+            "uri": uri,
+            "path": path,
+            "target_track_mode": target_track_mode,
+            "clip_slot": clip_slot,
+            "preserve_track_name": preserve_track_name,
+            "loaded": True,
+        }
 
     def get_browser_tree(self, category_type: str):  # noqa: ANN201
         return {"category_type": category_type}
@@ -690,7 +706,39 @@ def test_dispatch_calls_backend_for_browser_load_with_path() -> None:
         "load_instrument_or_effect",
         {"track": 2, "path": "instruments/Drift"},
     )
-    assert result == {"track": 2, "uri": None, "path": "instruments/Drift", "loaded": True}
+    assert result == {
+        "track": 2,
+        "uri": None,
+        "path": "instruments/Drift",
+        "target_track_mode": "auto",
+        "clip_slot": None,
+        "preserve_track_name": False,
+        "loaded": True,
+    }
+
+
+def test_dispatch_calls_backend_for_browser_load_with_existing_mode_and_clip_slot() -> None:
+    backend = _BackendStub()
+    result = dispatch_command(
+        backend,
+        "load_instrument_or_effect",
+        {
+            "track": 1,
+            "path": "sounds/Bass Loop.alc",
+            "target_track_mode": "existing",
+            "clip_slot": 3,
+            "preserve_track_name": True,
+        },
+    )
+    assert result == {
+        "track": 1,
+        "uri": None,
+        "path": "sounds/Bass Loop.alc",
+        "target_track_mode": "existing",
+        "clip_slot": 3,
+        "preserve_track_name": True,
+        "loaded": True,
+    }
 
 
 def test_dispatch_calls_backend_for_add_notes_to_clip() -> None:
@@ -1042,6 +1090,38 @@ def test_dispatch_rejects_browser_load_with_uri_and_path() -> None:
             backend,
             "load_instrument_or_effect",
             {"track": 0, "uri": "query:Synths#Drift", "path": "instruments/Drift"},
+        )
+
+    assert exc_info.value.code == "INVALID_ARGUMENT"
+
+
+def test_dispatch_rejects_browser_load_with_invalid_target_track_mode() -> None:
+    backend = _BackendStub()
+    with pytest.raises(CommandError) as exc_info:
+        dispatch_command(
+            backend,
+            "load_instrument_or_effect",
+            {
+                "track": 0,
+                "path": "instruments/Drift",
+                "target_track_mode": "legacy",
+            },
+        )
+
+    assert exc_info.value.code == "INVALID_ARGUMENT"
+
+
+def test_dispatch_rejects_browser_load_with_negative_clip_slot() -> None:
+    backend = _BackendStub()
+    with pytest.raises(CommandError) as exc_info:
+        dispatch_command(
+            backend,
+            "load_instrument_or_effect",
+            {
+                "track": 0,
+                "path": "instruments/Drift",
+                "clip_slot": -1,
+            },
         )
 
     assert exc_info.value.code == "INVALID_ARGUMENT"

@@ -192,7 +192,18 @@ class _Browser:
                 _BrowserItem(name="Synth", uri="inst:synth", is_device=True, is_loadable=True),
             ],
         )
-        self.sounds = _BrowserItem(name="Sounds", uri="cat:sounds", children=[])
+        self.sounds = _BrowserItem(
+            name="Sounds",
+            uri="cat:sounds",
+            children=[
+                _BrowserItem(
+                    name="Bass Loop.alc",
+                    uri="clip:bass-loop-alc",
+                    is_device=False,
+                    is_loadable=True,
+                )
+            ],
+        )
         self.drums = _BrowserItem(
             name="Drums",
             uri="cat:drums",
@@ -221,6 +232,25 @@ class _Browser:
         self.midi_effects = _BrowserItem(name="MIDI Effects", uri="cat:midi", children=[])
 
     def load_item(self, item: _BrowserItem) -> None:
+        uri = str(getattr(item, "uri", ""))
+        if uri.startswith("clip:"):
+            selected_scene = self._song.view.selected_scene
+            if selected_scene is None:
+                self._song.tracks.append(
+                    _Track(name=str(item.name), has_audio_input=False, has_midi_input=True)
+                )
+                return
+
+            target_track = self._song.view.selected_track
+            scene_index = list(self._song.scenes).index(selected_scene)
+            while scene_index >= len(target_track.clip_slots):
+                target_track.clip_slots.append(_ClipSlot())
+            slot = target_track.clip_slots[scene_index]
+            if not slot.has_clip:
+                slot.create_clip(length=1.0)
+            target_track.name = str(item.name)
+            return
+
         target = self._song.view.selected_track
         target.devices.append(
             _Device(
@@ -234,6 +264,8 @@ class _Browser:
 @dataclass(slots=True)
 class _SongView:
     selected_track: _Track
+    selected_scene: _Scene | None = None
+    highlighted_clip_slot: _ClipSlot | None = None
 
 
 class _Song:
@@ -256,7 +288,7 @@ class _Song:
             clip_slots=[],
             devices=[],
         )
-        self.view = _SongView(selected_track=self.tracks[0])
+        self.view = _SongView(selected_track=self.tracks[0], selected_scene=self.scenes[0])
         self.stop_all_clips_calls = 0
 
     def start_playing(self) -> None:
@@ -685,6 +717,46 @@ def test_live_backend_load_with_path_and_non_loadable_path_rejected() -> None:
     with pytest.raises(CommandError) as exc_info:
         backend.load_instrument_or_effect(0, uri=None, path="drums/Kits")
     assert "not loadable" in exc_info.value.message
+
+
+def test_live_backend_load_existing_mode_targets_clip_slot_and_preserves_track_name() -> None:
+    surface = _SurfaceStub()
+    backend = LiveBackend(surface)
+
+    loaded = backend.load_instrument_or_effect(
+        0,
+        uri=None,
+        path="sounds/Bass Loop.alc",
+        target_track_mode="existing",
+        clip_slot=1,
+        preserve_track_name=True,
+    )
+
+    target_track = surface.song().tracks[0]
+    assert loaded["loaded"] is True
+    assert loaded["track"] == 0
+    assert loaded["clip_slot"] == 1
+    assert loaded["target_track_mode"] == "existing"
+    assert loaded["track_name"] == "Track 1"
+    assert loaded["track_count"] == 2
+    assert target_track.name == "Track 1"
+    assert target_track.clip_slots[1].has_clip is True
+
+
+def test_live_backend_load_existing_mode_rejects_invalid_clip_slot() -> None:
+    backend = LiveBackend(_SurfaceStub())
+
+    with pytest.raises(CommandError) as exc_info:
+        backend.load_instrument_or_effect(
+            0,
+            uri=None,
+            path="sounds/Bass Loop.alc",
+            target_track_mode="existing",
+            clip_slot=99,
+            preserve_track_name=False,
+        )
+
+    assert exc_info.value.code == "INVALID_ARGUMENT"
 
 
 def test_live_backend_device_parameter_set() -> None:

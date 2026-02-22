@@ -196,6 +196,21 @@ def browser_load(
     ctx: typer.Context,
     track: Annotated[int, typer.Argument(help="Track index (0-based)")],
     target: Annotated[str, typer.Argument(help="Browser target (URI or path)")],
+    target_track_mode: Annotated[
+        str,
+        typer.Option(
+            "--target-track-mode",
+            help="Track target mode: auto|existing|new",
+        ),
+    ] = "auto",
+    clip_slot: Annotated[
+        int | None,
+        typer.Option("--clip-slot", help="Clip slot (scene index, 0-based)"),
+    ] = None,
+    preserve_track_name: Annotated[
+        bool,
+        typer.Option("--preserve-track-name", help="Restore original track name after loading"),
+    ] = False,
 ) -> None:
     def _run() -> dict[str, object]:
         require_non_negative(
@@ -203,13 +218,48 @@ def browser_load(
             track,
             hint="Use a valid track index from 'ableton-cli tracks list'.",
         )
+        valid_mode = require_non_empty_string(
+            "target_track_mode",
+            target_track_mode,
+            hint="Use one of: auto, existing, new.",
+        ).lower()
+        if valid_mode not in {"auto", "existing", "new"}:
+            raise invalid_argument(
+                message=(
+                    "target_track_mode must be one of auto/existing/new, "
+                    f"got {target_track_mode}"
+                ),
+                hint="Use --target-track-mode auto, existing, or new.",
+            )
+        valid_clip_slot = (
+            require_non_negative(
+                "clip_slot",
+                clip_slot,
+                hint="Use a non-negative clip slot index.",
+            )
+            if clip_slot is not None
+            else None
+        )
         valid_uri, valid_path = _resolve_browser_target(target)
-        return get_client(ctx).load_instrument_or_effect(track, uri=valid_uri, path=valid_path)
+        return get_client(ctx).load_instrument_or_effect(
+            track,
+            uri=valid_uri,
+            path=valid_path,
+            target_track_mode=valid_mode,
+            clip_slot=valid_clip_slot,
+            preserve_track_name=preserve_track_name,
+        )
 
     execute_command(
         ctx,
         command="browser load",
-        args={"track": track, "target": target},
+        args={
+            "track": track,
+            "target": target,
+            "target_track_mode": target_track_mode,
+            "clip_slot": clip_slot,
+            "preserve_track_name": preserve_track_name,
+        },
         action=_run,
     )
 

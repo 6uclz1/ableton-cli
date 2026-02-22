@@ -244,6 +244,46 @@ def test_browser_load_rejects_non_uri_non_path_target(runner, cli_app) -> None:
     assert payload["error"]["code"] == "INVALID_ARGUMENT"
 
 
+def test_browser_load_rejects_invalid_target_track_mode(runner, cli_app) -> None:
+    result = runner.invoke(
+        cli_app,
+        [
+            "--output",
+            "json",
+            "browser",
+            "load",
+            "0",
+            "instruments/Operator",
+            "--target-track-mode",
+            "legacy",
+        ],
+    )
+
+    assert result.exit_code == 2
+    payload = json.loads(result.stdout)
+    assert payload["error"]["code"] == "INVALID_ARGUMENT"
+
+
+def test_browser_load_rejects_negative_clip_slot(runner, cli_app) -> None:
+    result = runner.invoke(
+        cli_app,
+        [
+            "--output",
+            "json",
+            "browser",
+            "load",
+            "0",
+            "instruments/Operator",
+            "--clip-slot",
+            "-1",
+        ],
+    )
+
+    assert result.exit_code == 2
+    payload = json.loads(result.stdout)
+    assert payload["error"]["code"] == "INVALID_ARGUMENT"
+
+
 def test_browser_load_drum_kit_requires_exactly_one_kit_selector(runner, cli_app) -> None:
     none_selected = runner.invoke(
         cli_app,

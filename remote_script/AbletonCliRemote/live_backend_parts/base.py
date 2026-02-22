@@ -33,6 +33,38 @@ def _not_supported_by_live_api(message: str, hint: str) -> CommandError:
 class LiveBackendBaseMixin:
     _control_surface: Any
 
+    @staticmethod
+    def _is_callable_attribute(target: Any, name: str) -> bool:
+        return bool(callable(getattr(target, name, None)))
+
+    def _live_api_support(self) -> dict[str, bool]:
+        app = self._control_surface.application()
+        song = self._control_surface.song()
+
+        song_new_supported = self._is_callable_attribute(app, "new_live_set")
+        song_save_supported = self._is_callable_attribute(app, "save_live_set")
+        song_export_audio_supported = self._is_callable_attribute(app, "export_audio")
+        has_record_mode = hasattr(song, "record_mode")
+        arrangement_record_start_supported = has_record_mode or self._is_callable_attribute(
+            song,
+            "start_arrangement_recording",
+        )
+        arrangement_record_stop_supported = has_record_mode or self._is_callable_attribute(
+            song,
+            "stop_arrangement_recording",
+        )
+
+        return {
+            "song_new_supported": song_new_supported,
+            "song_save_supported": song_save_supported,
+            "song_export_audio_supported": song_export_audio_supported,
+            "arrangement_record_start_supported": arrangement_record_start_supported,
+            "arrangement_record_stop_supported": arrangement_record_stop_supported,
+            "arrangement_record_supported": (
+                arrangement_record_start_supported and arrangement_record_stop_supported
+            ),
+        }
+
     def _song(self) -> Any:
         return self._control_surface.song()
 
@@ -294,6 +326,7 @@ class LiveBackendBaseMixin:
         return {
             "protocol_version": PROTOCOL_VERSION,
             "remote_script_version": REMOTE_SCRIPT_VERSION,
+            "api_support": self._live_api_support(),
         }
 
     def _get_device_type(self, device: Any) -> str:

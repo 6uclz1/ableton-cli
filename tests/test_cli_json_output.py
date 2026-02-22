@@ -98,6 +98,11 @@ def test_ping_includes_capabilities_when_remote_reports_them(runner, cli_app, mo
                 "remote_script_version": "0.2.0",
                 "supported_commands": ["ping", "song_info"],
                 "command_set_hash": "abc123",
+                "api_support": {
+                    "song_save_supported": False,
+                    "song_export_audio_supported": False,
+                    "arrangement_record_supported": False,
+                },
             }
 
     monkeypatch.setattr(setup, "get_client", lambda ctx: _ClientStub())
@@ -112,6 +117,9 @@ def test_ping_includes_capabilities_when_remote_reports_them(runner, cli_app, mo
     assert payload["ok"] is True
     assert payload["result"]["supported_commands"] == ["ping", "song_info"]
     assert payload["result"]["command_set_hash"] == "abc123"
+    assert payload["result"]["api_support"]["song_save_supported"] is False
+    assert payload["result"]["api_support"]["song_export_audio_supported"] is False
+    assert payload["result"]["api_support"]["arrangement_record_supported"] is False
 
 
 def test_config_set_updates_key_and_returns_json_envelope(runner, cli_app, tmp_path) -> None:

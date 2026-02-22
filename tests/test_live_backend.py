@@ -528,6 +528,45 @@ def _set_track_device_to_effect(
     target_track.devices[device] = effect_device
 
 
+def test_live_backend_ping_info_reports_api_support_matrix() -> None:
+    backend = LiveBackend(_SurfaceStub())
+
+    result = backend.ping_info()
+
+    assert result["protocol_version"] == 2
+    assert "remote_script_version" in result
+    assert result["api_support"] == {
+        "song_new_supported": False,
+        "song_save_supported": False,
+        "song_export_audio_supported": False,
+        "arrangement_record_start_supported": False,
+        "arrangement_record_stop_supported": False,
+        "arrangement_record_supported": False,
+    }
+
+
+def test_live_backend_ping_info_reports_api_support_true_when_available() -> None:
+    surface = _SurfaceStub()
+    app = surface.application()
+    song = surface.song()
+    app.new_live_set = lambda: None
+    app.save_live_set = lambda _path: None
+    app.export_audio = lambda _path: None
+    song.record_mode = False
+    backend = LiveBackend(surface)
+
+    result = backend.ping_info()
+
+    assert result["api_support"] == {
+        "song_new_supported": True,
+        "song_save_supported": True,
+        "song_export_audio_supported": True,
+        "arrangement_record_start_supported": True,
+        "arrangement_record_stop_supported": True,
+        "arrangement_record_supported": True,
+    }
+
+
 def test_live_backend_transport_and_tempo() -> None:
     backend = LiveBackend(_SurfaceStub())
 

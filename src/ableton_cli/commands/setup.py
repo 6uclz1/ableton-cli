@@ -191,6 +191,7 @@ def register(app: typer.Typer) -> None:
                 "remote_script_version": result.get("remote_script_version"),
                 "supported_commands": result.get("supported_commands"),
                 "command_set_hash": result.get("command_set_hash"),
+                "api_support": result.get("api_support"),
                 "rtt_ms": round(rtt_ms, 3),
             }
 

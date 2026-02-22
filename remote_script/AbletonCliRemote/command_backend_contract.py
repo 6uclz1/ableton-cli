@@ -1,0 +1,289 @@
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import Any, Protocol
+
+PROTOCOL_VERSION = 2
+REMOTE_SCRIPT_VERSION = "0.4.0"
+MIN_BPM = 20.0
+MAX_BPM = 999.0
+MIN_VOLUME = 0.0
+MAX_VOLUME = 1.0
+MIN_PANNING = -1.0
+MAX_PANNING = 1.0
+NOTE_PITCH_MIN = 0
+NOTE_PITCH_MAX = 127
+NOTE_VELOCITY_MIN = 1
+NOTE_VELOCITY_MAX = 127
+NOTE_KEYS = frozenset({"pitch", "start_time", "duration", "velocity", "mute"})
+
+
+@dataclass(slots=True)
+class CommandError(Exception):
+    code: str
+    message: str
+    hint: str | None = None
+    details: dict[str, Any] | None = None
+
+
+class _SongTransportBackend(Protocol):
+    def ping_info(self) -> dict[str, Any]: ...
+
+    def song_info(self) -> dict[str, Any]: ...
+
+    def song_new(self) -> dict[str, Any]: ...
+
+    def song_save(self, path: str) -> dict[str, Any]: ...
+
+    def song_export_audio(self, path: str) -> dict[str, Any]: ...
+
+    def get_session_info(self) -> dict[str, Any]: ...
+
+    def session_snapshot(self) -> dict[str, Any]: ...
+
+    def get_track_info(self, track: int) -> dict[str, Any]: ...
+
+    def tracks_list(self) -> dict[str, Any]: ...
+
+    def create_midi_track(self, index: int) -> dict[str, Any]: ...
+
+    def create_audio_track(self, index: int) -> dict[str, Any]: ...
+
+    def set_track_name(self, track: int, name: str) -> dict[str, Any]: ...
+
+    def transport_play(self) -> dict[str, Any]: ...
+
+    def transport_stop(self) -> dict[str, Any]: ...
+
+    def transport_toggle(self) -> dict[str, Any]: ...
+
+    def start_playback(self) -> dict[str, Any]: ...
+
+    def stop_playback(self) -> dict[str, Any]: ...
+
+    def transport_tempo_get(self) -> dict[str, Any]: ...
+
+    def transport_tempo_set(self, bpm: float) -> dict[str, Any]: ...
+
+    def set_tempo(self, tempo: float) -> dict[str, Any]: ...
+
+    def track_volume_get(self, track: int) -> dict[str, Any]: ...
+
+    def track_volume_set(self, track: int, value: float) -> dict[str, Any]: ...
+
+    def track_mute_get(self, track: int) -> dict[str, Any]: ...
+
+    def track_mute_set(self, track: int, value: bool) -> dict[str, Any]: ...
+
+    def track_solo_get(self, track: int) -> dict[str, Any]: ...
+
+    def track_solo_set(self, track: int, value: bool) -> dict[str, Any]: ...
+
+    def track_arm_get(self, track: int) -> dict[str, Any]: ...
+
+    def track_arm_set(self, track: int, value: bool) -> dict[str, Any]: ...
+
+    def track_panning_get(self, track: int) -> dict[str, Any]: ...
+
+    def track_panning_set(self, track: int, value: float) -> dict[str, Any]: ...
+
+
+class _TracksClipsBackend(Protocol):
+    def create_clip(self, track: int, clip: int, length: float) -> dict[str, Any]: ...
+
+    def add_notes_to_clip(
+        self,
+        track: int,
+        clip: int,
+        notes: list[dict[str, Any]],
+    ) -> dict[str, Any]: ...
+
+    def get_clip_notes(
+        self,
+        track: int,
+        clip: int,
+        start_time: float | None,
+        end_time: float | None,
+        pitch: int | None,
+    ) -> dict[str, Any]: ...
+
+    def clear_clip_notes(
+        self,
+        track: int,
+        clip: int,
+        start_time: float | None,
+        end_time: float | None,
+        pitch: int | None,
+    ) -> dict[str, Any]: ...
+
+    def replace_clip_notes(
+        self,
+        track: int,
+        clip: int,
+        notes: list[dict[str, Any]],
+        start_time: float | None,
+        end_time: float | None,
+        pitch: int | None,
+    ) -> dict[str, Any]: ...
+
+    def set_clip_name(self, track: int, clip: int, name: str) -> dict[str, Any]: ...
+
+    def fire_clip(self, track: int, clip: int) -> dict[str, Any]: ...
+
+    def stop_clip(self, track: int, clip: int) -> dict[str, Any]: ...
+
+    def clip_duplicate(self, track: int, src_clip: int, dst_clip: int) -> dict[str, Any]: ...
+
+    def scenes_list(self) -> dict[str, Any]: ...
+
+    def create_scene(self, index: int) -> dict[str, Any]: ...
+
+    def set_scene_name(self, scene: int, name: str) -> dict[str, Any]: ...
+
+    def fire_scene(self, scene: int) -> dict[str, Any]: ...
+
+    def scenes_move(self, from_index: int, to_index: int) -> dict[str, Any]: ...
+
+    def stop_all_clips(self) -> dict[str, Any]: ...
+
+    def arrangement_record_start(self) -> dict[str, Any]: ...
+
+    def arrangement_record_stop(self) -> dict[str, Any]: ...
+
+    def tracks_delete(self, track: int) -> dict[str, Any]: ...
+
+
+class _BrowserBackend(Protocol):
+    def load_instrument_or_effect(
+        self,
+        track: int,
+        uri: str | None,
+        path: str | None,
+    ) -> dict[str, Any]: ...
+
+    def get_browser_tree(self, category_type: str) -> dict[str, Any]: ...
+
+    def get_browser_items_at_path(self, path: str) -> dict[str, Any]: ...
+
+    def get_browser_item(self, uri: str | None, path: str | None) -> dict[str, Any]: ...
+
+    def get_browser_categories(self, category_type: str) -> dict[str, Any]: ...
+
+    def get_browser_items(
+        self,
+        path: str,
+        item_type: str,
+        limit: int,
+        offset: int,
+    ) -> dict[str, Any]: ...
+
+    def search_browser_items(
+        self,
+        query: str,
+        path: str | None,
+        item_type: str,
+        limit: int,
+        offset: int,
+        exact: bool,
+        case_sensitive: bool,
+    ) -> dict[str, Any]: ...
+
+    def load_drum_kit(
+        self,
+        track: int,
+        rack_uri: str,
+        kit_uri: str | None,
+        kit_path: str | None,
+    ) -> dict[str, Any]: ...
+
+
+class _DevicesBackend(Protocol):
+    def set_device_parameter(
+        self,
+        track: int,
+        device: int,
+        parameter: int,
+        value: float,
+    ) -> dict[str, Any]: ...
+
+    def find_synth_devices(
+        self,
+        track: int | None,
+        synth_type: str | None,
+    ) -> dict[str, Any]: ...
+
+    def list_synth_parameters(self, track: int, device: int) -> dict[str, Any]: ...
+
+    def set_synth_parameter_safe(
+        self,
+        track: int,
+        device: int,
+        parameter: int,
+        value: float,
+    ) -> dict[str, Any]: ...
+
+    def observe_synth_parameters(self, track: int, device: int) -> dict[str, Any]: ...
+
+    def list_standard_synth_keys(self, synth_type: str) -> dict[str, Any]: ...
+
+    def set_standard_synth_parameter_safe(
+        self,
+        synth_type: str,
+        track: int,
+        device: int,
+        key: str,
+        value: float,
+    ) -> dict[str, Any]: ...
+
+    def observe_standard_synth_state(
+        self,
+        synth_type: str,
+        track: int,
+        device: int,
+    ) -> dict[str, Any]: ...
+
+    def find_effect_devices(
+        self,
+        track: int | None,
+        effect_type: str | None,
+    ) -> dict[str, Any]: ...
+
+    def list_effect_parameters(self, track: int, device: int) -> dict[str, Any]: ...
+
+    def set_effect_parameter_safe(
+        self,
+        track: int,
+        device: int,
+        parameter: int,
+        value: float,
+    ) -> dict[str, Any]: ...
+
+    def observe_effect_parameters(self, track: int, device: int) -> dict[str, Any]: ...
+
+    def list_standard_effect_keys(self, effect_type: str) -> dict[str, Any]: ...
+
+    def set_standard_effect_parameter_safe(
+        self,
+        effect_type: str,
+        track: int,
+        device: int,
+        key: str,
+        value: float,
+    ) -> dict[str, Any]: ...
+
+    def observe_standard_effect_state(
+        self,
+        effect_type: str,
+        track: int,
+        device: int,
+    ) -> dict[str, Any]: ...
+
+
+class CommandBackend(
+    _SongTransportBackend,
+    _TracksClipsBackend,
+    _BrowserBackend,
+    _DevicesBackend,
+    Protocol,
+):
+    pass

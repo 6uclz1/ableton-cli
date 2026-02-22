@@ -1,0 +1,52 @@
+version: 1
+phase: 2
+include:
+  - "src/**/*.py"
+  - "remote_script/**/*.py"
+exclude:
+  - "**/__pycache__/**"
+  - "tests/**"
+duplication:
+  min_lines: 6
+  min_tokens: 40
+thresholds:
+  file:
+    complexity: { warn: 180, fail: 260 }
+    imports: { warn: 20, fail: 30 }
+    estimated_tokens: { warn: 3000, fail: 12000 }
+  function:
+    complexity: { warn: 10, fail: 35 }
+    nesting: { warn: 3, fail: 6 }
+    args: { warn: 6, fail: 13 }
+    estimated_tokens: { warn: 260, fail: 950 }
+  class:
+    complexity: { warn: 70, fail: 400 }
+    nesting: { warn: 3, fail: 6 }
+    args: { warn: 8, fail: 12 }
+    imports: { warn: 8, fail: 12 }
+    estimated_tokens: { warn: 1200, fail: 12000 }
+    god_class_risk: { warn: 70, fail: 99 }
+  duplicates:
+    occurrences: { warn: 3, fail: 7 }
+parse_errors:
+  mode: warn
+baseline:
+  warning_delta: { warn: 5, fail: 20 }
+  failure_delta: { warn: 0.5, fail: 1 }
+  new_failures: { warn: 0.5, fail: 1 }
+dependencies:
+  cycle_count: { warn: 1, fail: 3 }
+layers:
+  violation_count: { warn: 1, fail: 4 }
+  order:
+    - name: commands
+      include:
+        - "src/ableton_cli/commands/**/*.py"
+        - "src/ableton_cli/app.py"
+        - "src/ableton_cli/cli.py"
+    - name: core
+      include:
+        - "src/ableton_cli/**/*.py"
+    - name: remote
+      include:
+        - "remote_script/**/*.py"

@@ -224,6 +224,21 @@ class _AbletonClientTracksClipsMixin:
             pitch=pitch,
         )
 
+    def clip_groove_get(self, track: int, clip: int) -> dict[str, Any]:
+        return self._call("clip_groove_get", {"track": track, "clip": clip})
+
+    def clip_groove_set(self, track: int, clip: int, target: str) -> dict[str, Any]:
+        return self._call("clip_groove_set", {"track": track, "clip": clip, "target": target})
+
+    def clip_groove_amount_set(self, track: int, clip: int, value: float) -> dict[str, Any]:
+        return self._call(
+            "clip_groove_amount_set",
+            {"track": track, "clip": clip, "value": value},
+        )
+
+    def clip_groove_clear(self, track: int, clip: int) -> dict[str, Any]:
+        return self._call("clip_groove_clear", {"track": track, "clip": clip})
+
     def set_clip_name(self, track: int, clip: int, name: str) -> dict[str, Any]:
         return self._call("set_clip_name", {"track": track, "clip": clip, "name": name})
 

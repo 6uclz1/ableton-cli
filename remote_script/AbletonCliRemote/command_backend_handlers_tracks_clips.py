@@ -17,6 +17,7 @@ from .command_backend_validators import (
     _notes,
     _track_index,
     _unit_interval,
+    _uri_or_path_target,
 )
 
 Handler = Callable[[CommandBackend, dict[str, Any]], dict[str, Any]]
@@ -102,6 +103,32 @@ def _handle_clip_notes_transpose(backend: CommandBackend, args: dict[str, Any]) 
     semitones = _as_int("semitones", args.get("semitones"))
     start_time, end_time, pitch = _clip_notes_filter(args)
     return backend.clip_notes_transpose(track, clip, semitones, start_time, end_time, pitch)
+
+
+def _handle_clip_groove_get(backend: CommandBackend, args: dict[str, Any]) -> dict[str, Any]:
+    track = _track_index("track", args.get("track"))
+    clip = _track_index("clip", args.get("clip"))
+    return backend.clip_groove_get(track, clip)
+
+
+def _handle_clip_groove_set(backend: CommandBackend, args: dict[str, Any]) -> dict[str, Any]:
+    track = _track_index("track", args.get("track"))
+    clip = _track_index("clip", args.get("clip"))
+    target = _uri_or_path_target("target", args.get("target"))
+    return backend.clip_groove_set(track, clip, target)
+
+
+def _handle_clip_groove_amount_set(backend: CommandBackend, args: dict[str, Any]) -> dict[str, Any]:
+    track = _track_index("track", args.get("track"))
+    clip = _track_index("clip", args.get("clip"))
+    value = _unit_interval("value", args.get("value"))
+    return backend.clip_groove_amount_set(track, clip, value)
+
+
+def _handle_clip_groove_clear(backend: CommandBackend, args: dict[str, Any]) -> dict[str, Any]:
+    track = _track_index("track", args.get("track"))
+    clip = _track_index("clip", args.get("clip"))
+    return backend.clip_groove_clear(track, clip)
 
 
 def _handle_set_clip_name(backend: CommandBackend, args: dict[str, Any]) -> dict[str, Any]:
@@ -202,6 +229,10 @@ TRACKS_CLIPS_HANDLERS: dict[str, Handler] = {
     "clip_notes_humanize": _handle_clip_notes_humanize,
     "clip_notes_velocity_scale": _handle_clip_notes_velocity_scale,
     "clip_notes_transpose": _handle_clip_notes_transpose,
+    "clip_groove_get": _handle_clip_groove_get,
+    "clip_groove_set": _handle_clip_groove_set,
+    "clip_groove_amount_set": _handle_clip_groove_amount_set,
+    "clip_groove_clear": _handle_clip_groove_clear,
     "set_clip_name": _handle_set_clip_name,
     "fire_clip": _handle_fire_clip,
     "stop_clip": _handle_stop_clip,

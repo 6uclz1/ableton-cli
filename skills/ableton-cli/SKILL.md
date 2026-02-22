@@ -103,6 +103,10 @@ uv run ableton-cli clip notes quantize 0 0 --grid 1/16 --strength 0.8 --start-ti
 uv run ableton-cli clip notes humanize 0 0 --timing 0.05 --velocity 5
 uv run ableton-cli clip notes velocity-scale 0 0 --scale 1.1 --offset -3
 uv run ableton-cli clip notes transpose 0 0 --semitones 2 --start-time 0.0 --end-time 4.0
+uv run ableton-cli clip groove get 0 0
+uv run ableton-cli clip groove set 0 0 grooves/Hip\ Hop\ Boom\ Bap\ 16ths\ 90\ bpm.agr
+uv run ableton-cli clip groove amount set 0 0 0.6
+uv run ableton-cli clip groove clear 0 0
 uv run ableton-cli clip name set 0 0 "Hook"
 uv run ableton-cli clip fire 0 0
 uv run ableton-cli clip stop 0 0

@@ -61,6 +61,8 @@ class _Clip:
         self.is_playing = False
         self.is_recording = False
         self.muted = False
+        self.groove: str | None = None
+        self.groove_amount = 0.5
         self._notes: list[_MidiNote] = []
         self._next_note_id = 1
 
@@ -231,6 +233,24 @@ class _Browser:
         )
         self.audio_effects = _BrowserItem(name="Audio Effects", uri="cat:audio", children=[])
         self.midi_effects = _BrowserItem(name="MIDI Effects", uri="cat:midi", children=[])
+        self.grooves = _BrowserItem(
+            name="Grooves",
+            uri="cat:grooves",
+            children=[
+                _BrowserItem(
+                    name="Hip Hop Boom Bap 16ths 90 bpm.agr",
+                    uri="groove:hip-hop-boom-bap-16ths-90",
+                    is_device=False,
+                    is_loadable=True,
+                ),
+                _BrowserItem(
+                    name="Hip Hop Subtle 16ths 80 bpm.agr",
+                    uri="groove:hip-hop-subtle-16ths-80",
+                    is_device=False,
+                    is_loadable=True,
+                ),
+            ],
+        )
 
     def load_item(self, item: _BrowserItem) -> None:
         uri = str(getattr(item, "uri", ""))
@@ -1206,6 +1226,30 @@ def test_live_backend_clip_note_transform_commands_with_filters() -> None:
     assert notes[2]["pitch"] == 64
     assert notes[2]["start_time"] == 1.1
     assert notes[2]["velocity"] == 80
+
+
+def test_live_backend_clip_groove_commands() -> None:
+    backend = LiveBackend(_SurfaceStub())
+    backend.create_clip(0, 0, 4.0)
+
+    set_result = backend.clip_groove_set(0, 0, "grooves/Hip Hop Boom Bap 16ths 90 bpm.agr")
+    assert set_result["has_groove"] is True
+    assert set_result["groove_path"] == "grooves/Hip Hop Boom Bap 16ths 90 bpm.agr"
+    assert set_result["groove_uri"] == "groove:hip-hop-boom-bap-16ths-90"
+
+    amount_result = backend.clip_groove_amount_set(0, 0, 0.6)
+    assert amount_result["has_groove"] is True
+    assert amount_result["amount"] == 0.6
+
+    current = backend.clip_groove_get(0, 0)
+    assert current["has_groove"] is True
+    assert current["amount"] == 0.6
+    assert current["groove_name"] == "Hip Hop Boom Bap 16ths 90 bpm.agr"
+
+    cleared = backend.clip_groove_clear(0, 0)
+    assert cleared["has_groove"] is False
+    assert cleared["groove_uri"] is None
+    assert cleared["groove_path"] is None
 
 
 def test_live_backend_load_drum_kit_requires_explicit_selection() -> None:

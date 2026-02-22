@@ -63,6 +63,16 @@ def _non_empty_string(name: str, value: Any) -> str:
     return parsed
 
 
+def _uri_or_path_target(name: str, value: Any) -> str:
+    parsed = _non_empty_string(name, value)
+    if "/" in parsed or ":" in parsed:
+        return parsed
+    raise _invalid_argument(
+        message=f"{name} must include '/' (path) or ':' (uri)",
+        hint="Use a browser path like grooves/My Groove.agr or URI like groove:example.",
+    )
+
+
 def _track_index(name: str, value: Any) -> int:
     parsed = _as_int(name, value)
     if parsed < 0:

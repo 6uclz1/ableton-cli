@@ -188,6 +188,51 @@ class _ClientStub:
             "changed_count": 2,
         }
 
+    def clip_groove_get(self, track: int, clip: int):  # noqa: ANN201
+        return {
+            "track": track,
+            "clip": clip,
+            "has_groove": True,
+            "groove_uri": "groove:hip-hop-boom-bap-16ths-90",
+            "groove_path": "grooves/Hip Hop Boom Bap 16ths 90 bpm.agr",
+            "groove_name": "Hip Hop Boom Bap 16ths 90 bpm.agr",
+            "amount": 0.5,
+        }
+
+    def clip_groove_set(self, track: int, clip: int, target: str):  # noqa: ANN201
+        return {
+            "track": track,
+            "clip": clip,
+            "target": target,
+            "has_groove": True,
+            "groove_uri": "groove:hip-hop-boom-bap-16ths-90",
+            "groove_path": "grooves/Hip Hop Boom Bap 16ths 90 bpm.agr",
+            "groove_name": "Hip Hop Boom Bap 16ths 90 bpm.agr",
+            "amount": 0.5,
+        }
+
+    def clip_groove_amount_set(self, track: int, clip: int, value: float):  # noqa: ANN201
+        return {
+            "track": track,
+            "clip": clip,
+            "has_groove": True,
+            "groove_uri": "groove:hip-hop-boom-bap-16ths-90",
+            "groove_path": "grooves/Hip Hop Boom Bap 16ths 90 bpm.agr",
+            "groove_name": "Hip Hop Boom Bap 16ths 90 bpm.agr",
+            "amount": value,
+        }
+
+    def clip_groove_clear(self, track: int, clip: int):  # noqa: ANN201
+        return {
+            "track": track,
+            "clip": clip,
+            "has_groove": False,
+            "groove_uri": None,
+            "groove_path": None,
+            "groove_name": None,
+            "amount": 0.5,
+        }
+
     def clip_active_get(self, track: int, clip: int):  # noqa: ANN201
         return {"track": track, "clip": clip, "active": True}
 
@@ -903,6 +948,53 @@ def test_clip_note_transform_commands_output_json_envelope(runner, cli_app, monk
     assert velocity_scale_payload["result"]["scale"] == 1.2
     assert velocity_scale_payload["result"]["offset"] == -3
     assert transpose_payload["result"]["semitones"] == 7
+
+
+def test_clip_groove_commands_output_json_envelope(runner, cli_app, monkeypatch) -> None:
+    from ableton_cli.commands import clip
+
+    monkeypatch.setattr(clip, "get_client", lambda ctx: _ClientStub())
+
+    gotten = runner.invoke(
+        cli_app,
+        ["--output", "json", "clip", "groove", "get", "0", "1"],
+    )
+    set_result = runner.invoke(
+        cli_app,
+        [
+            "--output",
+            "json",
+            "clip",
+            "groove",
+            "set",
+            "0",
+            "1",
+            "grooves/Hip Hop Boom Bap 16ths 90 bpm.agr",
+        ],
+    )
+    amount_result = runner.invoke(
+        cli_app,
+        ["--output", "json", "clip", "groove", "amount", "set", "0", "1", "0.7"],
+    )
+    cleared = runner.invoke(
+        cli_app,
+        ["--output", "json", "clip", "groove", "clear", "0", "1"],
+    )
+
+    assert gotten.exit_code == 0
+    assert set_result.exit_code == 0
+    assert amount_result.exit_code == 0
+    assert cleared.exit_code == 0
+
+    gotten_payload = json.loads(gotten.stdout)
+    set_payload = json.loads(set_result.stdout)
+    amount_payload = json.loads(amount_result.stdout)
+    cleared_payload = json.loads(cleared.stdout)
+
+    assert gotten_payload["result"]["has_groove"] is True
+    assert set_payload["result"]["target"] == "grooves/Hip Hop Boom Bap 16ths 90 bpm.agr"
+    assert amount_payload["result"]["amount"] == 0.7
+    assert cleared_payload["result"]["has_groove"] is False
 
 
 def test_browser_item_supports_uri_and_path_target(runner, cli_app, monkeypatch) -> None:

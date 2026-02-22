@@ -88,6 +88,10 @@ Stable action names and CLI mappings for automation wrappers.
 - `uv run ableton-cli clip notes humanize <track> <clip> --timing <beats> --velocity <0-127>`: Humanize timing and velocity for matching notes.
 - `uv run ableton-cli clip notes velocity-scale <track> <clip> --scale <float> --offset <int>`: Scale and offset note velocities for matching notes.
 - `uv run ableton-cli clip notes transpose <track> <clip> --semitones <int>`: Transpose matching note pitches.
+- `uv run ableton-cli clip groove get <track> <clip>`: Read groove assignment and amount from a clip.
+- `uv run ableton-cli clip groove set <track> <clip> <target>`: Assign a `.agr` groove by browser path or URI.
+- `uv run ableton-cli clip groove amount set <track> <clip> <0.0-1.0>`: Set groove amount on a clip.
+- `uv run ableton-cli clip groove clear <track> <clip>`: Clear groove assignment from a clip.
 
 Operational note: after `install-remote-script --yes`, reload Ableton's Control Surface assignment (`None` -> `AbletonCliRemote`) or restart Ableton Live to apply updated Remote Script code.
 

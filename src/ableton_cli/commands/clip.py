@@ -18,6 +18,8 @@ clip_app = typer.Typer(help="Clip commands", no_args_is_help=True)
 notes_app = typer.Typer(help="Clip note commands", no_args_is_help=True)
 name_app = typer.Typer(help="Clip naming commands", no_args_is_help=True)
 active_app = typer.Typer(help="Clip active-state commands", no_args_is_help=True)
+groove_app = typer.Typer(help="Clip groove commands", no_args_is_help=True)
+groove_amount_app = typer.Typer(help="Clip groove amount commands", no_args_is_help=True)
 
 
 def _validate_note_filters(
@@ -93,6 +95,20 @@ def _require_int_in_range(
             hint=hint,
         )
     return value
+
+
+def _require_uri_or_path_target(target: str) -> str:
+    parsed = require_non_empty_string(
+        "target",
+        target,
+        hint="Pass a groove target path or URI.",
+    )
+    if "/" in parsed or ":" in parsed:
+        return parsed
+    raise invalid_argument(
+        message=f"target must include '/' (path) or ':' (uri), got {parsed!r}",
+        hint="Use a path like grooves/Hip Hop Boom Bap 16ths 90 bpm.agr or groove URI.",
+    )
 
 
 @clip_app.command("create")
@@ -592,6 +608,124 @@ def clip_notes_transpose(
     )
 
 
+@groove_app.command("get")
+def clip_groove_get(
+    ctx: typer.Context,
+    track: Annotated[int, typer.Argument(help="Track index (0-based)")],
+    clip: Annotated[int, typer.Argument(help="Clip slot index (0-based)")],
+) -> None:
+    def _run() -> dict[str, object]:
+        require_non_negative(
+            "track",
+            track,
+            hint="Use a valid track index from 'ableton-cli tracks list'.",
+        )
+        require_non_negative(
+            "clip",
+            clip,
+            hint="Use a valid clip slot index.",
+        )
+        return get_client(ctx).clip_groove_get(track, clip)
+
+    execute_command(
+        ctx,
+        command="clip groove get",
+        args={"track": track, "clip": clip},
+        action=_run,
+    )
+
+
+@groove_app.command("set")
+def clip_groove_set(
+    ctx: typer.Context,
+    track: Annotated[int, typer.Argument(help="Track index (0-based)")],
+    clip: Annotated[int, typer.Argument(help="Clip slot index (0-based)")],
+    target: Annotated[str, typer.Argument(help="Groove target (URI or path to .agr)")],
+) -> None:
+    def _run() -> dict[str, object]:
+        require_non_negative(
+            "track",
+            track,
+            hint="Use a valid track index from 'ableton-cli tracks list'.",
+        )
+        require_non_negative(
+            "clip",
+            clip,
+            hint="Use a valid clip slot index.",
+        )
+        valid_target = _require_uri_or_path_target(target)
+        return get_client(ctx).clip_groove_set(track, clip, valid_target)
+
+    execute_command(
+        ctx,
+        command="clip groove set",
+        args={"track": track, "clip": clip, "target": target},
+        action=_run,
+    )
+
+
+@groove_amount_app.command("set")
+def clip_groove_amount_set(
+    ctx: typer.Context,
+    track: Annotated[int, typer.Argument(help="Track index (0-based)")],
+    clip: Annotated[int, typer.Argument(help="Clip slot index (0-based)")],
+    value: Annotated[float, typer.Argument(help="Groove amount in [0.0, 1.0]")],
+) -> None:
+    def _run() -> dict[str, object]:
+        require_non_negative(
+            "track",
+            track,
+            hint="Use a valid track index from 'ableton-cli tracks list'.",
+        )
+        require_non_negative(
+            "clip",
+            clip,
+            hint="Use a valid clip slot index.",
+        )
+        valid_value = _require_float_in_range(
+            name="value",
+            value=value,
+            minimum=0.0,
+            maximum=1.0,
+            hint="Use a groove amount in the 0.0-1.0 range.",
+        )
+        return get_client(ctx).clip_groove_amount_set(track, clip, valid_value)
+
+    execute_command(
+        ctx,
+        command="clip groove amount set",
+        args={"track": track, "clip": clip, "value": value},
+        action=_run,
+    )
+
+
+@groove_app.command("clear")
+def clip_groove_clear(
+    ctx: typer.Context,
+    track: Annotated[int, typer.Argument(help="Track index (0-based)")],
+    clip: Annotated[int, typer.Argument(help="Clip slot index (0-based)")],
+) -> None:
+    def _run() -> dict[str, object]:
+        require_non_negative(
+            "track",
+            track,
+            hint="Use a valid track index from 'ableton-cli tracks list'.",
+        )
+        require_non_negative(
+            "clip",
+            clip,
+            hint="Use a valid clip slot index.",
+        )
+        return get_client(ctx).clip_groove_clear(track, clip)
+
+    execute_command(
+        ctx,
+        command="clip groove clear",
+        args={"track": track, "clip": clip},
+        action=_run,
+    )
+
+
 @name_app.command("set")
 def clip_name_set(
     ctx: typer.Context,
@@ -766,6 +900,8 @@ def clip_active_set(
 clip_app.add_typer(notes_app, name="notes")
 clip_app.add_typer(name_app, name="name")
 clip_app.add_typer(active_app, name="active")
+groove_app.add_typer(groove_amount_app, name="amount")
+clip_app.add_typer(groove_app, name="groove")
 
 
 def register(app: typer.Typer) -> None:

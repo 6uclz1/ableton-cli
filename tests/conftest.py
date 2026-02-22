@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 from typer.testing import CliRunner
 
-from ableton_cli.app import app
+from ableton_cli.cli import app
 
 
 @pytest.fixture

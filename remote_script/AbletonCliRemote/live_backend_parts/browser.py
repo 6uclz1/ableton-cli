@@ -31,7 +31,13 @@ class LiveBackendBrowserCatalogMixin:
         return text
 
     def _normalize_uri(self, value: str) -> str:
-        return unquote(value.strip())
+        normalized = value.strip()
+        for _ in range(4):
+            decoded = unquote(normalized)
+            if decoded == normalized:
+                break
+            normalized = decoded
+        return normalized
 
     def _uri_matches(self, candidate: Any, expected: str) -> bool:
         candidate_uri = self._coerce_uri(candidate)

@@ -1684,7 +1684,9 @@ def test_live_backend_transport_stop_waits_for_longer_eventual_consistency() -> 
     class _LongEventuallyConsistentSong(_EventuallyConsistentSong):
         def stop_playing(self) -> None:
             self._actual_is_playing = False
-            self._stale_reads_remaining = 60
+            # Keep eventual consistency delay longer than 0.25s while leaving
+            # headroom under the 1.0s transport timeout for slower CI runners.
+            self._stale_reads_remaining = 40
 
     class _LongEventuallyConsistentSurfaceStub(_SurfaceStub):
         def __init__(self) -> None:

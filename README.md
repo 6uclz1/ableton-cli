@@ -146,8 +146,9 @@ uv run ableton-cli browser load 0 "sounds/Bass Loop.alc" --target-track-mode exi
 uv run ableton-cli browser load-drum-kit 0 rack:drums --kit-uri kit:acoustic
 uv run ableton-cli browser load-drum-kit 0 rack:drums --kit-path drums/Kits/Acoustic Kit
 uv run ableton-cli batch run --steps-file ./steps.json
-uv run ableton-cli batch run --steps-json '{"steps":[{"command":"song_info","args":{}}]}'
-echo '{"steps":[{"command":"song_info","args":{}}]}' | uv run ableton-cli batch run --steps-stdin
+uv run ableton-cli batch run --steps-json '{"steps":[{"name":"song_info","args":{}}]}'
+echo '{"steps":[{"name":"song_info","args":{}}]}' | uv run ableton-cli batch run --steps-stdin
+echo '{"id":"req-1","steps":[{"name":"song_info","args":{}}]}' | uv run ableton-cli batch stream
 uv run ableton-cli device parameter set 0 0 0 0.25
 uv run ableton-cli synth find --type wavetable
 uv run ableton-cli synth parameters list 0 0
@@ -234,6 +235,25 @@ Installers/config commands also support:
 
 - `--yes`
 - `--dry-run`
+
+## Low-latency operation
+
+For single commands, use existing subcommands as before.
+For repeated automation commands, prefer `batch stream` to keep one process alive and avoid process startup overhead.
+
+`batch stream` expects one JSON object per stdin line and emits one JSON response line per request:
+
+```bash
+cat <<'JSONL' | uv run ableton-cli batch stream
+{"id":"a1","steps":[{"name":"song_info","args":{}}]}
+{"id":"a2","steps":[{"name":"track_volume_get","args":{"track":0}}]}
+JSONL
+```
+
+Compatibility validation is now explicit:
+
+- `uv run ableton-cli ping` for protocol/version metadata
+- `uv run ableton-cli doctor` for supported command integrity checks
 
 ## Exit Codes
 

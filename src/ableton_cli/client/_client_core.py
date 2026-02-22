@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import Any
 
-from ..capabilities import parse_supported_commands
 from ..config import Settings
 from ..errors import AppError, ExitCode, remote_error_to_app_error
 from .protocol import make_request, parse_response
@@ -17,23 +16,6 @@ class _AbletonClientCore:
             port=settings.port,
             timeout_ms=settings.timeout_ms,
         )
-        self._supported_commands: set[str] | None = None
-
-    def _ensure_remote_supports(self, command_name: str) -> None:
-        if command_name == "ping":
-            return
-
-        if self._supported_commands is None:
-            ping_result = self.ping()
-            self._supported_commands = parse_supported_commands(ping_result)
-
-        if command_name not in self._supported_commands:
-            raise AppError(
-                error_code="REMOTE_SCRIPT_INCOMPATIBLE",
-                message=f"Remote Script does not support command: {command_name}",
-                hint="Run 'ableton-cli install-remote-script --yes' and restart Ableton Live.",
-                exit_code=ExitCode.PROTOCOL_MISMATCH,
-            )
 
     def _dispatch(self, name: str, args: dict[str, Any]) -> dict[str, Any]:
         request = make_request(
@@ -66,7 +48,6 @@ class _AbletonClientCore:
 
     def _call(self, name: str, args: dict[str, Any] | None = None) -> dict[str, Any]:
         payload = {} if args is None else dict(args)
-        self._ensure_remote_supports(name)
         return self._dispatch(name, payload)
 
     @staticmethod

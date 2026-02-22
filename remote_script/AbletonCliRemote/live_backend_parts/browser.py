@@ -1,14 +1,17 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
-from time import perf_counter
+from time import monotonic, perf_counter, sleep
 from typing import Any
 from urllib.parse import unquote
 
+from ..command_backend import CommandError
 from .base import _invalid_argument, _not_supported_by_live_api
 
 _ALLOWED_ITEM_TYPES = frozenset({"all", "folder", "device", "loadable"})
 _ALLOWED_TARGET_TRACK_MODES = frozenset({"auto", "existing", "new"})
+_BROWSER_IMPORT_SETTLE_TIMEOUT_SECONDS = 1.0
+_BROWSER_IMPORT_SETTLE_POLL_INTERVAL_SECONDS = 0.01
 
 
 class LiveBackendBrowserCatalogMixin:
@@ -342,11 +345,11 @@ class LiveBackendBrowserReadMixin:
     @staticmethod
     def _created_tracks_since(
         *,
-        before: list[Any],
         after: list[Any],
+        base_track_count: int,
     ) -> list[tuple[int, Any]]:
-        before_ids = {id(track) for track in before}
-        return [(index, track) for index, track in enumerate(after) if id(track) not in before_ids]
+        start = min(max(int(base_track_count), 0), len(after))
+        return [(index, track) for index, track in enumerate(after[start:], start=start)]
 
     @staticmethod
     def _first_track_clip(track: Any) -> tuple[int, Any] | None:
@@ -357,6 +360,113 @@ class LiveBackendBrowserReadMixin:
             if clip_obj is not None:
                 return slot_index, clip_obj
         return None
+
+    def _created_track_details(
+        self,
+        *,
+        after: list[Any],
+        base_track_count: int,
+    ) -> list[dict[str, Any]]:
+        details: list[dict[str, Any]] = []
+        for index, track in self._created_tracks_since(
+            after=after,
+            base_track_count=base_track_count,
+        ):
+            clip_entry = self._first_track_clip(track)
+            details.append(
+                {
+                    "index": index,
+                    "track": track,
+                    "name": str(getattr(track, "name", "")),
+                    "has_clip": clip_entry is not None,
+                    "clip_slot": clip_entry[0] if clip_entry is not None else None,
+                    "clip": clip_entry[1] if clip_entry is not None else None,
+                }
+            )
+        return details
+
+    @staticmethod
+    def _created_track_error_details(*, created_tracks: list[dict[str, Any]]) -> dict[str, Any]:
+        clip_tracks = [track for track in created_tracks if bool(track.get("has_clip"))]
+        return {
+            "created_track_count": len(created_tracks),
+            "clip_track_count": len(clip_tracks),
+            "created_tracks": [
+                {
+                    "index": int(track["index"]),
+                    "name": str(track["name"]),
+                    "has_clip": bool(track["has_clip"]),
+                    "clip_slot": track["clip_slot"],
+                }
+                for track in created_tracks
+            ],
+        }
+
+    def _raise_ambiguous_created_track_error(
+        self,
+        *,
+        message: str,
+        hint: str,
+        created_tracks: list[dict[str, Any]],
+    ) -> None:
+        raise CommandError(
+            code="INVALID_ARGUMENT",
+            message=message,
+            hint=hint,
+            details=self._created_track_error_details(created_tracks=created_tracks),
+        )
+
+    def _cleanup_created_tracks_except(
+        self,
+        *,
+        song: Any,
+        base_track_count: int,
+        keep_track_indices: set[int],
+    ) -> dict[int, int]:
+        tracks_after_load = list(getattr(song, "tracks", []))
+        created_tracks = self._created_tracks_since(
+            after=tracks_after_load,
+            base_track_count=base_track_count,
+        )
+        deleted_before_kept = {index: 0 for index in keep_track_indices}
+        for track_index, _created_track in reversed(created_tracks):
+            if track_index in keep_track_indices:
+                continue
+            self._delete_track(song, track_index)
+            for kept_track_index in keep_track_indices:
+                if track_index < kept_track_index:
+                    deleted_before_kept[kept_track_index] += 1
+        return {
+            kept_track_index: kept_track_index - deleted_before_kept[kept_track_index]
+            for kept_track_index in keep_track_indices
+        }
+
+    def _cleanup_created_tracks(self, *, song: Any, base_track_count: int) -> None:
+        self._cleanup_created_tracks_except(
+            song=song,
+            base_track_count=base_track_count,
+            keep_track_indices=set(),
+        )
+
+    def _wait_for_created_clip_track(
+        self,
+        *,
+        song: Any,
+        base_track_count: int,
+    ) -> tuple[list[dict[str, Any]], dict[str, Any] | None]:
+        deadline = monotonic() + _BROWSER_IMPORT_SETTLE_TIMEOUT_SECONDS
+        latest_created_tracks: list[dict[str, Any]] = []
+        while True:
+            latest_created_tracks = self._created_track_details(
+                after=list(getattr(song, "tracks", [])),
+                base_track_count=base_track_count,
+            )
+            clip_tracks = [track for track in latest_created_tracks if bool(track["has_clip"])]
+            if len(clip_tracks) == 1:
+                return latest_created_tracks, clip_tracks[0]
+            if monotonic() >= deadline:
+                return latest_created_tracks, None
+            sleep(_BROWSER_IMPORT_SETTLE_POLL_INTERVAL_SECONDS)
 
     @staticmethod
     def _scene_index(song: Any, scene_obj: Any) -> int | None:
@@ -459,7 +569,10 @@ class LiveBackendBrowserReadMixin:
         normalized_length = float(source_length)
         if normalized_length <= 0:
             return False
-        target_clip.length = normalized_length
+        try:
+            target_clip.length = normalized_length
+        except Exception:
+            return False
         return True
 
     @staticmethod
@@ -468,7 +581,10 @@ class LiveBackendBrowserReadMixin:
         for attribute in ("groove", "groove_assignment"):
             if not hasattr(source_clip, attribute) or not hasattr(target_clip, attribute):
                 continue
-            setattr(target_clip, attribute, getattr(source_clip, attribute))
+            try:
+                setattr(target_clip, attribute, getattr(source_clip, attribute))
+            except Exception:
+                continue
             imported = True
             break
 
@@ -477,7 +593,10 @@ class LiveBackendBrowserReadMixin:
                 continue
             source_value = getattr(source_clip, attribute)
             if isinstance(source_value, (int, float)):
-                setattr(target_clip, attribute, float(source_value))
+                try:
+                    setattr(target_clip, attribute, float(source_value))
+                except Exception:
+                    continue
                 imported = True
             break
 
@@ -488,9 +607,21 @@ class LiveBackendBrowserReadMixin:
         ):
             if not hasattr(source_clip, attribute):
                 continue
-            setattr(target_clip, attribute, getattr(source_clip, attribute))
+            try:
+                setattr(target_clip, attribute, getattr(source_clip, attribute))
+            except Exception:
+                continue
             imported = True
         return imported
+
+    @staticmethod
+    def _copy_clip_name(*, source_clip: Any, target_clip: Any) -> None:
+        if not hasattr(target_clip, "name"):
+            return
+        try:
+            target_clip.name = str(getattr(source_clip, "name", ""))
+        except Exception:
+            return
 
     @staticmethod
     def _delete_track(song: Any, track_index: int) -> None:
@@ -540,14 +671,14 @@ class LiveBackendBrowserReadMixin:
         return target_clip
 
     def _load_midi_clip_to_temporary_track(self, *, song: Any, item: Any) -> tuple[int, Any]:
-        tracks_before_load = list(getattr(song, "tracks", []))
+        base_track_count = len(list(getattr(song, "tracks", [])))
         create_midi_track = getattr(song, "create_midi_track", None)
         if not callable(create_midi_track):
             raise _not_supported_by_live_api(
                 message="Track creation API is not available in Live API",
                 hint="Use a Live version exposing song.create_midi_track.",
             )
-        temporary_track_index = len(tracks_before_load)
+        temporary_track_index = base_track_count
         create_midi_track(-1)
         temporary_track = self._track_at(temporary_track_index)
 
@@ -559,44 +690,42 @@ class LiveBackendBrowserReadMixin:
         )
         self._select_track_for_load(song=song, target_track=temporary_track)
         try:
-            self._browser().load_item(item)
+            try:
+                self._browser().load_item(item)
+            except Exception:
+                self._cleanup_created_tracks(song=song, base_track_count=base_track_count)
+                raise
         finally:
             if previous_selected_track is not None and view is not None:
                 view.selected_track = previous_selected_track
 
-        source_clip_entry = self._first_track_clip(temporary_track)
-        if source_clip_entry is not None:
-            _source_slot_index, source_clip = source_clip_entry
-            return temporary_track_index, source_clip
-
-        tracks_after_load = list(getattr(song, "tracks", []))
-        created_tracks_including_temporary = self._created_tracks_since(
-            before=tracks_before_load,
-            after=tracks_after_load,
+        created_tracks, source_track = self._wait_for_created_clip_track(
+            song=song,
+            base_track_count=base_track_count,
         )
-        created_tracks = [
-            (index, track)
-            for index, track in created_tracks_including_temporary
-            if id(track) != id(temporary_track)
-        ]
-        if len(created_tracks) != 1:
-            self._delete_track(song, temporary_track_index)
-            raise _invalid_argument(
+        if source_track is None:
+            self._cleanup_created_tracks(song=song, base_track_count=base_track_count)
+            self._raise_ambiguous_created_track_error(
                 message="MIDI clip import did not create a deterministic source track",
                 hint="Retry with a loadable .alc target from browser items/search.",
+                created_tracks=created_tracks,
             )
-        source_track_index, source_track = created_tracks[0]
-        source_clip_entry = self._first_track_clip(source_track)
-        if source_clip_entry is None:
-            self._delete_track(song, temporary_track_index)
+
+        source_track_index = int(source_track["index"])
+        reindexed_tracks = self._cleanup_created_tracks_except(
+            song=song,
+            base_track_count=base_track_count,
+            keep_track_indices={source_track_index},
+        )
+        source_track_index = reindexed_tracks.get(source_track_index)
+        current_tracks = list(getattr(song, "tracks", []))
+        if source_track_index is None or source_track_index >= len(current_tracks):
             raise _invalid_argument(
-                message="Imported source track did not contain a clip",
-                hint="Retry with a loadable MIDI clip target.",
+                message="Imported source track was removed before note import",
+                hint="Retry with a deterministic loadable MIDI clip target.",
             )
-        self._delete_track(song, temporary_track_index)
-        if source_track_index > temporary_track_index:
-            source_track_index -= 1
-        _source_slot_index, source_clip = source_clip_entry
+
+        source_clip = source_track["clip"]
         return source_track_index, source_clip
 
     def _rehome_loaded_midi_clip_if_needed(
@@ -607,56 +736,58 @@ class LiveBackendBrowserReadMixin:
         target_track: Any,
         target_track_mode: str,
         clip_slot: int | None,
-        tracks_before_load: list[Any],
+        base_track_count: int,
     ) -> tuple[int, int] | None:
         if target_track_mode != "existing":
             return None
         if not self._is_midi_clip_browser_item(item):
             return None
 
-        tracks_after_load = list(getattr(song, "tracks", []))
-        created_tracks = self._created_tracks_since(
-            before=tracks_before_load,
-            after=tracks_after_load,
+        created_tracks = self._created_track_details(
+            after=list(getattr(song, "tracks", [])),
+            base_track_count=base_track_count,
         )
         if not created_tracks:
             return None
-        if len(created_tracks) != 1:
-            raise _invalid_argument(
-                message="Clip load created an unexpected number of tracks",
+
+        clip_tracks = [track for track in created_tracks if bool(track["has_clip"])]
+        if len(clip_tracks) != 1:
+            self._cleanup_created_tracks(song=song, base_track_count=base_track_count)
+            self._raise_ambiguous_created_track_error(
+                message="Clip load created an ambiguous source track set",
                 hint="Retry with a deterministic MIDI clip target track and slot.",
+                created_tracks=created_tracks,
             )
 
-        source_track_index, source_track = created_tracks[0]
-        source_clip_entry = self._first_track_clip(source_track)
-        if source_clip_entry is None:
+        source_clip = clip_tracks[0]["clip"]
+        if source_clip is None:
+            self._cleanup_created_tracks(song=song, base_track_count=base_track_count)
             raise _invalid_argument(
-                message="Loaded clip track did not contain a clip",
+                message="Loaded clip source track did not contain a clip",
                 hint="Retry with a loadable MIDI clip target.",
             )
-        _source_slot_index, source_clip = source_clip_entry
 
-        destination_clip_slot = self._resolve_rehome_clip_slot(
-            song=song,
-            target_track=target_track,
-            clip_slot=clip_slot,
-        )
-        target_clip = self._target_clip_for_import(
-            target_track=target_track,
-            clip_slot=destination_clip_slot,
-            source_clip=source_clip,
-            require_existing_clip=False,
-        )
-        imported_note_count = self._import_clip_notes(
-            source_clip=source_clip,
-            target_clip=target_clip,
-            notes_mode="replace",
-        )
-        if hasattr(target_clip, "name"):
-            target_clip.name = str(getattr(source_clip, "name", ""))
-
-        self._delete_track(song, source_track_index)
-        return imported_note_count, destination_clip_slot
+        try:
+            destination_clip_slot = self._resolve_rehome_clip_slot(
+                song=song,
+                target_track=target_track,
+                clip_slot=clip_slot,
+            )
+            target_clip = self._target_clip_for_import(
+                target_track=target_track,
+                clip_slot=destination_clip_slot,
+                source_clip=source_clip,
+                require_existing_clip=False,
+            )
+            imported_note_count = self._import_clip_notes(
+                source_clip=source_clip,
+                target_clip=target_clip,
+                notes_mode="replace",
+            )
+            self._copy_clip_name(source_clip=source_clip, target_clip=target_clip)
+            return imported_note_count, destination_clip_slot
+        finally:
+            self._cleanup_created_tracks(song=song, base_track_count=base_track_count)
 
     def load_instrument_or_effect(
         self,
@@ -714,8 +845,8 @@ class LiveBackendBrowserReadMixin:
             )
 
         song = self._song()
-        tracks_before_load = list(getattr(song, "tracks", []))
-        track_count_before = len(list(getattr(song, "tracks", [])))
+        base_track_count = len(list(getattr(song, "tracks", [])))
+        track_count_before = base_track_count
         target, resolved_track = self._resolve_load_target_track(
             track=track,
             target_track_mode=target_track_mode,
@@ -738,7 +869,7 @@ class LiveBackendBrowserReadMixin:
                 target_track=target,
                 target_track_mode=target_track_mode,
                 clip_slot=resolved_clip_slot,
-                tracks_before_load=tracks_before_load,
+                base_track_count=base_track_count,
             )
             if rehomed is not None:
                 imported_note_count, resolved_clip_slot = rehomed
@@ -774,8 +905,7 @@ class LiveBackendBrowserReadMixin:
                     target_clip=target_clip,
                     notes_mode=resolved_notes_mode,
                 )
-                if hasattr(target_clip, "name"):
-                    target_clip.name = str(getattr(source_clip, "name", ""))
+                self._copy_clip_name(source_clip=source_clip, target_clip=target_clip)
                 length_imported = (
                     self._import_clip_length(source_clip=source_clip, target_clip=target_clip)
                     if import_length

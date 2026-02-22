@@ -1879,3 +1879,89 @@ def test_effect_standard_wrapper_commands_output_json_envelope(
     assert set_payload["result"]["key"] == "band1_freq"
     assert set_payload["result"]["after"] == 0.62
     assert observed_payload["result"]["state"]["band1_freq"] == 0.5
+
+
+class _BatchStreamClientStub:
+    def __init__(self) -> None:
+        self.calls: list[list[dict[str, object]]] = []
+
+    def execute_batch(self, steps: list[dict[str, object]]):  # noqa: ANN201
+        self.calls.append(steps)
+        return {
+            "step_count": len(steps),
+            "results": [
+                {"index": index, "name": str(step["name"]), "result": {"ok": True}}
+                for index, step in enumerate(steps)
+            ],
+        }
+
+
+def test_batch_stream_processes_multiple_lines_and_reuses_client(
+    runner, cli_app, monkeypatch
+) -> None:
+    from ableton_cli.commands import batch
+
+    client = _BatchStreamClientStub()
+    get_client_calls = {"count": 0}
+
+    def _get_client(_ctx):  # noqa: ANN202
+        get_client_calls["count"] += 1
+        return client
+
+    monkeypatch.setattr(batch, "get_client", _get_client)
+
+    payload = "\n".join(
+        [
+            json.dumps({"id": "first", "steps": [{"name": "tracks_list", "args": {}}]}),
+            json.dumps({"id": "second", "steps": [{"name": "song_info", "args": {}}]}),
+        ]
+    )
+    result = runner.invoke(cli_app, ["batch", "stream"], input=f"{payload}\n")
+
+    assert result.exit_code == 0
+    responses = [json.loads(line) for line in result.stdout.splitlines() if line.strip()]
+    assert get_client_calls["count"] == 1
+    assert [item["id"] for item in responses] == ["first", "second"]
+    assert [item["ok"] for item in responses] == [True, True]
+    assert client.calls == [
+        [{"name": "tracks_list", "args": {}}],
+        [{"name": "song_info", "args": {}}],
+    ]
+
+
+def test_batch_stream_emits_structured_line_errors_and_continues(
+    runner, cli_app, monkeypatch
+) -> None:
+    from ableton_cli.commands import batch
+
+    client = _BatchStreamClientStub()
+    monkeypatch.setattr(batch, "get_client", lambda _ctx: client)
+
+    payload = "\n".join(
+        [
+            json.dumps({"id": "ok-1", "steps": [{"name": "tracks_list", "args": {}}]}),
+            "{",
+            json.dumps({"id": "bad-steps", "steps": "not-array"}),
+            json.dumps({"id": "ok-2", "steps": [{"name": "song_info", "args": {}}]}),
+        ]
+    )
+    result = runner.invoke(cli_app, ["batch", "stream"], input=f"{payload}\n")
+
+    assert result.exit_code == 0
+    responses = [json.loads(line) for line in result.stdout.splitlines() if line.strip()]
+    assert len(responses) == 4
+
+    assert responses[0]["id"] == "ok-1"
+    assert responses[0]["ok"] is True
+
+    assert responses[1]["id"] is None
+    assert responses[1]["ok"] is False
+    assert responses[1]["error"]["code"] == "INVALID_ARGUMENT"
+
+    assert responses[2]["id"] == "bad-steps"
+    assert responses[2]["ok"] is False
+    assert responses[2]["error"]["code"] == "INVALID_ARGUMENT"
+
+    assert responses[3]["id"] == "ok-2"
+    assert responses[3]["ok"] is True
+    assert len(client.calls) == 2

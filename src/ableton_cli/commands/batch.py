@@ -7,21 +7,14 @@ from typing import Annotated, Any
 
 import typer
 
+from ..errors import AppError
 from ..runtime import execute_command, get_client
 from ._validation import invalid_argument, require_non_empty_string
 
 batch_app = typer.Typer(help="Batch commands", no_args_is_help=True)
 
 
-def _parse_steps_payload(raw: str, *, source_name: str) -> list[dict[str, Any]]:
-    try:
-        payload = json.loads(raw)
-    except json.JSONDecodeError as exc:
-        raise invalid_argument(
-            message=f"{source_name} must be valid JSON: {exc.msg}",
-            hint="Use JSON object format: {'steps': [{...}]}",
-        ) from exc
-
+def _parse_steps_object(payload: Any, *, source_name: str) -> list[dict[str, Any]]:
     if not isinstance(payload, dict):
         raise invalid_argument(
             message=f"{source_name} root must be an object",
@@ -69,6 +62,45 @@ def _parse_steps_payload(raw: str, *, source_name: str) -> list[dict[str, Any]]:
         steps.append({"name": name, "args": raw_args})
 
     return steps
+
+
+def _parse_steps_payload(raw: str, *, source_name: str) -> list[dict[str, Any]]:
+    try:
+        payload = json.loads(raw)
+    except json.JSONDecodeError as exc:
+        raise invalid_argument(
+            message=f"{source_name} must be valid JSON: {exc.msg}",
+            hint="Use JSON object format: {'steps': [{...}]}",
+        ) from exc
+    return _parse_steps_object(payload, source_name=source_name)
+
+
+def _stream_error_payload(error: AppError) -> dict[str, Any]:
+    return {
+        "code": error.error_code,
+        "message": error.message,
+        "hint": error.hint,
+        "details": error.details or None,
+    }
+
+
+def _emit_stream_line(
+    *,
+    request_id: str | None,
+    ok: bool,
+    result: Any,
+    error: dict[str, Any] | None,
+) -> None:
+    typer.echo(
+        json.dumps(
+            {
+                "id": request_id,
+                "ok": ok,
+                "result": result,
+                "error": error,
+            }
+        )
+    )
 
 
 @batch_app.command("run")
@@ -123,6 +155,68 @@ def batch_run(
         args={"steps_file": steps_file, "steps_json": steps_json, "steps_stdin": steps_stdin},
         action=_run,
     )
+
+
+@batch_app.command("stream")
+def batch_stream(ctx: typer.Context) -> None:
+    client = get_client(ctx)
+
+    for line_number, raw_line in enumerate(sys.stdin, start=1):
+        line = raw_line.strip()
+        if not line:
+            continue
+
+        request_id: str | None = None
+        try:
+            try:
+                payload = json.loads(line)
+            except json.JSONDecodeError as exc:
+                raise invalid_argument(
+                    message=f"line {line_number} must be valid JSON: {exc.msg}",
+                    hint="Use one JSON object per line: {'id': 'optional', 'steps': [{...}]}",
+                ) from exc
+
+            if not isinstance(payload, dict):
+                raise invalid_argument(
+                    message=f"line {line_number} root must be an object",
+                    hint="Use one JSON object per line: {'id': 'optional', 'steps': [{...}]}",
+                )
+
+            raw_id = payload.get("id")
+            if raw_id is not None:
+                if not isinstance(raw_id, str):
+                    raise invalid_argument(
+                        message=f"line {line_number}.id must be a string",
+                        hint="Use a string id value or omit id.",
+                    )
+                request_id = require_non_empty_string(
+                    "id",
+                    raw_id,
+                    hint=f"line {line_number}.id must be non-empty when provided.",
+                )
+
+            steps = _parse_steps_object(payload, source_name=f"line {line_number}")
+            result = client.execute_batch(steps)
+            _emit_stream_line(request_id=request_id, ok=True, result=result, error=None)
+        except AppError as exc:
+            _emit_stream_line(
+                request_id=request_id,
+                ok=False,
+                result=None,
+                error=_stream_error_payload(exc),
+            )
+        except Exception:  # noqa: BLE001
+            _emit_stream_line(
+                request_id=request_id,
+                ok=False,
+                result=None,
+                error={
+                    "code": "INTERNAL_ERROR",
+                    "message": "Unexpected internal error",
+                    "hint": "Run with --verbose and inspect logs.",
+                    "details": {"line_number": line_number},
+                },
+            )
 
 
 def register(app: typer.Typer) -> None:

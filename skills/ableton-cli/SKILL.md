@@ -150,8 +150,10 @@ uv run ableton-cli browser load-drum-kit 0 rack:drums --kit-path drums/Kits/Acou
 
 ```bash
 uv run ableton-cli batch run --steps-file ./steps.json
-uv run ableton-cli batch run --steps-json '{"steps":[{"command":"song_info","args":{}}]}'
-echo '{"steps":[{"command":"song_info","args":{}}]}' | uv run ableton-cli batch run --steps-stdin
+uv run ableton-cli batch run --steps-json '{"steps":[{"name":"song_info","args":{}}]}'
+echo '{"steps":[{"name":"song_info","args":{}}]}' | uv run ableton-cli batch run --steps-stdin
+uv run ableton-cli batch stream
+echo '{"id":"req-1","steps":[{"name":"song_info","args":{}}]}' | uv run ableton-cli batch stream
 ```
 
 ### Device
@@ -225,6 +227,8 @@ uv run ableton-cli --show-completion
 - For positional numeric arguments that begin with `-`, insert `--` before the value.
   - Example: `uv run ableton-cli track panning set 0 -- -0.25`
   - Example: `uv run ableton-cli effect parameter set 0 0 7 -- -2.0`
+- For low-latency repeated automation operations, prefer `uv run ableton-cli batch stream`.
+- Capability and compatibility checks are explicit through `uv run ableton-cli ping` and `uv run ableton-cli doctor`.
 - Standard wrapper commands (`synth <type> ...`, `effect <type> ...`) are strict and intentionally fail if required parameter names are missing.
   - If you get `Missing required standard ... keys`, use generic commands instead:
     - `uv run ableton-cli --output json effect parameters list <track> <device>`

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import queue
 import threading
+from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
@@ -22,6 +23,9 @@ except Exception:  # pragma: no cover - only used outside Ableton for local chec
 
         def update_display(self) -> None:
             pass
+
+        def schedule_message(self, _delay: int, callback: Callable[[], None]) -> None:
+            callback()
 
 
 @dataclass(slots=True)
@@ -44,6 +48,8 @@ class AbletonCliRemoteSurface(_ControlSurface):
         super().__init__(c_instance)
         self._backend = LiveBackend(self)
         self._queue: queue.Queue[_CommandRequest] = queue.Queue()
+        self._drain_lock = threading.Lock()
+        self._drain_scheduled = False
         self._command_server = AbletonCommandServer(
             host="127.0.0.1",
             port=8765,
@@ -87,6 +93,7 @@ class AbletonCliRemoteSurface(_ControlSurface):
             event=threading.Event(),
         )
         self._queue.put(request)
+        self._schedule_drain()
         if not request.event.wait(timeout=timeout_ms / 1000):
             raise CommandExecutionError(
                 code="TIMEOUT",
@@ -111,6 +118,23 @@ class AbletonCliRemoteSurface(_ControlSurface):
 
         return request.result or {}
 
+    def _schedule_drain(self) -> None:
+        with self._drain_lock:
+            if self._drain_scheduled:
+                return
+            self._drain_scheduled = True
+        self.schedule_message(0, self._scheduled_drain)
+
+    def _scheduled_drain(self) -> None:
+        try:
+            self._drain_requests()
+        finally:
+            with self._drain_lock:
+                self._drain_scheduled = False
+                needs_reschedule = not self._queue.empty()
+        if needs_reschedule:
+            self._schedule_drain()
+
     def _drain_requests(self) -> None:
         while True:
             try:
@@ -126,10 +150,11 @@ class AbletonCliRemoteSurface(_ControlSurface):
                 request.event.set()
 
     def update_display(self) -> None:
-        self._drain_requests()
         super().update_display()
 
     def disconnect(self) -> None:
         self._command_server.stop()
         self._drain_requests()
+        with self._drain_lock:
+            self._drain_scheduled = False
         super().disconnect()

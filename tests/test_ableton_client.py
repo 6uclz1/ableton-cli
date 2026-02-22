@@ -5,7 +5,6 @@ from typing import Any
 
 import pytest
 
-from ableton_cli.capabilities import compute_command_set_hash, required_remote_commands
 from ableton_cli.client.ableton_client import AbletonClient
 from ableton_cli.config import Settings
 from ableton_cli.errors import AppError, ExitCode
@@ -38,73 +37,31 @@ def _capture_requests(
     client: AbletonClient,
 ) -> list[dict[str, Any]]:
     requests: list[dict[str, Any]] = []
-    supported_commands = sorted(required_remote_commands())
 
     def _send(request: dict[str, Any]):  # noqa: ANN202
         requests.append(request)
-        if request["name"] == "ping":
-            return _ok_response(
-                request,
-                {
-                    "protocol_version": 2,
-                    "remote_script_version": "0.2.0",
-                    "supported_commands": supported_commands,
-                    "command_set_hash": compute_command_set_hash(supported_commands),
-                },
-            )
         return _ok_response(request, {"ok": True})
 
     monkeypatch.setattr(client.transport, "send", _send)
     return requests
 
 
-def test_client_rejects_remote_without_required_command(monkeypatch) -> None:
+def test_client_non_ping_command_sends_single_request_without_preflight(monkeypatch) -> None:
     client = AbletonClient(_settings())
-    requests: list[dict[str, Any]] = []
-    supported_commands = ["ping", "transport_play"]
+    requests = _capture_requests(monkeypatch, client)
 
-    def _send(request: dict[str, Any]):  # noqa: ANN202
-        requests.append(request)
-        if request["name"] == "ping":
-            return _ok_response(
-                request,
-                {
-                    "protocol_version": 2,
-                    "remote_script_version": "0.2.0",
-                    "supported_commands": supported_commands,
-                    "command_set_hash": compute_command_set_hash(supported_commands),
-                },
-            )
-        return _ok_response(request, {"tempo": 120.0})
+    client.song_info()
 
-    monkeypatch.setattr(client.transport, "send", _send)
-
-    with pytest.raises(AppError) as exc_info:
-        client.song_info()
-
-    assert exc_info.value.error_code == "REMOTE_SCRIPT_INCOMPATIBLE"
-    assert exc_info.value.exit_code == ExitCode.PROTOCOL_MISMATCH
-    assert [request["name"] for request in requests] == ["ping"]
+    assert [request["name"] for request in requests] == ["song_info"]
 
 
 def test_client_does_not_retry_read_command_on_timeout(monkeypatch) -> None:
     client = AbletonClient(_settings())
     requests: list[dict[str, Any]] = []
     state = {"song_info_calls": 0}
-    supported_commands = sorted(required_remote_commands())
 
     def _send(request: dict[str, Any]):  # noqa: ANN202
         requests.append(request)
-        if request["name"] == "ping":
-            return _ok_response(
-                request,
-                {
-                    "protocol_version": 2,
-                    "remote_script_version": "0.2.0",
-                    "supported_commands": supported_commands,
-                    "command_set_hash": compute_command_set_hash(supported_commands),
-                },
-            )
         if request["name"] == "song_info":
             state["song_info_calls"] += 1
             raise AppError(
@@ -121,26 +78,15 @@ def test_client_does_not_retry_read_command_on_timeout(monkeypatch) -> None:
         client.song_info()
 
     assert exc_info.value.error_code == "TIMEOUT"
-    assert [request["name"] for request in requests] == ["ping", "song_info"]
+    assert [request["name"] for request in requests] == ["song_info"]
 
 
 def test_client_does_not_retry_write_command_on_timeout(monkeypatch) -> None:
     client = AbletonClient(_settings())
     requests: list[dict[str, Any]] = []
-    supported_commands = sorted(required_remote_commands())
 
     def _send(request: dict[str, Any]):  # noqa: ANN202
         requests.append(request)
-        if request["name"] == "ping":
-            return _ok_response(
-                request,
-                {
-                    "protocol_version": 2,
-                    "remote_script_version": "0.2.0",
-                    "supported_commands": supported_commands,
-                    "command_set_hash": compute_command_set_hash(supported_commands),
-                },
-            )
         if request["name"] == "track_volume_set":
             raise AppError(
                 error_code="TIMEOUT",
@@ -156,34 +102,16 @@ def test_client_does_not_retry_write_command_on_timeout(monkeypatch) -> None:
         client.track_volume_set(0, 0.7)
 
     assert exc_info.value.error_code == "TIMEOUT"
-    assert [request["name"] for request in requests] == ["ping", "track_volume_set"]
+    assert [request["name"] for request in requests] == ["track_volume_set"]
 
 
 def test_client_sends_request_timeout_meta(monkeypatch) -> None:
     client = AbletonClient(_settings())
-    requests: list[dict[str, Any]] = []
-    supported_commands = sorted(required_remote_commands())
-
-    def _send(request: dict[str, Any]):  # noqa: ANN202
-        requests.append(request)
-        if request["name"] == "ping":
-            return _ok_response(
-                request,
-                {
-                    "protocol_version": 2,
-                    "remote_script_version": "0.2.0",
-                    "supported_commands": supported_commands,
-                    "command_set_hash": compute_command_set_hash(supported_commands),
-                },
-            )
-        return _ok_response(request, {"tempo": 128.0})
-
-    monkeypatch.setattr(client.transport, "send", _send)
+    requests = _capture_requests(monkeypatch, client)
 
     client.song_info()
 
     assert requests[0]["meta"]["request_timeout_ms"] == 15000
-    assert requests[1]["meta"]["request_timeout_ms"] == 15000
 
 
 @pytest.mark.parametrize(
@@ -378,8 +306,8 @@ def test_client_builds_optional_arguments_deterministically(
     requests = _capture_requests(monkeypatch, client)
     runner(client)
 
-    assert [request["name"] for request in requests] == ["ping", expected_command]
-    assert requests[1]["args"] == expected_args
+    assert [request["name"] for request in requests] == [expected_command]
+    assert requests[0]["args"] == expected_args
 
 
 @pytest.mark.parametrize(
@@ -422,8 +350,8 @@ def test_client_parameter_commands_share_payload_shape(
     requests = _capture_requests(monkeypatch, client)
     runner(client)
 
-    assert requests[1]["name"] == expected_command
-    assert requests[1]["args"] == {
+    assert requests[0]["name"] == expected_command
+    assert requests[0]["args"] == {
         "track": 0,
         "device": 1,
         "parameter": 2,

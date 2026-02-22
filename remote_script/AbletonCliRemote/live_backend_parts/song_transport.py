@@ -6,7 +6,7 @@ from typing import Any
 from ..command_backend import MAX_BPM, MAX_PANNING, MAX_VOLUME, MIN_BPM, MIN_PANNING, MIN_VOLUME
 from .base import _invalid_argument, _not_supported_by_live_api
 
-_TRANSPORT_STATE_TIMEOUT_SECONDS = 0.25
+_TRANSPORT_STATE_TIMEOUT_SECONDS = 1.0
 _TRANSPORT_STATE_POLL_INTERVAL_SECONDS = 0.01
 
 

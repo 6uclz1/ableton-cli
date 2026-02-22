@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from pathlib import Path
 from typing import Any
 
+from ..command_backend_validators import _is_absolute_filesystem_path
 from .base import _invalid_argument, _not_supported_by_live_api
 
 
@@ -146,7 +146,7 @@ class LiveBackendScenesArrangementMixin:
                     hint="Pass --audio-path with an absolute audio file path.",
                 )
             normalized_audio_path = str(audio_path).strip()
-            if not Path(normalized_audio_path).is_absolute():
+            if not _is_absolute_filesystem_path(normalized_audio_path):
                 raise _invalid_argument(
                     message=f"audio_path must be an absolute path, got {normalized_audio_path!r}",
                     hint="Pass an absolute filesystem path for --audio-path.",

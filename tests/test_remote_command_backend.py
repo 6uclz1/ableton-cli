@@ -1215,6 +1215,11 @@ def test_dispatch_calls_backend_for_new_todo_commands() -> None:
         "arrangement_clip_create",
         {"track": 0, "start_time": 8.0, "length": 4.0},
     )
+    arrangement_clip_audio = dispatch_command(
+        backend,
+        "arrangement_clip_create",
+        {"track": 1, "start_time": 16.0, "length": 8.0, "audio_path": "C:/tmp/loop.wav"},
+    )
     arrangement_clip_list = dispatch_command(
         backend,
         "arrangement_clip_list",
@@ -1243,6 +1248,15 @@ def test_dispatch_calls_backend_for_new_todo_commands() -> None:
         "start_time": 8.0,
         "length": 4.0,
         "kind": "midi",
+        "arrangement_view_focused": True,
+        "created": True,
+    }
+    assert arrangement_clip_audio == {
+        "track": 1,
+        "start_time": 16.0,
+        "length": 8.0,
+        "kind": "audio",
+        "audio_path": "C:/tmp/loop.wav",
         "arrangement_view_focused": True,
         "created": True,
     }

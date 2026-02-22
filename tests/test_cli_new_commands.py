@@ -1700,6 +1700,37 @@ def test_arrangement_clip_create_command_outputs_json_envelope(
     }
 
 
+def test_arrangement_clip_create_accepts_windows_absolute_audio_path(
+    runner, cli_app, monkeypatch
+) -> None:
+    from ableton_cli.commands import arrangement
+
+    monkeypatch.setattr(arrangement, "get_client", lambda ctx: _ClientStub())
+
+    result = runner.invoke(
+        cli_app,
+        [
+            "--output",
+            "json",
+            "arrangement",
+            "clip",
+            "create",
+            "1",
+            "--start",
+            "16",
+            "--length",
+            "8",
+            "--audio-path",
+            "C:/tmp/loop.wav",
+        ],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["ok"] is True
+    assert payload["result"]["audio_path"] == "C:/tmp/loop.wav"
+
+
 def test_arrangement_clip_create_rejects_track_kind_audio_path_mismatch(
     runner, cli_app, monkeypatch
 ) -> None:

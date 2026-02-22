@@ -2282,7 +2282,10 @@ def test_live_backend_arrangement_clip_create_midi_focuses_arranger_view() -> No
     assert surface.application().view.focused_views == ["Arranger"]
 
 
-def test_live_backend_arrangement_clip_create_audio_uses_absolute_audio_path() -> None:
+@pytest.mark.parametrize("audio_path", ["/tmp/loop.wav", "C:/tmp/loop.wav"])
+def test_live_backend_arrangement_clip_create_audio_uses_absolute_audio_path(
+    audio_path: str,
+) -> None:
     surface = _SurfaceStub()
     backend = LiveBackend(surface)
 
@@ -2290,7 +2293,7 @@ def test_live_backend_arrangement_clip_create_audio_uses_absolute_audio_path() -
         track=1,
         start_time=16.0,
         length=8.0,
-        audio_path="/tmp/loop.wav",
+        audio_path=audio_path,
     )
 
     assert result == {
@@ -2298,11 +2301,11 @@ def test_live_backend_arrangement_clip_create_audio_uses_absolute_audio_path() -
         "start_time": 16.0,
         "length": 8.0,
         "kind": "audio",
-        "audio_path": "/tmp/loop.wav",
+        "audio_path": audio_path,
         "arrangement_view_focused": True,
         "created": True,
     }
-    assert surface.song().tracks[1].arrangement_audio_clips == [("/tmp/loop.wav", 16.0)]
+    assert surface.song().tracks[1].arrangement_audio_clips == [(audio_path, 16.0)]
     assert surface.application().view.focused_views == ["Arranger"]
 
 

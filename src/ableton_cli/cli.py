@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from .app import create_app
+from .app_factory import create_app
 
 app = create_app()
 

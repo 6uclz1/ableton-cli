@@ -16,6 +16,7 @@ from ._validation import (
 clip_app = typer.Typer(help="Clip commands", no_args_is_help=True)
 notes_app = typer.Typer(help="Clip note commands", no_args_is_help=True)
 name_app = typer.Typer(help="Clip naming commands", no_args_is_help=True)
+active_app = typer.Typer(help="Clip active-state commands", no_args_is_help=True)
 
 
 def _validate_note_filters(
@@ -381,8 +382,64 @@ def clip_duplicate(
     )
 
 
+@active_app.command("get")
+def clip_active_get(
+    ctx: typer.Context,
+    track: Annotated[int, typer.Argument(help="Track index (0-based)")],
+    clip: Annotated[int, typer.Argument(help="Clip slot index (0-based)")],
+) -> None:
+    def _run() -> dict[str, object]:
+        require_non_negative(
+            "track",
+            track,
+            hint="Use a valid track index from 'ableton-cli tracks list'.",
+        )
+        require_non_negative(
+            "clip",
+            clip,
+            hint="Use a valid clip slot index.",
+        )
+        return get_client(ctx).clip_active_get(track, clip)
+
+    execute_command(
+        ctx,
+        command="clip active get",
+        args={"track": track, "clip": clip},
+        action=_run,
+    )
+
+
+@active_app.command("set")
+def clip_active_set(
+    ctx: typer.Context,
+    track: Annotated[int, typer.Argument(help="Track index (0-based)")],
+    clip: Annotated[int, typer.Argument(help="Clip slot index (0-based)")],
+    value: Annotated[bool, typer.Argument(help="Active value: true|false")],
+) -> None:
+    def _run() -> dict[str, object]:
+        require_non_negative(
+            "track",
+            track,
+            hint="Use a valid track index from 'ableton-cli tracks list'.",
+        )
+        require_non_negative(
+            "clip",
+            clip,
+            hint="Use a valid clip slot index.",
+        )
+        return get_client(ctx).clip_active_set(track, clip, value)
+
+    execute_command(
+        ctx,
+        command="clip active set",
+        args={"track": track, "clip": clip, "value": value},
+        action=_run,
+    )
+
+
 clip_app.add_typer(notes_app, name="notes")
 clip_app.add_typer(name_app, name="name")
+clip_app.add_typer(active_app, name="active")
 
 
 def register(app: typer.Typer) -> None:

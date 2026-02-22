@@ -5,6 +5,7 @@ from typing import Any
 
 from .command_backend_contract import CommandBackend
 from .command_backend_validators import (
+    _as_bool,
     _clip_length,
     _clip_notes_filter,
     _insert_index,
@@ -78,6 +79,19 @@ def _handle_clip_duplicate(backend: CommandBackend, args: dict[str, Any]) -> dic
     return backend.clip_duplicate(track, src_clip, dst_clip)
 
 
+def _handle_clip_active_get(backend: CommandBackend, args: dict[str, Any]) -> dict[str, Any]:
+    track = _track_index("track", args.get("track"))
+    clip = _track_index("clip", args.get("clip"))
+    return backend.clip_active_get(track, clip)
+
+
+def _handle_clip_active_set(backend: CommandBackend, args: dict[str, Any]) -> dict[str, Any]:
+    track = _track_index("track", args.get("track"))
+    clip = _track_index("clip", args.get("clip"))
+    value = _as_bool("value", args.get("value"))
+    return backend.clip_active_set(track, clip, value)
+
+
 def _handle_scenes_list(backend: CommandBackend, _args: dict[str, Any]) -> dict[str, Any]:
     return backend.scenes_list()
 
@@ -136,6 +150,8 @@ TRACKS_CLIPS_HANDLERS: dict[str, Handler] = {
     "set_clip_name": _handle_set_clip_name,
     "fire_clip": _handle_fire_clip,
     "stop_clip": _handle_stop_clip,
+    "clip_active_get": _handle_clip_active_get,
+    "clip_active_set": _handle_clip_active_set,
     "clip_duplicate": _handle_clip_duplicate,
     "scenes_list": _handle_scenes_list,
     "create_scene": _handle_create_scene,

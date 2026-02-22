@@ -106,6 +106,12 @@ class _ClientStub:
     def clip_duplicate(self, track: int, src_clip: int, dst_clip: int):  # noqa: ANN201
         return {"track": track, "src_clip": src_clip, "dst_clip": dst_clip, "duplicated": True}
 
+    def clip_active_get(self, track: int, clip: int):  # noqa: ANN201
+        return {"track": track, "clip": clip, "active": True}
+
+    def clip_active_set(self, track: int, clip: int, value: bool):  # noqa: ANN201
+        return {"track": track, "clip": clip, "active": value}
+
     def search_browser_items(  # noqa: ANN201
         self,
         query: str,
@@ -966,6 +972,25 @@ def test_clip_duplicate_command_outputs_json_envelope(runner, cli_app, monkeypat
     payload = json.loads(duplicated.stdout)
     assert payload["ok"] is True
     assert payload["result"] == {"track": 0, "src_clip": 1, "dst_clip": 2, "duplicated": True}
+
+
+def test_clip_active_commands_output_json_envelope(runner, cli_app, monkeypatch) -> None:
+    from ableton_cli.commands import clip
+
+    monkeypatch.setattr(clip, "get_client", lambda ctx: _ClientStub())
+
+    active_get = runner.invoke(cli_app, ["--output", "json", "clip", "active", "get", "0", "1"])
+    active_set = runner.invoke(
+        cli_app,
+        ["--output", "json", "clip", "active", "set", "0", "1", "false"],
+    )
+
+    assert active_get.exit_code == 0
+    assert active_set.exit_code == 0
+    payload_get = json.loads(active_get.stdout)
+    payload_set = json.loads(active_set.stdout)
+    assert payload_get["result"] == {"track": 0, "clip": 1, "active": True}
+    assert payload_set["result"] == {"track": 0, "clip": 1, "active": False}
 
 
 def test_scenes_move_command_outputs_json_envelope(runner, cli_app, monkeypatch) -> None:

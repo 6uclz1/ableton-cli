@@ -138,6 +138,12 @@ class _BackendStub:
     def stop_clip(self, track: int, clip: int):  # noqa: ANN201
         return {"track": track, "clip": clip, "stopped": True}
 
+    def clip_active_get(self, track: int, clip: int):  # noqa: ANN201
+        return {"track": track, "clip": clip, "active": True}
+
+    def clip_active_set(self, track: int, clip: int, value: bool):  # noqa: ANN201
+        return {"track": track, "clip": clip, "active": value}
+
     def clip_duplicate(self, track: int, src_clip: int, dst_clip: int):  # noqa: ANN201
         return {"track": track, "src_clip": src_clip, "dst_clip": dst_clip, "duplicated": True}
 
@@ -796,6 +802,24 @@ def test_dispatch_calls_backend_for_clip_notes_get_clear_replace() -> None:
     assert replaced["added_count"] == 1
 
 
+def test_dispatch_calls_backend_for_clip_active_get_set() -> None:
+    backend = _BackendStub()
+
+    active = dispatch_command(
+        backend,
+        "clip_active_get",
+        {"track": 0, "clip": 1},
+    )
+    inactive = dispatch_command(
+        backend,
+        "clip_active_set",
+        {"track": 0, "clip": 1, "value": False},
+    )
+
+    assert active == {"track": 0, "clip": 1, "active": True}
+    assert inactive == {"track": 0, "clip": 1, "active": False}
+
+
 def test_dispatch_calls_backend_for_load_drum_kit_with_explicit_selection() -> None:
     backend = _BackendStub()
     by_uri = dispatch_command(
@@ -948,6 +972,12 @@ def test_dispatch_validates_new_todo_command_arguments() -> None:
             "clip_duplicate",
             {"track": 0, "src_clip": 1, "dst_clip": -1},
         )
+    with pytest.raises(CommandError) as clip_active_set_exc:
+        dispatch_command(
+            backend,
+            "clip_active_set",
+            {"track": 0, "clip": 1, "value": "false"},
+        )
     with pytest.raises(CommandError) as scenes_move_exc:
         dispatch_command(backend, "scenes_move", {"from": -1, "to": 0})
     with pytest.raises(CommandError) as tracks_delete_exc:
@@ -956,6 +986,7 @@ def test_dispatch_validates_new_todo_command_arguments() -> None:
     assert song_save_exc.value.code == "INVALID_ARGUMENT"
     assert song_export_exc.value.code == "INVALID_ARGUMENT"
     assert clip_duplicate_exc.value.code == "INVALID_ARGUMENT"
+    assert clip_active_set_exc.value.code == "INVALID_ARGUMENT"
     assert scenes_move_exc.value.code == "INVALID_ARGUMENT"
     assert tracks_delete_exc.value.code == "INVALID_ARGUMENT"
 

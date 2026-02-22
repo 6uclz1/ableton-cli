@@ -5,25 +5,14 @@ from typing import Annotated
 import typer
 
 from ..runtime import execute_command, get_client
-from ._validation import invalid_argument, require_non_empty_string, require_non_negative
+from ._validation import (
+    invalid_argument,
+    require_non_empty_string,
+    require_non_negative,
+    resolve_uri_or_path_target,
+)
 
 browser_app = typer.Typer(help="Ableton browser commands", no_args_is_help=True)
-
-
-def _resolve_browser_target(target: str) -> tuple[str | None, str | None]:
-    parsed = require_non_empty_string("target", target, hint="Pass a non-empty target.")
-    first_colon = parsed.find(":")
-    first_slash = parsed.find("/")
-    if first_colon >= 0 and (first_slash < 0 or first_colon < first_slash):
-        return parsed, None
-    if "/" in parsed:
-        return None, parsed
-    if ":" in parsed:
-        return parsed, None
-    raise invalid_argument(
-        message=f"target must include '/' (path) or ':' (uri), got {parsed!r}",
-        hint="Use a browser path like instruments/Operator or URI like query:Synths#Operator.",
-    )
 
 
 @browser_app.command("tree")
@@ -65,7 +54,7 @@ def browser_item(
     target: Annotated[str, typer.Argument(help="Browser target (URI or path)")],
 ) -> None:
     def _run() -> dict[str, object]:
-        valid_uri, valid_path = _resolve_browser_target(target)
+        valid_uri, valid_path = resolve_uri_or_path_target(target=target)
         return get_client(ctx).get_browser_item(uri=valid_uri, path=valid_path)
 
     execute_command(
@@ -222,6 +211,20 @@ def browser_load(
         bool,
         typer.Option("--preserve-track-name", help="Restore original track name after loading"),
     ] = False,
+    import_length: Annotated[
+        bool,
+        typer.Option(
+            "--import-length/--no-import-length",
+            help="When using --notes-mode, copy source clip length into the destination clip",
+        ),
+    ] = False,
+    import_groove: Annotated[
+        bool,
+        typer.Option(
+            "--import-groove/--no-import-groove",
+            help="When using --notes-mode, copy source clip groove settings",
+        ),
+    ] = False,
 ) -> None:
     def _run() -> dict[str, object]:
         require_non_negative(
@@ -264,7 +267,12 @@ def browser_load(
                 message=f"notes_mode must be one of replace/append, got {notes_mode}",
                 hint="Use --notes-mode replace or append.",
             )
-        valid_uri, valid_path = _resolve_browser_target(target)
+        if valid_notes_mode is None and (import_length or import_groove):
+            raise invalid_argument(
+                message="--import-length/--import-groove require --notes-mode",
+                hint="Use --notes-mode replace or append when importing clip length/groove.",
+            )
+        valid_uri, valid_path = resolve_uri_or_path_target(target=target)
         return get_client(ctx).load_instrument_or_effect(
             track,
             uri=valid_uri,
@@ -273,6 +281,8 @@ def browser_load(
             clip_slot=valid_clip_slot,
             notes_mode=valid_notes_mode,
             preserve_track_name=preserve_track_name,
+            import_length=import_length,
+            import_groove=import_groove,
         )
 
     execute_command(
@@ -285,6 +295,8 @@ def browser_load(
             "clip_slot": clip_slot,
             "notes_mode": notes_mode,
             "preserve_track_name": preserve_track_name,
+            "import_length": import_length,
+            "import_groove": import_groove,
         },
         action=_run,
     )

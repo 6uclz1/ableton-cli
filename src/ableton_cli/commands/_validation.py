@@ -43,6 +43,27 @@ def require_non_empty_string(name: str, value: str, *, hint: str) -> str:
     return stripped
 
 
+def resolve_uri_or_path_target(
+    *,
+    target: str,
+    name: str = "target",
+    hint: str = ("Use a browser path like instruments/Operator or URI like query:Synths#Operator."),
+) -> tuple[str | None, str | None]:
+    parsed = require_non_empty_string(name, target, hint=f"Pass a non-empty {name}.")
+    first_colon = parsed.find(":")
+    first_slash = parsed.find("/")
+    if first_colon >= 0 and (first_slash < 0 or first_colon < first_slash):
+        return parsed, None
+    if "/" in parsed:
+        return None, parsed
+    if ":" in parsed:
+        return parsed, None
+    raise invalid_argument(
+        message=f"{name} must include '/' (path) or ':' (uri), got {parsed!r}",
+        hint=hint,
+    )
+
+
 def validate_clip_note_filters(
     *,
     start_time: float | None,

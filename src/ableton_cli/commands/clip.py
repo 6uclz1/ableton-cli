@@ -11,6 +11,7 @@ from ._validation import (
     require_non_empty_string,
     require_non_negative,
     require_positive_float,
+    resolve_uri_or_path_target,
     validate_clip_note_filters,
 )
 
@@ -406,6 +407,83 @@ def clip_notes_replace(
             "start_time": start_time,
             "end_time": end_time,
             "pitch": pitch,
+        },
+        action=_run,
+    )
+
+
+@notes_app.command("import-browser")
+def clip_notes_import_browser(
+    ctx: typer.Context,
+    track: Annotated[int, typer.Argument(help="Track index (0-based)")],
+    clip: Annotated[int, typer.Argument(help="Destination clip slot index (0-based)")],
+    target: Annotated[str, typer.Argument(help="Browser target (URI or path to .alc)")],
+    mode: Annotated[
+        str,
+        typer.Option("--mode", help="Note import mode: replace|append"),
+    ] = "replace",
+    import_length: Annotated[
+        bool,
+        typer.Option(
+            "--import-length/--no-import-length",
+            help="Copy source clip length into the destination clip",
+        ),
+    ] = False,
+    import_groove: Annotated[
+        bool,
+        typer.Option(
+            "--import-groove/--no-import-groove",
+            help="Copy source clip groove settings into the destination clip",
+        ),
+    ] = False,
+) -> None:
+    def _run() -> dict[str, object]:
+        require_non_negative(
+            "track",
+            track,
+            hint="Use a valid track index from 'ableton-cli tracks list'.",
+        )
+        require_non_negative(
+            "clip",
+            clip,
+            hint="Use a valid destination clip slot index.",
+        )
+        valid_mode = require_non_empty_string(
+            "mode",
+            mode,
+            hint="Use --mode replace or append.",
+        ).lower()
+        if valid_mode not in {"replace", "append"}:
+            raise invalid_argument(
+                message=f"mode must be one of replace/append, got {mode}",
+                hint="Use --mode replace or append.",
+            )
+        valid_uri, valid_path = resolve_uri_or_path_target(
+            target=target,
+            hint="Use a browser path or URI for a .alc MIDI clip item.",
+        )
+        return get_client(ctx).load_instrument_or_effect(
+            track=track,
+            uri=valid_uri,
+            path=valid_path,
+            target_track_mode="existing",
+            clip_slot=clip,
+            notes_mode=valid_mode,
+            preserve_track_name=False,
+            import_length=import_length,
+            import_groove=import_groove,
+        )
+
+    execute_command(
+        ctx,
+        command="clip notes import-browser",
+        args={
+            "track": track,
+            "clip": clip,
+            "target": target,
+            "mode": mode,
+            "import_length": import_length,
+            "import_groove": import_groove,
         },
         action=_run,
     )

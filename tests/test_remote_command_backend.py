@@ -306,6 +306,8 @@ class _BackendStub:
         clip_slot: int | None,
         preserve_track_name: bool,
         notes_mode: str | None,
+        import_length: bool,
+        import_groove: bool,
     ):
         return {
             "track": track,
@@ -315,6 +317,8 @@ class _BackendStub:
             "clip_slot": clip_slot,
             "preserve_track_name": preserve_track_name,
             "notes_mode": notes_mode,
+            "import_length": import_length,
+            "import_groove": import_groove,
             "loaded": True,
         }
 
@@ -875,6 +879,8 @@ def test_dispatch_calls_backend_for_browser_load_with_path() -> None:
         "clip_slot": None,
         "preserve_track_name": False,
         "notes_mode": None,
+        "import_length": False,
+        "import_groove": False,
         "loaded": True,
     }
 
@@ -900,6 +906,8 @@ def test_dispatch_calls_backend_for_browser_load_with_existing_mode_and_clip_slo
         "clip_slot": 3,
         "preserve_track_name": True,
         "notes_mode": None,
+        "import_length": False,
+        "import_groove": False,
         "loaded": True,
     }
 
@@ -925,6 +933,37 @@ def test_dispatch_calls_backend_for_browser_load_with_notes_mode() -> None:
         "clip_slot": 2,
         "preserve_track_name": False,
         "notes_mode": "append",
+        "import_length": False,
+        "import_groove": False,
+        "loaded": True,
+    }
+
+
+def test_dispatch_calls_backend_for_browser_load_with_notes_import_flags() -> None:
+    backend = _BackendStub()
+    result = dispatch_command(
+        backend,
+        "load_instrument_or_effect",
+        {
+            "track": 1,
+            "path": "sounds/Bass Loop.alc",
+            "target_track_mode": "existing",
+            "clip_slot": 2,
+            "notes_mode": "replace",
+            "import_length": True,
+            "import_groove": True,
+        },
+    )
+    assert result == {
+        "track": 1,
+        "uri": None,
+        "path": "sounds/Bass Loop.alc",
+        "target_track_mode": "existing",
+        "clip_slot": 2,
+        "preserve_track_name": False,
+        "notes_mode": "replace",
+        "import_length": True,
+        "import_groove": True,
         "loaded": True,
     }
 
@@ -1508,6 +1547,25 @@ def test_dispatch_rejects_browser_load_with_invalid_notes_mode() -> None:
                 "target_track_mode": "existing",
                 "clip_slot": 1,
                 "notes_mode": "merge",
+            },
+        )
+
+    assert exc_info.value.code == "INVALID_ARGUMENT"
+
+
+def test_dispatch_rejects_browser_load_with_non_boolean_import_flags() -> None:
+    backend = _BackendStub()
+    with pytest.raises(CommandError) as exc_info:
+        dispatch_command(
+            backend,
+            "load_instrument_or_effect",
+            {
+                "track": 0,
+                "path": "sounds/Bass Loop.alc",
+                "target_track_mode": "existing",
+                "clip_slot": 1,
+                "notes_mode": "replace",
+                "import_length": "true",
             },
         )
 

@@ -1081,6 +1081,86 @@ def test_live_backend_load_notes_mode_does_not_require_selected_scene_none() -> 
     assert sorted(note["pitch"] for note in notes["notes"]) == [60]
 
 
+def test_live_backend_load_existing_mode_notes_mode_imports_length_and_groove() -> None:
+    surface = _SurfaceStub()
+    target_slot = surface.song().tracks[0].clip_slots[1]
+    target_slot.create_clip(length=2.0)
+    assert target_slot.clip is not None
+    target_slot.clip.set_notes(((72, 0.25, 0.5, 90, False),))
+    target_slot.clip.groove = "groove:old"
+    target_slot.clip.groove_amount = 0.1
+
+    browser = surface.application().browser
+    original_load_item = browser.load_item
+
+    def _load_item_force_new_track(item: _BrowserItem) -> None:
+        uri = str(getattr(item, "uri", ""))
+        if uri != "clip:bass-loop-alc":
+            original_load_item(item)
+            return
+        new_track = _Track(name="Imported Clip", has_audio_input=False, has_midi_input=True)
+        source_slot = new_track.clip_slots[0]
+        source_slot.create_clip(length=8.0)
+        assert source_slot.clip is not None
+        source_slot.clip.set_notes(((60, 0.0, 0.5, 100, False),))
+        source_slot.clip.groove = "groove:hip-hop-boom-bap-16ths-90"
+        source_slot.clip.groove_amount = 0.7
+        source_slot.clip._ableton_cli_groove_uri = "groove:hip-hop-boom-bap-16ths-90"  # noqa: SLF001
+        source_slot.clip._ableton_cli_groove_path = (  # noqa: SLF001
+            "grooves/Hip Hop Boom Bap 16ths 90 bpm.agr"
+        )
+        source_slot.clip._ableton_cli_groove_name = "Hip Hop Boom Bap 16ths 90 bpm.agr"  # noqa: SLF001
+        surface.song().tracks.append(new_track)
+
+    browser.load_item = _load_item_force_new_track  # type: ignore[method-assign]
+
+    backend = LiveBackend(surface)
+    loaded = backend.load_instrument_or_effect(
+        0,
+        uri=None,
+        path="sounds/Bass Loop.alc",
+        target_track_mode="existing",
+        clip_slot=1,
+        preserve_track_name=True,
+        notes_mode="replace",
+        import_length=True,
+        import_groove=True,
+    )
+
+    assert loaded["loaded"] is True
+    assert loaded["track_count_delta"] == 0
+    assert loaded["notes_imported"] == 1
+    assert loaded["length_imported"] is True
+    assert loaded["groove_imported"] is True
+
+    destination_slot = surface.song().tracks[0].clip_slots[1]
+    assert destination_slot.has_clip is True
+    destination_clip = destination_slot.clip
+    assert destination_clip is not None
+    assert destination_clip.length == 8.0
+    groove = backend.clip_groove_get(0, 1)
+    assert groove["groove_uri"] == "groove:hip-hop-boom-bap-16ths-90"
+    assert groove["groove_path"] == "grooves/Hip Hop Boom Bap 16ths 90 bpm.agr"
+    assert groove["groove_name"] == "Hip Hop Boom Bap 16ths 90 bpm.agr"
+
+
+def test_live_backend_load_rejects_import_length_without_notes_mode() -> None:
+    backend = LiveBackend(_SurfaceStub())
+
+    with pytest.raises(CommandError) as exc_info:
+        backend.load_instrument_or_effect(
+            0,
+            uri=None,
+            path="sounds/Bass Loop.alc",
+            target_track_mode="existing",
+            clip_slot=1,
+            preserve_track_name=False,
+            import_length=True,
+        )
+
+    assert exc_info.value.code == "INVALID_ARGUMENT"
+
+
 def test_live_backend_load_notes_mode_requires_existing_clip() -> None:
     backend = LiveBackend(_SurfaceStub())
 

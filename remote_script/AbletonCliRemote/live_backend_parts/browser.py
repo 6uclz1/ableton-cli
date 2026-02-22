@@ -450,6 +450,49 @@ class LiveBackendBrowserReadMixin:
         return len(note_payload)
 
     @staticmethod
+    def _import_clip_length(*, source_clip: Any, target_clip: Any) -> bool:
+        if not hasattr(source_clip, "length") or not hasattr(target_clip, "length"):
+            return False
+        source_length = getattr(source_clip, "length", None)
+        if not isinstance(source_length, (int, float)):
+            return False
+        normalized_length = float(source_length)
+        if normalized_length <= 0:
+            return False
+        target_clip.length = normalized_length
+        return True
+
+    @staticmethod
+    def _import_clip_groove(*, source_clip: Any, target_clip: Any) -> bool:
+        imported = False
+        for attribute in ("groove", "groove_assignment"):
+            if not hasattr(source_clip, attribute) or not hasattr(target_clip, attribute):
+                continue
+            setattr(target_clip, attribute, getattr(source_clip, attribute))
+            imported = True
+            break
+
+        for attribute in ("groove_amount", "groove_amount_value"):
+            if not hasattr(source_clip, attribute) or not hasattr(target_clip, attribute):
+                continue
+            source_value = getattr(source_clip, attribute)
+            if isinstance(source_value, (int, float)):
+                setattr(target_clip, attribute, float(source_value))
+                imported = True
+            break
+
+        for attribute in (
+            "_ableton_cli_groove_uri",
+            "_ableton_cli_groove_path",
+            "_ableton_cli_groove_name",
+        ):
+            if not hasattr(source_clip, attribute):
+                continue
+            setattr(target_clip, attribute, getattr(source_clip, attribute))
+            imported = True
+        return imported
+
+    @staticmethod
     def _delete_track(song: Any, track_index: int) -> None:
         delete_track = getattr(song, "delete_track", None)
         if not callable(delete_track):
@@ -624,6 +667,8 @@ class LiveBackendBrowserReadMixin:
         clip_slot: int | None = None,
         preserve_track_name: bool = False,
         notes_mode: str | None = None,
+        import_length: bool = False,
+        import_groove: bool = False,
     ) -> dict[str, Any]:
         if uri is None and path is None:
             raise _invalid_argument(
@@ -661,6 +706,11 @@ class LiveBackendBrowserReadMixin:
             raise _invalid_argument(
                 message=f"notes_mode must be one of replace/append, got {notes_mode}",
                 hint="Use notes_mode replace or append.",
+            )
+        if resolved_notes_mode is None and (import_length or import_groove):
+            raise _invalid_argument(
+                message="import_length/import_groove require notes_mode",
+                hint="Use notes_mode replace or append when importing clip length/groove.",
             )
 
         song = self._song()
@@ -726,10 +776,18 @@ class LiveBackendBrowserReadMixin:
                 )
                 if hasattr(target_clip, "name"):
                     target_clip.name = str(getattr(source_clip, "name", ""))
+                length_imported = (
+                    self._import_clip_length(source_clip=source_clip, target_clip=target_clip)
+                    if import_length
+                    else False
+                )
+                groove_imported = (
+                    self._import_clip_groove(source_clip=source_clip, target_clip=target_clip)
+                    if import_groove
+                    else False
+                )
             finally:
                 self._delete_track(song, source_track_index)
-            length_imported = False
-            groove_imported = False
 
         if track_name_before is not None and hasattr(target, "name"):
             target.name = track_name_before
@@ -745,6 +803,8 @@ class LiveBackendBrowserReadMixin:
             "target_track_mode": target_track_mode,
             "preserve_track_name": preserve_track_name,
             "notes_mode": resolved_notes_mode,
+            "import_length": import_length,
+            "import_groove": import_groove,
             "notes_imported": imported_note_count,
             "length_imported": length_imported,
             "groove_imported": groove_imported,

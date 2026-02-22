@@ -294,6 +294,29 @@ def test_client_sends_request_timeout_meta(monkeypatch) -> None:
             },
         ),
         (
+            lambda client: client.load_instrument_or_effect(
+                track=1,
+                uri=None,
+                path="sounds/Bass Loop.alc",
+                target_track_mode="existing",
+                clip_slot=3,
+                notes_mode="append",
+                import_length=True,
+                import_groove=True,
+            ),
+            "load_instrument_or_effect",
+            {
+                "track": 1,
+                "path": "sounds/Bass Loop.alc",
+                "target_track_mode": "existing",
+                "clip_slot": 3,
+                "preserve_track_name": False,
+                "notes_mode": "append",
+                "import_length": True,
+                "import_groove": True,
+            },
+        ),
+        (
             lambda client: client.clip_notes_quantize(
                 track=0,
                 clip=1,

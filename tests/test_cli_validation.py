@@ -404,6 +404,29 @@ def test_browser_load_rejects_invalid_notes_mode(runner, cli_app) -> None:
     assert payload["error"]["code"] == "INVALID_ARGUMENT"
 
 
+def test_browser_load_rejects_import_flags_without_notes_mode(runner, cli_app) -> None:
+    result = runner.invoke(
+        cli_app,
+        [
+            "--output",
+            "json",
+            "browser",
+            "load",
+            "0",
+            "sounds/Bass Loop.alc",
+            "--target-track-mode",
+            "existing",
+            "--clip-slot",
+            "1",
+            "--import-length",
+        ],
+    )
+
+    assert result.exit_code == 2
+    payload = json.loads(result.stdout)
+    assert payload["error"]["code"] == "INVALID_ARGUMENT"
+
+
 def test_browser_load_drum_kit_requires_exactly_one_kit_selector(runner, cli_app) -> None:
     none_selected = runner.invoke(
         cli_app,
@@ -435,6 +458,28 @@ def test_clip_duplicate_rejects_invalid_to_list(runner, cli_app) -> None:
     result = runner.invoke(
         cli_app,
         ["--output", "json", "clip", "duplicate", "0", "1", "--to", "1,2"],
+    )
+
+    assert result.exit_code == 2
+    payload = json.loads(result.stdout)
+    assert payload["error"]["code"] == "INVALID_ARGUMENT"
+
+
+def test_clip_notes_import_browser_rejects_invalid_mode(runner, cli_app) -> None:
+    result = runner.invoke(
+        cli_app,
+        [
+            "--output",
+            "json",
+            "clip",
+            "notes",
+            "import-browser",
+            "0",
+            "1",
+            "sounds/Bass Loop.alc",
+            "--mode",
+            "merge",
+        ],
     )
 
     assert result.exit_code == 2

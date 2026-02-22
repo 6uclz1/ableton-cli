@@ -5,15 +5,15 @@ from typing import Any
 
 from .command_backend_contract import CommandBackend
 from .command_backend_validators import (
-    _as_int,
     _as_bool,
+    _as_int,
     _clip_length,
     _clip_notes_filter,
     _clip_quantize_grid,
     _humanize_velocity_amount,
     _insert_index,
-    _non_negative_float,
     _non_empty_string,
+    _non_negative_float,
     _notes,
     _track_index,
     _unit_interval,
@@ -76,13 +76,24 @@ def _handle_clip_notes_humanize(backend: CommandBackend, args: dict[str, Any]) -
     return backend.clip_notes_humanize(track, clip, timing, velocity, start_time, end_time, pitch)
 
 
-def _handle_clip_notes_velocity_scale(backend: CommandBackend, args: dict[str, Any]) -> dict[str, Any]:
+def _handle_clip_notes_velocity_scale(
+    backend: CommandBackend,
+    args: dict[str, Any],
+) -> dict[str, Any]:
     track = _track_index("track", args.get("track"))
     clip = _track_index("clip", args.get("clip"))
     scale = _non_negative_float("scale", args.get("scale"))
     offset = _as_int("offset", args.get("offset"))
     start_time, end_time, pitch = _clip_notes_filter(args)
-    return backend.clip_notes_velocity_scale(track, clip, scale, offset, start_time, end_time, pitch)
+    return backend.clip_notes_velocity_scale(
+        track,
+        clip,
+        scale,
+        offset,
+        start_time,
+        end_time,
+        pitch,
+    )
 
 
 def _handle_clip_notes_transpose(backend: CommandBackend, args: dict[str, Any]) -> dict[str, Any]:

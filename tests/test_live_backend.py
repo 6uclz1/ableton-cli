@@ -9,6 +9,9 @@ import pytest
 
 from remote_script.AbletonCliRemote.command_backend import CommandError
 from remote_script.AbletonCliRemote.live_backend import LiveBackend
+from remote_script.AbletonCliRemote.live_backend_parts import (
+    song_transport as song_transport_module,
+)
 
 
 @dataclass(slots=True)
@@ -1680,13 +1683,26 @@ def test_live_backend_load_existing_mode_rejects_invalid_clip_slot() -> None:
     assert exc_info.value.code == "INVALID_ARGUMENT"
 
 
-def test_live_backend_transport_stop_waits_for_longer_eventual_consistency() -> None:
+def test_live_backend_transport_stop_waits_for_longer_eventual_consistency(monkeypatch) -> None:
+    class _FakeClock:
+        def __init__(self) -> None:
+            self._now = 0.0
+
+        def monotonic(self) -> float:
+            return self._now
+
+        def sleep(self, seconds: float) -> None:
+            self._now += max(float(seconds), 0.0)
+
+    fake_clock = _FakeClock()
+    monkeypatch.setattr(song_transport_module.time, "monotonic", fake_clock.monotonic)
+    monkeypatch.setattr(song_transport_module.time, "sleep", fake_clock.sleep)
+
     class _LongEventuallyConsistentSong(_EventuallyConsistentSong):
         def stop_playing(self) -> None:
             self._actual_is_playing = False
-            # Keep eventual consistency delay longer than 0.25s while leaving
-            # headroom under the 1.0s transport timeout for slower CI runners.
-            self._stale_reads_remaining = 40
+            # At 10ms poll intervals this requires ~0.6s of stale reads.
+            self._stale_reads_remaining = 60
 
     class _LongEventuallyConsistentSurfaceStub(_SurfaceStub):
         def __init__(self) -> None:

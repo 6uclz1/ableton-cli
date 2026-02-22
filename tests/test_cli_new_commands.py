@@ -305,6 +305,8 @@ class _ClientStub:
         clip_slot: int | None = None,
         preserve_track_name: bool = False,
         notes_mode: str | None = None,
+        import_length: bool = False,
+        import_groove: bool = False,
     ):
         return {
             "track": track,
@@ -314,6 +316,8 @@ class _ClientStub:
             "clip_slot": clip_slot,
             "preserve_track_name": preserve_track_name,
             "notes_mode": notes_mode,
+            "import_length": import_length,
+            "import_groove": import_groove,
             "loaded": True,
         }
 
@@ -1198,6 +1202,79 @@ def test_browser_load_supports_notes_mode(runner, cli_app, monkeypatch) -> None:
     assert payload["ok"] is True
     assert payload["result"]["notes_mode"] == "append"
     assert payload["result"]["clip_slot"] == 2
+
+
+def test_browser_load_supports_length_and_groove_import_flags(runner, cli_app, monkeypatch) -> None:
+    from ableton_cli.commands import browser
+
+    monkeypatch.setattr(browser, "get_client", lambda ctx: _ClientStub())
+
+    result = runner.invoke(
+        cli_app,
+        [
+            "--output",
+            "json",
+            "browser",
+            "load",
+            "1",
+            "sounds/Bass Loop.alc",
+            "--target-track-mode",
+            "existing",
+            "--clip-slot",
+            "2",
+            "--notes-mode",
+            "replace",
+            "--import-length",
+            "--import-groove",
+        ],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["ok"] is True
+    assert payload["result"]["notes_mode"] == "replace"
+    assert payload["result"]["import_length"] is True
+    assert payload["result"]["import_groove"] is True
+
+
+def test_clip_notes_import_browser_supports_length_and_groove_flags(
+    runner,
+    cli_app,
+    monkeypatch,
+) -> None:
+    from ableton_cli.commands import clip
+
+    monkeypatch.setattr(clip, "get_client", lambda ctx: _ClientStub())
+
+    result = runner.invoke(
+        cli_app,
+        [
+            "--output",
+            "json",
+            "clip",
+            "notes",
+            "import-browser",
+            "1",
+            "3",
+            "packs/LoFi HipHop by Comakid/MIDI Clips/Drums/Fuji Drumkit groove 01 80 bpm.alc",
+            "--mode",
+            "append",
+            "--import-length",
+            "--import-groove",
+        ],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["ok"] is True
+    assert payload["result"]["track"] == 1
+    assert payload["result"]["clip_slot"] == 3
+    assert payload["result"]["target_track_mode"] == "existing"
+    assert payload["result"]["notes_mode"] == "append"
+    assert payload["result"]["import_length"] is True
+    assert payload["result"]["import_groove"] is True
+    assert payload["result"]["path"].endswith(".alc")
+    assert payload["result"]["uri"] is None
 
 
 def test_browser_load_drum_kit_supports_kit_uri_or_path(runner, cli_app, monkeypatch) -> None:

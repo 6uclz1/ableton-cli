@@ -65,6 +65,8 @@ def _handle_load_instrument_or_effect(
     clip_slot = _parse_optional_clip_slot(args)
     notes_mode = _parse_optional_notes_mode(args)
     preserve_track_name = _as_bool("preserve_track_name", args.get("preserve_track_name", False))
+    import_length = _as_bool("import_length", args.get("import_length", False))
+    import_groove = _as_bool("import_groove", args.get("import_groove", False))
     return backend.load_instrument_or_effect(
         track,
         uri,
@@ -73,6 +75,8 @@ def _handle_load_instrument_or_effect(
         clip_slot,
         preserve_track_name,
         notes_mode,
+        import_length,
+        import_groove,
     )
 
 

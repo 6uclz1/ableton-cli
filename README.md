@@ -121,6 +121,7 @@ uv run ableton-cli clip notes add 0 0 --notes-file ./notes.json
 uv run ableton-cli clip notes get 0 0 --start-time 0.0 --end-time 4.0 --pitch 60
 uv run ableton-cli clip notes clear 0 0 --start-time 0.0 --end-time 1.0
 uv run ableton-cli clip notes replace 0 0 --notes-json '[{"pitch":65,"start_time":0.25,"duration":0.5,"velocity":100,"mute":false}]' --start-time 0.0 --end-time 1.0
+uv run ableton-cli clip notes import-browser 0 1 "sounds/Bass Loop.alc" --mode replace --import-length --import-groove
 uv run ableton-cli clip name set 0 0 "Hook"
 uv run ableton-cli clip fire 0 0
 uv run ableton-cli clip stop 0 0
@@ -138,6 +139,7 @@ uv run ableton-cli browser item drums/Kits
 uv run ableton-cli browser search drift --item-type loadable
 uv run ableton-cli browser load 0 query:Synths#Operator
 uv run ableton-cli browser load 0 instruments/Drift
+uv run ableton-cli browser load 0 "sounds/Bass Loop.alc" --target-track-mode existing --clip-slot 1 --notes-mode replace --import-length --import-groove
 uv run ableton-cli browser load-drum-kit 0 rack:drums --kit-uri kit:acoustic
 uv run ableton-cli browser load-drum-kit 0 rack:drums --kit-path drums/Kits/Acoustic Kit
 uv run ableton-cli batch run --steps-file ./steps.json

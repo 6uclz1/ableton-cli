@@ -84,6 +84,7 @@ Stable action names and CLI mappings for automation wrappers.
 - `uv run ableton-cli transport tempo get`: Read current tempo only.
 - `uv run ableton-cli track volume get <track>`: Read current track volume only.
 - `uv run ableton-cli session snapshot`: Fetch song/session/tracks/scenes in one call.
+- `uv run ableton-cli batch stream`: Execute one JSON request per stdin line and receive one JSON response line for low-latency repeated automation.
 - `uv run ableton-cli clip notes quantize <track> <clip> --grid <fraction-or-beats> --strength <0.0-1.0>`: Quantize matching note start times.
 - `uv run ableton-cli clip notes humanize <track> <clip> --timing <beats> --velocity <0-127>`: Humanize timing and velocity for matching notes.
 - `uv run ableton-cli clip notes velocity-scale <track> <clip> --scale <float> --offset <int>`: Scale and offset note velocities for matching notes.
@@ -96,6 +97,8 @@ Stable action names and CLI mappings for automation wrappers.
 Operational note: after `install-remote-script --yes`, reload Ableton's Control Surface assignment (`None` -> `AbletonCliRemote`) or restart Ableton Live to apply updated Remote Script code.
 
 Operational note: verify the active Remote Script via `uv run ableton-cli --output json ping` (`result.remote_script_version`, `result.supported_commands`) before troubleshooting command behavior.
+
+Operational note: run `uv run ableton-cli doctor` to validate protocol/capability integrity when compatibility issues are suspected.
 
 Operational note: when passing a negative positional number, use `--` before the value (for example, `track panning set 0 -- -0.25`, `effect parameter set 0 0 7 -- -2.0`).
 

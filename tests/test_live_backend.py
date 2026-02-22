@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import threading
+import time
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -347,6 +349,63 @@ class _Song:
         self.scenes.insert(to_index, scene)
 
 
+class _TrackProxy:
+    __slots__ = ("_target",)
+
+    def __init__(self, target: _Track) -> None:
+        object.__setattr__(self, "_target", target)
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._target, name)
+
+    def __setattr__(self, name: str, value: Any) -> None:
+        setattr(self._target, name, value)
+
+
+class _ProxyIdentitySong(_Song):
+    def __init__(self) -> None:
+        self._stable_tracks: list[_Track] = []
+        self.delete_calls: list[int] = []
+        super().__init__()
+
+    @property
+    def tracks(self) -> list[_TrackProxy]:
+        return [_TrackProxy(track) for track in self._stable_tracks]
+
+    @tracks.setter
+    def tracks(self, value: list[_Track]) -> None:
+        self._stable_tracks = list(value)
+
+    def append_track(self, track: _Track) -> None:
+        self._stable_tracks.append(track)
+
+    def create_midi_track(self, index: int) -> None:
+        target = _Track(name="MIDI", has_audio_input=False, has_midi_input=True)
+        if index == -1:
+            self._stable_tracks.append(target)
+            return
+        self._stable_tracks.insert(index, target)
+
+    def create_audio_track(self, index: int) -> None:
+        target = _Track(name="Audio", has_audio_input=True, has_midi_input=False)
+        if index == -1:
+            self._stable_tracks.append(target)
+            return
+        self._stable_tracks.insert(index, target)
+
+    def delete_track(self, index: int) -> None:
+        self.delete_calls.append(index)
+        del self._stable_tracks[index]
+
+
+class _ProxyIdentityDeleteGuardSong(_ProxyIdentitySong):
+    def delete_track(self, index: int) -> None:
+        self.delete_calls.append(index)
+        if len(self._stable_tracks) <= 1:
+            raise RuntimeError("cannot delete final track")
+        del self._stable_tracks[index]
+
+
 class _EventuallyConsistentSong(_Song):
     def __init__(self) -> None:
         self._actual_is_playing = False
@@ -408,6 +467,31 @@ class _EventuallyConsistentSurfaceStub(_SurfaceStub):
     def __init__(self) -> None:
         self._song_obj = _EventuallyConsistentSong()
         self._app = _Application(self._song_obj)
+
+
+class _ProxyIdentitySurfaceStub(_SurfaceStub):
+    def __init__(self) -> None:
+        self._song_obj = _ProxyIdentitySong()
+        self._app = _Application(self._song_obj)
+
+
+class _ProxyIdentityDeleteGuardSurfaceStub(_SurfaceStub):
+    def __init__(self) -> None:
+        self._song_obj = _ProxyIdentityDeleteGuardSong()
+        self._app = _Application(self._song_obj)
+
+
+def _append_imported_source_track(song: Any, *, pitch: int, length: float = 2.0) -> None:
+    new_track = _Track(name="Imported Clip", has_audio_input=False, has_midi_input=True)
+    source_slot = new_track.clip_slots[0]
+    source_slot.create_clip(length=length)
+    assert source_slot.clip is not None
+    source_slot.clip.set_notes(((pitch, 0.0, 0.5, 100, False),))
+    append_track = getattr(song, "append_track", None)
+    if callable(append_track):
+        append_track(new_track)
+        return
+    song.tracks.append(new_track)
 
 
 def _note() -> dict[str, Any]:
@@ -1144,6 +1228,408 @@ def test_live_backend_load_existing_mode_notes_mode_imports_length_and_groove() 
     assert groove["groove_name"] == "Hip Hop Boom Bap 16ths 90 bpm.agr"
 
 
+def test_live_backend_load_existing_mode_notes_mode_ignores_read_only_target_properties() -> None:
+    class _ReadOnlyImportTargetClip(_Clip):
+        _blocked_attrs = {
+            "name",
+            "length",
+            "groove",
+            "groove_assignment",
+            "groove_amount",
+            "groove_amount_value",
+            "_ableton_cli_groove_uri",
+            "_ableton_cli_groove_path",
+            "_ableton_cli_groove_name",
+        }
+
+        def __init__(self, length: float, name: str = "") -> None:
+            object.__setattr__(self, "_allow_blocked_assignment", True)
+            super().__init__(length=length, name=name)
+            object.__setattr__(self, "_allow_blocked_assignment", False)
+
+        def __setattr__(self, name: str, value: Any) -> None:
+            if name in self._blocked_attrs and not bool(
+                getattr(self, "_allow_blocked_assignment", False)
+            ):
+                raise AttributeError("property of 'Clip' object has no setter")
+            super().__setattr__(name, value)
+
+    surface = _SurfaceStub()
+    target_slot = surface.song().tracks[0].clip_slots[1]
+    target_slot.create_clip(length=2.0)
+    target_slot.clip = _ReadOnlyImportTargetClip(length=2.0)
+    assert target_slot.clip is not None
+    target_slot.clip.set_notes(((72, 0.25, 0.5, 90, False),))
+
+    browser = surface.application().browser
+    original_load_item = browser.load_item
+
+    def _load_item_force_new_track(item: _BrowserItem) -> None:
+        uri = str(getattr(item, "uri", ""))
+        if uri != "clip:bass-loop-alc":
+            original_load_item(item)
+            return
+        new_track = _Track(name="Imported Clip", has_audio_input=False, has_midi_input=True)
+        source_slot = new_track.clip_slots[0]
+        source_slot.create_clip(length=8.0)
+        assert source_slot.clip is not None
+        source_slot.clip.set_notes(((60, 0.0, 0.5, 100, False),))
+        source_slot.clip.groove = "groove:hip-hop-boom-bap-16ths-90"
+        source_slot.clip.groove_amount = 0.7
+        source_slot.clip._ableton_cli_groove_uri = "groove:hip-hop-boom-bap-16ths-90"  # noqa: SLF001
+        source_slot.clip._ableton_cli_groove_path = (  # noqa: SLF001
+            "grooves/Hip Hop Boom Bap 16ths 90 bpm.agr"
+        )
+        source_slot.clip._ableton_cli_groove_name = "Hip Hop Boom Bap 16ths 90 bpm.agr"  # noqa: SLF001
+        surface.song().tracks.append(new_track)
+
+    browser.load_item = _load_item_force_new_track  # type: ignore[method-assign]
+
+    backend = LiveBackend(surface)
+    loaded = backend.load_instrument_or_effect(
+        0,
+        uri=None,
+        path="sounds/Bass Loop.alc",
+        target_track_mode="existing",
+        clip_slot=1,
+        preserve_track_name=True,
+        notes_mode="replace",
+        import_length=True,
+        import_groove=True,
+    )
+
+    assert loaded["loaded"] is True
+    assert loaded["track_count_delta"] == 0
+    assert loaded["notes_imported"] == 1
+    assert loaded["length_imported"] is False
+    assert loaded["groove_imported"] is False
+
+    destination_slot = surface.song().tracks[0].clip_slots[1]
+    destination_clip = destination_slot.clip
+    assert destination_clip is not None
+    assert destination_clip.length == 2.0
+    notes = backend.get_clip_notes(0, 1, None, None, None)
+    assert sorted(note["pitch"] for note in notes["notes"]) == [60]
+
+
+def test_live_backend_load_notes_mode_accepts_delayed_source_track_creation() -> None:
+    surface = _SurfaceStub()
+    target_slot = surface.song().tracks[0].clip_slots[1]
+    target_slot.create_clip(length=2.0)
+    assert target_slot.clip is not None
+
+    browser = surface.application().browser
+    original_load_item = browser.load_item
+
+    def _load_item_with_delayed_source_track(item: _BrowserItem) -> None:
+        uri = str(getattr(item, "uri", ""))
+        if uri != "clip:bass-loop-alc":
+            original_load_item(item)
+            return
+
+        def _worker() -> None:
+            time.sleep(0.03)
+            new_track = _Track(name="Delayed Imported", has_audio_input=False, has_midi_input=True)
+            source_slot = new_track.clip_slots[0]
+            source_slot.create_clip(length=2.0)
+            assert source_slot.clip is not None
+            source_slot.clip.set_notes(((66, 0.0, 0.5, 100, False),))
+            surface.song().tracks.append(new_track)
+
+        threading.Thread(target=_worker, daemon=True).start()
+
+    browser.load_item = _load_item_with_delayed_source_track  # type: ignore[method-assign]
+
+    backend = LiveBackend(surface)
+    loaded = backend.load_instrument_or_effect(
+        0,
+        uri=None,
+        path="sounds/Bass Loop.alc",
+        target_track_mode="existing",
+        clip_slot=1,
+        preserve_track_name=True,
+        notes_mode="replace",
+    )
+
+    assert loaded["loaded"] is True
+    assert loaded["track_count_delta"] == 0
+    assert len(surface.song().tracks) == 2
+    notes = backend.get_clip_notes(0, 1, None, None, None)
+    assert sorted(note["pitch"] for note in notes["notes"]) == [66]
+
+
+def test_live_backend_load_notes_mode_proxy_identity_preserves_existing_tracks() -> None:
+    surface = _ProxyIdentitySurfaceStub()
+    song = surface.song()
+    target_slot = song.tracks[0].clip_slots[1]
+    target_slot.create_clip(length=2.0)
+    assert target_slot.clip is not None
+    target_slot.clip.set_notes(((72, 0.25, 0.5, 90, False),))
+
+    browser = surface.application().browser
+    original_load_item = browser.load_item
+
+    def _load_item_force_new_track(item: _BrowserItem) -> None:
+        uri = str(getattr(item, "uri", ""))
+        if uri != "clip:bass-loop-alc":
+            original_load_item(item)
+            return
+        _append_imported_source_track(song, pitch=60)
+
+    browser.load_item = _load_item_force_new_track  # type: ignore[method-assign]
+
+    backend = LiveBackend(surface)
+    loaded = backend.load_instrument_or_effect(
+        0,
+        uri=None,
+        path="sounds/Bass Loop.alc",
+        target_track_mode="existing",
+        clip_slot=1,
+        preserve_track_name=True,
+        notes_mode="replace",
+    )
+
+    assert loaded["loaded"] is True
+    assert loaded["track_count"] == 2
+    assert loaded["track_count_delta"] == 0
+    assert len(song.tracks) == 2
+    notes = backend.get_clip_notes(0, 1, None, None, None)
+    assert sorted(note["pitch"] for note in notes["notes"]) == [60]
+
+
+def test_live_backend_load_rehome_proxy_identity_preserves_existing_tracks() -> None:
+    surface = _ProxyIdentitySurfaceStub()
+    song = surface.song()
+    browser = surface.application().browser
+    original_load_item = browser.load_item
+
+    def _load_item_force_new_track(item: _BrowserItem) -> None:
+        uri = str(getattr(item, "uri", ""))
+        if uri != "clip:bass-loop-alc":
+            original_load_item(item)
+            return
+        _append_imported_source_track(song, pitch=67)
+
+    browser.load_item = _load_item_force_new_track  # type: ignore[method-assign]
+
+    backend = LiveBackend(surface)
+    loaded = backend.load_instrument_or_effect(
+        0,
+        uri=None,
+        path="sounds/Bass Loop.alc",
+        target_track_mode="existing",
+        clip_slot=1,
+        preserve_track_name=True,
+    )
+
+    assert loaded["loaded"] is True
+    assert loaded["track_count"] == 2
+    assert loaded["track_count_delta"] == 0
+    assert len(song.tracks) == 2
+    assert song.tracks[0].name == "Track 1"
+    notes = backend.get_clip_notes(0, 1, None, None, None)
+    assert sorted(note["pitch"] for note in notes["notes"]) == [67]
+
+
+def test_live_backend_load_rehome_delete_guard_does_not_delete_existing_tracks() -> None:
+    surface = _ProxyIdentityDeleteGuardSurfaceStub()
+    song = surface.song()
+    browser = surface.application().browser
+    original_load_item = browser.load_item
+
+    def _load_item_force_new_track(item: _BrowserItem) -> None:
+        uri = str(getattr(item, "uri", ""))
+        if uri != "clip:bass-loop-alc":
+            original_load_item(item)
+            return
+        _append_imported_source_track(song, pitch=69)
+
+    browser.load_item = _load_item_force_new_track  # type: ignore[method-assign]
+
+    backend = LiveBackend(surface)
+    loaded = backend.load_instrument_or_effect(
+        0,
+        uri=None,
+        path="sounds/Bass Loop.alc",
+        target_track_mode="existing",
+        clip_slot=1,
+        preserve_track_name=False,
+    )
+
+    assert loaded["loaded"] is True
+    assert loaded["track_count"] == 2
+    assert loaded["track_count_delta"] == 0
+    assert len(song.tracks) == 2
+    assert song.delete_calls
+    assert all(track_index >= 2 for track_index in song.delete_calls)
+
+
+def test_live_backend_load_notes_mode_rejects_ambiguous_source_tracks_and_cleans_up() -> None:
+    surface = _SurfaceStub()
+    target_slot = surface.song().tracks[0].clip_slots[1]
+    target_slot.create_clip(length=2.0)
+    assert target_slot.clip is not None
+
+    browser = surface.application().browser
+    original_load_item = browser.load_item
+
+    def _load_item_with_two_source_tracks(item: _BrowserItem) -> None:
+        uri = str(getattr(item, "uri", ""))
+        if uri != "clip:bass-loop-alc":
+            original_load_item(item)
+            return
+        for index in range(2):
+            new_track = _Track(
+                name=f"Imported Clip {index}",
+                has_audio_input=False,
+                has_midi_input=True,
+            )
+            source_slot = new_track.clip_slots[0]
+            source_slot.create_clip(length=2.0)
+            assert source_slot.clip is not None
+            source_slot.clip.set_notes(((60 + index, 0.0, 0.5, 100, False),))
+            surface.song().tracks.append(new_track)
+
+    browser.load_item = _load_item_with_two_source_tracks  # type: ignore[method-assign]
+
+    backend = LiveBackend(surface)
+    with pytest.raises(CommandError) as exc_info:
+        backend.load_instrument_or_effect(
+            0,
+            uri=None,
+            path="sounds/Bass Loop.alc",
+            target_track_mode="existing",
+            clip_slot=1,
+            preserve_track_name=False,
+            notes_mode="replace",
+        )
+
+    assert exc_info.value.code == "INVALID_ARGUMENT"
+    assert "deterministic source track" in exc_info.value.message
+    assert isinstance(exc_info.value.details, dict)
+    assert len(surface.song().tracks) == 2
+
+
+def test_live_backend_load_notes_mode_accepts_single_clip_track_among_created_tracks() -> None:
+    surface = _SurfaceStub()
+    target_slot = surface.song().tracks[0].clip_slots[1]
+    target_slot.create_clip(length=2.0)
+    assert target_slot.clip is not None
+
+    browser = surface.application().browser
+    original_load_item = browser.load_item
+
+    def _load_item_with_mixed_created_tracks(item: _BrowserItem) -> None:
+        uri = str(getattr(item, "uri", ""))
+        if uri != "clip:bass-loop-alc":
+            original_load_item(item)
+            return
+
+        utility_track = _Track(name="Utility Track", has_audio_input=False, has_midi_input=True)
+        source_track = _Track(name="Imported Clip", has_audio_input=False, has_midi_input=True)
+        source_slot = source_track.clip_slots[0]
+        source_slot.create_clip(length=2.0)
+        assert source_slot.clip is not None
+        source_slot.clip.set_notes(((64, 0.0, 0.5, 100, False),))
+
+        surface.song().tracks.append(utility_track)
+        surface.song().tracks.append(source_track)
+
+    browser.load_item = _load_item_with_mixed_created_tracks  # type: ignore[method-assign]
+
+    backend = LiveBackend(surface)
+    loaded = backend.load_instrument_or_effect(
+        0,
+        uri=None,
+        path="sounds/Bass Loop.alc",
+        target_track_mode="existing",
+        clip_slot=1,
+        preserve_track_name=False,
+        notes_mode="replace",
+    )
+
+    assert loaded["loaded"] is True
+    assert loaded["track_count_delta"] == 0
+    assert len(surface.song().tracks) == 2
+    notes = backend.get_clip_notes(0, 1, None, None, None)
+    assert sorted(note["pitch"] for note in notes["notes"]) == [64]
+
+
+def test_live_backend_load_notes_mode_cleans_up_tracks_when_load_raises() -> None:
+    surface = _SurfaceStub()
+    target_slot = surface.song().tracks[0].clip_slots[1]
+    target_slot.create_clip(length=2.0)
+    assert target_slot.clip is not None
+
+    browser = surface.application().browser
+    original_load_item = browser.load_item
+
+    def _load_item_raises_after_side_effect(item: _BrowserItem) -> None:
+        uri = str(getattr(item, "uri", ""))
+        if uri != "clip:bass-loop-alc":
+            original_load_item(item)
+            return
+        leaked_track = _Track(name="Leaked Track", has_audio_input=False, has_midi_input=True)
+        surface.song().tracks.append(leaked_track)
+        raise RuntimeError("simulated browser failure")
+
+    browser.load_item = _load_item_raises_after_side_effect  # type: ignore[method-assign]
+
+    backend = LiveBackend(surface)
+    with pytest.raises(RuntimeError):
+        backend.load_instrument_or_effect(
+            0,
+            uri=None,
+            path="sounds/Bass Loop.alc",
+            target_track_mode="existing",
+            clip_slot=1,
+            preserve_track_name=False,
+            notes_mode="replace",
+        )
+
+    assert len(surface.song().tracks) == 2
+
+
+def test_live_backend_load_existing_mode_rehome_rejects_ambiguous_tracks_and_cleans_up() -> None:
+    surface = _SurfaceStub()
+    browser = surface.application().browser
+    original_load_item = browser.load_item
+
+    def _load_item_with_ambiguous_rehome_tracks(item: _BrowserItem) -> None:
+        uri = str(getattr(item, "uri", ""))
+        if uri != "clip:bass-loop-alc":
+            original_load_item(item)
+            return
+        for index in range(2):
+            new_track = _Track(
+                name=f"Ambiguous Rehome {index}",
+                has_audio_input=False,
+                has_midi_input=True,
+            )
+            source_slot = new_track.clip_slots[0]
+            source_slot.create_clip(length=2.0)
+            assert source_slot.clip is not None
+            source_slot.clip.set_notes(((70 + index, 0.0, 0.5, 100, False),))
+            surface.song().tracks.append(new_track)
+
+    browser.load_item = _load_item_with_ambiguous_rehome_tracks  # type: ignore[method-assign]
+
+    backend = LiveBackend(surface)
+    with pytest.raises(CommandError) as exc_info:
+        backend.load_instrument_or_effect(
+            0,
+            uri=None,
+            path="sounds/Bass Loop.alc",
+            target_track_mode="existing",
+            clip_slot=1,
+            preserve_track_name=False,
+        )
+
+    assert exc_info.value.code == "INVALID_ARGUMENT"
+    assert len(surface.song().tracks) == 2
+    assert isinstance(exc_info.value.details, dict)
+
+
 def test_live_backend_load_rejects_import_length_without_notes_mode() -> None:
     backend = LiveBackend(_SurfaceStub())
 
@@ -1192,6 +1678,23 @@ def test_live_backend_load_existing_mode_rejects_invalid_clip_slot() -> None:
         )
 
     assert exc_info.value.code == "INVALID_ARGUMENT"
+
+
+def test_live_backend_transport_stop_waits_for_longer_eventual_consistency() -> None:
+    class _LongEventuallyConsistentSong(_EventuallyConsistentSong):
+        def stop_playing(self) -> None:
+            self._actual_is_playing = False
+            self._stale_reads_remaining = 60
+
+    class _LongEventuallyConsistentSurfaceStub(_SurfaceStub):
+        def __init__(self) -> None:
+            self._song_obj = _LongEventuallyConsistentSong()
+            self._app = _Application(self._song_obj)
+
+    backend = LiveBackend(_LongEventuallyConsistentSurfaceStub())
+
+    assert backend.transport_play()["is_playing"] is True
+    assert backend.transport_stop()["is_playing"] is False
 
 
 def test_live_backend_device_parameter_set() -> None:

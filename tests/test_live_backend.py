@@ -913,6 +913,46 @@ def test_live_backend_load_existing_mode_rehomes_clip_when_live_creates_new_trac
     assert notes["note_count"] == 1
 
 
+def test_live_backend_load_existing_mode_rehomes_clip_without_explicit_clip_slot() -> None:
+    surface = _SurfaceStub()
+    browser = surface.application().browser
+    original_load_item = browser.load_item
+
+    def _load_item_force_new_track(item: _BrowserItem) -> None:
+        uri = str(getattr(item, "uri", ""))
+        if uri != "clip:bass-loop-alc":
+            original_load_item(item)
+            return
+        new_track = _Track(name="Imported Clip", has_audio_input=False, has_midi_input=True)
+        source_slot = new_track.clip_slots[0]
+        source_slot.create_clip(length=2.0)
+        assert source_slot.clip is not None
+        source_slot.clip.set_notes(((60, 0.0, 0.5, 100, False),))
+        surface.song().tracks.append(new_track)
+
+    browser.load_item = _load_item_force_new_track  # type: ignore[method-assign]
+
+    backend = LiveBackend(surface)
+    loaded = backend.load_instrument_or_effect(
+        0,
+        uri=None,
+        path="sounds/Bass Loop.alc",
+        target_track_mode="existing",
+        clip_slot=None,
+        preserve_track_name=True,
+    )
+
+    assert loaded["loaded"] is True
+    assert loaded["track"] == 0
+    assert loaded["clip_slot"] == 0
+    assert loaded["track_count_delta"] == 0
+    assert loaded["track_count"] == 2
+    assert loaded["track_name"] == "Track 1"
+    assert surface.song().tracks[0].clip_slots[0].has_clip is True
+    notes = backend.get_clip_notes(0, 0, None, None, None)
+    assert notes["note_count"] == 1
+
+
 @pytest.mark.parametrize(
     ("notes_mode", "expected_pitches"),
     (
@@ -970,6 +1010,75 @@ def test_live_backend_load_existing_mode_notes_mode_imports_into_existing_clip(
     assert loaded["groove_imported"] is False
     notes = backend.get_clip_notes(0, 1, None, None, None)
     assert sorted(note["pitch"] for note in notes["notes"]) == expected_pitches
+
+
+def test_live_backend_load_notes_mode_does_not_require_selected_scene_none() -> None:
+    class _StrictSelectedSceneView:
+        def __init__(
+            self,
+            *,
+            selected_track: _Track,
+            selected_scene: _Scene,
+            highlighted_clip_slot: _ClipSlot | None,
+        ) -> None:
+            self.selected_track = selected_track
+            self._selected_scene = selected_scene
+            self.highlighted_clip_slot = highlighted_clip_slot
+
+        @property
+        def selected_scene(self) -> _Scene:
+            return self._selected_scene
+
+        @selected_scene.setter
+        def selected_scene(self, value: _Scene) -> None:
+            if value is None:
+                raise TypeError("selected_scene cannot be None")
+            self._selected_scene = value
+
+    surface = _SurfaceStub()
+    song = surface.song()
+    song.view = _StrictSelectedSceneView(
+        selected_track=song.tracks[0],
+        selected_scene=song.scenes[0],
+        highlighted_clip_slot=song.tracks[0].clip_slots[0],
+    )
+    target_slot = song.tracks[0].clip_slots[1]
+    target_slot.create_clip(length=2.0)
+    assert target_slot.clip is not None
+    target_slot.clip.set_notes(((72, 0.25, 0.5, 90, False),))
+
+    browser = surface.application().browser
+    original_load_item = browser.load_item
+
+    def _load_item_force_new_track(item: _BrowserItem) -> None:
+        uri = str(getattr(item, "uri", ""))
+        if uri != "clip:bass-loop-alc":
+            original_load_item(item)
+            return
+        new_track = _Track(name="Imported Clip", has_audio_input=False, has_midi_input=True)
+        source_slot = new_track.clip_slots[0]
+        source_slot.create_clip(length=2.0)
+        assert source_slot.clip is not None
+        source_slot.clip.set_notes(((60, 0.0, 0.5, 100, False),))
+        surface.song().tracks.append(new_track)
+
+    browser.load_item = _load_item_force_new_track  # type: ignore[method-assign]
+
+    backend = LiveBackend(surface)
+    loaded = backend.load_instrument_or_effect(
+        0,
+        uri=None,
+        path="sounds/Bass Loop.alc",
+        target_track_mode="existing",
+        clip_slot=1,
+        preserve_track_name=True,
+        notes_mode="replace",
+    )
+
+    assert loaded["loaded"] is True
+    assert loaded["track_count_delta"] == 0
+    notes = backend.get_clip_notes(0, 1, None, None, None)
+    assert sorted(note["pitch"] for note in notes["notes"]) == [60]
 
 
 def test_live_backend_load_notes_mode_requires_existing_clip() -> None:

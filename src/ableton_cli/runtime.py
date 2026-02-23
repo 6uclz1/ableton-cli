@@ -28,6 +28,12 @@ class RuntimeContext:
     output_mode: OutputMode
     quiet: bool
     no_color: bool
+    _client: AbletonClient | None = None
+
+    def client(self) -> AbletonClient:
+        if self._client is None:
+            self._client = AbletonClient(self.settings)
+        return self._client
 
 
 def get_runtime(ctx: typer.Context) -> RuntimeContext:
@@ -39,7 +45,7 @@ def get_runtime(ctx: typer.Context) -> RuntimeContext:
 
 def get_client(ctx: typer.Context) -> AbletonClient:
     runtime = get_runtime(ctx)
-    return AbletonClient(runtime.settings)
+    return runtime.client()
 
 
 def execute_command(

@@ -8,7 +8,7 @@ import typer
 
 from ableton_cli.config import Settings
 from ableton_cli.output import OutputMode
-from ableton_cli.runtime import RuntimeContext, execute_command
+from ableton_cli.runtime import RuntimeContext, execute_command, get_client
 
 
 def _context(*, quiet: bool) -> SimpleNamespace:
@@ -65,3 +65,21 @@ def test_execute_command_not_quiet_emits_custom_human_formatter(monkeypatch) -> 
     assert exc_info.value.exit_code == 0
     assert len(emitted) == 1
     assert emitted[0][0][0] == "Doctor Results"
+
+
+def test_get_client_reuses_client_for_same_runtime(monkeypatch) -> None:
+    created_with: list[Settings] = []
+
+    class FakeClient:
+        def __init__(self, settings: Settings) -> None:
+            self.settings = settings
+            created_with.append(settings)
+
+    monkeypatch.setattr("ableton_cli.runtime.AbletonClient", FakeClient)
+
+    ctx = _context(quiet=False)
+    first = get_client(ctx)
+    second = get_client(ctx)
+
+    assert first is second
+    assert created_with == [ctx.obj.settings]

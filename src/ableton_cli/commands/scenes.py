@@ -1,27 +1,124 @@
 from __future__ import annotations
 
-from typing import Annotated
+from collections.abc import Callable, Sequence
+from typing import Annotated, TypeVar
 
 import typer
 
 from ..runtime import execute_command, get_client
 from ._validation import (
-    require_minus_one_or_non_negative,
-    require_non_empty_string,
-    require_non_negative,
+    require_scene_and_name,
+    require_scene_and_value,
+    require_scene_index,
+    require_scene_insert_index,
+    require_scene_move,
 )
 
 scenes_app = typer.Typer(help="Scenes commands", no_args_is_help=True)
 name_app = typer.Typer(help="Scenes naming commands", no_args_is_help=True)
 
+TValue = TypeVar("TValue")
+
+SceneValidator = Callable[[int], int]
+SceneValueValidator = Callable[[int, TValue], tuple[int, TValue]]
+SceneMoveValidator = Callable[[int, int], tuple[int, int]]
+
+SceneAction = Callable[[object, int], dict[str, object]]
+SceneValueAction = Callable[[object, int, TValue], dict[str, object]]
+SceneMoveAction = Callable[[object, int, int], dict[str, object]]
+
+
+def run_scene_command(
+    ctx: typer.Context,
+    *,
+    command_name: str,
+    scene: int,
+    fn: SceneAction,
+    validators: Sequence[SceneValidator] | None = None,
+) -> None:
+    active_validators = validators if validators is not None else (require_scene_index,)
+
+    def _run() -> dict[str, object]:
+        valid_scene = scene
+        for validator in active_validators:
+            valid_scene = validator(valid_scene)
+        client = get_client(ctx)
+        return fn(client, valid_scene)
+
+    execute_command(
+        ctx,
+        command=command_name,
+        args={"scene": scene},
+        action=_run,
+    )
+
+
+def run_scene_value_command(
+    ctx: typer.Context,
+    *,
+    command_name: str,
+    scene: int,
+    value: TValue,
+    fn: SceneValueAction[TValue],
+    value_name: str = "value",
+    validators: Sequence[SceneValueValidator[TValue]] | None = None,
+) -> None:
+    active_validators = validators if validators is not None else (require_scene_and_value,)
+
+    def _run() -> dict[str, object]:
+        valid_scene = scene
+        valid_value = value
+        for validator in active_validators:
+            valid_scene, valid_value = validator(valid_scene, valid_value)
+        client = get_client(ctx)
+        return fn(client, valid_scene, valid_value)
+
+    execute_command(
+        ctx,
+        command=command_name,
+        args={"scene": scene, value_name: value},
+        action=_run,
+    )
+
+
+def run_scene_move_command(
+    ctx: typer.Context,
+    *,
+    command_name: str,
+    from_scene: int,
+    to_scene: int,
+    fn: SceneMoveAction,
+    validators: Sequence[SceneMoveValidator] | None = None,
+) -> None:
+    active_validators = validators if validators is not None else (require_scene_move,)
+
+    def _run() -> dict[str, object]:
+        valid_from_scene = from_scene
+        valid_to_scene = to_scene
+        for validator in active_validators:
+            valid_from_scene, valid_to_scene = validator(valid_from_scene, valid_to_scene)
+        client = get_client(ctx)
+        return fn(client, valid_from_scene, valid_to_scene)
+
+    execute_command(
+        ctx,
+        command=command_name,
+        args={"from": from_scene, "to": to_scene},
+        action=_run,
+    )
+
 
 @scenes_app.command("list")
 def scenes_list(ctx: typer.Context) -> None:
+    def _run() -> dict[str, object]:
+        client = get_client(ctx)
+        return client.scenes_list()
+
     execute_command(
         ctx,
         command="scenes list",
         args={},
-        action=lambda: get_client(ctx).scenes_list(),
+        action=_run,
     )
 
 
@@ -37,12 +134,9 @@ def scenes_create(
     ] = -1,
 ) -> None:
     def _run() -> dict[str, object]:
-        valid_index = require_minus_one_or_non_negative(
-            "index",
-            index,
-            hint="Use -1 for append or a non-negative insertion index.",
-        )
-        return get_client(ctx).create_scene(valid_index)
+        valid_index = require_scene_insert_index(index)
+        client = get_client(ctx)
+        return client.create_scene(valid_index)
 
     execute_command(
         ctx,
@@ -58,16 +152,14 @@ def scenes_name_set(
     scene: Annotated[int, typer.Argument(help="Scene index (0-based)")],
     name: Annotated[str, typer.Argument(help="New scene name")],
 ) -> None:
-    def _run() -> dict[str, object]:
-        require_non_negative("scene", scene, hint="Use a valid scene index from 'scenes list'.")
-        valid_name = require_non_empty_string("name", name, hint="Pass a non-empty scene name.")
-        return get_client(ctx).set_scene_name(scene, valid_name)
-
-    execute_command(
+    run_scene_value_command(
         ctx,
-        command="scenes name set",
-        args={"scene": scene, "name": name},
-        action=_run,
+        command_name="scenes name set",
+        scene=scene,
+        value=name,
+        value_name="name",
+        validators=[require_scene_and_name],
+        fn=lambda client, valid_scene, valid_name: client.set_scene_name(valid_scene, valid_name),
     )
 
 
@@ -76,15 +168,11 @@ def scenes_fire(
     ctx: typer.Context,
     scene: Annotated[int, typer.Argument(help="Scene index (0-based)")],
 ) -> None:
-    def _run() -> dict[str, object]:
-        require_non_negative("scene", scene, hint="Use a valid scene index from 'scenes list'.")
-        return get_client(ctx).fire_scene(scene)
-
-    execute_command(
+    run_scene_command(
         ctx,
-        command="scenes fire",
-        args={"scene": scene},
-        action=_run,
+        command_name="scenes fire",
+        scene=scene,
+        fn=lambda client, valid_scene: client.fire_scene(valid_scene),
     )
 
 
@@ -94,24 +182,14 @@ def scenes_move(
     from_scene: Annotated[int, typer.Argument(help="Source scene index (0-based)")],
     to_scene: Annotated[int, typer.Argument(help="Destination scene index (0-based)")],
 ) -> None:
-    def _run() -> dict[str, object]:
-        require_non_negative(
-            "from",
-            from_scene,
-            hint="Use a valid source scene index from 'scenes list'.",
-        )
-        require_non_negative(
-            "to",
-            to_scene,
-            hint="Use a valid destination scene index from 'scenes list'.",
-        )
-        return get_client(ctx).scenes_move(from_scene, to_scene)
-
-    execute_command(
+    run_scene_move_command(
         ctx,
-        command="scenes move",
-        args={"from": from_scene, "to": to_scene},
-        action=_run,
+        command_name="scenes move",
+        from_scene=from_scene,
+        to_scene=to_scene,
+        fn=lambda client, valid_from_scene, valid_to_scene: client.scenes_move(
+            valid_from_scene, valid_to_scene
+        ),
     )
 
 

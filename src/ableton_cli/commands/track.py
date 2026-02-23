@@ -1,12 +1,18 @@
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from typing import Annotated, TypeVar
 
 import typer
 
 from ..runtime import execute_command, get_client
-from ._validation import require_float_in_range, require_non_empty_string, require_track_index
+from ._validation import (
+    require_track_and_name,
+    require_track_and_pan,
+    require_track_and_value,
+    require_track_and_volume,
+    require_track_index,
+)
 
 TValue = TypeVar("TValue")
 
@@ -14,74 +20,62 @@ TrackArgument = Annotated[int, typer.Argument(help="Track index (0-based)")]
 VolumeValueArgument = Annotated[float, typer.Argument(help="Volume value in [0.0, 1.0]")]
 PanningValueArgument = Annotated[float, typer.Argument(help="Panning value in [-1.0, 1.0]")]
 
+TrackValidator = Callable[[int], int]
+TrackValueValidator = Callable[[int, TValue], tuple[int, TValue]]
+TrackAction = Callable[[object, int], dict[str, object]]
+TrackValueAction = Callable[[object, int, TValue], dict[str, object]]
 
-def _execute_track_get(
+
+def run_track_command(
     ctx: typer.Context,
     *,
-    command: str,
+    command_name: str,
     track: int,
-    action: Callable[[int], dict[str, object]],
+    fn: TrackAction,
+    validators: Sequence[TrackValidator] | None = None,
 ) -> None:
+    active_validators = validators if validators is not None else (require_track_index,)
+
     def _run() -> dict[str, object]:
-        valid_track = require_track_index(track)
-        return action(valid_track)
+        valid_track = track
+        for validator in active_validators:
+            valid_track = validator(valid_track)
+        client = get_client(ctx)
+        return fn(client, valid_track)
 
     execute_command(
         ctx,
-        command=command,
+        command=command_name,
         args={"track": track},
         action=_run,
     )
 
 
-def _execute_track_set(
+def run_track_value_command(
     ctx: typer.Context,
     *,
-    command: str,
+    command_name: str,
     track: int,
     value: TValue,
-    action: Callable[[int, TValue], dict[str, object]],
+    fn: TrackValueAction[TValue],
     value_name: str = "value",
-    validator: Callable[[TValue], TValue] | None = None,
+    validators: Sequence[TrackValueValidator[TValue]] | None = None,
 ) -> None:
+    active_validators = validators if validators is not None else (require_track_and_value,)
+
     def _run() -> dict[str, object]:
-        valid_track = require_track_index(track)
-        valid_value = validator(value) if validator is not None else value
-        return action(valid_track, valid_value)
+        valid_track = track
+        valid_value = value
+        for validator in active_validators:
+            valid_track, valid_value = validator(valid_track, valid_value)
+        client = get_client(ctx)
+        return fn(client, valid_track, valid_value)
 
     execute_command(
         ctx,
-        command=command,
+        command=command_name,
         args={"track": track, value_name: value},
         action=_run,
-    )
-
-
-def _require_volume_value(value: float) -> float:
-    return require_float_in_range(
-        "value",
-        value,
-        minimum=0.0,
-        maximum=1.0,
-        hint="Use a normalized volume value such as 0.75.",
-    )
-
-
-def _require_panning_value(value: float) -> float:
-    return require_float_in_range(
-        "value",
-        value,
-        minimum=-1.0,
-        maximum=1.0,
-        hint="Use a normalized panning value such as -0.25.",
-    )
-
-
-def _require_track_name(value: str) -> str:
-    return require_non_empty_string(
-        "name",
-        value,
-        hint="Pass a non-empty track name.",
     )
 
 
@@ -99,11 +93,11 @@ def track_info(
     ctx: typer.Context,
     track: TrackArgument,
 ) -> None:
-    _execute_track_get(
+    run_track_command(
         ctx,
-        command="track info",
+        command_name="track info",
         track=track,
-        action=lambda valid_track: get_client(ctx).get_track_info(valid_track),
+        fn=lambda client, valid_track: client.get_track_info(valid_track),
     )
 
 
@@ -112,11 +106,11 @@ def volume_get(
     ctx: typer.Context,
     track: TrackArgument,
 ) -> None:
-    _execute_track_get(
+    run_track_command(
         ctx,
-        command="track volume get",
+        command_name="track volume get",
         track=track,
-        action=lambda valid_track: get_client(ctx).track_volume_get(valid_track),
+        fn=lambda client, valid_track: client.track_volume_get(valid_track),
     )
 
 
@@ -126,13 +120,13 @@ def volume_set(
     track: TrackArgument,
     value: VolumeValueArgument,
 ) -> None:
-    _execute_track_set(
+    run_track_value_command(
         ctx,
-        command="track volume set",
+        command_name="track volume set",
         track=track,
         value=value,
-        validator=_require_volume_value,
-        action=lambda valid_track, valid_value: get_client(ctx).track_volume_set(
+        validators=[require_track_and_volume],
+        fn=lambda client, valid_track, valid_value: client.track_volume_set(
             valid_track,
             valid_value,
         ),
@@ -145,14 +139,14 @@ def track_name_set(
     track: TrackArgument,
     name: Annotated[str, typer.Argument(help="New track name")],
 ) -> None:
-    _execute_track_set(
+    run_track_value_command(
         ctx,
-        command="track name set",
+        command_name="track name set",
         track=track,
         value=name,
         value_name="name",
-        validator=_require_track_name,
-        action=lambda valid_track, valid_name: get_client(ctx).set_track_name(
+        validators=[require_track_and_name],
+        fn=lambda client, valid_track, valid_name: client.set_track_name(
             valid_track,
             valid_name,
         ),
@@ -164,11 +158,11 @@ def mute_get(
     ctx: typer.Context,
     track: TrackArgument,
 ) -> None:
-    _execute_track_get(
+    run_track_command(
         ctx,
-        command="track mute get",
+        command_name="track mute get",
         track=track,
-        action=lambda valid_track: get_client(ctx).track_mute_get(valid_track),
+        fn=lambda client, valid_track: client.track_mute_get(valid_track),
     )
 
 
@@ -178,12 +172,12 @@ def mute_set(
     track: TrackArgument,
     value: Annotated[bool, typer.Argument(help="Mute value: true|false")],
 ) -> None:
-    _execute_track_set(
+    run_track_value_command(
         ctx,
-        command="track mute set",
+        command_name="track mute set",
         track=track,
         value=value,
-        action=lambda valid_track, valid_value: get_client(ctx).track_mute_set(
+        fn=lambda client, valid_track, valid_value: client.track_mute_set(
             valid_track,
             valid_value,
         ),
@@ -195,11 +189,11 @@ def solo_get(
     ctx: typer.Context,
     track: TrackArgument,
 ) -> None:
-    _execute_track_get(
+    run_track_command(
         ctx,
-        command="track solo get",
+        command_name="track solo get",
         track=track,
-        action=lambda valid_track: get_client(ctx).track_solo_get(valid_track),
+        fn=lambda client, valid_track: client.track_solo_get(valid_track),
     )
 
 
@@ -209,12 +203,12 @@ def solo_set(
     track: TrackArgument,
     value: Annotated[bool, typer.Argument(help="Solo value: true|false")],
 ) -> None:
-    _execute_track_set(
+    run_track_value_command(
         ctx,
-        command="track solo set",
+        command_name="track solo set",
         track=track,
         value=value,
-        action=lambda valid_track, valid_value: get_client(ctx).track_solo_set(
+        fn=lambda client, valid_track, valid_value: client.track_solo_set(
             valid_track,
             valid_value,
         ),
@@ -226,11 +220,11 @@ def arm_get(
     ctx: typer.Context,
     track: TrackArgument,
 ) -> None:
-    _execute_track_get(
+    run_track_command(
         ctx,
-        command="track arm get",
+        command_name="track arm get",
         track=track,
-        action=lambda valid_track: get_client(ctx).track_arm_get(valid_track),
+        fn=lambda client, valid_track: client.track_arm_get(valid_track),
     )
 
 
@@ -240,12 +234,12 @@ def arm_set(
     track: TrackArgument,
     value: Annotated[bool, typer.Argument(help="Arm value: true|false")],
 ) -> None:
-    _execute_track_set(
+    run_track_value_command(
         ctx,
-        command="track arm set",
+        command_name="track arm set",
         track=track,
         value=value,
-        action=lambda valid_track, valid_value: get_client(ctx).track_arm_set(
+        fn=lambda client, valid_track, valid_value: client.track_arm_set(
             valid_track,
             valid_value,
         ),
@@ -257,11 +251,11 @@ def panning_get(
     ctx: typer.Context,
     track: TrackArgument,
 ) -> None:
-    _execute_track_get(
+    run_track_command(
         ctx,
-        command="track panning get",
+        command_name="track panning get",
         track=track,
-        action=lambda valid_track: get_client(ctx).track_panning_get(valid_track),
+        fn=lambda client, valid_track: client.track_panning_get(valid_track),
     )
 
 
@@ -271,13 +265,13 @@ def panning_set(
     track: TrackArgument,
     value: PanningValueArgument,
 ) -> None:
-    _execute_track_set(
+    run_track_value_command(
         ctx,
-        command="track panning set",
+        command_name="track panning set",
         track=track,
         value=value,
-        validator=_require_panning_value,
-        action=lambda valid_track, valid_value: get_client(ctx).track_panning_set(
+        validators=[require_track_and_pan],
+        fn=lambda client, valid_track, valid_value: client.track_panning_set(
             valid_track,
             valid_value,
         ),

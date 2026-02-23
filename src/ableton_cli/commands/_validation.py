@@ -2,13 +2,23 @@ from __future__ import annotations
 
 import json
 from pathlib import Path, PurePosixPath, PureWindowsPath
-from typing import Any
+from typing import Any, TypeVar
 
 from ..errors import AppError, ExitCode
 
 NOTE_KEYS = {"pitch", "start_time", "duration", "velocity", "mute"}
 TRACK_INDEX_HINT = "Use a valid track index from 'ableton-cli tracks list'."
 DEVICE_INDEX_HINT = "Use a valid device index from 'ableton-cli track info'."
+SCENE_INDEX_HINT = "Use a valid scene index from 'scenes list'."
+SCENE_SOURCE_HINT = "Use a valid source scene index from 'scenes list'."
+SCENE_DESTINATION_HINT = "Use a valid destination scene index from 'scenes list'."
+SCENE_NAME_HINT = "Pass a non-empty scene name."
+SCENE_INSERT_INDEX_HINT = "Use -1 for append or a non-negative insertion index."
+TRACK_NAME_HINT = "Pass a non-empty track name."
+VOLUME_VALUE_HINT = "Use a normalized volume value such as 0.75."
+PAN_VALUE_HINT = "Use a normalized panning value such as -0.25."
+
+TValue = TypeVar("TValue")
 
 
 def invalid_argument(message: str, hint: str) -> AppError:
@@ -32,6 +42,10 @@ def require_track_index(value: int, *, hint: str = TRACK_INDEX_HINT) -> int:
 
 def require_device_index(value: int, *, hint: str = DEVICE_INDEX_HINT) -> int:
     return require_non_negative("device", value, hint=hint)
+
+
+def require_scene_index(value: int, *, hint: str = SCENE_INDEX_HINT) -> int:
+    return require_non_negative("scene", value, hint=hint)
 
 
 def require_parameter_index(value: int, *, hint: str) -> int:
@@ -70,6 +84,70 @@ def require_float_in_range(
             hint=hint,
         )
     return value
+
+
+def require_track_and_value(track: int, value: TValue) -> tuple[int, TValue]:
+    return require_track_index(track), value
+
+
+def require_optional_track_index(track: int | None) -> int | None:
+    if track is None:
+        return None
+    return require_track_index(track)
+
+
+def require_track_and_device(track: int, device: int) -> tuple[int, int]:
+    return require_track_index(track), require_device_index(device)
+
+
+def require_scene_and_value(scene: int, value: TValue) -> tuple[int, TValue]:
+    return require_scene_index(scene), value
+
+
+def require_track_and_name(track: int, value: str) -> tuple[int, str]:
+    valid_track = require_track_index(track)
+    valid_name = require_non_empty_string("name", value, hint=TRACK_NAME_HINT)
+    return valid_track, valid_name
+
+
+def require_scene_and_name(scene: int, value: str) -> tuple[int, str]:
+    valid_scene = require_scene_index(scene)
+    valid_name = require_non_empty_string("name", value, hint=SCENE_NAME_HINT)
+    return valid_scene, valid_name
+
+
+def require_scene_move(from_scene: int, to_scene: int) -> tuple[int, int]:
+    valid_from_scene = require_non_negative("from", from_scene, hint=SCENE_SOURCE_HINT)
+    valid_to_scene = require_non_negative("to", to_scene, hint=SCENE_DESTINATION_HINT)
+    return valid_from_scene, valid_to_scene
+
+
+def require_scene_insert_index(index: int) -> int:
+    return require_minus_one_or_non_negative("index", index, hint=SCENE_INSERT_INDEX_HINT)
+
+
+def require_track_and_volume(track: int, value: float) -> tuple[int, float]:
+    valid_track = require_track_index(track)
+    valid_value = require_float_in_range(
+        "value",
+        value,
+        minimum=0.0,
+        maximum=1.0,
+        hint=VOLUME_VALUE_HINT,
+    )
+    return valid_track, valid_value
+
+
+def require_track_and_pan(track: int, value: float) -> tuple[int, float]:
+    valid_track = require_track_index(track)
+    valid_value = require_float_in_range(
+        "value",
+        value,
+        minimum=-1.0,
+        maximum=1.0,
+        hint=PAN_VALUE_HINT,
+    )
+    return valid_track, valid_value
 
 
 def require_non_empty_string(name: str, value: str, *, hint: str) -> str:

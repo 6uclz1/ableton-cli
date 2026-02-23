@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from typing import Annotated
 
 import typer
@@ -8,10 +8,10 @@ import typer
 from ..runtime import execute_command, get_client
 from ._validation import (
     invalid_argument,
-    require_device_index,
     require_non_empty_string,
+    require_optional_track_index,
     require_parameter_index,
-    require_track_index,
+    require_track_and_device,
 )
 
 _SUPPORTED_EFFECT_TYPES = (
@@ -31,6 +31,9 @@ effect_app = typer.Typer(help="Effect control commands", no_args_is_help=True)
 parameters_app = typer.Typer(help="Effect parameter listing commands", no_args_is_help=True)
 parameter_app = typer.Typer(help="Effect parameter write commands", no_args_is_help=True)
 
+TrackDeviceValidator = Callable[[int, int], tuple[int, int]]
+TrackDeviceAction = Callable[[object, int, int], dict[str, object]]
+
 
 def _normalize_effect_type(value: str) -> str:
     parsed = require_non_empty_string("effect_type", value, hint="Pass a non-empty effect type.")
@@ -43,19 +46,6 @@ def _normalize_effect_type(value: str) -> str:
     return normalized
 
 
-def _require_optional_track_index(track: int | None) -> int | None:
-    if track is None:
-        return None
-    return require_track_index(track)
-
-
-def _require_track_and_device_index(track: int, device: int) -> tuple[int, int]:
-    return (
-        require_track_index(track),
-        require_device_index(device),
-    )
-
-
 def _require_effect_parameter_index(parameter: int) -> int:
     return require_parameter_index(
         parameter,
@@ -63,21 +53,28 @@ def _require_effect_parameter_index(parameter: int) -> int:
     )
 
 
-def _execute_track_device_command(
+def run_track_device_command(
     ctx: typer.Context,
     *,
-    command: str,
+    command_name: str,
     track: int,
     device: int,
-    action: Callable[[int, int], dict[str, object]],
+    fn: TrackDeviceAction,
+    validators: Sequence[TrackDeviceValidator] | None = None,
 ) -> None:
+    active_validators = validators if validators is not None else (require_track_and_device,)
+
     def _run() -> dict[str, object]:
-        valid_track, valid_device = _require_track_and_device_index(track, device)
-        return action(valid_track, valid_device)
+        valid_track = track
+        valid_device = device
+        for validator in active_validators:
+            valid_track, valid_device = validator(valid_track, valid_device)
+        client = get_client(ctx)
+        return fn(client, valid_track, valid_device)
 
     execute_command(
         ctx,
-        command=command,
+        command=command_name,
         args={"track": track, "device": device},
         action=_run,
     )
@@ -99,9 +96,10 @@ def effect_find(
     ] = None,
 ) -> None:
     def _run() -> dict[str, object]:
-        valid_track = _require_optional_track_index(track)
+        valid_track = require_optional_track_index(track)
         valid_type = _normalize_effect_type(effect_type) if effect_type is not None else None
-        return get_client(ctx).find_effect_devices(track=valid_track, effect_type=valid_type)
+        client = get_client(ctx)
+        return client.find_effect_devices(track=valid_track, effect_type=valid_type)
 
     execute_command(
         ctx,
@@ -117,12 +115,12 @@ def effect_parameters_list(
     track: TrackArgument,
     device: DeviceArgument,
 ) -> None:
-    _execute_track_device_command(
+    run_track_device_command(
         ctx,
-        command="effect parameters list",
+        command_name="effect parameters list",
         track=track,
         device=device,
-        action=lambda valid_track, valid_device: get_client(ctx).list_effect_parameters(
+        fn=lambda client, valid_track, valid_device: client.list_effect_parameters(
             track=valid_track,
             device=valid_device,
         ),
@@ -138,9 +136,10 @@ def effect_parameter_set(
     value: Annotated[float, typer.Argument(help="Target parameter value")],
 ) -> None:
     def _run() -> dict[str, object]:
-        valid_track, valid_device = _require_track_and_device_index(track, device)
+        valid_track, valid_device = require_track_and_device(track, device)
         valid_parameter = _require_effect_parameter_index(parameter)
-        return get_client(ctx).set_effect_parameter_safe(
+        client = get_client(ctx)
+        return client.set_effect_parameter_safe(
             track=valid_track,
             device=valid_device,
             parameter=valid_parameter,
@@ -161,12 +160,12 @@ def effect_observe(
     track: TrackArgument,
     device: DeviceArgument,
 ) -> None:
-    _execute_track_device_command(
+    run_track_device_command(
         ctx,
-        command="effect observe",
+        command_name="effect observe",
         track=track,
         device=device,
-        action=lambda valid_track, valid_device: get_client(ctx).observe_effect_parameters(
+        fn=lambda client, valid_track, valid_device: client.observe_effect_parameters(
             track=valid_track,
             device=valid_device,
         ),
@@ -181,11 +180,15 @@ def _build_standard_effect_app(effect_type: str, cli_name: str) -> typer.Typer:
 
     @standard_app.command("keys")
     def keys(ctx: typer.Context) -> None:
+        def _run() -> dict[str, object]:
+            client = get_client(ctx)
+            return client.list_standard_effect_keys(effect_type)
+
         execute_command(
             ctx,
             command=f"effect {cli_name} keys",
             args={},
-            action=lambda: get_client(ctx).list_standard_effect_keys(effect_type),
+            action=_run,
         )
 
     @standard_app.command("set")
@@ -197,13 +200,14 @@ def _build_standard_effect_app(effect_type: str, cli_name: str) -> typer.Typer:
         value: Annotated[float, typer.Argument(help="Target parameter value")],
     ) -> None:
         def _run() -> dict[str, object]:
-            valid_track, valid_device = _require_track_and_device_index(track, device)
+            valid_track, valid_device = require_track_and_device(track, device)
             valid_key = require_non_empty_string(
                 "key",
                 key,
                 hint="Pass a non-empty stable effect key.",
             )
-            return get_client(ctx).set_standard_effect_parameter_safe(
+            client = get_client(ctx)
+            return client.set_standard_effect_parameter_safe(
                 effect_type=effect_type,
                 track=valid_track,
                 device=valid_device,
@@ -224,12 +228,12 @@ def _build_standard_effect_app(effect_type: str, cli_name: str) -> typer.Typer:
         track: TrackArgument,
         device: DeviceArgument,
     ) -> None:
-        _execute_track_device_command(
+        run_track_device_command(
             ctx,
-            command=f"effect {cli_name} observe",
+            command_name=f"effect {cli_name} observe",
             track=track,
             device=device,
-            action=lambda valid_track, valid_device: get_client(ctx).observe_standard_effect_state(
+            fn=lambda client, valid_track, valid_device: client.observe_standard_effect_state(
                 effect_type=effect_type,
                 track=valid_track,
                 device=valid_device,

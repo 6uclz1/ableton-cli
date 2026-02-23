@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from typing import Annotated
 
 import typer
@@ -8,10 +8,10 @@ import typer
 from ..runtime import execute_command, get_client
 from ._validation import (
     invalid_argument,
-    require_device_index,
     require_non_empty_string,
+    require_optional_track_index,
     require_parameter_index,
-    require_track_index,
+    require_track_and_device,
 )
 
 _SUPPORTED_SYNTH_TYPES = ("wavetable", "drift", "meld")
@@ -23,6 +23,9 @@ ParameterArgument = Annotated[int, typer.Argument(help="Parameter index (0-based
 synth_app = typer.Typer(help="Synth control commands", no_args_is_help=True)
 parameters_app = typer.Typer(help="Synth parameter listing commands", no_args_is_help=True)
 parameter_app = typer.Typer(help="Synth parameter write commands", no_args_is_help=True)
+
+TrackDeviceValidator = Callable[[int, int], tuple[int, int]]
+TrackDeviceAction = Callable[[object, int, int], dict[str, object]]
 
 
 def _normalize_synth_type(value: str) -> str:
@@ -36,19 +39,6 @@ def _normalize_synth_type(value: str) -> str:
     return normalized
 
 
-def _require_optional_track_index(track: int | None) -> int | None:
-    if track is None:
-        return None
-    return require_track_index(track)
-
-
-def _require_track_and_device_index(track: int, device: int) -> tuple[int, int]:
-    return (
-        require_track_index(track),
-        require_device_index(device),
-    )
-
-
 def _require_synth_parameter_index(parameter: int) -> int:
     return require_parameter_index(
         parameter,
@@ -56,21 +46,28 @@ def _require_synth_parameter_index(parameter: int) -> int:
     )
 
 
-def _execute_track_device_command(
+def run_track_device_command(
     ctx: typer.Context,
     *,
-    command: str,
+    command_name: str,
     track: int,
     device: int,
-    action: Callable[[int, int], dict[str, object]],
+    fn: TrackDeviceAction,
+    validators: Sequence[TrackDeviceValidator] | None = None,
 ) -> None:
+    active_validators = validators if validators is not None else (require_track_and_device,)
+
     def _run() -> dict[str, object]:
-        valid_track, valid_device = _require_track_and_device_index(track, device)
-        return action(valid_track, valid_device)
+        valid_track = track
+        valid_device = device
+        for validator in active_validators:
+            valid_track, valid_device = validator(valid_track, valid_device)
+        client = get_client(ctx)
+        return fn(client, valid_track, valid_device)
 
     execute_command(
         ctx,
-        command=command,
+        command=command_name,
         args={"track": track, "device": device},
         action=_run,
     )
@@ -89,9 +86,10 @@ def synth_find(
     ] = None,
 ) -> None:
     def _run() -> dict[str, object]:
-        valid_track = _require_optional_track_index(track)
+        valid_track = require_optional_track_index(track)
         valid_type = _normalize_synth_type(synth_type) if synth_type is not None else None
-        return get_client(ctx).find_synth_devices(track=valid_track, synth_type=valid_type)
+        client = get_client(ctx)
+        return client.find_synth_devices(track=valid_track, synth_type=valid_type)
 
     execute_command(
         ctx,
@@ -107,12 +105,12 @@ def synth_parameters_list(
     track: TrackArgument,
     device: DeviceArgument,
 ) -> None:
-    _execute_track_device_command(
+    run_track_device_command(
         ctx,
-        command="synth parameters list",
+        command_name="synth parameters list",
         track=track,
         device=device,
-        action=lambda valid_track, valid_device: get_client(ctx).list_synth_parameters(
+        fn=lambda client, valid_track, valid_device: client.list_synth_parameters(
             track=valid_track,
             device=valid_device,
         ),
@@ -128,9 +126,10 @@ def synth_parameter_set(
     value: Annotated[float, typer.Argument(help="Target parameter value")],
 ) -> None:
     def _run() -> dict[str, object]:
-        valid_track, valid_device = _require_track_and_device_index(track, device)
+        valid_track, valid_device = require_track_and_device(track, device)
         valid_parameter = _require_synth_parameter_index(parameter)
-        return get_client(ctx).set_synth_parameter_safe(
+        client = get_client(ctx)
+        return client.set_synth_parameter_safe(
             track=valid_track,
             device=valid_device,
             parameter=valid_parameter,
@@ -151,12 +150,12 @@ def synth_observe(
     track: TrackArgument,
     device: DeviceArgument,
 ) -> None:
-    _execute_track_device_command(
+    run_track_device_command(
         ctx,
-        command="synth observe",
+        command_name="synth observe",
         track=track,
         device=device,
-        action=lambda valid_track, valid_device: get_client(ctx).observe_synth_parameters(
+        fn=lambda client, valid_track, valid_device: client.observe_synth_parameters(
             track=valid_track,
             device=valid_device,
         ),
@@ -171,11 +170,15 @@ def _build_standard_synth_app(synth_type: str) -> typer.Typer:
 
     @standard_app.command("keys")
     def keys(ctx: typer.Context) -> None:
+        def _run() -> dict[str, object]:
+            client = get_client(ctx)
+            return client.list_standard_synth_keys(synth_type)
+
         execute_command(
             ctx,
             command=f"synth {synth_type} keys",
             args={},
-            action=lambda: get_client(ctx).list_standard_synth_keys(synth_type),
+            action=_run,
         )
 
     @standard_app.command("set")
@@ -187,13 +190,14 @@ def _build_standard_synth_app(synth_type: str) -> typer.Typer:
         value: Annotated[float, typer.Argument(help="Target parameter value")],
     ) -> None:
         def _run() -> dict[str, object]:
-            valid_track, valid_device = _require_track_and_device_index(track, device)
+            valid_track, valid_device = require_track_and_device(track, device)
             valid_key = require_non_empty_string(
                 "key",
                 key,
                 hint="Pass a non-empty stable synth key.",
             )
-            return get_client(ctx).set_standard_synth_parameter_safe(
+            client = get_client(ctx)
+            return client.set_standard_synth_parameter_safe(
                 synth_type=synth_type,
                 track=valid_track,
                 device=valid_device,
@@ -214,12 +218,12 @@ def _build_standard_synth_app(synth_type: str) -> typer.Typer:
         track: TrackArgument,
         device: DeviceArgument,
     ) -> None:
-        _execute_track_device_command(
+        run_track_device_command(
             ctx,
-            command=f"synth {synth_type} observe",
+            command_name=f"synth {synth_type} observe",
             track=track,
             device=device,
-            action=lambda valid_track, valid_device: get_client(ctx).observe_standard_synth_state(
+            fn=lambda client, valid_track, valid_device: client.observe_standard_synth_state(
                 synth_type=synth_type,
                 track=valid_track,
                 device=valid_device,

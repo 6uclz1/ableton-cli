@@ -39,6 +39,15 @@ class Response:
 REQUIRED_RESPONSE_KEYS = {"ok", "request_id", "protocol_version"}
 
 
+def _raise_protocol_error(error_code: str, message: str, hint: str) -> None:
+    raise AppError(
+        error_code=error_code,
+        message=message,
+        hint=hint,
+        exit_code=ExitCode.PROTOCOL_MISMATCH,
+    )
+
+
 def make_request(
     name: str,
     args: dict[str, Any],
@@ -60,26 +69,24 @@ def parse_response(
 ) -> Response:
     missing = REQUIRED_RESPONSE_KEYS.difference(payload)
     if missing:
-        raise AppError(
-            error_code="PROTOCOL_VERSION_MISMATCH",
+        _raise_protocol_error(
+            error_code="PROTOCOL_INVALID_RESPONSE",
             message=f"Invalid response payload, missing keys: {sorted(missing)}",
             hint="Ensure the Remote Script protocol implementation matches the CLI.",
-            exit_code=ExitCode.PROTOCOL_MISMATCH,
         )
 
     response_protocol = payload.get("protocol_version")
     if not isinstance(response_protocol, int):
-        raise AppError(
-            error_code="PROTOCOL_VERSION_MISMATCH",
+        _raise_protocol_error(
+            error_code="PROTOCOL_INVALID_RESPONSE",
             message="protocol_version must be an integer",
             hint=(
                 "Set matching protocol versions on both sides "
                 "(--protocol-version or 'ableton-cli config set protocol_version <n>')."
             ),
-            exit_code=ExitCode.PROTOCOL_MISMATCH,
         )
     if response_protocol != expected_protocol:
-        raise AppError(
+        _raise_protocol_error(
             error_code="PROTOCOL_VERSION_MISMATCH",
             message=(
                 f"Protocol version mismatch (cli={expected_protocol}, remote={response_protocol})"
@@ -88,51 +95,45 @@ def parse_response(
                 "Align protocol_version in CLI and Remote Script "
                 "(--protocol-version or 'ableton-cli config set protocol_version <n>')."
             ),
-            exit_code=ExitCode.PROTOCOL_MISMATCH,
         )
 
     request_id = payload.get("request_id")
     if request_id != expected_request_id:
-        raise AppError(
-            error_code="PROTOCOL_VERSION_MISMATCH",
+        _raise_protocol_error(
+            error_code="PROTOCOL_REQUEST_ID_MISMATCH",
             message=(f"request_id mismatch (expected={expected_request_id}, actual={request_id})"),
             hint="Check request routing in the Remote Script server.",
-            exit_code=ExitCode.PROTOCOL_MISMATCH,
         )
 
     ok = payload.get("ok")
     if not isinstance(ok, bool):
-        raise AppError(
-            error_code="PROTOCOL_VERSION_MISMATCH",
+        _raise_protocol_error(
+            error_code="PROTOCOL_INVALID_RESPONSE",
             message="'ok' must be a boolean in response payload",
             hint="Update Remote Script response format.",
-            exit_code=ExitCode.PROTOCOL_MISMATCH,
         )
 
     result = payload.get("result")
     if result is not None and not isinstance(result, dict):
-        raise AppError(
-            error_code="PROTOCOL_VERSION_MISMATCH",
+        _raise_protocol_error(
+            error_code="PROTOCOL_INVALID_RESPONSE",
             message="'result' must be an object when provided",
             hint="Return JSON object for result payloads.",
-            exit_code=ExitCode.PROTOCOL_MISMATCH,
         )
 
     error = payload.get("error")
     if error is not None and not isinstance(error, dict):
-        raise AppError(
-            error_code="PROTOCOL_VERSION_MISMATCH",
+        _raise_protocol_error(
+            error_code="PROTOCOL_INVALID_RESPONSE",
             message="'error' must be an object when provided",
             hint="Return structured error payload with code/message.",
-            exit_code=ExitCode.PROTOCOL_MISMATCH,
         )
     if isinstance(error, dict) and "details" in error and error["details"] is not None:
         if not isinstance(error["details"], dict):
-            raise AppError(
-                error_code="PROTOCOL_VERSION_MISMATCH",
+            _raise_protocol_error(
+                error_code="PROTOCOL_INVALID_RESPONSE",
                 message="'error.details' must be an object when provided",
                 hint="Return structured error details as a JSON object.",
-                exit_code=ExitCode.PROTOCOL_MISMATCH,
             )
 
     return Response(

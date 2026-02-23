@@ -54,6 +54,54 @@ def test_parse_response_protocol_mismatch_raises() -> None:
     assert exc_info.value.exit_code == ExitCode.PROTOCOL_MISMATCH
 
 
+def test_parse_response_missing_keys_raises_invalid_response() -> None:
+    request = make_request(name="ping", args={}, protocol_version=2)
+    payload = {
+        "ok": True,
+        "request_id": request.request_id,
+    }
+
+    with pytest.raises(AppError) as exc_info:
+        parse_response(payload, expected_request_id=request.request_id, expected_protocol=2)
+
+    assert exc_info.value.error_code == "PROTOCOL_INVALID_RESPONSE"
+    assert exc_info.value.exit_code == ExitCode.PROTOCOL_MISMATCH
+
+
+def test_parse_response_request_id_mismatch_raises() -> None:
+    request = make_request(name="ping", args={}, protocol_version=2)
+    payload = {
+        "ok": True,
+        "request_id": "other-request-id",
+        "protocol_version": 2,
+        "result": {"pong": True},
+        "error": None,
+    }
+
+    with pytest.raises(AppError) as exc_info:
+        parse_response(payload, expected_request_id=request.request_id, expected_protocol=2)
+
+    assert exc_info.value.error_code == "PROTOCOL_REQUEST_ID_MISMATCH"
+    assert exc_info.value.exit_code == ExitCode.PROTOCOL_MISMATCH
+
+
+def test_parse_response_rejects_non_integer_protocol_version() -> None:
+    request = make_request(name="ping", args={}, protocol_version=2)
+    payload = {
+        "ok": True,
+        "request_id": request.request_id,
+        "protocol_version": "2",
+        "result": {"pong": True},
+        "error": None,
+    }
+
+    with pytest.raises(AppError) as exc_info:
+        parse_response(payload, expected_request_id=request.request_id, expected_protocol=2)
+
+    assert exc_info.value.error_code == "PROTOCOL_INVALID_RESPONSE"
+    assert exc_info.value.exit_code == ExitCode.PROTOCOL_MISMATCH
+
+
 def test_parse_response_rejects_non_object_error_details() -> None:
     request = make_request(name="ping", args={}, protocol_version=2)
     payload = {
@@ -67,7 +115,7 @@ def test_parse_response_rejects_non_object_error_details() -> None:
     with pytest.raises(AppError) as exc_info:
         parse_response(payload, expected_request_id=request.request_id, expected_protocol=2)
 
-    assert exc_info.value.error_code == "PROTOCOL_VERSION_MISMATCH"
+    assert exc_info.value.error_code == "PROTOCOL_INVALID_RESPONSE"
 
 
 def test_parse_response_accepts_error_details_object() -> None:

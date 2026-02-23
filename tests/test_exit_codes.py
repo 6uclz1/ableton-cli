@@ -25,6 +25,8 @@ def test_remote_error_to_exit_code_mapping() -> None:
     )
     assert exit_code_from_error_code("REMOTE_SCRIPT_INCOMPATIBLE") == ExitCode.PROTOCOL_MISMATCH
     assert exit_code_from_error_code("PROTOCOL_VERSION_MISMATCH") == ExitCode.PROTOCOL_MISMATCH
+    assert exit_code_from_error_code("PROTOCOL_INVALID_RESPONSE") == ExitCode.PROTOCOL_MISMATCH
+    assert exit_code_from_error_code("PROTOCOL_REQUEST_ID_MISMATCH") == ExitCode.PROTOCOL_MISMATCH
     assert exit_code_from_error_code("TIMEOUT") == ExitCode.TIMEOUT
     assert exit_code_from_error_code("BATCH_STEP_FAILED") == ExitCode.EXECUTION_FAILED
     assert exit_code_from_error_code("REMOTE_BUSY") == ExitCode.EXECUTION_FAILED

@@ -571,6 +571,166 @@ class LiveBackendScenesArrangementMixin:
             "deleted_indexes": deleted_indexes,
         }
 
+    @staticmethod
+    def _scene_from_session_spec(scene_spec: dict[str, Any]) -> tuple[int, float]:
+        scene_index = int(scene_spec["scene"])
+        duration_beats = float(scene_spec["duration_beats"])
+        if duration_beats <= 0:
+            raise _invalid_argument(
+                message=f"scene duration must be > 0, got {duration_beats}",
+                hint="Use positive duration values in --scenes.",
+            )
+        return scene_index, duration_beats
+
+    @staticmethod
+    def _scene_slot_clip(track_obj: Any, scene_index: int) -> Any | None:
+        clip_slots = list(getattr(track_obj, "clip_slots", []))
+        if scene_index < 0 or scene_index >= len(clip_slots):
+            return None
+        slot = clip_slots[scene_index]
+        if not bool(getattr(slot, "has_clip", False)):
+            return None
+        return getattr(slot, "clip", None)
+
+    def _arrangement_from_session_source_midi_length(
+        self,
+        *,
+        source_clip: Any,
+        source_notes: list[dict[str, Any]],
+        duration_beats: float,
+    ) -> float:
+        source_length = self._safe_float(getattr(source_clip, "length", None))
+        if source_length is not None and source_length > 0:
+            return source_length
+        note_end = max(
+            (float(note["start_time"]) + float(note["duration"]) for note in source_notes),
+            default=duration_beats,
+        )
+        return note_end if note_end > 0 else duration_beats
+
+    @staticmethod
+    def _arrangement_from_session_repeated_notes(
+        *,
+        source_notes: list[dict[str, Any]],
+        source_length: float,
+        duration_beats: float,
+    ) -> list[dict[str, Any]]:
+        repeated_notes: list[dict[str, Any]] = []
+        loop_count = max(int(math.ceil(duration_beats / source_length)), 1)
+        for loop_index in range(loop_count):
+            loop_offset = source_length * loop_index
+            for note in source_notes:
+                note_start = float(note["start_time"]) + loop_offset
+                if note_start >= duration_beats:
+                    continue
+                note_duration = float(note["duration"])
+                if note_start + note_duration > duration_beats:
+                    note_duration = duration_beats - note_start
+                if note_duration <= 0:
+                    continue
+                repeated_notes.append(
+                    {
+                        "pitch": int(note["pitch"]),
+                        "start_time": note_start,
+                        "duration": note_duration,
+                        "velocity": int(note["velocity"]),
+                        "mute": bool(note["mute"]),
+                    }
+                )
+        return repeated_notes
+
+    def _arrangement_from_session_add_midi_clip(
+        self,
+        *,
+        track_index: int,
+        arrangement_cursor: float,
+        duration_beats: float,
+        source_clip: Any,
+    ) -> tuple[int, int]:
+        before_count = len(self._arrangement_clips(track_index))
+        self.arrangement_clip_create(
+            track=track_index,
+            start_time=arrangement_cursor,
+            length=duration_beats,
+            audio_path=None,
+            notes=None,
+        )
+        target_index = before_count
+        source_notes = list(self._clip_notes_extended(source_clip))
+        source_length = self._arrangement_from_session_source_midi_length(
+            source_clip=source_clip,
+            source_notes=source_notes,
+            duration_beats=duration_beats,
+        )
+        repeated_notes = self._arrangement_from_session_repeated_notes(
+            source_notes=source_notes,
+            source_length=source_length,
+            duration_beats=duration_beats,
+        )
+        if not repeated_notes:
+            return 1, 0
+        added = self.arrangement_clip_notes_add(track_index, target_index, repeated_notes)
+        return 1, int(added["note_count"])
+
+    def _arrangement_from_session_audio_source(self, source_clip: Any) -> tuple[str, float]:
+        file_path = str(getattr(source_clip, "file_path", "")).strip()
+        if not file_path:
+            raise _invalid_argument(
+                message="source session audio clip must expose file_path",
+                hint="Use audio clips with a resolvable file path.",
+            )
+        source_length = self._safe_float(getattr(source_clip, "length", None))
+        if source_length is None or source_length <= 0:
+            raise _invalid_argument(
+                message="source session audio clip must expose positive length",
+                hint="Use audio clips with positive clip length.",
+            )
+        return file_path, source_length
+
+    def _arrangement_from_session_add_audio_clips(
+        self,
+        *,
+        track_index: int,
+        arrangement_cursor: float,
+        duration_beats: float,
+        source_clip: Any,
+    ) -> int:
+        file_path, source_length = self._arrangement_from_session_audio_source(source_clip)
+        placed = 0.0
+        audio_created = 0
+        while placed < duration_beats:
+            self.arrangement_clip_create(
+                track=track_index,
+                start_time=arrangement_cursor + placed,
+                length=source_length,
+                audio_path=file_path,
+                notes=None,
+            )
+            audio_created += 1
+            placed += source_length
+        return audio_created
+
+    @staticmethod
+    def _arrangement_from_session_scene_payload(
+        *,
+        scene_index: int,
+        duration_beats: float,
+        arrangement_cursor: float,
+        midi_created: int,
+        audio_created: int,
+        notes_added: int,
+    ) -> dict[str, Any]:
+        created_count = midi_created + audio_created
+        return {
+            "scene": scene_index,
+            "duration_beats": duration_beats,
+            "start_beat": arrangement_cursor,
+            "midi_clips_created": midi_created,
+            "audio_clips_created": audio_created,
+            "notes_added": notes_added,
+            "created_count": created_count,
+        }
+
     def arrangement_from_session(self, scenes: list[dict[str, Any]]) -> dict[str, Any]:
         song = self._song()
         arrangement_cursor = 0.0
@@ -578,13 +738,7 @@ class LiveBackendScenesArrangementMixin:
         total_created = 0
         total_notes_added = 0
         for scene_spec in scenes:
-            scene_index = int(scene_spec["scene"])
-            duration_beats = float(scene_spec["duration_beats"])
-            if duration_beats <= 0:
-                raise _invalid_argument(
-                    message=f"scene duration must be > 0, got {duration_beats}",
-                    hint="Use positive duration values in --scenes.",
-                )
+            scene_index, duration_beats = self._scene_from_session_spec(scene_spec)
             self._scene_at(scene_index)
 
             midi_created = 0
@@ -592,106 +746,40 @@ class LiveBackendScenesArrangementMixin:
             notes_added = 0
 
             for track_index, track_obj in enumerate(list(getattr(song, "tracks", []))):
-                clip_slots = list(getattr(track_obj, "clip_slots", []))
-                if scene_index < 0 or scene_index >= len(clip_slots):
-                    continue
-                slot = clip_slots[scene_index]
-                if not bool(getattr(slot, "has_clip", False)):
-                    continue
-                source_clip = getattr(slot, "clip", None)
+                source_clip = self._scene_slot_clip(track_obj, scene_index)
                 if source_clip is None:
                     continue
 
                 if bool(getattr(source_clip, "is_midi_clip", False)):
-                    before_count = len(self._arrangement_clips(track_index))
-                    self.arrangement_clip_create(
-                        track=track_index,
-                        start_time=arrangement_cursor,
-                        length=duration_beats,
-                        audio_path=None,
-                        notes=None,
+                    created, added_count = self._arrangement_from_session_add_midi_clip(
+                        track_index=track_index,
+                        arrangement_cursor=arrangement_cursor,
+                        duration_beats=duration_beats,
+                        source_clip=source_clip,
                     )
-                    target_index = before_count
-                    source_notes = list(self._clip_notes_extended(source_clip))
-                    source_length = self._safe_float(getattr(source_clip, "length", None))
-                    if source_length is None or source_length <= 0:
-                        note_end = max(
-                            (
-                                float(note["start_time"]) + float(note["duration"])
-                                for note in source_notes
-                            ),
-                            default=duration_beats,
-                        )
-                        source_length = note_end if note_end > 0 else duration_beats
-                    repeated_notes: list[dict[str, Any]] = []
-                    loop_count = max(int(math.ceil(duration_beats / source_length)), 1)
-                    for loop_index in range(loop_count):
-                        loop_offset = source_length * loop_index
-                        for note in source_notes:
-                            note_start = float(note["start_time"]) + loop_offset
-                            if note_start >= duration_beats:
-                                continue
-                            note_duration = float(note["duration"])
-                            if note_start + note_duration > duration_beats:
-                                note_duration = duration_beats - note_start
-                            if note_duration <= 0:
-                                continue
-                            repeated_notes.append(
-                                {
-                                    "pitch": int(note["pitch"]),
-                                    "start_time": note_start,
-                                    "duration": note_duration,
-                                    "velocity": int(note["velocity"]),
-                                    "mute": bool(note["mute"]),
-                                }
-                            )
-                    if repeated_notes:
-                        added = self.arrangement_clip_notes_add(
-                            track_index, target_index, repeated_notes
-                        )
-                        notes_added += int(added["note_count"])
-                    midi_created += 1
+                    midi_created += created
+                    notes_added += added_count
                     continue
 
                 if bool(getattr(source_clip, "is_audio_clip", False)):
-                    file_path = str(getattr(source_clip, "file_path", "")).strip()
-                    if not file_path:
-                        raise _invalid_argument(
-                            message="source session audio clip must expose file_path",
-                            hint="Use audio clips with a resolvable file path.",
-                        )
-                    source_length = self._safe_float(getattr(source_clip, "length", None))
-                    if source_length is None or source_length <= 0:
-                        raise _invalid_argument(
-                            message="source session audio clip must expose positive length",
-                            hint="Use audio clips with positive clip length.",
-                        )
-                    placed = 0.0
-                    while placed < duration_beats:
-                        self.arrangement_clip_create(
-                            track=track_index,
-                            start_time=arrangement_cursor + placed,
-                            length=source_length,
-                            audio_path=file_path,
-                            notes=None,
-                        )
-                        audio_created += 1
-                        placed += source_length
+                    audio_created += self._arrangement_from_session_add_audio_clips(
+                        track_index=track_index,
+                        arrangement_cursor=arrangement_cursor,
+                        duration_beats=duration_beats,
+                        source_clip=source_clip,
+                    )
                     continue
 
-            created_count = midi_created + audio_created
-            scene_payloads.append(
-                {
-                    "scene": scene_index,
-                    "duration_beats": duration_beats,
-                    "start_beat": arrangement_cursor,
-                    "midi_clips_created": midi_created,
-                    "audio_clips_created": audio_created,
-                    "notes_added": notes_added,
-                    "created_count": created_count,
-                }
+            scene_payload = self._arrangement_from_session_scene_payload(
+                scene_index=scene_index,
+                duration_beats=duration_beats,
+                arrangement_cursor=arrangement_cursor,
+                midi_created=midi_created,
+                audio_created=audio_created,
+                notes_added=notes_added,
             )
-            total_created += created_count
+            scene_payloads.append(scene_payload)
+            total_created += int(scene_payload["created_count"])
             total_notes_added += notes_added
             arrangement_cursor += duration_beats
 

@@ -7,7 +7,6 @@ import typer
 
 from ..runtime import execute_command, get_client
 from ._client_command_runner import CommandSpec
-from ._client_command_runner import run_client_command as run_client_command_shared
 from ._client_command_runner import run_client_command_spec as run_client_command_spec_shared
 from ._validation import (
     invalid_argument,
@@ -54,23 +53,6 @@ BROWSER_LOAD_DRUM_KIT_SPEC = BrowserCommandSpec(
     command_name="browser load-drum-kit",
     client_method="load_drum_kit",
 )
-
-
-def run_client_command(
-    ctx: typer.Context,
-    *,
-    command_name: str,
-    args: dict[str, object],
-    fn: Callable[[object], dict[str, object]],
-) -> None:
-    run_client_command_shared(
-        ctx,
-        command_name=command_name,
-        args=args,
-        fn=fn,
-        get_client_fn=get_client,
-        execute_command_fn=execute_command,
-    )
 
 
 def run_client_command_spec(

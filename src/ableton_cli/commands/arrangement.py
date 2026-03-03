@@ -10,30 +10,12 @@ from ._arrangement_notes_commands import register_commands as register_notes_com
 from ._arrangement_record_commands import register_commands as register_record_commands
 from ._arrangement_session_commands import register_commands as register_session_commands
 from ._arrangement_specs import ArrangementCommandSpec
-from ._client_command_runner import run_client_command as run_client_command_shared
 from ._client_command_runner import run_client_command_spec as run_client_command_spec_shared
 
 arrangement_app = typer.Typer(help="Arrangement commands", no_args_is_help=True)
 record_app = typer.Typer(help="Arrangement recording commands", no_args_is_help=True)
 clip_app = typer.Typer(help="Arrangement clip commands", no_args_is_help=True)
 notes_app = typer.Typer(help="Arrangement clip note commands", no_args_is_help=True)
-
-
-def run_client_command(
-    ctx: typer.Context,
-    *,
-    command_name: str,
-    args: dict[str, object],
-    fn: Callable[[object], dict[str, object]],
-) -> None:
-    run_client_command_shared(
-        ctx,
-        command_name=command_name,
-        args=args,
-        fn=fn,
-        get_client_fn=get_client,
-        execute_command_fn=execute_command,
-    )
 
 
 def run_client_command_spec(

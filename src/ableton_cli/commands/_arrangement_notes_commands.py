@@ -45,10 +45,51 @@ NOTES_IMPORT_BROWSER_SPEC = ArrangementCommandSpec(
 )
 
 
-def register_commands(
+RunClientCommandSpec = Callable[..., None]
+
+
+def _note_filter_method_kwargs(
+    *,
+    track: int,
+    index: int,
+    start_time: float | None,
+    end_time: float | None,
+    pitch: int | None,
+) -> dict[str, object]:
+    valid_track = require_track_index(track)
+    valid_index = require_arrangement_clip_index(index)
+    filters = validate_clip_note_filters(
+        start_time=start_time,
+        end_time=end_time,
+        pitch=pitch,
+    )
+    return {
+        "track": valid_track,
+        "index": valid_index,
+        "start_time": filters["start_time"],
+        "end_time": filters["end_time"],
+        "pitch": filters["pitch"],
+    }
+
+
+def _validate_import_mode(mode: str) -> str:
+    valid_mode = require_non_empty_string(
+        "mode",
+        mode,
+        hint="Use --mode replace or append.",
+    ).lower()
+    if valid_mode not in {"replace", "append"}:
+        raise invalid_argument(
+            message=f"mode must be one of replace/append, got {mode}",
+            hint="Use --mode replace or append.",
+        )
+    return valid_mode
+
+
+def _register_add_command(
     notes_app: typer.Typer,
     *,
-    run_client_command_spec: Callable[..., None],
+    run_client_command_spec: RunClientCommandSpec,
 ) -> None:
     @notes_app.command("add")
     def arrangement_clip_notes_add(
@@ -65,13 +106,10 @@ def register_commands(
         ] = None,
     ) -> None:
         def _method_kwargs() -> dict[str, object]:
-            valid_track = require_track_index(track)
-            valid_index = require_arrangement_clip_index(index)
-            notes = parse_notes_input(notes_json=notes_json, notes_file=notes_file)
             return {
-                "track": valid_track,
-                "index": valid_index,
-                "notes": notes,
+                "track": require_track_index(track),
+                "index": require_arrangement_clip_index(index),
+                "notes": parse_notes_input(notes_json=notes_json, notes_file=notes_file),
             }
 
         run_client_command_spec(
@@ -81,6 +119,12 @@ def register_commands(
             method_kwargs=_method_kwargs,
         )
 
+
+def _register_get_command(
+    notes_app: typer.Typer,
+    *,
+    run_client_command_spec: RunClientCommandSpec,
+) -> None:
     @notes_app.command("get")
     def arrangement_clip_notes_get(
         ctx: typer.Context,
@@ -100,20 +144,13 @@ def register_commands(
         ] = None,
     ) -> None:
         def _method_kwargs() -> dict[str, object]:
-            valid_track = require_track_index(track)
-            valid_index = require_arrangement_clip_index(index)
-            filters = validate_clip_note_filters(
+            return _note_filter_method_kwargs(
+                track=track,
+                index=index,
                 start_time=start_time,
                 end_time=end_time,
                 pitch=pitch,
             )
-            return {
-                "track": valid_track,
-                "index": valid_index,
-                "start_time": filters["start_time"],
-                "end_time": filters["end_time"],
-                "pitch": filters["pitch"],
-            }
 
         run_client_command_spec(
             ctx,
@@ -128,6 +165,12 @@ def register_commands(
             method_kwargs=_method_kwargs,
         )
 
+
+def _register_clear_command(
+    notes_app: typer.Typer,
+    *,
+    run_client_command_spec: RunClientCommandSpec,
+) -> None:
     @notes_app.command("clear")
     def arrangement_clip_notes_clear(
         ctx: typer.Context,
@@ -147,20 +190,13 @@ def register_commands(
         ] = None,
     ) -> None:
         def _method_kwargs() -> dict[str, object]:
-            valid_track = require_track_index(track)
-            valid_index = require_arrangement_clip_index(index)
-            filters = validate_clip_note_filters(
+            return _note_filter_method_kwargs(
+                track=track,
+                index=index,
                 start_time=start_time,
                 end_time=end_time,
                 pitch=pitch,
             )
-            return {
-                "track": valid_track,
-                "index": valid_index,
-                "start_time": filters["start_time"],
-                "end_time": filters["end_time"],
-                "pitch": filters["pitch"],
-            }
 
         run_client_command_spec(
             ctx,
@@ -175,6 +211,12 @@ def register_commands(
             method_kwargs=_method_kwargs,
         )
 
+
+def _register_replace_command(
+    notes_app: typer.Typer,
+    *,
+    run_client_command_spec: RunClientCommandSpec,
+) -> None:
     @notes_app.command("replace")
     def arrangement_clip_notes_replace(
         ctx: typer.Context,
@@ -202,22 +244,15 @@ def register_commands(
         ] = None,
     ) -> None:
         def _method_kwargs() -> dict[str, object]:
-            valid_track = require_track_index(track)
-            valid_index = require_arrangement_clip_index(index)
-            notes = parse_notes_input(notes_json=notes_json, notes_file=notes_file)
-            filters = validate_clip_note_filters(
+            payload = _note_filter_method_kwargs(
+                track=track,
+                index=index,
                 start_time=start_time,
                 end_time=end_time,
                 pitch=pitch,
             )
-            return {
-                "track": valid_track,
-                "index": valid_index,
-                "notes": notes,
-                "start_time": filters["start_time"],
-                "end_time": filters["end_time"],
-                "pitch": filters["pitch"],
-            }
+            payload["notes"] = parse_notes_input(notes_json=notes_json, notes_file=notes_file)
+            return payload
 
         run_client_command_spec(
             ctx,
@@ -232,6 +267,12 @@ def register_commands(
             method_kwargs=_method_kwargs,
         )
 
+
+def _register_import_browser_command(
+    notes_app: typer.Typer,
+    *,
+    run_client_command_spec: RunClientCommandSpec,
+) -> None:
     @notes_app.command("import-browser")
     def arrangement_clip_notes_import_browser(
         ctx: typer.Context,
@@ -257,28 +298,16 @@ def register_commands(
         ] = False,
     ) -> None:
         def _method_kwargs() -> dict[str, object]:
-            valid_track = require_track_index(track)
-            valid_index = require_arrangement_clip_index(index)
-            valid_mode = require_non_empty_string(
-                "mode",
-                mode,
-                hint="Use --mode replace or append.",
-            ).lower()
-            if valid_mode not in {"replace", "append"}:
-                raise invalid_argument(
-                    message=f"mode must be one of replace/append, got {mode}",
-                    hint="Use --mode replace or append.",
-                )
             target_uri, target_path = resolve_uri_or_path_target(
                 target=target,
                 hint="Use a browser path or URI for a .alc MIDI clip item.",
             )
             return {
-                "track": valid_track,
-                "index": valid_index,
+                "track": require_track_index(track),
+                "index": require_arrangement_clip_index(index),
                 "target_uri": target_uri,
                 "target_path": target_path,
-                "mode": valid_mode,
+                "mode": _validate_import_mode(mode),
                 "import_length": import_length,
                 "import_groove": import_groove,
             }
@@ -296,3 +325,15 @@ def register_commands(
             },
             method_kwargs=_method_kwargs,
         )
+
+
+def register_commands(
+    notes_app: typer.Typer,
+    *,
+    run_client_command_spec: RunClientCommandSpec,
+) -> None:
+    _register_add_command(notes_app, run_client_command_spec=run_client_command_spec)
+    _register_get_command(notes_app, run_client_command_spec=run_client_command_spec)
+    _register_clear_command(notes_app, run_client_command_spec=run_client_command_spec)
+    _register_replace_command(notes_app, run_client_command_spec=run_client_command_spec)
+    _register_import_browser_command(notes_app, run_client_command_spec=run_client_command_spec)

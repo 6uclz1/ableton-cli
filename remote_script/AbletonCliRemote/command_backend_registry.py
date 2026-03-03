@@ -4,7 +4,7 @@ import hashlib
 from collections.abc import Callable
 from typing import Any
 
-from .command_backend_contract import CommandBackend, CommandError
+from .command_backend_contract import CommandBackend, CommandError, RemoteErrorCode
 from .command_backend_handlers_batch import make_execute_batch_handler
 from .command_backend_handlers_browser import BROWSER_HANDLERS
 from .command_backend_handlers_devices import DEVICE_HANDLERS
@@ -48,7 +48,7 @@ def dispatch_command(backend: CommandBackend, name: str, args: dict[str, Any]) -
     handler = _HANDLERS.get(name)
     if handler is None:
         raise CommandError(
-            code="INVALID_ARGUMENT",
+            code=RemoteErrorCode.INVALID_ARGUMENT,
             message=f"Unknown command: {name}",
             hint="Use a supported command name.",
         )

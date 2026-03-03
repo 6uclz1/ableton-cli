@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from enum import Enum
 from typing import Any, Protocol
 
 PROTOCOL_VERSION = 2
@@ -18,9 +19,29 @@ NOTE_VELOCITY_MAX = 127
 NOTE_KEYS = frozenset({"pitch", "start_time", "duration", "velocity", "mute"})
 
 
+class RemoteErrorCode(str, Enum):
+    INVALID_ARGUMENT = "INVALID_ARGUMENT"
+    PROTOCOL_VERSION_MISMATCH = "PROTOCOL_VERSION_MISMATCH"
+    TIMEOUT = "TIMEOUT"
+    REMOTE_BUSY = "REMOTE_BUSY"
+    BATCH_STEP_FAILED = "BATCH_STEP_FAILED"
+    INTERNAL_ERROR = "INTERNAL_ERROR"
+
+
+class RemoteErrorReason(str, Enum):
+    NOT_SUPPORTED_BY_LIVE_API = "not_supported_by_live_api"
+
+
+def details_with_reason(reason: RemoteErrorReason, /, **details: Any) -> dict[str, Any]:
+    return {
+        "reason": reason.value,
+        **details,
+    }
+
+
 @dataclass(slots=True)
 class CommandError(Exception):
-    code: str
+    code: RemoteErrorCode | str
     message: str
     hint: str | None = None
     details: dict[str, Any] | None = None

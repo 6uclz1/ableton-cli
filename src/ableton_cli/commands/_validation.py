@@ -4,7 +4,7 @@ import json
 from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import Any, TypeVar
 
-from ..errors import AppError, ExitCode
+from ..errors import AppError, ErrorCode, ExitCode
 
 NOTE_KEYS = {"pitch", "start_time", "duration", "velocity", "mute"}
 TRACK_INDEX_HINT = "Use a valid track index from 'ableton-cli tracks list'."
@@ -23,7 +23,7 @@ TValue = TypeVar("TValue")
 
 def invalid_argument(message: str, hint: str) -> AppError:
     return AppError(
-        error_code="INVALID_ARGUMENT",
+        error_code=ErrorCode.INVALID_ARGUMENT,
         message=message,
         hint=hint,
         exit_code=ExitCode.INVALID_ARGUMENT,

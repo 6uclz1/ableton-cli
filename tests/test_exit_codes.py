@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from ableton_cli.errors import ExitCode, exit_code_from_error_code
+from ableton_cli.errors import ErrorCode, ErrorDetailReason, ExitCode, exit_code_from_error_code
 
 
 def test_exit_code_values_are_fixed() -> None:
@@ -36,3 +36,28 @@ def test_remote_error_to_exit_code_mapping() -> None:
     assert exit_code_from_error_code("BATCH_RETRY_EXHAUSTED") == ExitCode.EXECUTION_FAILED
     assert exit_code_from_error_code("INTERNAL_ERROR") == ExitCode.INTERNAL_ERROR
     assert exit_code_from_error_code("UNKNOWN") == ExitCode.EXECUTION_FAILED
+
+
+def test_error_code_enum_values_are_stable() -> None:
+    assert ErrorCode.INVALID_ARGUMENT.value == "INVALID_ARGUMENT"
+    assert ErrorCode.CONFIG_INVALID.value == "CONFIG_INVALID"
+    assert ErrorCode.ABLETON_NOT_REACHABLE.value == "ABLETON_NOT_REACHABLE"
+    assert ErrorCode.REMOTE_SCRIPT_NOT_INSTALLED.value == "REMOTE_SCRIPT_NOT_INSTALLED"
+    assert ErrorCode.REMOTE_SCRIPT_INCOMPATIBLE.value == "REMOTE_SCRIPT_INCOMPATIBLE"
+    assert ErrorCode.PROTOCOL_VERSION_MISMATCH.value == "PROTOCOL_VERSION_MISMATCH"
+    assert ErrorCode.PROTOCOL_INVALID_RESPONSE.value == "PROTOCOL_INVALID_RESPONSE"
+    assert ErrorCode.PROTOCOL_REQUEST_ID_MISMATCH.value == "PROTOCOL_REQUEST_ID_MISMATCH"
+    assert ErrorCode.TIMEOUT.value == "TIMEOUT"
+    assert ErrorCode.BATCH_STEP_FAILED.value == "BATCH_STEP_FAILED"
+    assert ErrorCode.REMOTE_BUSY.value == "REMOTE_BUSY"
+    assert ErrorCode.READ_ONLY_VIOLATION.value == "READ_ONLY_VIOLATION"
+    assert ErrorCode.BATCH_PREFLIGHT_FAILED.value == "BATCH_PREFLIGHT_FAILED"
+    assert ErrorCode.BATCH_ASSERT_FAILED.value == "BATCH_ASSERT_FAILED"
+    assert ErrorCode.BATCH_RETRY_EXHAUSTED.value == "BATCH_RETRY_EXHAUSTED"
+    assert ErrorCode.INSTALL_TARGET_NOT_FOUND.value == "INSTALL_TARGET_NOT_FOUND"
+    assert ErrorCode.INTERNAL_ERROR.value == "INTERNAL_ERROR"
+
+
+def test_error_detail_reason_values_are_stable() -> None:
+    assert ErrorDetailReason.NOT_SUPPORTED_BY_LIVE_API.value == "not_supported_by_live_api"
+    assert ErrorDetailReason.CONTRACT_VALIDATION_FAILED.value == "contract_validation_failed"

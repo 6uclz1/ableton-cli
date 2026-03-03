@@ -1,34 +1,87 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from pathlib import Path
 
 import typer
 
 from ..runtime import execute_command, get_client
 from ..session_diff import compute_session_diff
+from ._client_command_runner import CommandSpec
+from ._client_command_runner import run_client_command as run_client_command_shared
+from ._client_command_runner import run_client_command_spec as run_client_command_spec_shared
 from ._validation import invalid_argument
 
 session_app = typer.Typer(help="Session information commands", no_args_is_help=True)
 
 
+SessionCommandSpec = CommandSpec
+
+
+SESSION_INFO_SPEC = SessionCommandSpec(
+    command_name="session info",
+    client_method="get_session_info",
+)
+SESSION_SNAPSHOT_SPEC = SessionCommandSpec(
+    command_name="session snapshot",
+    client_method="session_snapshot",
+)
+SESSION_STOP_ALL_CLIPS_SPEC = SessionCommandSpec(
+    command_name="session stop-all-clips",
+    client_method="stop_all_clips",
+)
+
+
+def run_client_command(
+    ctx: typer.Context,
+    *,
+    command_name: str,
+    args: dict[str, object],
+    fn: Callable[[object], dict[str, object]],
+) -> None:
+    run_client_command_shared(
+        ctx,
+        command_name=command_name,
+        args=args,
+        fn=fn,
+        get_client_fn=get_client,
+        execute_command_fn=execute_command,
+    )
+
+
+def run_client_command_spec(
+    ctx: typer.Context,
+    *,
+    spec: SessionCommandSpec,
+    args: dict[str, object],
+    method_kwargs: dict[str, object] | Callable[[], dict[str, object]] | None = None,
+) -> None:
+    run_client_command_spec_shared(
+        ctx,
+        spec=spec,
+        args=args,
+        method_kwargs=method_kwargs,
+        get_client_fn=get_client,
+        execute_command_fn=execute_command,
+    )
+
+
 @session_app.command("info")
 def session_info(ctx: typer.Context) -> None:
-    execute_command(
+    run_client_command_spec(
         ctx,
-        command="session info",
+        spec=SESSION_INFO_SPEC,
         args={},
-        action=lambda: get_client(ctx).get_session_info(),
     )
 
 
 @session_app.command("snapshot")
 def session_snapshot(ctx: typer.Context) -> None:
-    execute_command(
+    run_client_command_spec(
         ctx,
-        command="session snapshot",
+        spec=SESSION_SNAPSHOT_SPEC,
         args={},
-        action=lambda: get_client(ctx).session_snapshot(),
     )
 
 
@@ -56,37 +109,37 @@ def _load_snapshot(path: str, *, source_name: str) -> dict[str, object]:
     return payload
 
 
+def _session_diff_result(*, from_path: str, to_path: str) -> dict[str, object]:
+    from_snapshot = _load_snapshot(from_path, source_name="--from")
+    to_snapshot = _load_snapshot(to_path, source_name="--to")
+    result = compute_session_diff(from_snapshot, to_snapshot)
+    return {
+        "from_path": str(Path(from_path)),
+        "to_path": str(Path(to_path)),
+        **result,
+    }
+
+
 @session_app.command("diff")
 def session_diff(
     ctx: typer.Context,
     from_path: str = typer.Option(..., "--from"),
     to_path: str = typer.Option(..., "--to"),
 ) -> None:  # noqa: E501
-    def _run() -> dict[str, object]:
-        from_snapshot = _load_snapshot(from_path, source_name="--from")
-        to_snapshot = _load_snapshot(to_path, source_name="--to")
-        result = compute_session_diff(from_snapshot, to_snapshot)
-        return {
-            "from_path": str(Path(from_path)),
-            "to_path": str(Path(to_path)),
-            **result,
-        }
-
-    execute_command(
+    run_client_command(
         ctx,
-        command="session diff",
+        command_name="session diff",
         args={"from": from_path, "to": to_path},
-        action=_run,
+        fn=lambda _client: _session_diff_result(from_path=from_path, to_path=to_path),
     )
 
 
 @session_app.command("stop-all-clips")
 def session_stop_all_clips(ctx: typer.Context) -> None:
-    execute_command(
+    run_client_command_spec(
         ctx,
-        command="session stop-all-clips",
+        spec=SESSION_STOP_ALL_CLIPS_SPEC,
         args={},
-        action=lambda: get_client(ctx).stop_all_clips(),
     )
 
 

@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import Annotated
 
 import typer
 
 from ..runtime import execute_command, get_client
+from ._client_command_runner import CommandSpec
+from ._client_command_runner import run_client_command_spec as run_client_command_spec_shared
 from ._validation import (
     invalid_argument,
     require_non_empty_string,
@@ -15,6 +18,83 @@ from ._validation import (
 browser_app = typer.Typer(help="Ableton browser commands", no_args_is_help=True)
 
 
+BrowserCommandSpec = CommandSpec
+
+
+BROWSER_TREE_SPEC = BrowserCommandSpec(
+    command_name="browser tree",
+    client_method="get_browser_tree",
+)
+BROWSER_ITEMS_AT_PATH_SPEC = BrowserCommandSpec(
+    command_name="browser items-at-path",
+    client_method="get_browser_items_at_path",
+)
+BROWSER_ITEM_SPEC = BrowserCommandSpec(
+    command_name="browser item",
+    client_method="get_browser_item",
+)
+BROWSER_CATEGORIES_SPEC = BrowserCommandSpec(
+    command_name="browser categories",
+    client_method="get_browser_categories",
+)
+BROWSER_ITEMS_SPEC = BrowserCommandSpec(
+    command_name="browser items",
+    client_method="get_browser_items",
+)
+BROWSER_SEARCH_SPEC = BrowserCommandSpec(
+    command_name="browser search",
+    client_method="search_browser_items",
+)
+BROWSER_LOAD_SPEC = BrowserCommandSpec(
+    command_name="browser load",
+    client_method="load_instrument_or_effect",
+)
+BROWSER_LOAD_DRUM_KIT_SPEC = BrowserCommandSpec(
+    command_name="browser load-drum-kit",
+    client_method="load_drum_kit",
+)
+
+
+def run_client_command_spec(
+    ctx: typer.Context,
+    *,
+    spec: BrowserCommandSpec,
+    args: dict[str, object],
+    method_kwargs: dict[str, object] | Callable[[], dict[str, object]] | None = None,
+) -> None:
+    run_client_command_spec_shared(
+        ctx,
+        spec=spec,
+        args=args,
+        method_kwargs=method_kwargs,
+        get_client_fn=get_client,
+        execute_command_fn=execute_command,
+    )
+
+
+def _validate_item_type(item_type: str) -> str:
+    if item_type not in {"all", "folder", "device", "loadable"}:
+        raise invalid_argument(
+            message=f"item_type must be one of all/folder/device/loadable, got {item_type}",
+            hint="Use one of: all, folder, device, loadable.",
+        )
+    return item_type
+
+
+def _validate_paging(*, limit: int, offset: int) -> tuple[int, int]:
+    if limit <= 0:
+        raise invalid_argument(
+            message=f"limit must be > 0, got {limit}",
+            hint="Use a positive limit value.",
+        )
+    if offset < 0:
+        raise invalid_argument(
+            message=f"offset must be >= 0, got {offset}",
+            hint="Use a non-negative offset value.",
+        )
+    return limit, offset
+
+
 @browser_app.command("tree")
 def browser_tree(
     ctx: typer.Context,
@@ -23,11 +103,11 @@ def browser_tree(
         typer.Argument(help="Category type, e.g. all/instruments/sounds/drums/audio_effects."),
     ] = "all",
 ) -> None:
-    execute_command(
+    run_client_command_spec(
         ctx,
-        command="browser tree",
+        spec=BROWSER_TREE_SPEC,
         args={"category_type": category_type},
-        action=lambda: get_client(ctx).get_browser_tree(category_type),
+        method_kwargs={"category_type": category_type},
     )
 
 
@@ -36,15 +116,15 @@ def browser_items_at_path(
     ctx: typer.Context,
     path: Annotated[str, typer.Argument(help="Browser path, e.g. drums/Kits")],
 ) -> None:
-    def _run() -> dict[str, object]:
+    def _method_kwargs() -> dict[str, object]:
         valid_path = require_non_empty_string("path", path, hint="Pass a non-empty browser path.")
-        return get_client(ctx).get_browser_items_at_path(valid_path)
+        return {"path": valid_path}
 
-    execute_command(
+    run_client_command_spec(
         ctx,
-        command="browser items-at-path",
+        spec=BROWSER_ITEMS_AT_PATH_SPEC,
         args={"path": path},
-        action=_run,
+        method_kwargs=_method_kwargs,
     )
 
 
@@ -53,15 +133,15 @@ def browser_item(
     ctx: typer.Context,
     target: Annotated[str, typer.Argument(help="Browser target (URI or path)")],
 ) -> None:
-    def _run() -> dict[str, object]:
+    def _method_kwargs() -> dict[str, object]:
         valid_uri, valid_path = resolve_uri_or_path_target(target=target)
-        return get_client(ctx).get_browser_item(uri=valid_uri, path=valid_path)
+        return {"uri": valid_uri, "path": valid_path}
 
-    execute_command(
+    run_client_command_spec(
         ctx,
-        command="browser item",
+        spec=BROWSER_ITEM_SPEC,
         args={"target": target},
-        action=_run,
+        method_kwargs=_method_kwargs,
     )
 
 
@@ -70,11 +150,11 @@ def browser_categories(
     ctx: typer.Context,
     category_type: Annotated[str, typer.Argument(help="Category filter")] = "all",
 ) -> None:
-    execute_command(
+    run_client_command_spec(
         ctx,
-        command="browser categories",
+        spec=BROWSER_CATEGORIES_SPEC,
         args={"category_type": category_type},
-        action=lambda: get_client(ctx).get_browser_categories(category_type),
+        method_kwargs={"category_type": category_type},
     )
 
 
@@ -89,30 +169,22 @@ def browser_items(
     limit: Annotated[int, typer.Option("--limit", help="Maximum number of items")] = 100,
     offset: Annotated[int, typer.Option("--offset", help="Pagination offset")] = 0,
 ) -> None:
-    def _run() -> dict[str, object]:
+    def _method_kwargs() -> dict[str, object]:
         valid_path = require_non_empty_string("path", path, hint="Pass a non-empty browser path.")
-        if item_type not in {"all", "folder", "device", "loadable"}:
-            raise invalid_argument(
-                message=f"item_type must be one of all/folder/device/loadable, got {item_type}",
-                hint="Use one of: all, folder, device, loadable.",
-            )
-        if limit <= 0:
-            raise invalid_argument(
-                message=f"limit must be > 0, got {limit}",
-                hint="Use a positive limit value.",
-            )
-        if offset < 0:
-            raise invalid_argument(
-                message=f"offset must be >= 0, got {offset}",
-                hint="Use a non-negative offset value.",
-            )
-        return get_client(ctx).get_browser_items(valid_path, item_type, limit, offset)
+        valid_item_type = _validate_item_type(item_type)
+        valid_limit, valid_offset = _validate_paging(limit=limit, offset=offset)
+        return {
+            "path": valid_path,
+            "item_type": valid_item_type,
+            "limit": valid_limit,
+            "offset": valid_offset,
+        }
 
-    execute_command(
+    run_client_command_spec(
         ctx,
-        command="browser items",
+        spec=BROWSER_ITEMS_SPEC,
         args={"path": path, "item_type": item_type, "limit": limit, "offset": offset},
-        action=_run,
+        method_kwargs=_method_kwargs,
     )
 
 
@@ -136,41 +208,28 @@ def browser_search(
         typer.Option("--case-sensitive", help="Use case-sensitive matching"),
     ] = False,
 ) -> None:
-    def _run() -> dict[str, object]:
+    def _method_kwargs() -> dict[str, object]:
         valid_query = require_non_empty_string("query", query, hint="Pass a non-empty query.")
         valid_path = (
             require_non_empty_string("path", path, hint="Pass a non-empty browser path.")
             if path is not None
             else None
         )
-        if item_type not in {"all", "folder", "device", "loadable"}:
-            raise invalid_argument(
-                message=f"item_type must be one of all/folder/device/loadable, got {item_type}",
-                hint="Use one of: all, folder, device, loadable.",
-            )
-        if limit <= 0:
-            raise invalid_argument(
-                message=f"limit must be > 0, got {limit}",
-                hint="Use a positive limit value.",
-            )
-        if offset < 0:
-            raise invalid_argument(
-                message=f"offset must be >= 0, got {offset}",
-                hint="Use a non-negative offset value.",
-            )
-        return get_client(ctx).search_browser_items(
-            query=valid_query,
-            path=valid_path,
-            item_type=item_type,
-            limit=limit,
-            offset=offset,
-            exact=exact,
-            case_sensitive=case_sensitive,
-        )
+        valid_item_type = _validate_item_type(item_type)
+        valid_limit, valid_offset = _validate_paging(limit=limit, offset=offset)
+        return {
+            "query": valid_query,
+            "path": valid_path,
+            "item_type": valid_item_type,
+            "limit": valid_limit,
+            "offset": valid_offset,
+            "exact": exact,
+            "case_sensitive": case_sensitive,
+        }
 
-    execute_command(
+    run_client_command_spec(
         ctx,
-        command="browser search",
+        spec=BROWSER_SEARCH_SPEC,
         args={
             "query": query,
             "path": path,
@@ -180,7 +239,7 @@ def browser_search(
             "exact": exact,
             "case_sensitive": case_sensitive,
         },
-        action=_run,
+        method_kwargs=_method_kwargs,
     )
 
 
@@ -226,8 +285,8 @@ def browser_load(
         ),
     ] = False,
 ) -> None:
-    def _run() -> dict[str, object]:
-        require_non_negative(
+    def _method_kwargs() -> dict[str, object]:
+        valid_track = require_non_negative(
             "track",
             track,
             hint="Use a valid track index from 'ableton-cli tracks list'.",
@@ -273,21 +332,21 @@ def browser_load(
                 hint="Use --notes-mode replace or append when importing clip length/groove.",
             )
         valid_uri, valid_path = resolve_uri_or_path_target(target=target)
-        return get_client(ctx).load_instrument_or_effect(
-            track,
-            uri=valid_uri,
-            path=valid_path,
-            target_track_mode=valid_mode,
-            clip_slot=valid_clip_slot,
-            notes_mode=valid_notes_mode,
-            preserve_track_name=preserve_track_name,
-            import_length=import_length,
-            import_groove=import_groove,
-        )
+        return {
+            "track": valid_track,
+            "uri": valid_uri,
+            "path": valid_path,
+            "target_track_mode": valid_mode,
+            "clip_slot": valid_clip_slot,
+            "notes_mode": valid_notes_mode,
+            "preserve_track_name": preserve_track_name,
+            "import_length": import_length,
+            "import_groove": import_groove,
+        }
 
-    execute_command(
+    run_client_command_spec(
         ctx,
-        command="browser load",
+        spec=BROWSER_LOAD_SPEC,
         args={
             "track": track,
             "target": target,
@@ -298,7 +357,7 @@ def browser_load(
             "import_length": import_length,
             "import_groove": import_groove,
         },
-        action=_run,
+        method_kwargs=_method_kwargs,
     )
 
 
@@ -313,8 +372,8 @@ def browser_load_drum_kit(
         typer.Option("--kit-path", help="Browser path for drum kit item"),
     ] = None,
 ) -> None:
-    def _run() -> dict[str, object]:
-        require_non_negative(
+    def _method_kwargs() -> dict[str, object]:
+        valid_track = require_non_negative(
             "track",
             track,
             hint="Use a valid track index from 'ableton-cli tracks list'.",
@@ -344,18 +403,18 @@ def browser_load_drum_kit(
             if kit_path is not None
             else None
         )
-        return get_client(ctx).load_drum_kit(
-            track=track,
-            rack_uri=valid_rack_uri,
-            kit_uri=valid_kit_uri,
-            kit_path=valid_kit_path,
-        )
+        return {
+            "track": valid_track,
+            "rack_uri": valid_rack_uri,
+            "kit_uri": valid_kit_uri,
+            "kit_path": valid_kit_path,
+        }
 
-    execute_command(
+    run_client_command_spec(
         ctx,
-        command="browser load-drum-kit",
+        spec=BROWSER_LOAD_DRUM_KIT_SPEC,
         args={"track": track, "rack_uri": rack_uri, "kit_uri": kit_uri, "kit_path": kit_path},
-        action=_run,
+        method_kwargs=_method_kwargs,
     )
 
 

@@ -9,7 +9,7 @@ from typing import Any
 import tomli
 from platformdirs import user_config_dir
 
-from .errors import AppError, ExitCode
+from .errors import AppError, ErrorCode, ExitCode
 
 ENV_PREFIX = "ABLETON_CLI_"
 
@@ -53,7 +53,7 @@ def _normalize_int(name: str, value: Any) -> int:
         return int(value)
     except (TypeError, ValueError) as exc:
         raise AppError(
-            error_code="CONFIG_INVALID",
+            error_code=ErrorCode.CONFIG_INVALID,
             message=f"Invalid integer for '{name}': {value}",
             hint="Fix the config value or pass a valid CLI option.",
             exit_code=ExitCode.CONFIG_INVALID,
@@ -63,7 +63,7 @@ def _normalize_int(name: str, value: Any) -> int:
 def _normalize_str(name: str, value: Any) -> str:
     if not isinstance(value, str):
         raise AppError(
-            error_code="CONFIG_INVALID",
+            error_code=ErrorCode.CONFIG_INVALID,
             message=f"Invalid string for '{name}': {value}",
             hint="Fix the config value or pass a valid CLI option.",
             exit_code=ExitCode.CONFIG_INVALID,
@@ -79,7 +79,7 @@ def _load_file_values(path: Path) -> dict[str, Any]:
         raw = tomli.loads(path.read_text(encoding="utf-8"))
     except (tomli.TOMLDecodeError, OSError) as exc:
         raise AppError(
-            error_code="CONFIG_INVALID",
+            error_code=ErrorCode.CONFIG_INVALID,
             message=f"Failed to read config file: {path}",
             hint="Check the TOML syntax and file permissions.",
             exit_code=ExitCode.CONFIG_INVALID,
@@ -87,7 +87,7 @@ def _load_file_values(path: Path) -> dict[str, Any]:
 
     if not isinstance(raw, dict):
         raise AppError(
-            error_code="CONFIG_INVALID",
+            error_code=ErrorCode.CONFIG_INVALID,
             message=f"Config file root must be a table: {path}",
             hint="Use key/value pairs at the top level.",
             exit_code=ExitCode.CONFIG_INVALID,
@@ -122,28 +122,28 @@ def _settings_from_merged(merged: dict[str, Any], *, resolved_path: Path) -> Set
 
     if not host:
         raise AppError(
-            error_code="CONFIG_INVALID",
+            error_code=ErrorCode.CONFIG_INVALID,
             message="host must not be empty",
             hint="Set host to a reachable IP or hostname.",
             exit_code=ExitCode.CONFIG_INVALID,
         )
     if not (1 <= port <= 65535):
         raise AppError(
-            error_code="CONFIG_INVALID",
+            error_code=ErrorCode.CONFIG_INVALID,
             message=f"port out of range: {port}",
             hint="Use a port between 1 and 65535.",
             exit_code=ExitCode.CONFIG_INVALID,
         )
     if timeout_ms <= 0:
         raise AppError(
-            error_code="CONFIG_INVALID",
+            error_code=ErrorCode.CONFIG_INVALID,
             message=f"timeout_ms must be positive: {timeout_ms}",
             hint="Use a positive timeout in milliseconds.",
             exit_code=ExitCode.CONFIG_INVALID,
         )
     if protocol_version <= 0:
         raise AppError(
-            error_code="CONFIG_INVALID",
+            error_code=ErrorCode.CONFIG_INVALID,
             message=f"protocol_version must be positive: {protocol_version}",
             hint="Set protocol_version to 2.",
             exit_code=ExitCode.CONFIG_INVALID,
@@ -170,7 +170,7 @@ def _serialize_toml_value(value: Any) -> str:
     if isinstance(value, str):
         return json.dumps(value, ensure_ascii=False)
     raise AppError(
-        error_code="CONFIG_INVALID",
+        error_code=ErrorCode.CONFIG_INVALID,
         message=f"Unsupported value type for config serialization: {type(value).__name__}",
         hint="Use scalar TOML values for config entries.",
         exit_code=ExitCode.CONFIG_INVALID,
@@ -250,7 +250,7 @@ def update_config_value(path: Path, *, key: str, value: Any) -> dict[str, Any]:
     if key not in CONFIG_SET_KEYS:
         allowed = ", ".join(sorted(CONFIG_SET_KEYS))
         raise AppError(
-            error_code="CONFIG_INVALID",
+            error_code=ErrorCode.CONFIG_INVALID,
             message=f"Unsupported config key for updates: {key}",
             hint=f"Use one of: {allowed}",
             exit_code=ExitCode.CONFIG_INVALID,

@@ -3,7 +3,7 @@ from __future__ import annotations
 import hashlib
 from typing import Any
 
-from .errors import AppError, ExitCode
+from .errors import AppError, ErrorCode, ExitCode
 
 _REQUIRED_REMOTE_COMMANDS = frozenset(
     {
@@ -165,7 +165,7 @@ def parse_supported_commands(ping_payload: dict[str, Any]) -> set[str]:
     raw_commands = ping_payload.get("supported_commands")
     if not isinstance(raw_commands, list):
         raise AppError(
-            error_code="REMOTE_SCRIPT_INCOMPATIBLE",
+            error_code=ErrorCode.REMOTE_SCRIPT_INCOMPATIBLE,
             message="Remote Script ping payload is missing supported_commands",
             hint="Reinstall Remote Script and restart Ableton Live.",
             exit_code=ExitCode.PROTOCOL_MISMATCH,
@@ -175,7 +175,7 @@ def parse_supported_commands(ping_payload: dict[str, Any]) -> set[str]:
     for index, value in enumerate(raw_commands):
         if not isinstance(value, str) or not value.strip():
             raise AppError(
-                error_code="REMOTE_SCRIPT_INCOMPATIBLE",
+                error_code=ErrorCode.REMOTE_SCRIPT_INCOMPATIBLE,
                 message=f"supported_commands[{index}] must be a non-empty string",
                 hint="Reinstall Remote Script and restart Ableton Live.",
                 exit_code=ExitCode.PROTOCOL_MISMATCH,
@@ -184,7 +184,7 @@ def parse_supported_commands(ping_payload: dict[str, Any]) -> set[str]:
 
     if not commands:
         raise AppError(
-            error_code="REMOTE_SCRIPT_INCOMPATIBLE",
+            error_code=ErrorCode.REMOTE_SCRIPT_INCOMPATIBLE,
             message="Remote Script reported no supported commands",
             hint="Reinstall Remote Script and restart Ableton Live.",
             exit_code=ExitCode.PROTOCOL_MISMATCH,
@@ -193,7 +193,7 @@ def parse_supported_commands(ping_payload: dict[str, Any]) -> set[str]:
     remote_hash = ping_payload.get("command_set_hash")
     if not isinstance(remote_hash, str) or not remote_hash.strip():
         raise AppError(
-            error_code="REMOTE_SCRIPT_INCOMPATIBLE",
+            error_code=ErrorCode.REMOTE_SCRIPT_INCOMPATIBLE,
             message="Remote Script ping payload is missing command_set_hash",
             hint="Reinstall Remote Script and restart Ableton Live.",
             exit_code=ExitCode.PROTOCOL_MISMATCH,
@@ -201,7 +201,7 @@ def parse_supported_commands(ping_payload: dict[str, Any]) -> set[str]:
     expected_hash = compute_command_set_hash(commands)
     if remote_hash != expected_hash:
         raise AppError(
-            error_code="REMOTE_SCRIPT_INCOMPATIBLE",
+            error_code=ErrorCode.REMOTE_SCRIPT_INCOMPATIBLE,
             message="Remote Script command_set_hash does not match supported_commands",
             hint="Reinstall Remote Script and restart Ableton Live.",
             exit_code=ExitCode.PROTOCOL_MISMATCH,

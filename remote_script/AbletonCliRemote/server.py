@@ -7,7 +7,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
-from .command_backend import PROTOCOL_VERSION
+from .command_backend import PROTOCOL_VERSION, RemoteErrorCode
 
 
 @dataclass(slots=True)
@@ -74,7 +74,7 @@ class _Handler(socketserver.StreamRequestHandler):
             self._write_response(
                 _error(
                     request_id="unknown",
-                    code="PROTOCOL_VERSION_MISMATCH",
+                    code=RemoteErrorCode.PROTOCOL_VERSION_MISMATCH.value,
                     message="Invalid JSON payload",
                     hint="Send one JSON object per line.",
                 )
@@ -86,14 +86,14 @@ class _Handler(socketserver.StreamRequestHandler):
         try:
             if payload.get("type") != "command":
                 raise CommandExecutionError(
-                    code="INVALID_ARGUMENT",
+                    code=RemoteErrorCode.INVALID_ARGUMENT.value,
                     message="type must be 'command'",
                     hint="Use the CLI protocol request shape.",
                 )
             protocol_version = payload.get("protocol_version")
             if protocol_version != PROTOCOL_VERSION:
                 raise CommandExecutionError(
-                    code="PROTOCOL_VERSION_MISMATCH",
+                    code=RemoteErrorCode.PROTOCOL_VERSION_MISMATCH.value,
                     message=(
                         "Protocol version mismatch "
                         f"(remote={PROTOCOL_VERSION}, request={protocol_version})"
@@ -108,14 +108,14 @@ class _Handler(socketserver.StreamRequestHandler):
             args = payload.get("args", {})
             if not isinstance(args, dict):
                 raise CommandExecutionError(
-                    code="INVALID_ARGUMENT",
+                    code=RemoteErrorCode.INVALID_ARGUMENT.value,
                     message="args must be an object",
                     hint="Pass a JSON object for args.",
                 )
             meta = payload.get("meta", {})
             if not isinstance(meta, dict):
                 raise CommandExecutionError(
-                    code="INVALID_ARGUMENT",
+                    code=RemoteErrorCode.INVALID_ARGUMENT.value,
                     message="meta must be an object",
                     hint="Pass a JSON object for meta.",
                 )
@@ -137,7 +137,7 @@ class _Handler(socketserver.StreamRequestHandler):
         except Exception as exc:  # noqa: BLE001
             response = _error(
                 request_id=request_id,
-                code="INTERNAL_ERROR",
+                code=RemoteErrorCode.INTERNAL_ERROR.value,
                 message=f"Remote internal error: {exc}",
                 hint="Check Remote Script logs.",
             )

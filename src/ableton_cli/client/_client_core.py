@@ -4,9 +4,8 @@ from typing import Any
 
 from ..capabilities import read_only_remote_commands
 from ..config import Settings
-from ..errors import AppError, ExitCode, remote_error_to_app_error
-from .protocol import make_request, parse_response
-from .transport import RecordingTransport, ReplayTransport, TcpJsonlTransport
+from ..errors import AppError, ErrorCode, ExitCode
+from .backends import ClientBackend, LiveBackendClient, RecordingClient, ReplayClient
 
 
 class _AbletonClientCore:
@@ -23,61 +22,43 @@ class _AbletonClientCore:
         self._read_only_commands = read_only_remote_commands()
         if record_path is not None and replay_path is not None:
             raise AppError(
-                error_code="INVALID_ARGUMENT",
+                error_code=ErrorCode.INVALID_ARGUMENT,
                 message="--record and --replay cannot be used together",
                 hint="Choose exactly one of --record or --replay.",
                 exit_code=ExitCode.INVALID_ARGUMENT,
             )
 
-        base_transport = TcpJsonlTransport(
-            host=settings.host,
-            port=settings.port,
-            timeout_ms=settings.timeout_ms,
+        self._backend = self._build_backend(
+            settings=settings,
+            record_path=record_path,
+            replay_path=replay_path,
         )
+        # Keep direct transport access available for tests and fixtures.
+        self.transport = self._backend.transport
+
+    @staticmethod
+    def _build_backend(
+        *,
+        settings: Settings,
+        record_path: str | None,
+        replay_path: str | None,
+    ) -> ClientBackend:
         if replay_path is not None:
-            self.transport = ReplayTransport(path=replay_path)
-        elif record_path is not None:
-            self.transport = RecordingTransport(inner=base_transport, path=record_path)
-        else:
-            self.transport = base_transport
+            return ReplayClient(settings, path=replay_path)
+        if record_path is not None:
+            return RecordingClient(settings, path=record_path)
+        return LiveBackendClient(settings)
 
     def _dispatch(self, name: str, args: dict[str, Any]) -> dict[str, Any]:
         if self.read_only and name not in self._read_only_commands:
             raise AppError(
-                error_code="READ_ONLY_VIOLATION",
+                error_code=ErrorCode.READ_ONLY_VIOLATION,
                 message=f"Command '{name}' is blocked in read-only mode",
                 hint="Run without --read-only to execute write commands.",
                 exit_code=ExitCode.EXECUTION_FAILED,
                 details={"command": name},
             )
-
-        request = make_request(
-            name=name,
-            args=args,
-            protocol_version=self.settings.protocol_version,
-            meta={"request_timeout_ms": self.settings.timeout_ms},
-        )
-        raw_response = self.transport.send(request.to_dict())
-        response = parse_response(
-            payload=raw_response,
-            expected_request_id=request.request_id,
-            expected_protocol=self.settings.protocol_version,
-        )
-
-        if response.ok:
-            if response.result is None:
-                return {}
-            return response.result
-
-        if response.error is None:
-            raise AppError(
-                error_code="INTERNAL_ERROR",
-                message="Remote command failed without structured error payload",
-                hint="Update Remote Script error handling.",
-                exit_code=ExitCode.EXECUTION_FAILED,
-            )
-
-        raise remote_error_to_app_error(response.error)
+        return self._backend.dispatch(name, args)
 
     def _call(self, name: str, args: dict[str, Any] | None = None) -> dict[str, Any]:
         payload = {} if args is None else dict(args)

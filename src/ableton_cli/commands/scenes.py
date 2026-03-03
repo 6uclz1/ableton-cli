@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Sequence
-from typing import Annotated, TypeVar
+from dataclasses import dataclass
+from typing import Annotated, Generic, TypeVar, cast
 
 import typer
 
@@ -26,6 +27,28 @@ SceneMoveValidator = Callable[[int, int], tuple[int, int]]
 SceneAction = Callable[[object, int], dict[str, object]]
 SceneValueAction = Callable[[object, int, TValue], dict[str, object]]
 SceneMoveAction = Callable[[object, int, int], dict[str, object]]
+
+
+@dataclass(frozen=True)
+class SceneCommandSpec:
+    command_name: str
+    client_method: str
+    validators: Sequence[SceneValidator] | None = None
+
+
+@dataclass(frozen=True)
+class SceneValueCommandSpec(Generic[TValue]):
+    command_name: str
+    client_method: str
+    value_name: str = "value"
+    validators: Sequence[SceneValueValidator[TValue]] | None = None
+
+
+@dataclass(frozen=True)
+class SceneMoveCommandSpec:
+    command_name: str
+    client_method: str
+    validators: Sequence[SceneMoveValidator] | None = None
 
 
 def run_scene_command(
@@ -108,6 +131,83 @@ def run_scene_move_command(
     )
 
 
+def run_scene_command_spec(
+    ctx: typer.Context,
+    *,
+    spec: SceneCommandSpec,
+    scene: int,
+) -> None:
+    run_scene_command(
+        ctx,
+        command_name=spec.command_name,
+        scene=scene,
+        validators=spec.validators,
+        fn=lambda client, valid_scene: cast(
+            dict[str, object],
+            getattr(client, spec.client_method)(valid_scene),
+        ),
+    )
+
+
+def run_scene_value_command_spec(
+    ctx: typer.Context,
+    *,
+    spec: SceneValueCommandSpec[TValue],
+    scene: int,
+    value: TValue,
+) -> None:
+    run_scene_value_command(
+        ctx,
+        command_name=spec.command_name,
+        scene=scene,
+        value=value,
+        value_name=spec.value_name,
+        validators=spec.validators,
+        fn=lambda client, valid_scene, valid_value: cast(
+            dict[str, object],
+            getattr(client, spec.client_method)(valid_scene, valid_value),
+        ),
+    )
+
+
+def run_scene_move_command_spec(
+    ctx: typer.Context,
+    *,
+    spec: SceneMoveCommandSpec,
+    from_scene: int,
+    to_scene: int,
+) -> None:
+    run_scene_move_command(
+        ctx,
+        command_name=spec.command_name,
+        from_scene=from_scene,
+        to_scene=to_scene,
+        validators=spec.validators,
+        fn=lambda client, valid_from_scene, valid_to_scene: cast(
+            dict[str, object],
+            getattr(client, spec.client_method)(valid_from_scene, valid_to_scene),
+        ),
+    )
+
+
+SCENE_NAME_SET_SPEC = SceneValueCommandSpec[str](
+    command_name="scenes name set",
+    client_method="set_scene_name",
+    value_name="name",
+    validators=(require_scene_and_name,),
+)
+
+SCENE_FIRE_SPEC = SceneCommandSpec(
+    command_name="scenes fire",
+    client_method="fire_scene",
+)
+
+SCENE_MOVE_SPEC = SceneMoveCommandSpec(
+    command_name="scenes move",
+    client_method="scenes_move",
+)
+
+
 @scenes_app.command("list")
 def scenes_list(ctx: typer.Context) -> None:
     def _run() -> dict[str, object]:
@@ -152,14 +252,11 @@ def scenes_name_set(
     scene: Annotated[int, typer.Argument(help="Scene index (0-based)")],
     name: Annotated[str, typer.Argument(help="New scene name")],
 ) -> None:
-    run_scene_value_command(
+    run_scene_value_command_spec(
         ctx,
-        command_name="scenes name set",
+        spec=SCENE_NAME_SET_SPEC,
         scene=scene,
         value=name,
-        value_name="name",
-        validators=[require_scene_and_name],
-        fn=lambda client, valid_scene, valid_name: client.set_scene_name(valid_scene, valid_name),
     )
 
 
@@ -168,11 +265,10 @@ def scenes_fire(
     ctx: typer.Context,
     scene: Annotated[int, typer.Argument(help="Scene index (0-based)")],
 ) -> None:
-    run_scene_command(
+    run_scene_command_spec(
         ctx,
-        command_name="scenes fire",
+        spec=SCENE_FIRE_SPEC,
         scene=scene,
-        fn=lambda client, valid_scene: client.fire_scene(valid_scene),
     )
 
 
@@ -182,14 +278,11 @@ def scenes_move(
     from_scene: Annotated[int, typer.Argument(help="Source scene index (0-based)")],
     to_scene: Annotated[int, typer.Argument(help="Destination scene index (0-based)")],
 ) -> None:
-    run_scene_move_command(
+    run_scene_move_command_spec(
         ctx,
-        command_name="scenes move",
+        spec=SCENE_MOVE_SPEC,
         from_scene=from_scene,
         to_scene=to_scene,
-        fn=lambda client, valid_from_scene, valid_to_scene: client.scenes_move(
-            valid_from_scene, valid_to_scene
-        ),
     )
 
 

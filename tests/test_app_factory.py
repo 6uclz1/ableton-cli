@@ -33,3 +33,12 @@ def test_command_registration_happens_only_during_factory(monkeypatch) -> None:
     assert first.exit_code == 0
     assert second.exit_code == 0
     assert register_calls == 1
+
+
+def test_public_command_registry_excludes_internal_modules() -> None:
+    module_names = [
+        command_module.__name__.rsplit(".", maxsplit=1)[-1]
+        for command_module in app_module._COMMAND_MODULES
+    ]
+
+    assert all(not module_name.startswith("_") for module_name in module_names)

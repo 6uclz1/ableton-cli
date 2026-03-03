@@ -13,3 +13,11 @@ def test_commands_layer_includes_app_factory() -> None:
 
     commands_layer = next(rule for rule in config.layers.order if rule.name == "commands")
     assert "src/ableton_cli/app_factory.py" in commands_layer.include
+
+
+def test_function_args_threshold_allows_cli_entry_points() -> None:
+    config = load_config(QUALITY_HARNESS_CONFIG)
+
+    function_args_threshold = config.thresholds.function["args"]
+    assert function_args_threshold.warn == 8
+    assert function_args_threshold.fail == 17

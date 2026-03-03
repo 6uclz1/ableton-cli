@@ -11,7 +11,7 @@ from .client.ableton_client import AbletonClient
 from .compact import compact_payload
 from .config import Settings
 from .contracts import validate_command_contract
-from .errors import AppError, ExitCode
+from .errors import AppError, ErrorCode, ExitCode
 from .output import (
     OutputMode,
     emit_human_error,
@@ -90,10 +90,11 @@ def execute_command(
     except typer.Exit:
         raise
     except AppError as exc:
+        serialized_error = exc.to_payload()
         payload = error_payload(
             command=command,
             args=args,
-            code=exc.error_code,
+            code=serialized_error["code"],
             message=exc.message,
             hint=exc.hint,
             details=exc.details or None,
@@ -101,11 +102,11 @@ def execute_command(
         if runtime.output_mode == OutputMode.JSON:
             emit_json(payload)
         else:
-            emit_human_error(exc.error_code, exc.message, exc.hint)
+            emit_human_error(serialized_error["code"], exc.message, exc.hint)
         raise typer.Exit(exc.exit_code.value) from exc
     except Exception as exc:  # noqa: BLE001
         logger.exception("Unhandled command failure")
-        code = "INTERNAL_ERROR"
+        code = ErrorCode.INTERNAL_ERROR.value
         message = "Unexpected internal error"
         hint = "Run with --verbose and check stderr/log-file for details."
         payload = error_payload(command=command, args=args, code=code, message=message, hint=hint)

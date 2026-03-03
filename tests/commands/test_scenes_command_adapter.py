@@ -100,3 +100,78 @@ def test_run_scene_move_command_validates_indices_before_client_lookup(monkeypat
 
     assert exc.value.message == "from must be >= 0, got -1"
     assert get_client_calls["count"] == 0
+
+
+def test_run_scene_command_spec_dispatches_client_method(monkeypatch) -> None:
+    from ableton_cli.commands import scenes
+
+    captured: dict[str, object] = {}
+
+    class _Client:
+        def fire_scene(self, scene_index: int):  # noqa: ANN201
+            return {"scene": scene_index, "fired": True}
+
+    def _get_client(_ctx):  # noqa: ANN202
+        return _Client()
+
+    def _execute_command(_ctx, *, command, args, action, human_formatter=None):  # noqa: ANN202
+        del human_formatter
+        captured["command"] = command
+        captured["args"] = args
+        captured["result"] = action()
+
+    monkeypatch.setattr(scenes, "get_client", _get_client)
+    monkeypatch.setattr(scenes, "execute_command", _execute_command)
+
+    scenes.run_scene_command_spec(
+        ctx=object(),
+        spec=scenes.SceneCommandSpec(
+            command_name="scenes fire",
+            client_method="fire_scene",
+        ),
+        scene=4,
+    )
+
+    assert captured["command"] == "scenes fire"
+    assert captured["args"] == {"scene": 4}
+    assert captured["result"] == {"scene": 4, "fired": True}
+
+
+def test_run_scene_move_command_spec_applies_validators(monkeypatch) -> None:
+    from ableton_cli.commands import scenes
+
+    captured: dict[str, object] = {}
+
+    class _Client:
+        def scenes_move(self, from_scene: int, to_scene: int):  # noqa: ANN201
+            return {"from": from_scene, "to": to_scene}
+
+    def _get_client(_ctx):  # noqa: ANN202
+        return _Client()
+
+    def _execute_command(_ctx, *, command, args, action, human_formatter=None):  # noqa: ANN202
+        del human_formatter
+        captured["command"] = command
+        captured["args"] = args
+        captured["result"] = action()
+
+    def _validator(from_scene: int, to_scene: int) -> tuple[int, int]:
+        return from_scene + 1, to_scene + 2
+
+    monkeypatch.setattr(scenes, "get_client", _get_client)
+    monkeypatch.setattr(scenes, "execute_command", _execute_command)
+
+    scenes.run_scene_move_command_spec(
+        ctx=object(),
+        spec=scenes.SceneMoveCommandSpec(
+            command_name="scenes move",
+            client_method="scenes_move",
+            validators=(_validator,),
+        ),
+        from_scene=1,
+        to_scene=3,
+    )
+
+    assert captured["command"] == "scenes move"
+    assert captured["args"] == {"from": 1, "to": 3}
+    assert captured["result"] == {"from": 2, "to": 5}

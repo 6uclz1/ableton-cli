@@ -9,7 +9,7 @@ import typer
 from ..completion import completion_help
 from ..config import default_config_path, init_config_file, update_config_value
 from ..doctor import run_doctor
-from ..errors import AppError, ExitCode
+from ..errors import AppError, ErrorCode, ExitCode
 from ..installer import install_remote_script, install_skill
 from ..runtime import execute_command, get_client, get_runtime
 from ._validation import invalid_argument, require_non_empty_string
@@ -277,14 +277,14 @@ def _register_wait_ready_command(app: typer.Typer) -> None:
         def _run() -> dict[str, object]:
             if max_wait_ms <= 0:
                 raise AppError(
-                    error_code="INVALID_ARGUMENT",
+                    error_code=ErrorCode.INVALID_ARGUMENT,
                     message=f"max_wait_ms must be > 0, got {max_wait_ms}",
                     hint="Use a positive --max-wait-ms value.",
                     exit_code=ExitCode.INVALID_ARGUMENT,
                 )
             if interval_ms <= 0:
                 raise AppError(
-                    error_code="INVALID_ARGUMENT",
+                    error_code=ErrorCode.INVALID_ARGUMENT,
                     message=f"interval_ms must be > 0, got {interval_ms}",
                     hint="Use a positive --interval-ms value.",
                     exit_code=ExitCode.INVALID_ARGUMENT,
@@ -314,7 +314,7 @@ def _register_wait_ready_command(app: typer.Typer) -> None:
                             f"{round(elapsed_ms, 3)}ms"
                         )
                         raise AppError(
-                            error_code="TIMEOUT",
+                            error_code=ErrorCode.TIMEOUT,
                             message=timeout_message,
                             hint=exc.hint
                             or "Start Ableton Live and enable the Remote Script, then retry.",

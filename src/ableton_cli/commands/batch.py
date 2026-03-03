@@ -9,7 +9,7 @@ from typing import Annotated, Any
 import typer
 
 from ..capabilities import parse_supported_commands, required_remote_commands
-from ..errors import AppError, ExitCode
+from ..errors import AppError, ErrorCode, ExitCode
 from ..runtime import execute_command, get_client, get_runtime
 from ._validation import invalid_argument, require_non_empty_string
 
@@ -344,7 +344,7 @@ def _raise_assert_failure(
     actual: Any = None,
 ) -> None:
     raise AppError(
-        error_code="BATCH_ASSERT_FAILED",
+        error_code=ErrorCode.BATCH_ASSERT_FAILED,
         message=f"Batch assert failed at step {step_index}",
         hint="Fix batch assert conditions or preceding step behavior.",
         exit_code=ExitCode.EXECUTION_FAILED,
@@ -411,7 +411,7 @@ def _run_preflight(
         supported_commands = parse_supported_commands(ping_result)
     except AppError as exc:
         raise AppError(
-            error_code="BATCH_PREFLIGHT_FAILED",
+            error_code=ErrorCode.BATCH_PREFLIGHT_FAILED,
             message="Batch preflight failed while validating ping/capabilities",
             hint=exc.hint or "Fix protocol/capability mismatch before retrying batch.",
             exit_code=ExitCode.EXECUTION_FAILED,
@@ -425,7 +425,7 @@ def _run_preflight(
     remote_protocol = ping_result.get("protocol_version")
     if remote_protocol != expected_protocol:
         raise AppError(
-            error_code="BATCH_PREFLIGHT_FAILED",
+            error_code=ErrorCode.BATCH_PREFLIGHT_FAILED,
             message="Batch preflight protocol_version mismatch",
             hint="Align CLI protocol version and Remote Script protocol version.",
             exit_code=ExitCode.EXECUTION_FAILED,
@@ -439,7 +439,7 @@ def _run_preflight(
     remote_hash = ping_result.get("command_set_hash")
     if expected_hash is not None and remote_hash != expected_hash:
         raise AppError(
-            error_code="BATCH_PREFLIGHT_FAILED",
+            error_code=ErrorCode.BATCH_PREFLIGHT_FAILED,
             message="Batch preflight command_set_hash mismatch",
             hint="Update Remote Script or batch preflight command_set_hash.",
             exit_code=ExitCode.EXECUTION_FAILED,
@@ -457,7 +457,7 @@ def _run_preflight(
     missing = sorted(required.difference(supported_commands))
     if missing:
         raise AppError(
-            error_code="BATCH_PREFLIGHT_FAILED",
+            error_code=ErrorCode.BATCH_PREFLIGHT_FAILED,
             message="Batch preflight detected missing required commands",
             hint="Reinstall Remote Script and restart Ableton Live.",
             exit_code=ExitCode.EXECUTION_FAILED,
@@ -503,7 +503,7 @@ def _execute_step(
                 raise
             if attempt >= max_attempts:
                 raise AppError(
-                    error_code="BATCH_RETRY_EXHAUSTED",
+                    error_code=ErrorCode.BATCH_RETRY_EXHAUSTED,
                     message=f"Retry exhausted for step {step_index}",
                     hint="Increase retry.max_attempts or fix underlying command errors.",
                     exit_code=ExitCode.EXECUTION_FAILED,

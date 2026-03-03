@@ -2,7 +2,14 @@ from __future__ import annotations
 
 from typing import Any
 
-from ..command_backend import PROTOCOL_VERSION, REMOTE_SCRIPT_VERSION, CommandError
+from ..command_backend import (
+    PROTOCOL_VERSION,
+    REMOTE_SCRIPT_VERSION,
+    CommandError,
+    RemoteErrorCode,
+    RemoteErrorReason,
+    details_with_reason,
+)
 from ..effect_specs import (
     SUPPORTED_EFFECT_TYPES,
     canonicalize_effect_type,
@@ -18,15 +25,15 @@ from ..synth_specs import (
 
 
 def _invalid_argument(message: str, hint: str) -> CommandError:
-    return CommandError(code="INVALID_ARGUMENT", message=message, hint=hint)
+    return CommandError(code=RemoteErrorCode.INVALID_ARGUMENT, message=message, hint=hint)
 
 
 def _not_supported_by_live_api(message: str, hint: str) -> CommandError:
     return CommandError(
-        code="INVALID_ARGUMENT",
+        code=RemoteErrorCode.INVALID_ARGUMENT,
         message=message,
         hint=hint,
-        details={"reason": "not_supported_by_live_api"},
+        details=details_with_reason(RemoteErrorReason.NOT_SUPPORTED_BY_LIVE_API),
     )
 
 

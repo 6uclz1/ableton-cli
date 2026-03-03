@@ -6,7 +6,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from .errors import AppError, ExitCode
+from .errors import AppError, ErrorCode, ExitCode
 from .platform_paths import PlatformPaths
 
 REMOTE_SCRIPT_DIR_NAME = "AbletonCliRemote"
@@ -30,7 +30,7 @@ def _select_target_roots(candidates: list[Path]) -> list[Path]:
 
     joined = "\n".join(str(candidate) for candidate in candidates)
     raise AppError(
-        error_code="INSTALL_TARGET_NOT_FOUND",
+        error_code=ErrorCode.INSTALL_TARGET_NOT_FOUND,
         message="Could not locate Ableton Remote Scripts directory",
         hint=f"Create one of these directories or set up Ableton User Library:\n{joined}",
         exit_code=ExitCode.EXECUTION_FAILED,
@@ -48,7 +48,7 @@ def install_remote_script(
     source = remote_script_source_dir()
     if not source.exists():
         raise AppError(
-            error_code="REMOTE_SCRIPT_NOT_INSTALLED",
+            error_code=ErrorCode.REMOTE_SCRIPT_NOT_INSTALLED,
             message=f"Remote Script source not found: {source}",
             hint="Reinstall ableton-cli package including remote_script assets.",
             exit_code=ExitCode.REMOTE_SCRIPT_NOT_DETECTED,
@@ -100,7 +100,7 @@ def _resolve_codex_home(codex_home: Path | None) -> Path:
     raw_value = os.environ.get(CODEX_HOME_ENV_VAR)
     if raw_value is None or not raw_value.strip():
         raise AppError(
-            error_code="CONFIG_INVALID",
+            error_code=ErrorCode.CONFIG_INVALID,
             message=f"{CODEX_HOME_ENV_VAR} is not set",
             hint=f"Set {CODEX_HOME_ENV_VAR} before running install-skill.",
             exit_code=ExitCode.CONFIG_INVALID,
@@ -126,7 +126,7 @@ def _resolve_skill_home(
     if target == "claude":
         return _resolve_claude_home(claude_home=claude_home, platform_paths=platform_paths)
     raise AppError(
-        error_code="INVALID_ARGUMENT",
+        error_code=ErrorCode.INVALID_ARGUMENT,
         message=f"target must be one of: codex, claude (got {target!r})",
         hint="Use --target codex or --target claude.",
         exit_code=ExitCode.INVALID_ARGUMENT,
@@ -147,7 +147,7 @@ def install_skill(
     source = skill_source_file()
     if not source.exists():
         raise AppError(
-            error_code="SKILL_SOURCE_NOT_FOUND",
+            error_code=ErrorCode.SKILL_SOURCE_NOT_FOUND,
             message=f"Skill source not found: {source}",
             hint="Reinstall ableton-cli package including skills assets.",
             exit_code=ExitCode.EXECUTION_FAILED,

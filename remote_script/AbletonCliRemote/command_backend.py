@@ -15,6 +15,9 @@ from .command_backend_contract import (
     REMOTE_SCRIPT_VERSION,
     CommandBackend,
     CommandError,
+    RemoteErrorCode,
+    RemoteErrorReason,
+    details_with_reason,
 )
 from .command_backend_registry import dispatch_command
 
@@ -33,5 +36,8 @@ __all__ = [
     "NOTE_VELOCITY_MAX",
     "CommandError",
     "CommandBackend",
+    "RemoteErrorCode",
+    "RemoteErrorReason",
+    "details_with_reason",
     "dispatch_command",
 ]

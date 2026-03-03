@@ -1,0 +1,273 @@
+{
+  "command_contracts": {
+    "doctor": {
+      "args": {
+        "additional_properties": false,
+        "type": "object"
+      },
+      "result": {
+        "properties": {
+          "checks": {
+            "type": "array"
+          },
+          "summary": {
+            "properties": {
+              "fail": {
+                "type": "integer"
+              },
+              "pass": {
+                "type": "integer"
+              },
+              "warn": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "pass",
+              "warn",
+              "fail"
+            ],
+            "type": "object"
+          }
+        },
+        "required": [
+          "summary",
+          "checks"
+        ],
+        "type": "object"
+      }
+    },
+    "ping": {
+      "args": {
+        "additional_properties": false,
+        "type": "object"
+      },
+      "result": {
+        "properties": {
+          "api_support": {
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "command_set_hash": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "host": {
+            "type": "string"
+          },
+          "port": {
+            "type": "integer"
+          },
+          "protocol_version": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "remote_script_version": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "rtt_ms": {
+            "type": "number"
+          },
+          "supported_commands": {
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "host",
+          "port",
+          "rtt_ms"
+        ],
+        "type": "object"
+      }
+    },
+    "session diff": {
+      "args": {
+        "properties": {
+          "from": {
+            "type": "string"
+          },
+          "to": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "from",
+          "to"
+        ],
+        "type": "object"
+      },
+      "result": {
+        "properties": {
+          "added": {
+            "type": "object"
+          },
+          "changed": {
+            "type": "object"
+          },
+          "from_path": {
+            "type": "string"
+          },
+          "removed": {
+            "type": "object"
+          },
+          "to_path": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "from_path",
+          "to_path",
+          "added",
+          "removed",
+          "changed"
+        ],
+        "type": "object"
+      }
+    },
+    "song info": {
+      "args": {
+        "additional_properties": false,
+        "type": "object"
+      },
+      "result": {
+        "properties": {
+          "tempo": {
+            "type": "number"
+          }
+        },
+        "type": "object"
+      }
+    },
+    "tracks list": {
+      "args": {
+        "additional_properties": false,
+        "type": "object"
+      },
+      "result": {
+        "properties": {
+          "tracks": {
+            "type": "array"
+          }
+        },
+        "required": [
+          "tracks"
+        ],
+        "type": "object"
+      }
+    }
+  },
+  "errors": {
+    "codes": [
+      "ABLETON_NOT_REACHABLE",
+      "BATCH_ASSERT_FAILED",
+      "BATCH_PREFLIGHT_FAILED",
+      "BATCH_RETRY_EXHAUSTED",
+      "BATCH_STEP_FAILED",
+      "CONFIG_INVALID",
+      "INSTALL_TARGET_NOT_FOUND",
+      "INTERNAL_ERROR",
+      "INVALID_ARGUMENT",
+      "PROTOCOL_INVALID_RESPONSE",
+      "PROTOCOL_REQUEST_ID_MISMATCH",
+      "PROTOCOL_VERSION_MISMATCH",
+      "READ_ONLY_VIOLATION",
+      "REMOTE_BUSY",
+      "REMOTE_SCRIPT_INCOMPATIBLE",
+      "REMOTE_SCRIPT_NOT_INSTALLED",
+      "SKILL_SOURCE_NOT_FOUND",
+      "TIMEOUT",
+      "UNSUPPORTED_OS"
+    ],
+    "detail_reasons": [
+      "contract_validation_failed",
+      "not_supported_by_live_api"
+    ]
+  },
+  "json_output_envelope": {
+    "error": {
+      "args": {
+        "example": true
+      },
+      "command": "example command",
+      "error": {
+        "code": "INVALID_ARGUMENT",
+        "details": {
+          "reason": "not_supported_by_live_api"
+        },
+        "hint": "Resolve example failure.",
+        "message": "Example failure"
+      },
+      "ok": false,
+      "result": null
+    },
+    "success": {
+      "args": {
+        "example": true
+      },
+      "command": "example command",
+      "error": null,
+      "ok": true,
+      "result": {
+        "status": "ok"
+      }
+    }
+  },
+  "protocol": {
+    "request": {
+      "args": {
+        "example": true
+      },
+      "meta": {
+        "request_timeout_ms": 15000
+      },
+      "name": "example_command",
+      "protocol_version": 2,
+      "request_id": "<request-id>",
+      "type": "command"
+    },
+    "response_error": {
+      "error": {
+        "code": "INVALID_ARGUMENT",
+        "details": {
+          "reason": "not_supported_by_live_api"
+        },
+        "hint": "Resolve example failure.",
+        "message": "Example failure"
+      },
+      "ok": false,
+      "protocol_version": 2,
+      "request_id": "<request-id>",
+      "result": null
+    },
+    "response_required_keys": [
+      "ok",
+      "protocol_version",
+      "request_id"
+    ],
+    "response_success": {
+      "error": null,
+      "ok": true,
+      "protocol_version": 2,
+      "request_id": "<request-id>",
+      "result": {
+        "status": "ok"
+      }
+    }
+  },
+  "schema_version": 1
+}

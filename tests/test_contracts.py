@@ -35,6 +35,8 @@ def test_song_info_contract_rejects_invalid_result_shape(runner, cli_app, monkey
     payload = json.loads(result.stdout)
     assert payload["ok"] is False
     assert payload["error"]["code"] == "PROTOCOL_INVALID_RESPONSE"
+    assert payload["error"]["details"]["reason"] == "contract_validation_failed"
+    assert isinstance(payload["error"]["details"]["validation_message"], str)
 
 
 def test_tracks_list_contract_rejects_non_array_tracks(runner, cli_app, monkeypatch) -> None:

@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+from copy import deepcopy
 from typing import Any
 
-from ..errors import AppError, ExitCode
+from ..errors import AppError, ErrorCode, ErrorDetailReason, ExitCode, details_with_reason
 from .schema import ContractValidationError, validate_value
 
 _CONTRACTS: dict[str, dict[str, dict[str, Any]]] = {
@@ -88,6 +89,10 @@ _CONTRACTS: dict[str, dict[str, dict[str, Any]]] = {
 }
 
 
+def get_registered_contracts() -> dict[str, dict[str, dict[str, Any]]]:
+    return deepcopy(_CONTRACTS)
+
+
 def validate_command_contract(*, command: str, args: dict[str, Any], result: Any) -> None:
     contract = _CONTRACTS.get(command)
     if contract is None:
@@ -98,13 +103,16 @@ def validate_command_contract(*, command: str, args: dict[str, Any], result: Any
         validate_value(contract["result"], result, path="result")
     except ContractValidationError as exc:
         raise AppError(
-            error_code="PROTOCOL_INVALID_RESPONSE",
+            error_code=ErrorCode.PROTOCOL_INVALID_RESPONSE,
             message=f"Contract validation failed for '{command}': {exc.path} {exc.message}",
             hint="Fix the command contract or result payload shape.",
             exit_code=ExitCode.PROTOCOL_MISMATCH,
             details={
                 "command": command,
                 "path": exc.path,
-                "reason": exc.message,
+                **details_with_reason(
+                    ErrorDetailReason.CONTRACT_VALIDATION_FAILED,
+                    validation_message=exc.message,
+                ),
             },
         ) from exc

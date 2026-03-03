@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(uv run ableton-cli:*)",
+      "Bash(python3:*)",
+      "Bash(sleep:*)",
+      "Bash(gh issue create:*)",
+      "Bash(gh issue list:*)",
+      "Bash(gh issue view:*)",
+      "Bash(gh repo view:*)"
+    ]
+  }
+}

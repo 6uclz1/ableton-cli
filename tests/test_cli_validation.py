@@ -12,6 +12,18 @@ def test_tempo_set_rejects_out_of_range_value(runner, cli_app) -> None:
     assert payload["error"]["code"] == "INVALID_ARGUMENT"
 
 
+def test_transport_position_set_rejects_negative_value(runner, cli_app) -> None:
+    result = runner.invoke(
+        cli_app,
+        ["--output", "json", "transport", "position", "set", "--", "-1"],
+    )
+
+    assert result.exit_code == 2
+    payload = json.loads(result.stdout)
+    assert payload["ok"] is False
+    assert payload["error"]["code"] == "INVALID_ARGUMENT"
+
+
 def test_track_volume_set_rejects_out_of_range_value(runner, cli_app) -> None:
     result = runner.invoke(cli_app, ["--output", "json", "track", "volume", "set", "0", "1.2"])
 
@@ -454,6 +466,113 @@ def test_browser_load_drum_kit_requires_exactly_one_kit_selector(runner, cli_app
     assert json.loads(both_selected.stdout)["error"]["code"] == "INVALID_ARGUMENT"
 
 
+def test_clip_cut_to_drum_rack_rejects_ambiguous_source_options(runner, cli_app) -> None:
+    result = runner.invoke(
+        cli_app,
+        [
+            "--output",
+            "json",
+            "clip",
+            "cut-to-drum-rack",
+            "--source-track",
+            "0",
+            "--source-clip",
+            "1",
+            "--source",
+            "sounds/Bass Loop.wav",
+            "--slice-count",
+            "8",
+        ],
+    )
+
+    assert result.exit_code == 2
+    assert json.loads(result.stdout)["error"]["code"] == "INVALID_ARGUMENT"
+
+
+def test_clip_cut_to_drum_rack_rejects_incomplete_session_source(runner, cli_app) -> None:
+    result = runner.invoke(
+        cli_app,
+        [
+            "--output",
+            "json",
+            "clip",
+            "cut-to-drum-rack",
+            "--source-track",
+            "0",
+            "--slice-count",
+            "8",
+        ],
+    )
+
+    assert result.exit_code == 2
+    assert json.loads(result.stdout)["error"]["code"] == "INVALID_ARGUMENT"
+
+
+def test_clip_cut_to_drum_rack_rejects_missing_slice_mode(runner, cli_app) -> None:
+    result = runner.invoke(
+        cli_app,
+        [
+            "--output",
+            "json",
+            "clip",
+            "cut-to-drum-rack",
+            "--source-track",
+            "0",
+            "--source-clip",
+            "1",
+        ],
+    )
+
+    assert result.exit_code == 2
+    assert json.loads(result.stdout)["error"]["code"] == "INVALID_ARGUMENT"
+
+
+def test_clip_cut_to_drum_rack_rejects_mutually_exclusive_slice_modes(runner, cli_app) -> None:
+    result = runner.invoke(
+        cli_app,
+        [
+            "--output",
+            "json",
+            "clip",
+            "cut-to-drum-rack",
+            "--source-track",
+            "0",
+            "--source-clip",
+            "1",
+            "--grid",
+            "1/16",
+            "--slice-count",
+            "8",
+        ],
+    )
+
+    assert result.exit_code == 2
+    assert json.loads(result.stdout)["error"]["code"] == "INVALID_ARGUMENT"
+
+
+def test_clip_cut_to_drum_rack_rejects_trigger_slot_without_trigger_flag(runner, cli_app) -> None:
+    result = runner.invoke(
+        cli_app,
+        [
+            "--output",
+            "json",
+            "clip",
+            "cut-to-drum-rack",
+            "--source-track",
+            "0",
+            "--source-clip",
+            "1",
+            "--slice-count",
+            "8",
+            "--trigger-clip-slot",
+            "2",
+        ],
+    )
+
+    assert result.exit_code == 2
+    assert json.loads(result.stdout)["error"]["code"] == "INVALID_ARGUMENT"
+
+
 def test_clip_duplicate_rejects_invalid_to_list(runner, cli_app) -> None:
     result = runner.invoke(
         cli_app,
@@ -792,6 +911,33 @@ def test_arrangement_clip_create_rejects_relative_audio_path(runner, cli_app) ->
     assert payload["error"]["code"] == "INVALID_ARGUMENT"
 
 
+def test_arrangement_clip_create_rejects_notes_for_audio_track(runner, cli_app) -> None:
+    result = runner.invoke(
+        cli_app,
+        [
+            "--output",
+            "json",
+            "arrangement",
+            "clip",
+            "create",
+            "1",
+            "--start",
+            "0",
+            "--length",
+            "4",
+            "--audio-path",
+            "/tmp/loop.wav",
+            "--notes-json",
+            '[{"pitch":60,"start_time":0.0,"duration":0.5,"velocity":100,"mute":false}]',
+        ],
+    )
+
+    assert result.exit_code == 2
+    payload = json.loads(result.stdout)
+    assert payload["ok"] is False
+    assert payload["error"]["code"] == "INVALID_ARGUMENT"
+
+
 def test_arrangement_clip_list_rejects_negative_track_option(runner, cli_app) -> None:
     result = runner.invoke(
         cli_app,
@@ -804,6 +950,117 @@ def test_arrangement_clip_list_rejects_negative_track_option(runner, cli_app) ->
             "--track",
             "-1",
         ],
+    )
+
+    assert result.exit_code == 2
+    payload = json.loads(result.stdout)
+    assert payload["ok"] is False
+    assert payload["error"]["code"] == "INVALID_ARGUMENT"
+
+
+def test_arrangement_clip_create_rejects_notes_json_and_notes_file_together(
+    runner, cli_app, tmp_path
+) -> None:
+    notes_path = tmp_path / "notes.json"
+    notes_path.write_text(
+        '[{"pitch":60,"start_time":0.0,"duration":0.5,"velocity":100,"mute":false}]',
+        encoding="utf-8",
+    )
+
+    result = runner.invoke(
+        cli_app,
+        [
+            "--output",
+            "json",
+            "arrangement",
+            "clip",
+            "create",
+            "0",
+            "--start",
+            "0",
+            "--length",
+            "4",
+            "--notes-json",
+            '[{"pitch":60,"start_time":0.0,"duration":0.5,"velocity":100,"mute":false}]',
+            "--notes-file",
+            str(notes_path),
+        ],
+    )
+
+    assert result.exit_code == 2
+    payload = json.loads(result.stdout)
+    assert payload["ok"] is False
+    assert payload["error"]["code"] == "INVALID_ARGUMENT"
+
+
+def test_arrangement_clip_notes_import_browser_rejects_invalid_mode(runner, cli_app) -> None:
+    result = runner.invoke(
+        cli_app,
+        [
+            "--output",
+            "json",
+            "arrangement",
+            "clip",
+            "notes",
+            "import-browser",
+            "0",
+            "1",
+            "sounds/Bass Loop.alc",
+            "--mode",
+            "merge",
+        ],
+    )
+
+    assert result.exit_code == 2
+    payload = json.loads(result.stdout)
+    assert payload["ok"] is False
+    assert payload["error"]["code"] == "INVALID_ARGUMENT"
+
+
+def test_arrangement_clip_delete_requires_exactly_one_mode(runner, cli_app) -> None:
+    missing_mode = runner.invoke(
+        cli_app,
+        ["--output", "json", "arrangement", "clip", "delete", "0"],
+    )
+    multiple_modes = runner.invoke(
+        cli_app,
+        [
+            "--output",
+            "json",
+            "arrangement",
+            "clip",
+            "delete",
+            "0",
+            "1",
+            "--all",
+        ],
+    )
+    incomplete_range = runner.invoke(
+        cli_app,
+        [
+            "--output",
+            "json",
+            "arrangement",
+            "clip",
+            "delete",
+            "0",
+            "--start",
+            "8",
+        ],
+    )
+
+    assert missing_mode.exit_code == 2
+    assert multiple_modes.exit_code == 2
+    assert incomplete_range.exit_code == 2
+    assert json.loads(missing_mode.stdout)["error"]["code"] == "INVALID_ARGUMENT"
+    assert json.loads(multiple_modes.stdout)["error"]["code"] == "INVALID_ARGUMENT"
+    assert json.loads(incomplete_range.stdout)["error"]["code"] == "INVALID_ARGUMENT"
+
+
+def test_arrangement_from_session_rejects_invalid_scenes_csv(runner, cli_app) -> None:
+    result = runner.invoke(
+        cli_app,
+        ["--output", "json", "arrangement", "from-session", "--scenes", "0:24,bad"],
     )
 
     assert result.exit_code == 2

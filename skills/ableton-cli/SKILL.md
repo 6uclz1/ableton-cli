@@ -67,6 +67,9 @@ uv run ableton-cli transport stop
 uv run ableton-cli transport toggle
 uv run ableton-cli transport tempo get
 uv run ableton-cli transport tempo set 128
+uv run ableton-cli transport position get
+uv run ableton-cli transport position set 32
+uv run ableton-cli transport rewind
 ```
 
 ### Arrangement
@@ -75,9 +78,19 @@ uv run ableton-cli transport tempo set 128
 uv run ableton-cli arrangement record start
 uv run ableton-cli arrangement record stop
 uv run ableton-cli arrangement clip create 0 --start 8 --length 4
+uv run ableton-cli arrangement clip create 0 --start 8 --length 4 --notes-json '[{"pitch":60,"start_time":0.0,"duration":0.5,"velocity":100,"mute":false}]'
 uv run ableton-cli arrangement clip create 1 --start 16 --length 8 --audio-path /tmp/loop.wav
 uv run ableton-cli arrangement clip list
 uv run ableton-cli arrangement clip list --track 0
+uv run ableton-cli arrangement clip notes add 0 0 --notes-file ./notes.json
+uv run ableton-cli arrangement clip notes get 0 0 --start-time 0.0 --end-time 4.0 --pitch 60
+uv run ableton-cli arrangement clip notes clear 0 0 --pitch 60
+uv run ableton-cli arrangement clip notes replace 0 0 --notes-json '[{"pitch":65,"start_time":0.25,"duration":0.5,"velocity":100,"mute":false}]'
+uv run ableton-cli arrangement clip notes import-browser 0 0 sounds/Bass\ Loop.alc --mode replace --import-length --import-groove
+uv run ableton-cli arrangement clip delete 0 0
+uv run ableton-cli arrangement clip delete 0 --start 8 --end 16
+uv run ableton-cli arrangement clip delete 0 --all
+uv run ableton-cli arrangement from-session --scenes "0:24,1:48"
 ```
 
 ### Track
@@ -124,6 +137,7 @@ uv run ableton-cli clip active set 0 0 false
 uv run ableton-cli clip duplicate 0 0 1
 uv run ableton-cli clip duplicate-many 0 0 --to 2,4,5,6
 uv run ableton-cli clip place-pattern 0 --clip 0 --scenes Intro,Drop,Peak
+uv run ableton-cli clip cut-to-drum-rack --source-track 1 --source-clip 0 --slice-count 8 --create-trigger-clip --trigger-clip-slot 1
 ```
 
 ### Scenes
@@ -308,6 +322,9 @@ uv run ableton-cli --output json ping
 - `arrangement_record_start` -> `uv run ableton-cli --output json arrangement record start`
 - `arrangement_record_stop` -> `uv run ableton-cli --output json arrangement record stop`
 - `set_tempo` -> `uv run ableton-cli --output json transport tempo set <bpm>`
+- `transport_position_get` -> `uv run ableton-cli --output json transport position get`
+- `transport_position_set` -> `uv run ableton-cli --output json transport position set <beats>`
+- `transport_rewind` -> `uv run ableton-cli --output json transport rewind`
 - `list_tracks` -> `uv run ableton-cli --output json tracks list`
 - `create_midi_track` -> `uv run ableton-cli --output json tracks create midi [--index <index>]`
 - `create_audio_track` -> `uv run ableton-cli --output json tracks create audio [--index <index>]`
@@ -327,6 +344,13 @@ uv run ableton-cli --output json ping
 - `get_clip_notes` -> `uv run ableton-cli --output json clip notes get <track> <clip> [--start-time <beats>] [--end-time <beats>] [--pitch <midi>]`
 - `clear_clip_notes` -> `uv run ableton-cli --output json clip notes clear <track> <clip> [--start-time <beats>] [--end-time <beats>] [--pitch <midi>]`
 - `replace_clip_notes` -> `uv run ableton-cli --output json clip notes replace <track> <clip> (--notes-json '<json-array>' | --notes-file <path>) [--start-time <beats>] [--end-time <beats>] [--pitch <midi>]`
+- `arrangement_clip_notes_add` -> `uv run ableton-cli --output json arrangement clip notes add <track> <index> (--notes-json '<json-array>' | --notes-file <path>)`
+- `arrangement_clip_notes_get` -> `uv run ableton-cli --output json arrangement clip notes get <track> <index> [--start-time <beats>] [--end-time <beats>] [--pitch <midi>]`
+- `arrangement_clip_notes_clear` -> `uv run ableton-cli --output json arrangement clip notes clear <track> <index> [--start-time <beats>] [--end-time <beats>] [--pitch <midi>]`
+- `arrangement_clip_notes_replace` -> `uv run ableton-cli --output json arrangement clip notes replace <track> <index> (--notes-json '<json-array>' | --notes-file <path>) [--start-time <beats>] [--end-time <beats>] [--pitch <midi>]`
+- `arrangement_clip_notes_import_browser` -> `uv run ableton-cli --output json arrangement clip notes import-browser <track> <index> <target> [--mode <replace|append>] [--import-length] [--import-groove]`
+- `arrangement_clip_delete` -> `uv run ableton-cli --output json arrangement clip delete <track> [index] [--start <beat> --end <beat>] [--all]`
+- `arrangement_from_session` -> `uv run ableton-cli --output json arrangement from-session --scenes "0:24,1:48"`
 - `clip_duplicate` -> `uv run ableton-cli --output json clip duplicate <track> <src_clip> <dst_clip>`
 - `set_clip_name` -> `uv run ableton-cli --output json clip name set <track> <clip> <name>`
 - `fire_clip` -> `uv run ableton-cli --output json clip fire <track> <clip>`

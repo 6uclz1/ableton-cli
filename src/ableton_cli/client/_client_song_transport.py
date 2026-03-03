@@ -38,6 +38,15 @@ class _AbletonClientSongTransportMixin:
     def transport_tempo_set(self, bpm: float) -> dict[str, object]:
         return self._call("transport_tempo_set", {"bpm": bpm})
 
+    def transport_position_get(self) -> dict[str, object]:
+        return self._call("transport_position_get")
+
+    def transport_position_set(self, beats: float) -> dict[str, object]:
+        return self._call("transport_position_set", {"beats": beats})
+
+    def transport_rewind(self) -> dict[str, object]:
+        return self._call("transport_rewind")
+
     def start_playback(self) -> dict[str, object]:
         return self._call("start_playback")
 

@@ -8,6 +8,7 @@ from .command_backend_validators import (
     _as_bool,
     _insert_index,
     _non_empty_string,
+    _non_negative_float,
     _panning,
     _tempo,
     _track_index,
@@ -96,6 +97,27 @@ def _handle_transport_tempo_set(backend: CommandBackend, args: dict[str, Any]) -
     return backend.transport_tempo_set(_tempo(args.get("bpm")))
 
 
+def _handle_transport_position_get(
+    backend: CommandBackend,
+    _args: dict[str, Any],
+) -> dict[str, Any]:
+    return backend.transport_position_get()
+
+
+def _handle_transport_position_set(
+    backend: CommandBackend,
+    args: dict[str, Any],
+) -> dict[str, Any]:
+    return backend.transport_position_set(_non_negative_float("beats", args.get("beats")))
+
+
+def _handle_transport_rewind(
+    backend: CommandBackend,
+    _args: dict[str, Any],
+) -> dict[str, Any]:
+    return backend.transport_rewind()
+
+
 def _handle_set_tempo(backend: CommandBackend, args: dict[str, Any]) -> dict[str, Any]:
     return backend.set_tempo(_tempo(args.get("tempo")))
 
@@ -172,6 +194,9 @@ SONG_TRANSPORT_HANDLERS: dict[str, Handler] = {
     "stop_playback": _handle_stop_playback,
     "transport_tempo_get": _handle_transport_tempo_get,
     "transport_tempo_set": _handle_transport_tempo_set,
+    "transport_position_get": _handle_transport_position_get,
+    "transport_position_set": _handle_transport_position_set,
+    "transport_rewind": _handle_transport_rewind,
     "set_tempo": _handle_set_tempo,
     "track_volume_get": _handle_track_volume_get,
     "track_volume_set": _handle_track_volume_set,

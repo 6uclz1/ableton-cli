@@ -1,0 +1,134 @@
+{
+  "attempt_count": 1,
+  "attempts": [
+    {
+      "attempt": 1,
+      "executed_actions": [
+        {
+          "command": [
+            "uv",
+            "run",
+            "ruff",
+            "check",
+            "--fix",
+            "."
+          ],
+          "duration_seconds": 0.022194541001226753,
+          "exit_code": 0,
+          "name": "ruff_check_fix",
+          "status": "pass"
+        },
+        {
+          "command": [
+            "uv",
+            "run",
+            "ruff",
+            "format",
+            "."
+          ],
+          "duration_seconds": 0.0220096250413917,
+          "exit_code": 0,
+          "name": "ruff_format",
+          "status": "pass"
+        }
+      ],
+      "fail_violation_count": 3,
+      "fail_violations": [
+        {
+          "fail_threshold": 99.0,
+          "message": "class.god_class_risk exceeded threshold (99.2 >= 70.0/99.0)",
+          "metric": "god_class_risk",
+          "path": "remote_script/AbletonCliRemote/live_backend_parts/tracks_clips.py",
+          "qualname": "LiveBackendTracksClipsMixin",
+          "scope": "class",
+          "severity": "fail",
+          "value": 99.2,
+          "warn_threshold": 70.0
+        },
+        {
+          "fail_threshold": 6.0,
+          "message": "class.nesting exceeded threshold (6.0 >= 3.0/6.0)",
+          "metric": "nesting",
+          "path": "remote_script/AbletonCliRemote/live_backend_parts/scenes_arrangement.py",
+          "qualname": "LiveBackendScenesArrangementMixin",
+          "scope": "class",
+          "severity": "fail",
+          "value": 6.0,
+          "warn_threshold": 3.0
+        },
+        {
+          "fail_threshold": 6.0,
+          "message": "function.nesting exceeded threshold (6.0 >= 3.0/6.0)",
+          "metric": "nesting",
+          "path": "remote_script/AbletonCliRemote/live_backend_parts/scenes_arrangement.py",
+          "qualname": "LiveBackendScenesArrangementMixin.arrangement_from_session",
+          "scope": "function",
+          "severity": "fail",
+          "value": 6.0,
+          "warn_threshold": 3.0
+        }
+      ],
+      "violation_actions": [
+        {
+          "actions": [
+            "ruff_check_fix",
+            "ruff_format"
+          ],
+          "violation": "class.god_class_risk:remote_script/AbletonCliRemote/live_backend_parts/tracks_clips.py:LiveBackendTracksClipsMixin"
+        },
+        {
+          "actions": [
+            "ruff_check_fix",
+            "ruff_format"
+          ],
+          "violation": "class.nesting:remote_script/AbletonCliRemote/live_backend_parts/scenes_arrangement.py:LiveBackendScenesArrangementMixin"
+        },
+        {
+          "actions": [
+            "ruff_check_fix",
+            "ruff_format"
+          ],
+          "violation": "function.nesting:remote_script/AbletonCliRemote/live_backend_parts/scenes_arrangement.py:LiveBackendScenesArrangementMixin.arrangement_from_session"
+        }
+      ]
+    }
+  ],
+  "max_attempts": 1,
+  "schema_version": 1,
+  "status": "fail",
+  "unresolved_failures": [
+    {
+      "fail_threshold": 99.0,
+      "message": "class.god_class_risk exceeded threshold (99.2 >= 70.0/99.0)",
+      "metric": "god_class_risk",
+      "path": "remote_script/AbletonCliRemote/live_backend_parts/tracks_clips.py",
+      "qualname": "LiveBackendTracksClipsMixin",
+      "scope": "class",
+      "severity": "fail",
+      "value": 99.2,
+      "warn_threshold": 70.0
+    },
+    {
+      "fail_threshold": 6.0,
+      "message": "class.nesting exceeded threshold (6.0 >= 3.0/6.0)",
+      "metric": "nesting",
+      "path": "remote_script/AbletonCliRemote/live_backend_parts/scenes_arrangement.py",
+      "qualname": "LiveBackendScenesArrangementMixin",
+      "scope": "class",
+      "severity": "fail",
+      "value": 6.0,
+      "warn_threshold": 3.0
+    },
+    {
+      "fail_threshold": 6.0,
+      "message": "function.nesting exceeded threshold (6.0 >= 3.0/6.0)",
+      "metric": "nesting",
+      "path": "remote_script/AbletonCliRemote/live_backend_parts/scenes_arrangement.py",
+      "qualname": "LiveBackendScenesArrangementMixin.arrangement_from_session",
+      "scope": "function",
+      "severity": "fail",
+      "value": 6.0,
+      "warn_threshold": 3.0
+    }
+  ]
+}

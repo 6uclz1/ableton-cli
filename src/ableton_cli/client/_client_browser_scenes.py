@@ -4,6 +4,23 @@ from typing import Any
 
 
 class _AbletonClientBrowserScenesMixin:
+    def _build_arrangement_clip_note_args(
+        self,
+        *,
+        track: int,
+        index: int,
+        notes: list[dict[str, Any]] | None,
+        start_time: float | None,
+        end_time: float | None,
+        pitch: int | None,
+    ) -> dict[str, Any]:
+        args: dict[str, Any] = {"track": track, "index": index}
+        self._add_if_not_none(args, "notes", notes)
+        self._add_if_not_none(args, "start_time", start_time)
+        self._add_if_not_none(args, "end_time", end_time)
+        self._add_if_not_none(args, "pitch", pitch)
+        return args
+
     def load_instrument_or_effect(
         self,
         track: int,
@@ -119,6 +136,7 @@ class _AbletonClientBrowserScenesMixin:
         start_time: float,
         length: float,
         audio_path: str | None,
+        notes: list[dict[str, Any]] | None = None,
     ) -> dict[str, Any]:
         args: dict[str, Any] = {
             "track": track,
@@ -126,12 +144,122 @@ class _AbletonClientBrowserScenesMixin:
             "length": length,
         }
         self._add_if_not_none(args, "audio_path", audio_path)
+        self._add_if_not_none(args, "notes", notes)
         return self._call("arrangement_clip_create", args)
 
     def arrangement_clip_list(self, track: int | None) -> dict[str, Any]:
         args: dict[str, Any] = {}
         self._add_if_not_none(args, "track", track)
         return self._call("arrangement_clip_list", args)
+
+    def arrangement_clip_notes_add(
+        self,
+        track: int,
+        index: int,
+        notes: list[dict[str, Any]],
+    ) -> dict[str, Any]:
+        args = self._build_arrangement_clip_note_args(
+            track=track,
+            index=index,
+            notes=notes,
+            start_time=None,
+            end_time=None,
+            pitch=None,
+        )
+        return self._call("arrangement_clip_notes_add", args)
+
+    def arrangement_clip_notes_get(
+        self,
+        track: int,
+        index: int,
+        start_time: float | None,
+        end_time: float | None,
+        pitch: int | None,
+    ) -> dict[str, Any]:
+        args = self._build_arrangement_clip_note_args(
+            track=track,
+            index=index,
+            notes=None,
+            start_time=start_time,
+            end_time=end_time,
+            pitch=pitch,
+        )
+        return self._call("arrangement_clip_notes_get", args)
+
+    def arrangement_clip_notes_clear(
+        self,
+        track: int,
+        index: int,
+        start_time: float | None,
+        end_time: float | None,
+        pitch: int | None,
+    ) -> dict[str, Any]:
+        args = self._build_arrangement_clip_note_args(
+            track=track,
+            index=index,
+            notes=None,
+            start_time=start_time,
+            end_time=end_time,
+            pitch=pitch,
+        )
+        return self._call("arrangement_clip_notes_clear", args)
+
+    def arrangement_clip_notes_replace(
+        self,
+        track: int,
+        index: int,
+        notes: list[dict[str, Any]],
+        start_time: float | None,
+        end_time: float | None,
+        pitch: int | None,
+    ) -> dict[str, Any]:
+        args = self._build_arrangement_clip_note_args(
+            track=track,
+            index=index,
+            notes=notes,
+            start_time=start_time,
+            end_time=end_time,
+            pitch=pitch,
+        )
+        return self._call("arrangement_clip_notes_replace", args)
+
+    def arrangement_clip_notes_import_browser(
+        self,
+        track: int,
+        index: int,
+        target_uri: str | None,
+        target_path: str | None,
+        mode: str,
+        import_length: bool,
+        import_groove: bool,
+    ) -> dict[str, Any]:
+        args: dict[str, Any] = {
+            "track": track,
+            "index": index,
+            "mode": mode,
+            "import_length": import_length,
+            "import_groove": import_groove,
+        }
+        self._add_if_not_none(args, "target_uri", target_uri)
+        self._add_if_not_none(args, "target_path", target_path)
+        return self._call("arrangement_clip_notes_import_browser", args)
+
+    def arrangement_clip_delete(
+        self,
+        track: int,
+        index: int | None,
+        start: float | None,
+        end: float | None,
+        delete_all: bool,
+    ) -> dict[str, Any]:
+        args: dict[str, Any] = {"track": track, "all": delete_all}
+        self._add_if_not_none(args, "index", index)
+        self._add_if_not_none(args, "start", start)
+        self._add_if_not_none(args, "end", end)
+        return self._call("arrangement_clip_delete", args)
+
+    def arrangement_from_session(self, scenes: list[dict[str, float]]) -> dict[str, Any]:
+        return self._call("arrangement_from_session", {"scenes": scenes})
 
     def tracks_delete(self, track: int) -> dict[str, Any]:
         return self._call("tracks_delete", {"track": track})

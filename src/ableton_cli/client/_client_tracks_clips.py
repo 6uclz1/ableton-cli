@@ -269,5 +269,33 @@ class _AbletonClientTracksClipsMixin:
         self._add_if_not_none(args, "dst_clips", dst_clips)
         return self._call("clip_duplicate", args)
 
+    def clip_cut_to_drum_rack(
+        self,
+        *,
+        source_track: int | None,
+        source_clip: int | None,
+        source_uri: str | None,
+        source_path: str | None,
+        target_track: int | None,
+        grid: str | None,
+        slice_count: int | None,
+        start_pad: int,
+        create_trigger_clip: bool,
+        trigger_clip_slot: int | None,
+    ) -> dict[str, Any]:
+        args: dict[str, Any] = {
+            "start_pad": start_pad,
+            "create_trigger_clip": create_trigger_clip,
+        }
+        self._add_if_not_none(args, "source_track", source_track)
+        self._add_if_not_none(args, "source_clip", source_clip)
+        self._add_if_not_none(args, "source_uri", source_uri)
+        self._add_if_not_none(args, "source_path", source_path)
+        self._add_if_not_none(args, "target_track", target_track)
+        self._add_if_not_none(args, "grid", grid)
+        self._add_if_not_none(args, "slice_count", slice_count)
+        self._add_if_not_none(args, "trigger_clip_slot", trigger_clip_slot)
+        return self._call("clip_cut_to_drum_rack", args)
+
     def execute_batch(self, steps: list[dict[str, Any]]) -> dict[str, Any]:
         return self._call("execute_batch", {"steps": steps})

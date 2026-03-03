@@ -49,12 +49,21 @@ uv run ableton-cli wait-ready
 uv run ableton-cli song info
 uv run ableton-cli transport play
 uv run ableton-cli transport tempo set 128
+uv run ableton-cli transport position get
+uv run ableton-cli transport position set 32
+uv run ableton-cli transport rewind
 uv run ableton-cli tracks list
 uv run ableton-cli track volume get 0
 uv run ableton-cli track volume set 0 0.7
 uv run ableton-cli track panning set 0 -- -0.25
 uv run ableton-cli clip create 0 0 --length 4
 uv run ableton-cli clip notes add 0 0 --notes-json '[{"pitch":60,"start_time":0.0,"duration":0.5,"velocity":100,"mute":false}]'
+uv run ableton-cli clip cut-to-drum-rack --source-track 1 --source-clip 0 --slice-count 8 --create-trigger-clip --trigger-clip-slot 1
+uv run ableton-cli arrangement clip create 0 --start 8 --length 4 --notes-json '[{"pitch":60,"start_time":0.0,"duration":0.5,"velocity":100,"mute":false}]'
+uv run ableton-cli arrangement clip notes get 0 0 --start-time 0.0 --end-time 4.0 --pitch 60
+uv run ableton-cli arrangement clip notes import-browser 0 0 sounds/Bass\ Loop.alc --mode replace --import-length --import-groove
+uv run ableton-cli arrangement clip delete 0 --start 0 --end 16
+uv run ableton-cli arrangement from-session --scenes "0:24,1:48"
 uv run ableton-cli clip fire 0 0
 uv run ableton-cli scenes list
 uv run ableton-cli browser search drift --item-type loadable

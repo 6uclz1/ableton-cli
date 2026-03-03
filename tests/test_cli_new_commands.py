@@ -119,6 +119,37 @@ class _ClientStub:
             "duplicated": True,
         }
 
+    def clip_cut_to_drum_rack(  # noqa: ANN201
+        self,
+        source_track: int | None,
+        source_clip: int | None,
+        source_uri: str | None,
+        source_path: str | None,
+        target_track: int | None,
+        grid: str | None,
+        slice_count: int | None,
+        start_pad: int,
+        create_trigger_clip: bool,
+        trigger_clip_slot: int | None,
+    ):
+        resolved_slice_count = (
+            slice_count if slice_count is not None else (4 if grid is not None else 0)
+        )
+        return {
+            "source_track": source_track,
+            "source_clip": source_clip,
+            "source_uri": source_uri,
+            "source_path": source_path,
+            "target_track": 2 if target_track is None else target_track,
+            "grid": grid,
+            "slice_count": resolved_slice_count,
+            "start_pad": start_pad,
+            "assigned_count": resolved_slice_count,
+            "create_trigger_clip": create_trigger_clip,
+            "trigger_clip_created": create_trigger_clip,
+            "trigger_clip_slot": trigger_clip_slot,
+        }
+
     def set_clip_name(self, track: int, clip: int, name: str):  # noqa: ANN201
         return {"track": track, "clip": clip, "name": name}
 
@@ -363,6 +394,15 @@ class _ClientStub:
     def track_panning_set(self, track: int, value: float):  # noqa: ANN201
         return {"track": track, "panning": value}
 
+    def transport_position_get(self):  # noqa: ANN201
+        return {"current_time": 4.0, "beat_position": 4.0}
+
+    def transport_position_set(self, beats: float):  # noqa: ANN201
+        return {"current_time": beats, "beat_position": beats}
+
+    def transport_rewind(self):  # noqa: ANN201
+        return {"current_time": 0.0, "beat_position": 0.0}
+
     def scenes_list(self):  # noqa: ANN201
         return {
             "scenes": [
@@ -399,7 +439,15 @@ class _ClientStub:
         start_time: float,
         length: float,
         audio_path: str | None,
+        notes: list[dict[str, object]] | None = None,
     ):
+        if track == 1 and notes is not None:
+            raise AppError(
+                error_code="INVALID_ARGUMENT",
+                message="notes are supported only for MIDI tracks",
+                hint="Remove --notes-json/--notes-file for audio arrangement clips.",
+                exit_code=ExitCode.INVALID_ARGUMENT,
+            )
         if track == 0 and audio_path is not None:
             raise AppError(
                 error_code="INVALID_ARGUMENT",
@@ -423,6 +471,8 @@ class _ClientStub:
         }
         if audio_path is None:
             payload["kind"] = "midi"
+            if notes is not None:
+                payload["notes_added"] = len(notes)
             return payload
         payload["kind"] = "audio"
         payload["audio_path"] = audio_path
@@ -452,6 +502,109 @@ class _ClientStub:
         if track is not None:
             clips = [clip for clip in clips if clip["track"] == track]
         return {"track": track, "clip_count": len(clips), "clips": clips}
+
+    def arrangement_clip_notes_add(  # noqa: ANN201
+        self, track: int, index: int, notes: list[dict[str, object]]
+    ):
+        return {"track": track, "index": index, "note_count": len(notes)}
+
+    def arrangement_clip_notes_get(  # noqa: ANN201
+        self,
+        track: int,
+        index: int,
+        start_time: float | None,
+        end_time: float | None,
+        pitch: int | None,
+    ):
+        return {
+            "track": track,
+            "index": index,
+            "start_time": start_time,
+            "end_time": end_time,
+            "pitch": pitch,
+            "notes": [],
+            "note_count": 0,
+        }
+
+    def arrangement_clip_notes_clear(  # noqa: ANN201
+        self,
+        track: int,
+        index: int,
+        start_time: float | None,
+        end_time: float | None,
+        pitch: int | None,
+    ):
+        return {
+            "track": track,
+            "index": index,
+            "start_time": start_time,
+            "end_time": end_time,
+            "pitch": pitch,
+            "cleared_count": 1,
+        }
+
+    def arrangement_clip_notes_replace(  # noqa: ANN201
+        self,
+        track: int,
+        index: int,
+        notes: list[dict[str, object]],
+        start_time: float | None,
+        end_time: float | None,
+        pitch: int | None,
+    ):
+        return {
+            "track": track,
+            "index": index,
+            "start_time": start_time,
+            "end_time": end_time,
+            "pitch": pitch,
+            "cleared_count": 1,
+            "added_count": len(notes),
+        }
+
+    def arrangement_clip_notes_import_browser(  # noqa: ANN201
+        self,
+        track: int,
+        index: int,
+        target_uri: str | None,
+        target_path: str | None,
+        mode: str,
+        import_length: bool,
+        import_groove: bool,
+    ):
+        return {
+            "track": track,
+            "index": index,
+            "target_uri": target_uri,
+            "target_path": target_path,
+            "mode": mode,
+            "import_length": import_length,
+            "import_groove": import_groove,
+            "notes_imported": 2,
+            "length_imported": import_length,
+            "groove_imported": import_groove,
+        }
+
+    def arrangement_clip_delete(  # noqa: ANN201
+        self,
+        track: int,
+        index: int | None,
+        start: float | None,
+        end: float | None,
+        delete_all: bool,
+    ):
+        if index is not None:
+            return {"track": track, "mode": "index", "deleted_count": 1, "deleted_indexes": [index]}
+        if delete_all:
+            return {"track": track, "mode": "all", "deleted_count": 2, "deleted_indexes": [0, 1]}
+        return {"track": track, "mode": "range", "deleted_count": 1, "deleted_indexes": [1]}
+
+    def arrangement_from_session(self, scenes: list[dict[str, float]]):  # noqa: ANN201
+        return {
+            "scene_count": len(scenes),
+            "created_count": 3,
+            "scenes": scenes,
+        }
 
     def execute_batch(self, steps: list[dict[str, object]]):  # noqa: ANN201
         return {
@@ -1499,6 +1652,93 @@ def test_clip_duplicate_many_command_outputs_json_envelope(runner, cli_app, monk
     }
 
 
+def test_clip_cut_to_drum_rack_command_supports_session_source(
+    runner, cli_app, monkeypatch
+) -> None:
+    from ableton_cli.commands import clip
+
+    monkeypatch.setattr(clip, "get_client", lambda ctx: _ClientStub())
+
+    result = runner.invoke(
+        cli_app,
+        [
+            "--output",
+            "json",
+            "clip",
+            "cut-to-drum-rack",
+            "--source-track",
+            "0",
+            "--source-clip",
+            "1",
+            "--slice-count",
+            "8",
+            "--start-pad",
+            "4",
+        ],
+    )
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["ok"] is True
+    assert payload["result"] == {
+        "source_track": 0,
+        "source_clip": 1,
+        "source_uri": None,
+        "source_path": None,
+        "target_track": 2,
+        "grid": None,
+        "slice_count": 8,
+        "start_pad": 4,
+        "assigned_count": 8,
+        "create_trigger_clip": False,
+        "trigger_clip_created": False,
+        "trigger_clip_slot": None,
+    }
+
+
+def test_clip_cut_to_drum_rack_command_supports_browser_source_and_trigger_clip(
+    runner, cli_app, monkeypatch
+) -> None:
+    from ableton_cli.commands import clip
+
+    monkeypatch.setattr(clip, "get_client", lambda ctx: _ClientStub())
+
+    result = runner.invoke(
+        cli_app,
+        [
+            "--output",
+            "json",
+            "clip",
+            "cut-to-drum-rack",
+            "--source",
+            "sounds/Bass Loop.wav",
+            "--target-track",
+            "0",
+            "--grid",
+            "1/16",
+            "--create-trigger-clip",
+            "--trigger-clip-slot",
+            "3",
+        ],
+    )
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["ok"] is True
+    assert payload["result"] == {
+        "source_track": None,
+        "source_clip": None,
+        "source_uri": None,
+        "source_path": "sounds/Bass Loop.wav",
+        "target_track": 0,
+        "grid": "1/16",
+        "slice_count": 4,
+        "start_pad": 0,
+        "assigned_count": 4,
+        "create_trigger_clip": True,
+        "trigger_clip_created": True,
+        "trigger_clip_slot": 3,
+    }
+
+
 def test_clip_place_pattern_supports_scene_ranges(runner, cli_app, monkeypatch) -> None:
     from ableton_cli.commands import clip
 
@@ -1618,6 +1858,32 @@ def test_tracks_delete_command_outputs_json_envelope(runner, cli_app, monkeypatc
     assert payload["result"] == {"track": 1, "deleted": True}
 
 
+def test_transport_position_commands_output_json_envelope(runner, cli_app, monkeypatch) -> None:
+    from ableton_cli.commands import transport
+
+    monkeypatch.setattr(transport, "get_client", lambda ctx: _ClientStub())
+
+    gotten = runner.invoke(cli_app, ["--output", "json", "transport", "position", "get"])
+    set_result = runner.invoke(
+        cli_app,
+        ["--output", "json", "transport", "position", "set", "32"],
+    )
+    rewind = runner.invoke(cli_app, ["--output", "json", "transport", "rewind"])
+
+    assert gotten.exit_code == 0
+    assert set_result.exit_code == 0
+    assert rewind.exit_code == 0
+    gotten_payload = json.loads(gotten.stdout)
+    set_payload = json.loads(set_result.stdout)
+    rewind_payload = json.loads(rewind.stdout)
+    assert gotten_payload["ok"] is True
+    assert set_payload["ok"] is True
+    assert rewind_payload["ok"] is True
+    assert gotten_payload["result"] == {"current_time": 4.0, "beat_position": 4.0}
+    assert set_payload["result"] == {"current_time": 32.0, "beat_position": 32.0}
+    assert rewind_payload["result"] == {"current_time": 0.0, "beat_position": 0.0}
+
+
 def test_arrangement_record_commands_output_json_envelope(runner, cli_app, monkeypatch) -> None:
     from ableton_cli.commands import arrangement
 
@@ -1698,6 +1964,35 @@ def test_arrangement_clip_create_command_outputs_json_envelope(
         "arrangement_view_focused": True,
         "created": True,
     }
+
+
+def test_arrangement_clip_create_accepts_notes_options(runner, cli_app, monkeypatch) -> None:
+    from ableton_cli.commands import arrangement
+
+    monkeypatch.setattr(arrangement, "get_client", lambda ctx: _ClientStub())
+
+    result = runner.invoke(
+        cli_app,
+        [
+            "--output",
+            "json",
+            "arrangement",
+            "clip",
+            "create",
+            "0",
+            "--start",
+            "8",
+            "--length",
+            "4",
+            "--notes-json",
+            '[{"pitch":60,"start_time":0.0,"duration":0.5,"velocity":100,"mute":false}]',
+        ],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["ok"] is True
+    assert payload["result"]["notes_added"] == 1
 
 
 def test_arrangement_clip_create_accepts_windows_absolute_audio_path(
@@ -1836,6 +2131,175 @@ def test_arrangement_clip_list_command_outputs_json_envelope(runner, cli_app, mo
             }
         ],
     }
+
+
+def test_arrangement_clip_notes_commands_output_json_envelope(runner, cli_app, monkeypatch) -> None:
+    from ableton_cli.commands import arrangement
+
+    monkeypatch.setattr(arrangement, "get_client", lambda ctx: _ClientStub())
+
+    add_result = runner.invoke(
+        cli_app,
+        [
+            "--output",
+            "json",
+            "arrangement",
+            "clip",
+            "notes",
+            "add",
+            "0",
+            "1",
+            "--notes-json",
+            '[{"pitch":60,"start_time":0.0,"duration":0.5,"velocity":100,"mute":false}]',
+        ],
+    )
+    get_result = runner.invoke(
+        cli_app,
+        [
+            "--output",
+            "json",
+            "arrangement",
+            "clip",
+            "notes",
+            "get",
+            "0",
+            "1",
+            "--start-time",
+            "0",
+            "--end-time",
+            "4",
+            "--pitch",
+            "60",
+        ],
+    )
+    clear_result = runner.invoke(
+        cli_app,
+        [
+            "--output",
+            "json",
+            "arrangement",
+            "clip",
+            "notes",
+            "clear",
+            "0",
+            "1",
+            "--pitch",
+            "60",
+        ],
+    )
+    replace_result = runner.invoke(
+        cli_app,
+        [
+            "--output",
+            "json",
+            "arrangement",
+            "clip",
+            "notes",
+            "replace",
+            "0",
+            "1",
+            "--notes-json",
+            '[{"pitch":62,"start_time":1.0,"duration":0.5,"velocity":100,"mute":false}]',
+            "--start-time",
+            "0",
+            "--end-time",
+            "4",
+        ],
+    )
+    import_result = runner.invoke(
+        cli_app,
+        [
+            "--output",
+            "json",
+            "arrangement",
+            "clip",
+            "notes",
+            "import-browser",
+            "0",
+            "1",
+            "sounds/Bass Loop.alc",
+            "--mode",
+            "append",
+            "--import-length",
+            "--import-groove",
+        ],
+    )
+
+    assert add_result.exit_code == 0
+    assert get_result.exit_code == 0
+    assert clear_result.exit_code == 0
+    assert replace_result.exit_code == 0
+    assert import_result.exit_code == 0
+
+    assert json.loads(add_result.stdout)["result"] == {"track": 0, "index": 1, "note_count": 1}
+    assert json.loads(get_result.stdout)["result"]["note_count"] == 0
+    assert json.loads(clear_result.stdout)["result"]["cleared_count"] == 1
+    assert json.loads(replace_result.stdout)["result"]["added_count"] == 1
+    imported = json.loads(import_result.stdout)["result"]
+    assert imported["mode"] == "append"
+    assert imported["import_length"] is True
+    assert imported["import_groove"] is True
+
+
+def test_arrangement_clip_delete_command_supports_index_range_all(
+    runner, cli_app, monkeypatch
+) -> None:
+    from ableton_cli.commands import arrangement
+
+    monkeypatch.setattr(arrangement, "get_client", lambda ctx: _ClientStub())
+
+    by_index = runner.invoke(
+        cli_app,
+        ["--output", "json", "arrangement", "clip", "delete", "0", "1"],
+    )
+    by_range = runner.invoke(
+        cli_app,
+        [
+            "--output",
+            "json",
+            "arrangement",
+            "clip",
+            "delete",
+            "0",
+            "--start",
+            "8",
+            "--end",
+            "16",
+        ],
+    )
+    by_all = runner.invoke(
+        cli_app,
+        ["--output", "json", "arrangement", "clip", "delete", "0", "--all"],
+    )
+
+    assert by_index.exit_code == 0
+    assert by_range.exit_code == 0
+    assert by_all.exit_code == 0
+    assert json.loads(by_index.stdout)["result"]["mode"] == "index"
+    assert json.loads(by_range.stdout)["result"]["mode"] == "range"
+    assert json.loads(by_all.stdout)["result"]["mode"] == "all"
+
+
+def test_arrangement_from_session_command_outputs_json_envelope(
+    runner, cli_app, monkeypatch
+) -> None:
+    from ableton_cli.commands import arrangement
+
+    monkeypatch.setattr(arrangement, "get_client", lambda ctx: _ClientStub())
+
+    result = runner.invoke(
+        cli_app,
+        ["--output", "json", "arrangement", "from-session", "--scenes", "0:24,1:48"],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["ok"] is True
+    assert payload["result"]["scene_count"] == 2
+    assert payload["result"]["scenes"] == [
+        {"scene": 0, "duration_beats": 24.0},
+        {"scene": 1, "duration_beats": 48.0},
+    ]
 
 
 def test_new_commands_validate_arguments_with_exit_code_2(runner, cli_app, monkeypatch) -> None:

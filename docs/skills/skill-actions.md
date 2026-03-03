@@ -94,6 +94,7 @@ Stable action names and CLI mappings for automation wrappers.
 - `uv run ableton-cli transport tempo get`: Read current tempo only.
 - `uv run ableton-cli track volume get <track>`: Read current track volume only.
 - `uv run ableton-cli session snapshot`: Fetch song/session/tracks/scenes in one call.
+- `uv run ableton-cli session diff --from <snapshot-before.json> --to <snapshot-after.json>`: Compute deterministic added/removed/changed session deltas from two snapshots.
 - `uv run ableton-cli batch stream`: Execute one JSON request per stdin line and receive one JSON response line for low-latency repeated automation.
 - `uv run ableton-cli clip notes quantize <track> <clip> --grid <fraction-or-beats> --strength <0.0-1.0>`: Quantize matching note start times.
 - `uv run ableton-cli clip notes humanize <track> <clip> --timing <beats> --velocity <0-127>`: Humanize timing and velocity for matching notes.

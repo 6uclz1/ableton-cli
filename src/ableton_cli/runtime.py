@@ -8,7 +8,9 @@ from typing import Any
 import typer
 
 from .client.ableton_client import AbletonClient
+from .compact import compact_payload
 from .config import Settings
+from .contracts import validate_command_contract
 from .errors import AppError, ExitCode
 from .output import (
     OutputMode,
@@ -28,11 +30,23 @@ class RuntimeContext:
     output_mode: OutputMode
     quiet: bool
     no_color: bool
+    record_path: str | None = None
+    replay_path: str | None = None
+    read_only: bool = False
+    compact: bool = False
     _client: AbletonClient | None = None
 
     def client(self) -> AbletonClient:
         if self._client is None:
-            self._client = AbletonClient(self.settings)
+            if self.record_path is None and self.replay_path is None and not self.read_only:
+                self._client = AbletonClient(self.settings)
+            else:
+                self._client = AbletonClient(
+                    self.settings,
+                    record_path=self.record_path,
+                    replay_path=self.replay_path,
+                    read_only=self.read_only,
+                )
         return self._client
 
 
@@ -61,8 +75,11 @@ def execute_command(
 
     try:
         result = action()
+        validate_command_contract(command=command, args=args, result=result)
         payload = success_payload(command=command, args=args, result=result)
         if runtime.output_mode == OutputMode.JSON:
+            if runtime.compact:
+                payload = compact_payload(payload)
             emit_json(payload)
         else:
             if human_formatter is not None and not runtime.quiet:

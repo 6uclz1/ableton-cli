@@ -18,6 +18,12 @@ def test_ci_workflow_configures_dev_checks_reports() -> None:
     test_job = jobs["test"]
     steps = test_job["steps"]
 
+    verify_generated_docs = next(
+        step for step in steps if step.get("name") == "Verify generated skill docs"
+    )
+    assert "python tools/generate_skill_docs.py" in verify_generated_docs["run"]
+    assert "git diff --exit-code" in verify_generated_docs["run"]
+
     run_lint_and_tests = next(step for step in steps if step.get("name") == "Run lint and tests")
     assert run_lint_and_tests["run"] == (
         "uv run python -m ableton_cli.dev_checks "

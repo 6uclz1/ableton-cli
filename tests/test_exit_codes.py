@@ -30,5 +30,9 @@ def test_remote_error_to_exit_code_mapping() -> None:
     assert exit_code_from_error_code("TIMEOUT") == ExitCode.TIMEOUT
     assert exit_code_from_error_code("BATCH_STEP_FAILED") == ExitCode.EXECUTION_FAILED
     assert exit_code_from_error_code("REMOTE_BUSY") == ExitCode.EXECUTION_FAILED
+    assert exit_code_from_error_code("READ_ONLY_VIOLATION") == ExitCode.EXECUTION_FAILED
+    assert exit_code_from_error_code("BATCH_PREFLIGHT_FAILED") == ExitCode.EXECUTION_FAILED
+    assert exit_code_from_error_code("BATCH_ASSERT_FAILED") == ExitCode.EXECUTION_FAILED
+    assert exit_code_from_error_code("BATCH_RETRY_EXHAUSTED") == ExitCode.EXECUTION_FAILED
     assert exit_code_from_error_code("INTERNAL_ERROR") == ExitCode.INTERNAL_ERROR
     assert exit_code_from_error_code("UNKNOWN") == ExitCode.EXECUTION_FAILED

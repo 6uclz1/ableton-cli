@@ -1,93 +1,21 @@
 from __future__ import annotations
 
 import re
+import subprocess
 from pathlib import Path
 
 from typer.main import get_command
 
+from ableton_cli.actions import (
+    STABLE_ACTION_MAPPINGS,
+    stable_action_command_map,
+    stable_action_names,
+)
 from ableton_cli.cli import app
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SKILL_DOC = REPO_ROOT / "skills" / "ableton-cli" / "SKILL.md"
 ACTIONS_DOC = REPO_ROOT / "docs" / "skills" / "skill-actions.md"
-
-STABLE_ACTIONS = (
-    "ping",
-    "get_song_info",
-    "song_new",
-    "song_save",
-    "song_export_audio",
-    "get_session_info",
-    "get_track_info",
-    "play",
-    "stop",
-    "arrangement_record_start",
-    "arrangement_record_stop",
-    "set_tempo",
-    "transport_position_get",
-    "transport_position_set",
-    "transport_rewind",
-    "list_tracks",
-    "create_midi_track",
-    "create_audio_track",
-    "tracks_delete",
-    "set_track_name",
-    "set_track_volume",
-    "get_track_mute",
-    "set_track_mute",
-    "get_track_solo",
-    "set_track_solo",
-    "get_track_arm",
-    "set_track_arm",
-    "get_track_panning",
-    "set_track_panning",
-    "create_clip",
-    "add_notes_to_clip",
-    "get_clip_notes",
-    "clear_clip_notes",
-    "replace_clip_notes",
-    "arrangement_clip_notes_add",
-    "arrangement_clip_notes_get",
-    "arrangement_clip_notes_clear",
-    "arrangement_clip_notes_replace",
-    "arrangement_clip_notes_import_browser",
-    "arrangement_clip_delete",
-    "arrangement_from_session",
-    "clip_duplicate",
-    "set_clip_name",
-    "fire_clip",
-    "stop_clip",
-    "list_scenes",
-    "create_scene",
-    "set_scene_name",
-    "fire_scene",
-    "scenes_move",
-    "stop_all_clips",
-    "get_browser_tree",
-    "get_browser_items_at_path",
-    "get_browser_item",
-    "get_browser_categories",
-    "get_browser_items",
-    "search_browser_items",
-    "load_instrument_or_effect",
-    "load_drum_kit",
-    "set_device_parameter",
-    "find_synth_devices",
-    "list_synth_parameters",
-    "set_synth_parameter_safe",
-    "observe_synth_parameters",
-    "list_standard_synth_keys",
-    "set_standard_synth_parameter_safe",
-    "observe_standard_synth_state",
-    "find_effect_devices",
-    "list_effect_parameters",
-    "set_effect_parameter_safe",
-    "observe_effect_parameters",
-    "list_standard_effect_keys",
-    "set_standard_effect_parameter_safe",
-    "observe_standard_effect_state",
-    "execute_batch",
-)
 
 
 def _read(path: Path) -> str:
@@ -150,17 +78,22 @@ def test_skill_doc_frontmatter_is_minimal() -> None:
 
 
 def test_stable_action_names_are_complete_and_unique() -> None:
-    assert len(STABLE_ACTIONS) == 75
-    assert len(set(STABLE_ACTIONS)) == 75
+    names = stable_action_names()
+    assert len(STABLE_ACTION_MAPPINGS) == 75
+    assert len(names) == 75
+    assert len(set(names)) == 75
 
 
 def test_action_mappings_are_consistent_between_docs() -> None:
     skill_doc_mapping = _extract_skill_doc_mapping(_read(SKILL_DOC))
     action_doc_mapping = _extract_action_doc_mapping(_read(ACTIONS_DOC))
+    expected_action_names = set(stable_action_names())
+    expected_mapping = stable_action_command_map()
 
-    assert set(skill_doc_mapping) == set(STABLE_ACTIONS)
-    assert set(action_doc_mapping) == set(STABLE_ACTIONS)
-    assert skill_doc_mapping == action_doc_mapping
+    assert set(skill_doc_mapping) == expected_action_names
+    assert set(action_doc_mapping) == expected_action_names
+    assert skill_doc_mapping == expected_mapping
+    assert action_doc_mapping == expected_mapping
     for command in skill_doc_mapping.values():
         assert command.startswith("uv run ableton-cli ")
 
@@ -172,3 +105,14 @@ def test_skill_doc_covers_all_leaf_cli_commands() -> None:
         assert re.search(pattern, markdown, flags=re.MULTILINE), (
             f"missing command documentation for: {command}"
         )
+
+
+def test_generated_skill_docs_are_up_to_date() -> None:
+    result = subprocess.run(
+        ("uv", "run", "python", "tools/generate_skill_docs.py", "--check"),
+        cwd=REPO_ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr

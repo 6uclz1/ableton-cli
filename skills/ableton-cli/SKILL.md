@@ -45,6 +45,7 @@ uv run ableton-cli song save --path /tmp/demo.als
 uv run ableton-cli song export audio --path /tmp/demo.wav
 uv run ableton-cli session info
 uv run ableton-cli session snapshot
+uv run ableton-cli session diff --from ./snapshot-before.json --to ./snapshot-after.json
 uv run ableton-cli session stop-all-clips
 ```
 

@@ -70,6 +70,22 @@ def main(
     config: Annotated[Path | None, typer.Option("--config", help="Config file path")] = None,
     no_color: Annotated[bool, typer.Option("--no-color", help="Disable color output")] = False,
     quiet: Annotated[bool, typer.Option("--quiet", help="Suppress human success output")] = False,
+    record: Annotated[
+        str | None,
+        typer.Option("--record", help="Record request/response transport data to JSONL file"),
+    ] = None,
+    replay: Annotated[
+        str | None,
+        typer.Option("--replay", help="Replay request/response transport data from JSONL file"),
+    ] = None,
+    read_only: Annotated[
+        bool,
+        typer.Option("--read-only", help="Reject write commands before dispatch"),
+    ] = False,
+    compact: Annotated[
+        bool,
+        typer.Option("--compact", help="Compact large JSON arrays into summaries"),
+    ] = False,
     version: Annotated[
         bool,
         typer.Option(
@@ -94,6 +110,10 @@ def main(
             config=config,
             no_color=no_color,
             quiet=quiet,
+            record=record,
+            replay=replay,
+            read_only=read_only,
+            compact=compact,
         )
     except AppError as exc:
         payload = error_payload(

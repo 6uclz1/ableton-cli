@@ -612,6 +612,12 @@ class _ClientStub:
             "results": [{"index": idx, "result": {"ok": True}} for idx, _ in enumerate(steps)],
         }
 
+    def execute_remote_command(self, name: str, args: dict[str, object]):  # noqa: ANN201
+        handler = getattr(self, name, None)
+        if handler is None:
+            return {"name": name, "args": args, "ok": True}
+        return handler(**args)
+
     def find_synth_devices(  # noqa: ANN201
         self,
         track: int | None,
@@ -2611,17 +2617,11 @@ def test_effect_standard_wrapper_commands_output_json_envelope(
 
 class _BatchStreamClientStub:
     def __init__(self) -> None:
-        self.calls: list[list[dict[str, object]]] = []
+        self.calls: list[tuple[str, dict[str, object]]] = []
 
-    def execute_batch(self, steps: list[dict[str, object]]):  # noqa: ANN201
-        self.calls.append(steps)
-        return {
-            "step_count": len(steps),
-            "results": [
-                {"index": index, "name": str(step["name"]), "result": {"ok": True}}
-                for index, step in enumerate(steps)
-            ],
-        }
+    def execute_remote_command(self, name: str, args: dict[str, object]):  # noqa: ANN201
+        self.calls.append((name, args))
+        return {"ok": True, "name": name}
 
 
 def test_batch_stream_processes_multiple_lines_and_reuses_client(
@@ -2652,8 +2652,8 @@ def test_batch_stream_processes_multiple_lines_and_reuses_client(
     assert [item["id"] for item in responses] == ["first", "second"]
     assert [item["ok"] for item in responses] == [True, True]
     assert client.calls == [
-        [{"name": "tracks_list", "args": {}}],
-        [{"name": "song_info", "args": {}}],
+        ("tracks_list", {}),
+        ("song_info", {}),
     ]
 
 
@@ -2693,3 +2693,228 @@ def test_batch_stream_emits_structured_line_errors_and_continues(
     assert responses[3]["id"] == "ok-2"
     assert responses[3]["ok"] is True
     assert len(client.calls) == 2
+
+
+def _timeout_error() -> AppError:
+    return AppError(
+        error_code="TIMEOUT",
+        message="timed out",
+        hint="retry",
+        exit_code=ExitCode.TIMEOUT,
+    )
+
+
+class _BatchAdvancedClientStub:
+    def __init__(self) -> None:
+        from ableton_cli.capabilities import compute_command_set_hash
+
+        self.calls: list[tuple[str, dict[str, object]]] = []
+        self._responses: dict[str, list[dict[str, object] | AppError]] = {}
+        supported = ["ping", "tracks_list", "song_info", "track_volume_set"]
+        self._ping_payload = {
+            "protocol_version": 2,
+            "supported_commands": supported,
+            "command_set_hash": compute_command_set_hash(supported),
+            "remote_script_version": "0.0.0",
+            "api_support": {},
+        }
+
+    def set_responses(self, name: str, items: list[dict[str, object] | AppError]) -> None:
+        self._responses[name] = list(items)
+
+    def ping(self):  # noqa: ANN201
+        return dict(self._ping_payload)
+
+    def execute_remote_command(self, name: str, args: dict[str, object]):  # noqa: ANN201
+        self.calls.append((name, args))
+        queue = self._responses.get(name)
+        if queue:
+            item = queue.pop(0)
+            if isinstance(item, AppError):
+                raise item
+            return item
+        return {"ok": True, "name": name}
+
+
+def test_batch_run_retries_only_configured_errors(runner, cli_app, monkeypatch) -> None:
+    from ableton_cli.commands import batch
+
+    client = _BatchAdvancedClientStub()
+    client.set_responses("tracks_list", [_timeout_error(), {"tracks": []}])
+    monkeypatch.setattr(batch, "get_client", lambda _ctx: client)
+
+    result = runner.invoke(
+        cli_app,
+        [
+            "--output",
+            "json",
+            "batch",
+            "run",
+            "--steps-json",
+            json.dumps(
+                {
+                    "steps": [
+                        {
+                            "name": "tracks_list",
+                            "args": {},
+                            "retry": {"max_attempts": 3, "backoff_ms": 0, "on": ["TIMEOUT"]},
+                        }
+                    ]
+                }
+            ),
+        ],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["ok"] is True
+    assert payload["result"]["results"][0]["attempts"] == 2
+
+
+def test_batch_run_fails_when_retry_is_exhausted(runner, cli_app, monkeypatch) -> None:
+    from ableton_cli.commands import batch
+
+    client = _BatchAdvancedClientStub()
+    client.set_responses("tracks_list", [_timeout_error(), _timeout_error(), _timeout_error()])
+    monkeypatch.setattr(batch, "get_client", lambda _ctx: client)
+
+    result = runner.invoke(
+        cli_app,
+        [
+            "--output",
+            "json",
+            "batch",
+            "run",
+            "--steps-json",
+            json.dumps(
+                {
+                    "steps": [
+                        {
+                            "name": "tracks_list",
+                            "args": {},
+                            "retry": {"max_attempts": 3, "backoff_ms": 0, "on": ["TIMEOUT"]},
+                        }
+                    ]
+                }
+            ),
+        ],
+    )
+
+    assert result.exit_code == 20
+    payload = json.loads(result.stdout)
+    assert payload["ok"] is False
+    assert payload["error"]["code"] == "BATCH_RETRY_EXHAUSTED"
+
+
+def test_batch_run_fails_when_assert_condition_does_not_match(runner, cli_app, monkeypatch) -> None:
+    from ableton_cli.commands import batch
+
+    client = _BatchAdvancedClientStub()
+    client.set_responses("song_info", [{"tempo": 90.0}])
+    client.set_responses("tracks_list", [{"tracks": []}])
+    monkeypatch.setattr(batch, "get_client", lambda _ctx: client)
+
+    result = runner.invoke(
+        cli_app,
+        [
+            "--output",
+            "json",
+            "batch",
+            "run",
+            "--steps-json",
+            json.dumps(
+                {
+                    "steps": [
+                        {"name": "song_info", "args": {}},
+                        {
+                            "name": "tracks_list",
+                            "args": {},
+                            "assert": {
+                                "source": "previous",
+                                "path": "tempo",
+                                "op": "gte",
+                                "value": 120.0,
+                            },
+                        },
+                    ]
+                }
+            ),
+        ],
+    )
+
+    assert result.exit_code == 20
+    payload = json.loads(result.stdout)
+    assert payload["ok"] is False
+    assert payload["error"]["code"] == "BATCH_ASSERT_FAILED"
+
+
+def test_batch_run_preflight_blocks_on_protocol_mismatch(runner, cli_app, monkeypatch) -> None:
+    from ableton_cli.commands import batch
+
+    client = _BatchAdvancedClientStub()
+    monkeypatch.setattr(batch, "get_client", lambda _ctx: client)
+
+    result = runner.invoke(
+        cli_app,
+        [
+            "--output",
+            "json",
+            "batch",
+            "run",
+            "--steps-json",
+            json.dumps(
+                {
+                    "preflight": {"protocol_version": 99},
+                    "steps": [{"name": "tracks_list", "args": {}}],
+                }
+            ),
+        ],
+    )
+
+    assert result.exit_code == 20
+    payload = json.loads(result.stdout)
+    assert payload["ok"] is False
+    assert payload["error"]["code"] == "BATCH_PREFLIGHT_FAILED"
+
+
+def test_batch_stream_continues_after_assert_failure(runner, cli_app, monkeypatch) -> None:
+    from ableton_cli.commands import batch
+
+    client = _BatchAdvancedClientStub()
+    client.set_responses("song_info", [{"tempo": 80.0}, {"tempo": 130.0}])
+    monkeypatch.setattr(batch, "get_client", lambda _ctx: client)
+
+    payload = "\n".join(
+        [
+            json.dumps(
+                {
+                    "id": "fail-assert",
+                    "steps": [
+                        {"name": "song_info", "args": {}},
+                        {
+                            "name": "tracks_list",
+                            "args": {},
+                            "assert": {
+                                "source": "previous",
+                                "path": "tempo",
+                                "op": "gte",
+                                "value": 100.0,
+                            },
+                        },
+                    ],
+                }
+            ),
+            json.dumps({"id": "ok", "steps": [{"name": "song_info", "args": {}}]}),
+        ]
+    )
+
+    result = runner.invoke(cli_app, ["batch", "stream"], input=f"{payload}\n")
+
+    assert result.exit_code == 0
+    responses = [json.loads(line) for line in result.stdout.splitlines() if line.strip()]
+    assert len(responses) == 2
+    assert responses[0]["id"] == "fail-assert"
+    assert responses[0]["ok"] is False
+    assert responses[0]["error"]["code"] == "BATCH_ASSERT_FAILED"
+    assert responses[1]["id"] == "ok"
+    assert responses[1]["ok"] is True

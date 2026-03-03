@@ -56,6 +56,10 @@ def test_build_runtime_context_resolves_dependencies_and_configures_logging(
         config=config_path,
         no_color=True,
         quiet=False,
+        record="/tmp/session-record.jsonl",
+        replay=None,
+        read_only=True,
+        compact=True,
     )
 
     assert runtime.settings is settings
@@ -63,6 +67,10 @@ def test_build_runtime_context_resolves_dependencies_and_configures_logging(
     assert runtime.output_mode is OutputMode.JSON
     assert runtime.quiet is False
     assert runtime.no_color is True
+    assert runtime.record_path == "/tmp/session-record.jsonl"
+    assert runtime.replay_path is None
+    assert runtime.read_only is True
+    assert runtime.compact is True
     assert seen["config_path"] == config_path
     assert seen["cli_overrides"] == {
         "host": "127.0.0.1",
@@ -102,6 +110,10 @@ def test_build_runtime_context_propagates_bootstrap_errors(monkeypatch) -> None:
             config=None,
             no_color=False,
             quiet=False,
+            record=None,
+            replay=None,
+            read_only=False,
+            compact=False,
         )
 
     assert exc_info.value is expected

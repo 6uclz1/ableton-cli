@@ -232,6 +232,30 @@ class LiveBackendTransportMixerMixin:
         song.tempo = float(bpm)
         return {"tempo": float(song.tempo)}
 
+    def transport_position_get(self) -> dict[str, Any]:
+        song = self._song()
+        if not hasattr(song, "current_song_time"):
+            raise _not_supported_by_live_api(
+                message="Song position API is not available in Live API",
+                hint="Use a Live version exposing song.current_song_time.",
+            )
+        current_time = float(song.current_song_time)
+        return {"current_time": current_time, "beat_position": current_time}
+
+    def transport_position_set(self, beats: float) -> dict[str, Any]:
+        song = self._song()
+        if not hasattr(song, "current_song_time"):
+            raise _not_supported_by_live_api(
+                message="Song position API is not available in Live API",
+                hint="Use a Live version exposing song.current_song_time.",
+            )
+        song.current_song_time = float(beats)
+        current_time = float(song.current_song_time)
+        return {"current_time": current_time, "beat_position": current_time}
+
+    def transport_rewind(self) -> dict[str, Any]:
+        return self.transport_position_set(0.0)
+
     def set_tempo(self, tempo: float) -> dict[str, Any]:
         return self.transport_tempo_set(tempo)
 

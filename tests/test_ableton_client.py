@@ -295,6 +295,66 @@ def test_client_sends_request_timeout_meta(monkeypatch) -> None:
             },
         ),
         (
+            lambda client: client.clip_cut_to_drum_rack(
+                source_track=0,
+                source_clip=1,
+                source_uri=None,
+                source_path=None,
+                target_track=None,
+                grid="1/8",
+                slice_count=None,
+                start_pad=4,
+                create_trigger_clip=False,
+                trigger_clip_slot=None,
+            ),
+            "clip_cut_to_drum_rack",
+            {
+                "source_track": 0,
+                "source_clip": 1,
+                "grid": "1/8",
+                "start_pad": 4,
+                "create_trigger_clip": False,
+            },
+        ),
+        (
+            lambda client: client.clip_cut_to_drum_rack(
+                source_track=None,
+                source_clip=None,
+                source_uri=None,
+                source_path="sounds/Bass Loop.wav",
+                target_track=2,
+                grid=None,
+                slice_count=8,
+                start_pad=0,
+                create_trigger_clip=True,
+                trigger_clip_slot=3,
+            ),
+            "clip_cut_to_drum_rack",
+            {
+                "source_path": "sounds/Bass Loop.wav",
+                "target_track": 2,
+                "slice_count": 8,
+                "start_pad": 0,
+                "create_trigger_clip": True,
+                "trigger_clip_slot": 3,
+            },
+        ),
+        (
+            lambda client: client.transport_position_get(),
+            "transport_position_get",
+            {},
+        ),
+        (
+            lambda client: client.transport_position_set(32.0),
+            "transport_position_set",
+            {"beats": 32.0},
+        ),
+        (
+            lambda client: client.transport_rewind(),
+            "transport_rewind",
+            {},
+        ),
+        (
             lambda client: client.arrangement_clip_create(
                 track=0,
                 start_time=8.0,
@@ -324,6 +384,38 @@ def test_client_sends_request_timeout_meta(monkeypatch) -> None:
             },
         ),
         (
+            lambda client: client.arrangement_clip_create(
+                track=0,
+                start_time=0.0,
+                length=4.0,
+                audio_path=None,
+                notes=[
+                    {
+                        "pitch": 60,
+                        "start_time": 0.0,
+                        "duration": 0.5,
+                        "velocity": 100,
+                        "mute": False,
+                    }
+                ],
+            ),
+            "arrangement_clip_create",
+            {
+                "track": 0,
+                "start_time": 0.0,
+                "length": 4.0,
+                "notes": [
+                    {
+                        "pitch": 60,
+                        "start_time": 0.0,
+                        "duration": 0.5,
+                        "velocity": 100,
+                        "mute": False,
+                    }
+                ],
+            },
+        ),
+        (
             lambda client: client.arrangement_clip_list(track=None),
             "arrangement_clip_list",
             {},
@@ -332,6 +424,143 @@ def test_client_sends_request_timeout_meta(monkeypatch) -> None:
             lambda client: client.arrangement_clip_list(track=1),
             "arrangement_clip_list",
             {"track": 1},
+        ),
+        (
+            lambda client: client.arrangement_clip_notes_add(
+                track=0,
+                index=1,
+                notes=[
+                    {
+                        "pitch": 62,
+                        "start_time": 0.0,
+                        "duration": 0.5,
+                        "velocity": 100,
+                        "mute": False,
+                    }
+                ],
+            ),
+            "arrangement_clip_notes_add",
+            {
+                "track": 0,
+                "index": 1,
+                "notes": [
+                    {
+                        "pitch": 62,
+                        "start_time": 0.0,
+                        "duration": 0.5,
+                        "velocity": 100,
+                        "mute": False,
+                    }
+                ],
+            },
+        ),
+        (
+            lambda client: client.arrangement_clip_notes_get(
+                track=0,
+                index=1,
+                start_time=0.0,
+                end_time=4.0,
+                pitch=62,
+            ),
+            "arrangement_clip_notes_get",
+            {
+                "track": 0,
+                "index": 1,
+                "start_time": 0.0,
+                "end_time": 4.0,
+                "pitch": 62,
+            },
+        ),
+        (
+            lambda client: client.arrangement_clip_notes_clear(
+                track=0,
+                index=1,
+                start_time=None,
+                end_time=None,
+                pitch=None,
+            ),
+            "arrangement_clip_notes_clear",
+            {
+                "track": 0,
+                "index": 1,
+            },
+        ),
+        (
+            lambda client: client.arrangement_clip_notes_replace(
+                track=0,
+                index=1,
+                notes=[
+                    {
+                        "pitch": 64,
+                        "start_time": 1.0,
+                        "duration": 0.5,
+                        "velocity": 90,
+                        "mute": False,
+                    }
+                ],
+                start_time=0.0,
+                end_time=8.0,
+                pitch=None,
+            ),
+            "arrangement_clip_notes_replace",
+            {
+                "track": 0,
+                "index": 1,
+                "notes": [
+                    {
+                        "pitch": 64,
+                        "start_time": 1.0,
+                        "duration": 0.5,
+                        "velocity": 90,
+                        "mute": False,
+                    }
+                ],
+                "start_time": 0.0,
+                "end_time": 8.0,
+            },
+        ),
+        (
+            lambda client: client.arrangement_clip_notes_import_browser(
+                track=0,
+                index=1,
+                target_uri=None,
+                target_path="sounds/Bass Loop.alc",
+                mode="append",
+                import_length=True,
+                import_groove=False,
+            ),
+            "arrangement_clip_notes_import_browser",
+            {
+                "track": 0,
+                "index": 1,
+                "target_path": "sounds/Bass Loop.alc",
+                "mode": "append",
+                "import_length": True,
+                "import_groove": False,
+            },
+        ),
+        (
+            lambda client: client.arrangement_clip_delete(
+                track=0,
+                index=None,
+                start=8.0,
+                end=16.0,
+                delete_all=False,
+            ),
+            "arrangement_clip_delete",
+            {"track": 0, "start": 8.0, "end": 16.0, "all": False},
+        ),
+        (
+            lambda client: client.arrangement_from_session(
+                scenes=[{"scene": 0, "duration_beats": 24.0}, {"scene": 1, "duration_beats": 48.0}]
+            ),
+            "arrangement_from_session",
+            {
+                "scenes": [
+                    {"scene": 0, "duration_beats": 24.0},
+                    {"scene": 1, "duration_beats": 48.0},
+                ]
+            },
         ),
     ],
 )

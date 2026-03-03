@@ -65,6 +65,12 @@ class _SongTransportBackend(Protocol):
 
     def transport_tempo_set(self, bpm: float) -> dict[str, Any]: ...
 
+    def transport_position_get(self) -> dict[str, Any]: ...
+
+    def transport_position_set(self, beats: float) -> dict[str, Any]: ...
+
+    def transport_rewind(self) -> dict[str, Any]: ...
+
     def set_tempo(self, tempo: float) -> dict[str, Any]: ...
 
     def track_volume_get(self, track: int) -> dict[str, Any]: ...
@@ -195,6 +201,20 @@ class _TracksClipsBackend(Protocol):
         dst_clips: list[int] | None,
     ) -> dict[str, Any]: ...
 
+    def clip_cut_to_drum_rack(
+        self,
+        source_track: int | None,
+        source_clip: int | None,
+        source_uri: str | None,
+        source_path: str | None,
+        target_track: int | None,
+        grid: float | None,
+        slice_count: int | None,
+        start_pad: int,
+        create_trigger_clip: bool,
+        trigger_clip_slot: int | None,
+    ) -> dict[str, Any]: ...
+
     def scenes_list(self) -> dict[str, Any]: ...
 
     def create_scene(self, index: int) -> dict[str, Any]: ...
@@ -217,9 +237,67 @@ class _TracksClipsBackend(Protocol):
         start_time: float,
         length: float,
         audio_path: str | None,
+        notes: list[dict[str, Any]] | None,
     ) -> dict[str, Any]: ...
 
     def arrangement_clip_list(self, track: int | None) -> dict[str, Any]: ...
+
+    def arrangement_clip_notes_add(
+        self,
+        track: int,
+        index: int,
+        notes: list[dict[str, Any]],
+    ) -> dict[str, Any]: ...
+
+    def arrangement_clip_notes_get(
+        self,
+        track: int,
+        index: int,
+        start_time: float | None,
+        end_time: float | None,
+        pitch: int | None,
+    ) -> dict[str, Any]: ...
+
+    def arrangement_clip_notes_clear(
+        self,
+        track: int,
+        index: int,
+        start_time: float | None,
+        end_time: float | None,
+        pitch: int | None,
+    ) -> dict[str, Any]: ...
+
+    def arrangement_clip_notes_replace(
+        self,
+        track: int,
+        index: int,
+        notes: list[dict[str, Any]],
+        start_time: float | None,
+        end_time: float | None,
+        pitch: int | None,
+    ) -> dict[str, Any]: ...
+
+    def arrangement_clip_notes_import_browser(
+        self,
+        track: int,
+        index: int,
+        target_uri: str | None,
+        target_path: str | None,
+        mode: str,
+        import_length: bool,
+        import_groove: bool,
+    ) -> dict[str, Any]: ...
+
+    def arrangement_clip_delete(
+        self,
+        track: int,
+        index: int | None,
+        start: float | None,
+        end: float | None,
+        delete_all: bool,
+    ) -> dict[str, Any]: ...
+
+    def arrangement_from_session(self, scenes: list[dict[str, Any]]) -> dict[str, Any]: ...
 
     def tracks_delete(self, track: int) -> dict[str, Any]: ...
 

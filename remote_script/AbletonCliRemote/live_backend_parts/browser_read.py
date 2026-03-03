@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+from gzip import decompress as gzip_decompress
+from pathlib import Path
 from time import monotonic, sleep
 from typing import Any
+from xml.etree import ElementTree as ET
 
 from ..command_backend import CommandError
 from .base import _invalid_argument, _not_supported_by_live_api
@@ -48,6 +51,15 @@ class LiveBackendBrowserReadMixin:
                 hint="Use a Live version exposing song.view.selected_track.",
             )
         view.selected_track = target_track
+
+    def _focus_session_view_for_load(self) -> None:
+        app = self._application()
+        view = getattr(app, "view", None)
+        if view is None:
+            return
+        focus_view = getattr(view, "focus_view", None)
+        if callable(focus_view):
+            focus_view("Session")
 
     def _select_clip_slot_for_load(
         self,
@@ -159,12 +171,16 @@ class LiveBackendBrowserReadMixin:
         message: str,
         hint: str,
         created_tracks: list[dict[str, Any]],
+        extra_details: dict[str, Any] | None = None,
     ) -> None:
+        details = self._created_track_error_details(created_tracks=created_tracks)
+        if extra_details:
+            details.update(extra_details)
         raise CommandError(
             code="INVALID_ARGUMENT",
             message=message,
             hint=hint,
-            details=self._created_track_error_details(created_tracks=created_tracks),
+            details=details,
         )
 
     def _cleanup_created_tracks_except(
@@ -421,6 +437,199 @@ class LiveBackendBrowserReadMixin:
             )
         return target_clip
 
+    @staticmethod
+    def _known_clip_roots() -> list[Path]:
+        roots: list[Path] = []
+        applications_dir = Path("/Applications")
+        if applications_dir.is_dir():
+            for app in sorted(applications_dir.glob("Ableton Live *.app")):
+                core_library = app / "Contents" / "App-Resources" / "Core Library"
+                for subdir in ("MIDI Clips", "Audio Clips", "Clips"):
+                    candidate = core_library / subdir
+                    if candidate.is_dir():
+                        roots.append(candidate)
+        user_library = Path.home() / "Music" / "Ableton" / "User Library" / "Clips"
+        if user_library.is_dir():
+            roots.append(user_library)
+        unique_roots: list[Path] = []
+        seen: set[str] = set()
+        for root in roots:
+            key = str(root)
+            if key in seen:
+                continue
+            seen.add(key)
+            unique_roots.append(root)
+        return unique_roots
+
+    @classmethod
+    def _resolve_relative_clip_path(cls, value: str) -> Path | None:
+        normalized = value.strip().replace("\\", "/")
+        if not normalized:
+            return None
+        if normalized.lower().startswith("clips/"):
+            normalized = normalized.split("/", 1)[1]
+        relative_path = Path(normalized)
+        roots = cls._known_clip_roots()
+        for root in roots:
+            direct = root / relative_path
+            if direct.is_file():
+                return direct
+        basename = relative_path.name
+        if not basename:
+            return None
+        matches: list[Path] = []
+        for root in roots:
+            for candidate in root.rglob(basename):
+                if candidate.is_file():
+                    matches.append(candidate)
+                    if len(matches) > 1:
+                        return None
+        if len(matches) == 1:
+            return matches[0]
+        return None
+
+    def _resolve_midi_clip_alc_file_path(self, *, item: Any) -> Path | None:
+        candidates: list[str] = []
+        for attr in ("file_path", "source_path", "absolute_path", "path"):
+            value = getattr(item, attr, None)
+            if isinstance(value, str) and value.strip():
+                candidates.append(value.strip())
+        uri = self._coerce_uri(getattr(item, "uri", None))
+        if uri is not None:
+            path_by_uri = self._item_path_by_uri(uri)
+            if isinstance(path_by_uri, str) and path_by_uri.strip():
+                candidates.append(path_by_uri.strip())
+        name = str(getattr(item, "name", "")).strip()
+        if name:
+            candidates.append(f"clips/{name}")
+
+        seen: set[str] = set()
+        for raw in candidates:
+            if raw in seen:
+                continue
+            seen.add(raw)
+            direct = Path(raw)
+            if direct.is_absolute() and direct.is_file():
+                return direct
+            resolved = self._resolve_relative_clip_path(raw)
+            if resolved is not None:
+                return resolved
+        return None
+
+    @staticmethod
+    def _float_attr(node: Any, key: str) -> float | None:
+        if node is None:
+            return None
+        value = None
+        if hasattr(node, "attrib"):
+            value = node.attrib.get(key)
+        if value is None:
+            return None
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return None
+
+    def _parse_midi_clip_alc_file(
+        self,
+        *,
+        alc_path: Path,
+    ) -> tuple[list[dict[str, Any]], float] | None:
+        try:
+            xml_bytes = gzip_decompress(alc_path.read_bytes())
+            root = ET.fromstring(xml_bytes)
+        except Exception:
+            return None
+
+        midi_clip = root.find(".//MidiClip")
+        if midi_clip is None:
+            return None
+
+        clip_length = self._float_attr(midi_clip.find("./CurrentEnd"), "Value")
+        if clip_length is None or clip_length <= 0:
+            clip_length = self._float_attr(midi_clip.find("./Loop/LoopEnd"), "Value")
+        if clip_length is None or clip_length <= 0:
+            clip_length = 1.0
+
+        notes: list[dict[str, Any]] = []
+        for key_track in midi_clip.findall(".//Notes/KeyTracks/KeyTrack"):
+            midi_key = self._float_attr(key_track.find("./MidiKey"), "Value")
+            if midi_key is None:
+                continue
+            pitch = int(round(midi_key))
+            for note_event in key_track.findall("./Notes/MidiNoteEvent"):
+                start_time = self._float_attr(note_event, "Time")
+                duration = self._float_attr(note_event, "Duration")
+                velocity = self._float_attr(note_event, "Velocity")
+                if start_time is None or duration is None or velocity is None:
+                    continue
+                if duration <= 0:
+                    continue
+                notes.append(
+                    {
+                        "pitch": pitch,
+                        "start_time": float(start_time),
+                        "duration": float(duration),
+                        "velocity": max(1, min(127, int(round(float(velocity))))),
+                        "mute": False,
+                    }
+                )
+
+        notes.sort(key=lambda note: (float(note["start_time"]), int(note["pitch"])))
+        return notes, float(clip_length)
+
+    def _materialize_midi_clip_source_from_alc(
+        self,
+        *,
+        temporary_track: Any,
+        item: Any,
+    ) -> tuple[Any | None, dict[str, Any]]:
+        debug: dict[str, Any] = {"materialize_mode": "alc_file_parse"}
+        alc_path = self._resolve_midi_clip_alc_file_path(item=item)
+        if alc_path is None:
+            debug["materialize_reason"] = "alc_path_unresolved"
+            return None, debug
+        debug["alc_path"] = str(alc_path)
+        parsed = self._parse_midi_clip_alc_file(alc_path=alc_path)
+        if parsed is None:
+            debug["materialize_reason"] = "alc_parse_failed"
+            return None, debug
+        notes, clip_length = parsed
+        debug["materialize_notes_count"] = len(notes)
+        debug["materialize_clip_length"] = float(clip_length)
+
+        clip_slots = list(getattr(temporary_track, "clip_slots", []))
+        if not clip_slots:
+            debug["materialize_reason"] = "temporary_track_missing_clip_slots"
+            return None, debug
+        slot = clip_slots[0]
+        source_clip = getattr(slot, "clip", None)
+        if source_clip is None:
+            create_clip = getattr(slot, "create_clip", None)
+            if not callable(create_clip):
+                debug["materialize_reason"] = "clip_slot_create_clip_unavailable"
+                return None, debug
+            create_clip(max(float(clip_length), 0.000001))
+            source_clip = getattr(slot, "clip", None)
+        if source_clip is None:
+            debug["materialize_reason"] = "clip_slot_failed_to_materialize_clip"
+            return None, debug
+
+        if hasattr(source_clip, "length"):
+            try:
+                source_clip.length = float(clip_length)
+            except Exception:
+                pass
+
+        if notes:
+            set_notes = getattr(source_clip, "set_notes", None)
+            if not callable(set_notes):
+                debug["materialize_reason"] = "source_clip_set_notes_unavailable"
+                return None, debug
+            set_notes(self._clip_note_tuples(notes))
+        debug["materialize_reason"] = "materialized"
+        return source_clip, debug
+
     def _load_midi_clip_to_temporary_track(self, *, song: Any, item: Any) -> tuple[int, Any]:
         base_track_count = len(list(getattr(song, "tracks", [])))
         create_midi_track = getattr(song, "create_midi_track", None)
@@ -434,12 +643,21 @@ class LiveBackendBrowserReadMixin:
         temporary_track = self._track_at(temporary_track_index)
 
         view = getattr(song, "view", None)
+        has_selected_track = view is not None and hasattr(view, "selected_track")
+        has_selected_scene = view is not None and hasattr(view, "selected_scene")
+        has_highlighted_clip_slot = view is not None and hasattr(view, "highlighted_clip_slot")
         previous_selected_track = (
-            getattr(view, "selected_track", None)
-            if view is not None and hasattr(view, "selected_track")
-            else None
+            getattr(view, "selected_track", None) if has_selected_track else None
         )
+        previous_selected_scene = (
+            getattr(view, "selected_scene", None) if has_selected_scene else None
+        )
+        previous_highlighted_clip_slot = (
+            getattr(view, "highlighted_clip_slot", None) if has_highlighted_clip_slot else None
+        )
+        self._focus_session_view_for_load()
         self._select_track_for_load(song=song, target_track=temporary_track)
+        self._select_clip_slot_for_load(song=song, target_track=temporary_track, clip_slot=0)
         try:
             try:
                 self._browser().load_item(item)
@@ -447,20 +665,39 @@ class LiveBackendBrowserReadMixin:
                 self._cleanup_created_tracks(song=song, base_track_count=base_track_count)
                 raise
         finally:
-            if previous_selected_track is not None and view is not None:
-                view.selected_track = previous_selected_track
+            if view is not None:
+                if has_selected_track:
+                    view.selected_track = previous_selected_track
+                if has_selected_scene:
+                    view.selected_scene = previous_selected_scene
+                if has_highlighted_clip_slot:
+                    view.highlighted_clip_slot = previous_highlighted_clip_slot
 
         created_tracks, source_track = self._wait_for_created_clip_track(
             song=song,
             base_track_count=base_track_count,
         )
         if source_track is None:
-            self._cleanup_created_tracks(song=song, base_track_count=base_track_count)
-            self._raise_ambiguous_created_track_error(
-                message="MIDI clip import did not create a deterministic source track",
-                hint="Retry with a loadable .alc target from browser items/search.",
-                created_tracks=created_tracks,
+            source_clip, materialize_debug = self._materialize_midi_clip_source_from_alc(
+                temporary_track=temporary_track,
+                item=item,
             )
+            if source_clip is None:
+                self._cleanup_created_tracks(song=song, base_track_count=base_track_count)
+                self._raise_ambiguous_created_track_error(
+                    message="MIDI clip import did not create a deterministic source track",
+                    hint="Retry with a loadable .alc target from browser items/search.",
+                    created_tracks=created_tracks,
+                    extra_details=materialize_debug,
+                )
+            source_track = {
+                "index": temporary_track_index,
+                "track": temporary_track,
+                "name": str(getattr(temporary_track, "name", "")),
+                "has_clip": True,
+                "clip_slot": 0,
+                "clip": source_clip,
+            }
 
         source_track_index = int(source_track["index"])
         reindexed_tracks = self._cleanup_created_tracks_except(

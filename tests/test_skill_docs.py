@@ -24,6 +24,9 @@ STABLE_ACTIONS = (
     "arrangement_record_start",
     "arrangement_record_stop",
     "set_tempo",
+    "transport_position_get",
+    "transport_position_set",
+    "transport_rewind",
     "list_tracks",
     "create_midi_track",
     "create_audio_track",
@@ -43,6 +46,13 @@ STABLE_ACTIONS = (
     "get_clip_notes",
     "clear_clip_notes",
     "replace_clip_notes",
+    "arrangement_clip_notes_add",
+    "arrangement_clip_notes_get",
+    "arrangement_clip_notes_clear",
+    "arrangement_clip_notes_replace",
+    "arrangement_clip_notes_import_browser",
+    "arrangement_clip_delete",
+    "arrangement_from_session",
     "clip_duplicate",
     "set_clip_name",
     "fire_clip",
@@ -140,8 +150,8 @@ def test_skill_doc_frontmatter_is_minimal() -> None:
 
 
 def test_stable_action_names_are_complete_and_unique() -> None:
-    assert len(STABLE_ACTIONS) == 65
-    assert len(set(STABLE_ACTIONS)) == 65
+    assert len(STABLE_ACTIONS) == 75
+    assert len(set(STABLE_ACTIONS)) == 75
 
 
 def test_action_mappings_are_consistent_between_docs() -> None:

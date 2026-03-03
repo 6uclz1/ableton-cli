@@ -15,6 +15,7 @@ from .live_backend_parts import (
     LiveBackendSongSessionMixin,
     LiveBackendSynthDevicesMixin,
     LiveBackendTracksClipsMixin,
+    LiveBackendTracksCutToDrumRackMixin,
     LiveBackendTransportMixerMixin,
 )
 
@@ -28,6 +29,7 @@ class LiveBackend(
     LiveBackendBrowserSearchIndexMixin,
     LiveBackendBrowserPathLookupMixin,
     LiveBackendBrowserCatalogMixin,
+    LiveBackendTracksCutToDrumRackMixin,
     LiveBackendTracksClipsMixin,
     LiveBackendScenesArrangementMixin,
     LiveBackendTransportMixerMixin,

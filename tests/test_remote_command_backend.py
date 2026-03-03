@@ -73,6 +73,15 @@ class _BackendStub:
     def transport_tempo_set(self, bpm: float):  # noqa: ANN201
         return {"tempo": bpm}
 
+    def transport_position_get(self):  # noqa: ANN201
+        return {"current_time": 4.0, "beat_position": 4.0}
+
+    def transport_position_set(self, beats: float):  # noqa: ANN201
+        return {"current_time": beats, "beat_position": beats}
+
+    def transport_rewind(self):  # noqa: ANN201
+        return {"current_time": 0.0, "beat_position": 0.0}
+
     def track_volume_get(self, track: int):  # noqa: ANN201
         return {"track": track, "volume": 0.5}
 
@@ -168,6 +177,33 @@ class _BackendStub:
             "src_clip": src_clip,
             "dst_clips": dst_clips or [],
             "duplicated": True,
+        }
+
+    def clip_cut_to_drum_rack(  # noqa: ANN201
+        self,
+        source_track: int | None,
+        source_clip: int | None,
+        source_uri: str | None,
+        source_path: str | None,
+        target_track: int | None,
+        grid: float | None,
+        slice_count: int | None,
+        start_pad: int,
+        create_trigger_clip: bool,
+        trigger_clip_slot: int | None,
+    ):
+        return {
+            "source_track": source_track,
+            "source_clip": source_clip,
+            "source_uri": source_uri,
+            "source_path": source_path,
+            "target_track": target_track,
+            "grid": grid,
+            "slice_count": slice_count,
+            "start_pad": start_pad,
+            "create_trigger_clip": create_trigger_clip,
+            "trigger_clip_slot": trigger_clip_slot,
+            "loaded": True,
         }
 
     def clip_notes_quantize(  # noqa: ANN201
@@ -417,7 +453,13 @@ class _BackendStub:
         start_time: float,
         length: float,
         audio_path: str | None,
+        notes: list[dict[str, object]] | None = None,
     ):
+        if track == 1 and notes is not None:
+            raise CommandError(
+                code="INVALID_ARGUMENT",
+                message="notes are supported only for MIDI arrangement clips",
+            )
         payload = {
             "track": track,
             "start_time": start_time,
@@ -427,6 +469,8 @@ class _BackendStub:
         }
         if audio_path is None:
             payload["kind"] = "midi"
+            if notes is not None:
+                payload["notes_added"] = len(notes)
             return payload
         payload["kind"] = "audio"
         payload["audio_path"] = audio_path
@@ -456,6 +500,106 @@ class _BackendStub:
         if track is not None:
             clips = [clip for clip in clips if clip["track"] == track]
         return {"track": track, "clip_count": len(clips), "clips": clips}
+
+    def arrangement_clip_notes_add(  # noqa: ANN201
+        self,
+        track: int,
+        index: int,
+        notes: list[dict[str, object]],
+    ):
+        return {"track": track, "index": index, "note_count": len(notes)}
+
+    def arrangement_clip_notes_get(  # noqa: ANN201
+        self,
+        track: int,
+        index: int,
+        start_time: float | None,
+        end_time: float | None,
+        pitch: int | None,
+    ):
+        return {
+            "track": track,
+            "index": index,
+            "start_time": start_time,
+            "end_time": end_time,
+            "pitch": pitch,
+            "notes": [],
+            "note_count": 0,
+        }
+
+    def arrangement_clip_notes_clear(  # noqa: ANN201
+        self,
+        track: int,
+        index: int,
+        start_time: float | None,
+        end_time: float | None,
+        pitch: int | None,
+    ):
+        return {
+            "track": track,
+            "index": index,
+            "start_time": start_time,
+            "end_time": end_time,
+            "pitch": pitch,
+            "cleared_count": 1,
+        }
+
+    def arrangement_clip_notes_replace(  # noqa: ANN201
+        self,
+        track: int,
+        index: int,
+        notes: list[dict[str, object]],
+        start_time: float | None,
+        end_time: float | None,
+        pitch: int | None,
+    ):
+        return {
+            "track": track,
+            "index": index,
+            "start_time": start_time,
+            "end_time": end_time,
+            "pitch": pitch,
+            "cleared_count": 1,
+            "added_count": len(notes),
+        }
+
+    def arrangement_clip_notes_import_browser(  # noqa: ANN201
+        self,
+        track: int,
+        index: int,
+        target_uri: str | None,
+        target_path: str | None,
+        mode: str,
+        import_length: bool,
+        import_groove: bool,
+    ):
+        return {
+            "track": track,
+            "index": index,
+            "target_uri": target_uri,
+            "target_path": target_path,
+            "mode": mode,
+            "import_length": import_length,
+            "import_groove": import_groove,
+            "notes_imported": 2,
+        }
+
+    def arrangement_clip_delete(  # noqa: ANN201
+        self,
+        track: int,
+        index: int | None,
+        start: float | None,
+        end: float | None,
+        delete_all: bool,
+    ):
+        if index is not None:
+            return {"track": track, "mode": "index", "deleted_count": 1, "deleted_indexes": [index]}
+        if delete_all:
+            return {"track": track, "mode": "all", "deleted_count": 2, "deleted_indexes": [0, 1]}
+        return {"track": track, "mode": "range", "deleted_count": 1, "deleted_indexes": [1]}
+
+    def arrangement_from_session(self, scenes: list[dict[str, object]]):  # noqa: ANN201
+        return {"scene_count": len(scenes), "created_count": 4, "scenes": scenes}
 
     def track_mute_get(self, track: int):  # noqa: ANN201
         return {"track": track, "mute": False}
@@ -707,6 +851,18 @@ def test_dispatch_calls_backend_for_tempo_set() -> None:
     backend = _BackendStub()
     result = dispatch_command(backend, "transport_tempo_set", {"bpm": 128})
     assert result == {"tempo": 128.0}
+
+
+def test_dispatch_calls_backend_for_transport_position_commands() -> None:
+    backend = _BackendStub()
+
+    gotten = dispatch_command(backend, "transport_position_get", {})
+    set_result = dispatch_command(backend, "transport_position_set", {"beats": 24.0})
+    rewound = dispatch_command(backend, "transport_rewind", {})
+
+    assert gotten == {"current_time": 4.0, "beat_position": 4.0}
+    assert set_result == {"current_time": 24.0, "beat_position": 24.0}
+    assert rewound == {"current_time": 0.0, "beat_position": 0.0}
 
 
 def test_dispatch_ping_includes_supported_commands_and_hash() -> None:
@@ -1089,6 +1245,38 @@ def test_dispatch_calls_backend_for_clip_active_get_set() -> None:
     assert inactive == {"track": 0, "clip": 1, "active": False}
 
 
+def test_dispatch_calls_backend_for_clip_cut_to_drum_rack() -> None:
+    backend = _BackendStub()
+
+    result = dispatch_command(
+        backend,
+        "clip_cut_to_drum_rack",
+        {
+            "source_track": 0,
+            "source_clip": 1,
+            "target_track": 2,
+            "grid": "1/16",
+            "start_pad": 4,
+            "create_trigger_clip": True,
+            "trigger_clip_slot": 3,
+        },
+    )
+
+    assert result == {
+        "source_track": 0,
+        "source_clip": 1,
+        "source_uri": None,
+        "source_path": None,
+        "target_track": 2,
+        "grid": 0.25,
+        "slice_count": None,
+        "start_pad": 4,
+        "create_trigger_clip": True,
+        "trigger_clip_slot": 3,
+        "loaded": True,
+    }
+
+
 def test_dispatch_calls_backend_for_load_drum_kit_with_explicit_selection() -> None:
     backend = _BackendStub()
     by_uri = dispatch_command(
@@ -1220,6 +1408,24 @@ def test_dispatch_calls_backend_for_new_todo_commands() -> None:
         "arrangement_clip_create",
         {"track": 1, "start_time": 16.0, "length": 8.0, "audio_path": "C:/tmp/loop.wav"},
     )
+    arrangement_clip_with_notes = dispatch_command(
+        backend,
+        "arrangement_clip_create",
+        {
+            "track": 0,
+            "start_time": 24.0,
+            "length": 4.0,
+            "notes": [
+                {
+                    "pitch": 60,
+                    "start_time": 0.0,
+                    "duration": 0.5,
+                    "velocity": 100,
+                    "mute": False,
+                }
+            ],
+        },
+    )
     arrangement_clip_list = dispatch_command(
         backend,
         "arrangement_clip_list",
@@ -1260,6 +1466,7 @@ def test_dispatch_calls_backend_for_new_todo_commands() -> None:
         "arrangement_view_focused": True,
         "created": True,
     }
+    assert arrangement_clip_with_notes["notes_added"] == 1
     assert arrangement_clip_list["track"] is None
     assert arrangement_clip_list["clip_count"] == 2
     assert arrangement_clip_list_track["track"] == 1
@@ -1284,6 +1491,99 @@ def test_dispatch_calls_backend_for_clip_duplicate_many() -> None:
         "dst_clips": [3, 4, 5],
         "duplicated": True,
     }
+
+
+def test_dispatch_calls_backend_for_arrangement_notes_delete_and_from_session() -> None:
+    backend = _BackendStub()
+
+    added = dispatch_command(
+        backend,
+        "arrangement_clip_notes_add",
+        {
+            "track": 0,
+            "index": 1,
+            "notes": [
+                {
+                    "pitch": 60,
+                    "start_time": 0.0,
+                    "duration": 0.5,
+                    "velocity": 100,
+                    "mute": False,
+                }
+            ],
+        },
+    )
+    gotten = dispatch_command(
+        backend,
+        "arrangement_clip_notes_get",
+        {"track": 0, "index": 1, "start_time": 0.0, "end_time": 4.0, "pitch": 60},
+    )
+    cleared = dispatch_command(
+        backend,
+        "arrangement_clip_notes_clear",
+        {"track": 0, "index": 1, "pitch": 60},
+    )
+    replaced = dispatch_command(
+        backend,
+        "arrangement_clip_notes_replace",
+        {
+            "track": 0,
+            "index": 1,
+            "notes": [
+                {
+                    "pitch": 62,
+                    "start_time": 1.0,
+                    "duration": 0.5,
+                    "velocity": 90,
+                    "mute": False,
+                }
+            ],
+            "start_time": 0.0,
+            "end_time": 8.0,
+        },
+    )
+    imported = dispatch_command(
+        backend,
+        "arrangement_clip_notes_import_browser",
+        {
+            "track": 0,
+            "index": 1,
+            "target_path": "sounds/Bass Loop.alc",
+            "mode": "append",
+            "import_length": True,
+            "import_groove": False,
+        },
+    )
+    deleted_index = dispatch_command(
+        backend,
+        "arrangement_clip_delete",
+        {"track": 0, "index": 1},
+    )
+    deleted_range = dispatch_command(
+        backend,
+        "arrangement_clip_delete",
+        {"track": 0, "start": 8.0, "end": 16.0},
+    )
+    deleted_all = dispatch_command(
+        backend,
+        "arrangement_clip_delete",
+        {"track": 0, "all": True},
+    )
+    from_session = dispatch_command(
+        backend,
+        "arrangement_from_session",
+        {"scenes": [{"scene": 0, "duration_beats": 24.0}, {"scene": 1, "duration_beats": 48.0}]},
+    )
+
+    assert added["note_count"] == 1
+    assert gotten["note_count"] == 0
+    assert cleared["cleared_count"] == 1
+    assert replaced["added_count"] == 1
+    assert imported["mode"] == "append"
+    assert deleted_index["mode"] == "index"
+    assert deleted_range["mode"] == "range"
+    assert deleted_all["mode"] == "all"
+    assert from_session["scene_count"] == 2
 
 
 def test_dispatch_calls_backend_for_clip_note_transform_commands() -> None:
@@ -1418,6 +1718,42 @@ def test_dispatch_validates_new_todo_command_arguments() -> None:
             "arrangement_clip_list",
             {"track": -1},
         )
+    with pytest.raises(CommandError) as transport_position_set_exc:
+        dispatch_command(
+            backend,
+            "transport_position_set",
+            {"beats": -0.5},
+        )
+    with pytest.raises(CommandError) as arrangement_clip_notes_pitch_exc:
+        dispatch_command(
+            backend,
+            "arrangement_clip_notes_get",
+            {"track": 0, "index": 0, "pitch": 200},
+        )
+    with pytest.raises(CommandError) as arrangement_clip_delete_missing_mode_exc:
+        dispatch_command(
+            backend,
+            "arrangement_clip_delete",
+            {"track": 0},
+        )
+    with pytest.raises(CommandError) as arrangement_clip_delete_multiple_modes_exc:
+        dispatch_command(
+            backend,
+            "arrangement_clip_delete",
+            {"track": 0, "index": 0, "all": True},
+        )
+    with pytest.raises(CommandError) as arrangement_clip_delete_bad_range_exc:
+        dispatch_command(
+            backend,
+            "arrangement_clip_delete",
+            {"track": 0, "start": 8.0},
+        )
+    with pytest.raises(CommandError) as arrangement_from_session_invalid_exc:
+        dispatch_command(
+            backend,
+            "arrangement_from_session",
+            {"scenes": [{"scene": 0, "duration_beats": 0.0}]},
+        )
 
     assert song_save_exc.value.code == "INVALID_ARGUMENT"
     assert song_export_exc.value.code == "INVALID_ARGUMENT"
@@ -1430,6 +1766,12 @@ def test_dispatch_validates_new_todo_command_arguments() -> None:
     assert arrangement_clip_start_exc.value.code == "INVALID_ARGUMENT"
     assert arrangement_clip_audio_path_exc.value.code == "INVALID_ARGUMENT"
     assert arrangement_clip_list_track_exc.value.code == "INVALID_ARGUMENT"
+    assert transport_position_set_exc.value.code == "INVALID_ARGUMENT"
+    assert arrangement_clip_notes_pitch_exc.value.code == "INVALID_ARGUMENT"
+    assert arrangement_clip_delete_missing_mode_exc.value.code == "INVALID_ARGUMENT"
+    assert arrangement_clip_delete_multiple_modes_exc.value.code == "INVALID_ARGUMENT"
+    assert arrangement_clip_delete_bad_range_exc.value.code == "INVALID_ARGUMENT"
+    assert arrangement_from_session_invalid_exc.value.code == "INVALID_ARGUMENT"
 
 
 def test_dispatch_rejects_invalid_clip_note_transform_arguments() -> None:
@@ -1756,6 +2098,55 @@ def test_dispatch_rejects_load_drum_kit_ambiguous_selection() -> None:
 
     assert exc_info_none.value.code == "INVALID_ARGUMENT"
     assert exc_info_both.value.code == "INVALID_ARGUMENT"
+
+
+def test_dispatch_rejects_clip_cut_to_drum_rack_ambiguous_source() -> None:
+    backend = _BackendStub()
+    with pytest.raises(CommandError) as exc_info:
+        dispatch_command(
+            backend,
+            "clip_cut_to_drum_rack",
+            {
+                "source_track": 0,
+                "source_clip": 1,
+                "source_path": "sounds/Bass Loop.wav",
+                "slice_count": 8,
+            },
+        )
+
+    assert exc_info.value.code == "INVALID_ARGUMENT"
+
+
+def test_dispatch_rejects_clip_cut_to_drum_rack_missing_slice_mode() -> None:
+    backend = _BackendStub()
+    with pytest.raises(CommandError) as exc_info:
+        dispatch_command(
+            backend,
+            "clip_cut_to_drum_rack",
+            {
+                "source_track": 0,
+                "source_clip": 1,
+            },
+        )
+
+    assert exc_info.value.code == "INVALID_ARGUMENT"
+
+
+def test_dispatch_rejects_clip_cut_to_drum_rack_trigger_slot_without_flag() -> None:
+    backend = _BackendStub()
+    with pytest.raises(CommandError) as exc_info:
+        dispatch_command(
+            backend,
+            "clip_cut_to_drum_rack",
+            {
+                "source_track": 0,
+                "source_clip": 1,
+                "slice_count": 8,
+                "trigger_clip_slot": 3,
+            },
+        )
+
+    assert exc_info.value.code == "INVALID_ARGUMENT"
 
 
 def test_dispatch_rejects_track_panning_out_of_range() -> None:

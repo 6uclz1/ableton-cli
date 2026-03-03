@@ -16,6 +16,9 @@ Stable action names and CLI mappings for automation wrappers.
 | `arrangement_record_start` | `uv run ableton-cli --output json arrangement record start` | Start arrangement recording when supported by Live API. |
 | `arrangement_record_stop` | `uv run ableton-cli --output json arrangement record stop` | Stop arrangement recording when supported by Live API. |
 | `set_tempo` | `uv run ableton-cli --output json transport tempo set <bpm>` | Update song tempo in BPM. |
+| `transport_position_get` | `uv run ableton-cli --output json transport position get` | Read current transport beat/time position. |
+| `transport_position_set` | `uv run ableton-cli --output json transport position set <beats>` | Move transport playhead to a beat position. |
+| `transport_rewind` | `uv run ableton-cli --output json transport rewind` | Rewind transport playhead to beat 0. |
 | `list_tracks` | `uv run ableton-cli --output json tracks list` | List all tracks and their basic properties. |
 | `create_midi_track` | `uv run ableton-cli --output json tracks create midi [--index <index>]` | Insert a MIDI track at an index or append. |
 | `create_audio_track` | `uv run ableton-cli --output json tracks create audio [--index <index>]` | Insert an audio track at an index or append. |
@@ -35,6 +38,13 @@ Stable action names and CLI mappings for automation wrappers.
 | `get_clip_notes` | `uv run ableton-cli --output json clip notes get <track> <clip> [--start-time <beats>] [--end-time <beats>] [--pitch <midi>]` | Read clip notes with optional time/pitch filters. |
 | `clear_clip_notes` | `uv run ableton-cli --output json clip notes clear <track> <clip> [--start-time <beats>] [--end-time <beats>] [--pitch <midi>]` | Remove matching clip notes by optional time/pitch filters. |
 | `replace_clip_notes` | `uv run ableton-cli --output json clip notes replace <track> <clip> (--notes-json '<json-array>' | --notes-file <path>) [--start-time <beats>] [--end-time <beats>] [--pitch <midi>]` | Clear matching notes then add replacement notes. |
+| `arrangement_clip_notes_add` | `uv run ableton-cli --output json arrangement clip notes add <track> <index> (--notes-json '<json-array>' | --notes-file <path>)` | Add MIDI notes to an arrangement clip by list index. |
+| `arrangement_clip_notes_get` | `uv run ableton-cli --output json arrangement clip notes get <track> <index> [--start-time <beats>] [--end-time <beats>] [--pitch <midi>]` | Read arrangement clip notes with optional time/pitch filters. |
+| `arrangement_clip_notes_clear` | `uv run ableton-cli --output json arrangement clip notes clear <track> <index> [--start-time <beats>] [--end-time <beats>] [--pitch <midi>]` | Remove matching arrangement clip notes by optional time/pitch filters. |
+| `arrangement_clip_notes_replace` | `uv run ableton-cli --output json arrangement clip notes replace <track> <index> (--notes-json '<json-array>' | --notes-file <path>) [--start-time <beats>] [--end-time <beats>] [--pitch <midi>]` | Clear matching arrangement notes then add replacements. |
+| `arrangement_clip_notes_import_browser` | `uv run ableton-cli --output json arrangement clip notes import-browser <track> <index> <target> [--mode <replace|append>] [--import-length] [--import-groove]` | Import notes from a browser `.alc` item into an arrangement clip. |
+| `arrangement_clip_delete` | `uv run ableton-cli --output json arrangement clip delete <track> [index] [--start <beat> --end <beat>] [--all]` | Delete arrangement clips by index, time range, or all mode. |
+| `arrangement_from_session` | `uv run ableton-cli --output json arrangement from-session --scenes "0:24,1:48"` | Expand session scenes into Arrangement using explicit scene durations. |
 | `clip_duplicate` | `uv run ableton-cli --output json clip duplicate <track> <src_clip> <dst_clip>` | Duplicate a clip into an empty destination slot. |
 | `set_clip_name` | `uv run ableton-cli --output json clip name set <track> <clip> <name>` | Rename a clip. |
 | `fire_clip` | `uv run ableton-cli --output json clip fire <track> <clip>` | Launch a clip slot. |
@@ -93,6 +103,7 @@ Stable action names and CLI mappings for automation wrappers.
 - `uv run ableton-cli clip groove set <track> <clip> <target>`: Assign a `.agr` groove by browser path or URI.
 - `uv run ableton-cli clip groove amount set <track> <clip> <0.0-1.0>`: Set groove amount on a clip.
 - `uv run ableton-cli clip groove clear <track> <clip>`: Clear groove assignment from a clip.
+- `uv run ableton-cli clip cut-to-drum-rack (--source-track <track> --source-clip <clip> | --source <uri-or-path>) (--grid <fraction-or-beats> | --slice-count <n>) [--target-track <track>] [--start-pad <pad>] [--create-trigger-clip --trigger-clip-slot <clip>]`: Slice audio source and map slices into Drum Rack pads.
 
 Operational note: after `install-remote-script --yes`, reload Ableton's Control Surface assignment (`None` -> `AbletonCliRemote`) or restart Ableton Live to apply updated Remote Script code.
 

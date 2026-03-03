@@ -3,6 +3,8 @@ from __future__ import annotations
 import threading
 import time
 from dataclasses import dataclass, field
+from gzip import compress as gzip_compress
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -43,10 +45,26 @@ class _Device:
     can_have_drum_pads: bool = False
     can_have_chains: bool = False
     class_display_name: str = ""
+    drum_pads: list[Any] = field(default_factory=list)
 
     def __post_init__(self) -> None:
         if not self.class_display_name:
             self.class_display_name = self.class_name
+
+
+class _DrumPad:
+    def __init__(self, index: int) -> None:
+        self.index = int(index)
+        self.loaded_slices: list[dict[str, Any]] = []
+
+    def load_audio_slice(self, source_ref: str, start_beat: float, end_beat: float) -> None:
+        self.loaded_slices.append(
+            {
+                "source_ref": str(source_ref),
+                "start_beat": float(start_beat),
+                "end_beat": float(end_beat),
+            }
+        )
 
 
 @dataclass(slots=True)
@@ -66,12 +84,72 @@ class _ArrangementClip:
     length: float
     is_audio_clip: bool
     is_midi_clip: bool
+    file_path: str | None = None
+    groove: str | None = None
+    groove_amount: float = 0.5
+    _notes: list[_MidiNote] = field(default_factory=list)
+    _next_note_id: int = 1
+
+    def set_notes(self, notes: tuple[tuple[int, float, float, int, bool], ...]) -> None:
+        for pitch, start_time, duration, velocity, mute in notes:
+            self._notes.append(
+                _MidiNote(
+                    note_id=self._next_note_id,
+                    pitch=int(pitch),
+                    start_time=float(start_time),
+                    duration=float(duration),
+                    velocity=int(velocity),
+                    mute=bool(mute),
+                )
+            )
+            self._next_note_id += 1
+
+    def get_notes_extended(
+        self,
+        from_pitch: int = 0,
+        pitch_span: int = 128,
+        from_time: float = 0.0,
+        time_span: float | None = None,
+    ) -> list[_MidiNote]:
+        to_pitch = from_pitch + pitch_span
+        to_time = None if time_span is None else from_time + time_span
+        notes: list[_MidiNote] = []
+        for note in self._notes:
+            pitch = int(note.pitch)
+            start_time = float(note.start_time)
+            if pitch < from_pitch or pitch >= to_pitch:
+                continue
+            if start_time < from_time:
+                continue
+            if to_time is not None and start_time >= to_time:
+                continue
+            notes.append(note)
+        return notes
+
+    def remove_notes_by_id(self, note_ids: list[int]) -> None:
+        remove_set = {int(value) for value in note_ids}
+        self._notes = [note for note in self._notes if int(note.note_id) not in remove_set]
 
 
 class _Clip:
-    def __init__(self, length: float, name: str = "") -> None:
+    def __init__(
+        self,
+        length: float,
+        name: str = "",
+        *,
+        is_audio_clip: bool = False,
+        is_midi_clip: bool = True,
+        start_marker: float = 0.0,
+        end_marker: float | None = None,
+        file_path: str | None = None,
+    ) -> None:
         self.name = name or "Clip"
         self.length = float(length)
+        self.is_audio_clip = bool(is_audio_clip)
+        self.is_midi_clip = bool(is_midi_clip)
+        self.start_marker = float(start_marker)
+        self.end_marker = float(end_marker) if end_marker is not None else float(length)
+        self.file_path = file_path
         self.is_playing = False
         self.is_recording = False
         self.muted = False
@@ -146,7 +224,7 @@ class _ClipSlot:
     def create_clip(self, length: float) -> None:
         if self.has_clip:
             raise RuntimeError("slot occupied")
-        self.clip = _Clip(length=length)
+        self.clip = _Clip(length=length, is_audio_clip=False, is_midi_clip=True)
 
     def fire(self) -> None:
         if not self.has_clip:
@@ -204,6 +282,7 @@ class _Track:
                 length=0.0,
                 is_audio_clip=True,
                 is_midi_clip=False,
+                file_path=str(path),
             )
         )
 
@@ -215,6 +294,7 @@ class _BrowserItem:
     is_device: bool = False
     is_loadable: bool = False
     children: list[_BrowserItem] = field(default_factory=list)
+    length_beats: float | None = None
 
     @property
     def is_folder(self) -> bool:
@@ -248,7 +328,21 @@ class _Browser:
                     uri="clip:bass-loop-alc",
                     is_device=False,
                     is_loadable=True,
-                )
+                ),
+                _BrowserItem(
+                    name="Bass Loop.wav",
+                    uri="audio:bass-loop-wav",
+                    is_device=False,
+                    is_loadable=True,
+                    length_beats=4.0,
+                ),
+                _BrowserItem(
+                    name="Unsupported.mp3",
+                    uri="audio:unsupported-mp3",
+                    is_device=False,
+                    is_loadable=True,
+                    length_beats=4.0,
+                ),
             ],
         )
         self.drums = _BrowserItem(
@@ -298,6 +392,21 @@ class _Browser:
 
     def load_item(self, item: _BrowserItem) -> None:
         uri = str(getattr(item, "uri", ""))
+        if uri == "rack:drums":
+            target = self._song.view.selected_track
+            target.devices.append(
+                _Device(
+                    name="Drum Rack",
+                    class_name="DrumGroupDevice",
+                    parameters=[_Parameter("Macro 1", 0.5)],
+                    can_have_drum_pads=True,
+                    can_have_chains=True,
+                    class_display_name="Drum Rack",
+                    drum_pads=[_DrumPad(index) for index in range(128)],
+                )
+            )
+            return
+
         if uri.startswith("clip:"):
             selected_scene = self._song.view.selected_scene
             if selected_scene is None:
@@ -312,7 +421,11 @@ class _Browser:
                 target_track.clip_slots.append(_ClipSlot())
             slot = target_track.clip_slots[scene_index]
             if not slot.has_clip:
-                slot.create_clip(length=1.0)
+                slot.create_clip(length=2.0)
+            assert slot.clip is not None
+            slot.clip.set_notes(((60, 0.0, 0.5, 100, False),))
+            slot.clip.groove = "groove:hip-hop-boom-bap-16ths-90"
+            slot.clip.groove_amount = 0.5
             target_track.name = str(item.name)
             return
 
@@ -324,6 +437,16 @@ class _Browser:
                 parameters=[_Parameter("Macro 1", 0.5)],
             )
         )
+
+
+class _ExternalMidiClipItem:
+    def __init__(self, *, uri: str, file_path: str) -> None:
+        self.name = Path(file_path).name
+        self.uri = uri
+        self.is_device = False
+        self.is_loadable = True
+        self.children: list[Any] = []
+        self.file_path = file_path
 
 
 @dataclass(slots=True)
@@ -402,6 +525,60 @@ class _TrackProxy:
 
     def __setattr__(self, name: str, value: Any) -> None:
         setattr(self._target, name, value)
+
+
+class _TupleArrangementTrack:
+    def __init__(self, original: _Track) -> None:
+        self.name = original.name
+        self.has_audio_input = original.has_audio_input
+        self.has_midi_input = original.has_midi_input
+        self.mute = original.mute
+        self.solo = original.solo
+        self.arm = original.arm
+        self.mixer_device = original.mixer_device
+        self.clip_slots = original.clip_slots
+        self.devices = original.devices
+        self.arrangement_midi_clips = list(original.arrangement_midi_clips)
+        self.arrangement_audio_clips = list(original.arrangement_audio_clips)
+        self._arrangement_clips: list[_ArrangementClip] = list(original.arrangement_clips)
+
+    @property
+    def arrangement_clips(self) -> tuple[_ArrangementClip, ...]:
+        return tuple(self._arrangement_clips)
+
+    def create_midi_clip(self, start_time: float, length: float) -> None:
+        normalized_start = float(start_time)
+        normalized_length = float(length)
+        self.arrangement_midi_clips.append((normalized_start, normalized_length))
+        self._arrangement_clips.append(
+            _ArrangementClip(
+                name=f"MIDI {len(self._arrangement_clips)}",
+                start_time=normalized_start,
+                length=normalized_length,
+                is_audio_clip=False,
+                is_midi_clip=True,
+            )
+        )
+
+    def create_audio_clip(self, path: str, start_time: float) -> None:
+        normalized_start = float(start_time)
+        normalized_path = str(path)
+        self.arrangement_audio_clips.append((normalized_path, normalized_start))
+        self._arrangement_clips.append(
+            _ArrangementClip(
+                name=normalized_path,
+                start_time=normalized_start,
+                length=0.0,
+                is_audio_clip=True,
+                is_midi_clip=False,
+                file_path=normalized_path,
+            )
+        )
+
+    def delete_clip(self, clip: _ArrangementClip) -> None:
+        self._arrangement_clips = [
+            candidate for candidate in self._arrangement_clips if candidate is not clip
+        ]
 
 
 class _ProxyIdentitySong(_Song):
@@ -543,6 +720,26 @@ def _append_imported_source_track(song: Any, *, pitch: int, length: float = 2.0)
         append_track(new_track)
         return
     song.tracks.append(new_track)
+
+
+def _set_audio_source_clip(
+    song: Any,
+    *,
+    track: int,
+    clip: int,
+    length: float,
+    file_path: str,
+) -> None:
+    slot = song.tracks[track].clip_slots[clip]
+    slot.clip = _Clip(
+        length=length,
+        name=file_path.split("/")[-1],
+        is_audio_clip=True,
+        is_midi_clip=False,
+        start_marker=0.0,
+        end_marker=length,
+        file_path=file_path,
+    )
 
 
 def _note() -> dict[str, Any]:
@@ -736,6 +933,14 @@ def test_live_backend_transport_waits_for_committed_state() -> None:
 
     assert backend.transport_play()["is_playing"] is True
     assert backend.transport_stop()["is_playing"] is False
+
+
+def test_live_backend_transport_position_get_set_and_rewind() -> None:
+    backend = LiveBackend(_SurfaceStub())
+
+    assert backend.transport_position_get() == {"current_time": 4.0, "beat_position": 4.0}
+    assert backend.transport_position_set(32.0) == {"current_time": 32.0, "beat_position": 32.0}
+    assert backend.transport_rewind() == {"current_time": 0.0, "beat_position": 0.0}
 
 
 def test_live_backend_track_volume_set() -> None:
@@ -2168,6 +2373,140 @@ def test_live_backend_load_drum_kit_requires_explicit_selection() -> None:
     assert exc_info_both.value.code == "INVALID_ARGUMENT"
 
 
+def test_live_backend_clip_cut_to_drum_rack_creates_target_track_and_loads_slices() -> None:
+    surface = _SurfaceStub()
+    _set_audio_source_clip(
+        surface.song(),
+        track=1,
+        clip=0,
+        length=4.0,
+        file_path="/tmp/Bass Loop.wav",
+    )
+    backend = LiveBackend(surface)
+
+    result = backend.clip_cut_to_drum_rack(
+        source_track=1,
+        source_clip=0,
+        source_uri=None,
+        source_path=None,
+        target_track=None,
+        grid=None,
+        slice_count=8,
+        start_pad=0,
+        create_trigger_clip=False,
+        trigger_clip_slot=None,
+    )
+
+    assert result["created_target_track"] is True
+    assert result["created_drum_rack"] is True
+    assert result["slice_count"] == 8
+    assert result["assigned_count"] == 8
+    target_track = surface.song().tracks[result["target_track"]]
+    drum_rack = target_track.devices[-1]
+    assert drum_rack.can_have_drum_pads is True
+    assert len(drum_rack.drum_pads[0].loaded_slices) == 1
+    assert drum_rack.drum_pads[0].loaded_slices[0]["source_ref"] == "/tmp/Bass Loop.wav"
+
+
+def test_live_backend_clip_cut_to_drum_rack_supports_browser_source_and_trigger_clip() -> None:
+    surface = _SurfaceStub()
+    backend = LiveBackend(surface)
+
+    result = backend.clip_cut_to_drum_rack(
+        source_track=None,
+        source_clip=None,
+        source_uri=None,
+        source_path="sounds/Bass Loop.wav",
+        target_track=0,
+        grid=1.0,
+        slice_count=None,
+        start_pad=2,
+        create_trigger_clip=True,
+        trigger_clip_slot=1,
+    )
+
+    assert result["target_track"] == 0
+    assert result["slice_count"] == 4
+    assert result["trigger_clip_created"] is True
+    trigger_notes = backend.get_clip_notes(
+        track=0,
+        clip=1,
+        start_time=None,
+        end_time=None,
+        pitch=None,
+    )
+    assert trigger_notes["note_count"] == 4
+
+
+def test_live_backend_clip_cut_to_drum_rack_rejects_pad_overflow() -> None:
+    surface = _SurfaceStub()
+    _set_audio_source_clip(
+        surface.song(),
+        track=1,
+        clip=0,
+        length=4.0,
+        file_path="/tmp/Bass Loop.wav",
+    )
+    backend = LiveBackend(surface)
+
+    with pytest.raises(CommandError) as exc_info:
+        backend.clip_cut_to_drum_rack(
+            source_track=1,
+            source_clip=0,
+            source_uri=None,
+            source_path=None,
+            target_track=0,
+            grid=None,
+            slice_count=200,
+            start_pad=0,
+            create_trigger_clip=False,
+            trigger_clip_slot=None,
+        )
+
+    assert exc_info.value.code == "INVALID_ARGUMENT"
+
+
+def test_live_backend_clip_cut_to_drum_rack_rejects_unsupported_audio_format() -> None:
+    backend = LiveBackend(_SurfaceStub())
+
+    with pytest.raises(CommandError) as exc_info:
+        backend.clip_cut_to_drum_rack(
+            source_track=None,
+            source_clip=None,
+            source_uri=None,
+            source_path="sounds/Unsupported.mp3",
+            target_track=0,
+            grid=None,
+            slice_count=8,
+            start_pad=0,
+            create_trigger_clip=False,
+            trigger_clip_slot=None,
+        )
+
+    assert exc_info.value.code == "INVALID_ARGUMENT"
+
+
+def test_live_backend_clip_cut_to_drum_rack_rejects_midi_clip_source() -> None:
+    backend = LiveBackend(_SurfaceStub())
+    backend.create_clip(0, 0, 4.0)
+
+    with pytest.raises(CommandError) as exc_info:
+        backend.clip_cut_to_drum_rack(
+            source_track=0,
+            source_clip=0,
+            source_uri=None,
+            source_path=None,
+            target_track=0,
+            grid=None,
+            slice_count=8,
+            start_pad=0,
+            create_trigger_clip=False,
+            trigger_clip_slot=None,
+        )
+
+    assert exc_info.value.code == "INVALID_ARGUMENT"
+
+
 def test_live_backend_scene_lifecycle() -> None:
     backend = LiveBackend(_SurfaceStub())
 
@@ -2435,6 +2774,313 @@ def test_live_backend_arrangement_clip_list_requires_arrangement_clips_api() -> 
 
     assert exc_info.value.code == "INVALID_ARGUMENT"
     assert exc_info.value.details == {"reason": "not_supported_by_live_api"}
+
+
+def test_live_backend_arrangement_clip_create_midi_accepts_notes_payload() -> None:
+    backend = LiveBackend(_SurfaceStub())
+
+    created = backend.arrangement_clip_create(
+        track=0,
+        start_time=0.0,
+        length=4.0,
+        audio_path=None,
+        notes=[_note()],
+    )
+    notes = backend.arrangement_clip_notes_get(
+        track=0,
+        index=0,
+        start_time=None,
+        end_time=None,
+        pitch=None,
+    )
+
+    assert created["notes_added"] == 1
+    assert notes["note_count"] == 1
+
+
+def test_live_backend_arrangement_clip_create_accepts_tuple_container() -> None:
+    surface = _SurfaceStub()
+    surface.song().tracks[0] = _TupleArrangementTrack(surface.song().tracks[0])
+    backend = LiveBackend(surface)
+
+    created = backend.arrangement_clip_create(
+        track=0,
+        start_time=0.0,
+        length=4.0,
+        audio_path=None,
+        notes=[_note()],
+    )
+    notes = backend.arrangement_clip_notes_get(
+        track=0,
+        index=0,
+        start_time=None,
+        end_time=None,
+        pitch=None,
+    )
+
+    assert created["kind"] == "midi"
+    assert created["notes_added"] == 1
+    assert notes["note_count"] == 1
+
+
+def test_live_backend_arrangement_clip_notes_lifecycle() -> None:
+    backend = LiveBackend(_SurfaceStub())
+    backend.arrangement_clip_create(track=0, start_time=0.0, length=4.0, audio_path=None)
+
+    added = backend.arrangement_clip_notes_add(track=0, index=0, notes=[_note()])
+    gotten = backend.arrangement_clip_notes_get(
+        track=0,
+        index=0,
+        start_time=0.0,
+        end_time=4.0,
+        pitch=60,
+    )
+    cleared = backend.arrangement_clip_notes_clear(
+        track=0,
+        index=0,
+        start_time=None,
+        end_time=None,
+        pitch=60,
+    )
+    replaced = backend.arrangement_clip_notes_replace(
+        track=0,
+        index=0,
+        notes=[{**_note(), "pitch": 62}],
+        start_time=None,
+        end_time=None,
+        pitch=None,
+    )
+
+    assert added["note_count"] == 1
+    assert gotten["note_count"] == 1
+    assert cleared["cleared_count"] == 1
+    assert replaced["added_count"] == 1
+
+
+def test_live_backend_arrangement_clip_notes_rejects_non_midi_clip() -> None:
+    backend = LiveBackend(_SurfaceStub())
+    backend.arrangement_clip_create(track=1, start_time=0.0, length=4.0, audio_path="/tmp/x.wav")
+
+    with pytest.raises(CommandError) as exc_info:
+        backend.arrangement_clip_notes_get(
+            track=1,
+            index=0,
+            start_time=None,
+            end_time=None,
+            pitch=None,
+        )
+
+    assert exc_info.value.code == "INVALID_ARGUMENT"
+
+
+def test_live_backend_arrangement_clip_notes_import_browser_cleans_up_temporary_track() -> None:
+    surface = _SurfaceStub()
+    backend = LiveBackend(surface)
+    backend.arrangement_clip_create(track=0, start_time=0.0, length=4.0, audio_path=None)
+
+    result = backend.arrangement_clip_notes_import_browser(
+        track=0,
+        index=0,
+        target_uri=None,
+        target_path="sounds/Bass Loop.alc",
+        mode="replace",
+        import_length=True,
+        import_groove=True,
+    )
+    notes = backend.arrangement_clip_notes_get(
+        track=0,
+        index=0,
+        start_time=None,
+        end_time=None,
+        pitch=None,
+    )
+
+    assert result["notes_imported"] == 1
+    assert result["length_imported"] is True
+    assert result["groove_imported"] is True
+    assert len(surface.song().tracks) == 2
+    assert notes["note_count"] == 1
+
+
+def test_live_backend_arrangement_clip_notes_import_browser_works_without_selected_scene() -> None:
+    surface = _SurfaceStub()
+    surface.song().view.selected_scene = None
+    backend = LiveBackend(surface)
+    backend.arrangement_clip_create(track=0, start_time=0.0, length=4.0, audio_path=None)
+
+    result = backend.arrangement_clip_notes_import_browser(
+        track=0,
+        index=0,
+        target_uri=None,
+        target_path="sounds/Bass Loop.alc",
+        mode="replace",
+        import_length=False,
+        import_groove=False,
+    )
+    notes = backend.arrangement_clip_notes_get(
+        track=0,
+        index=0,
+        start_time=None,
+        end_time=None,
+        pitch=None,
+    )
+
+    assert result["notes_imported"] == 1
+    assert len(surface.song().tracks) == 2
+    assert notes["note_count"] == 1
+
+
+def test_live_backend_arrangement_clip_notes_import_browser_parses_alc_file_when_load_has_no_clip(
+    tmp_path: Path,
+) -> None:
+    alc_path = tmp_path / "External Pattern.alc"
+    alc_xml = """<?xml version="1.0" encoding="UTF-8"?>
+<Ableton>
+  <LiveSet>
+    <MidiClip>
+      <CurrentEnd Value="2" />
+      <GrooveSettings>
+        <GrooveId Value="-1" />
+      </GrooveSettings>
+      <Notes>
+        <KeyTracks>
+          <KeyTrack Id="1">
+            <Notes>
+              <MidiNoteEvent Time="0" Duration="0.5" Velocity="100" OffVelocity="64" NoteId="1" />
+              <MidiNoteEvent Time="1" Duration="0.5" Velocity="90" OffVelocity="64" NoteId="2" />
+            </Notes>
+            <MidiKey Value="60" />
+          </KeyTrack>
+        </KeyTracks>
+      </Notes>
+    </MidiClip>
+  </LiveSet>
+</Ableton>
+"""
+    alc_path.write_bytes(gzip_compress(alc_xml.encode("utf-8")))
+
+    surface = _SurfaceStub()
+    browser = _Browser(surface.song())
+    external_item = _ExternalMidiClipItem(uri="clip:external-alc", file_path=str(alc_path))
+    browser.sounds.children.append(external_item)
+    browser.load_item = lambda _item: None
+    surface._app.browser = browser
+
+    backend = LiveBackend(surface)
+    backend.arrangement_clip_create(track=0, start_time=0.0, length=4.0, audio_path=None)
+
+    result = backend.arrangement_clip_notes_import_browser(
+        track=0,
+        index=0,
+        target_uri="clip:external-alc",
+        target_path=None,
+        mode="replace",
+        import_length=True,
+        import_groove=False,
+    )
+    notes = backend.arrangement_clip_notes_get(
+        track=0,
+        index=0,
+        start_time=None,
+        end_time=None,
+        pitch=None,
+    )
+
+    assert result["notes_imported"] == 2
+    assert result["length_imported"] is True
+    assert notes["note_count"] == 2
+    assert len(surface.song().tracks) == 2
+
+
+def test_live_backend_arrangement_clip_delete_modes() -> None:
+    backend = LiveBackend(_SurfaceStub())
+    backend.arrangement_clip_create(track=0, start_time=0.0, length=4.0, audio_path=None)
+    backend.arrangement_clip_create(track=0, start_time=8.0, length=4.0, audio_path=None)
+    backend.arrangement_clip_create(track=0, start_time=20.0, length=4.0, audio_path=None)
+
+    deleted_index = backend.arrangement_clip_delete(
+        track=0,
+        index=0,
+        start=None,
+        end=None,
+        delete_all=False,
+    )
+    deleted_range = backend.arrangement_clip_delete(
+        track=0,
+        index=None,
+        start=7.0,
+        end=19.0,
+        delete_all=False,
+    )
+    deleted_all = backend.arrangement_clip_delete(
+        track=0,
+        index=None,
+        start=None,
+        end=None,
+        delete_all=True,
+    )
+
+    assert deleted_index["mode"] == "index"
+    assert deleted_index["deleted_count"] == 1
+    assert deleted_range["mode"] == "range"
+    assert deleted_range["deleted_count"] == 1
+    assert deleted_all["mode"] == "all"
+    assert deleted_all["deleted_count"] == 1
+
+
+def test_live_backend_arrangement_clip_delete_uses_track_delete_clip_for_tuple_container() -> None:
+    surface = _SurfaceStub()
+    surface.song().tracks[0] = _TupleArrangementTrack(surface.song().tracks[0])
+    backend = LiveBackend(surface)
+    backend.arrangement_clip_create(track=0, start_time=0.0, length=4.0, audio_path=None)
+    backend.arrangement_clip_create(track=0, start_time=8.0, length=4.0, audio_path=None)
+
+    deleted = backend.arrangement_clip_delete(
+        track=0,
+        index=0,
+        start=None,
+        end=None,
+        delete_all=False,
+    )
+    listed = backend.arrangement_clip_list(track=0)
+
+    assert deleted["mode"] == "index"
+    assert deleted["deleted_count"] == 1
+    assert listed["clip_count"] == 1
+    assert listed["clips"][0]["start_time"] == 8.0
+
+
+def test_live_backend_arrangement_from_session_repeats_midi_and_audio() -> None:
+    surface = _SurfaceStub()
+    source_midi_slot = surface.song().tracks[0].clip_slots[0]
+    source_midi_slot.create_clip(2.0)
+    assert source_midi_slot.clip is not None
+    source_midi_slot.clip.set_notes(((60, 0.0, 0.5, 100, False),))
+    _set_audio_source_clip(
+        surface.song(),
+        track=1,
+        clip=0,
+        length=4.0,
+        file_path="/tmp/Bass Loop.wav",
+    )
+
+    backend = LiveBackend(surface)
+    payload = backend.arrangement_from_session([{"scene": 0, "duration_beats": 6.0}])
+    midi_notes = backend.arrangement_clip_notes_get(
+        track=0,
+        index=0,
+        start_time=None,
+        end_time=None,
+        pitch=None,
+    )
+
+    assert payload["scene_count"] == 1
+    assert payload["total_created"] == 3
+    assert midi_notes["note_count"] == 3
+    assert surface.song().tracks[1].arrangement_audio_clips == [
+        ("/tmp/Bass Loop.wav", 0.0),
+        ("/tmp/Bass Loop.wav", 4.0),
+    ]
 
 
 @pytest.mark.parametrize(

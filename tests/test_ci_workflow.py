@@ -29,6 +29,24 @@ def test_ci_workflow_configures_dev_checks_reports() -> None:
     assert any(step.get("name") == "Upload pytest report" for step in steps)
 
 
+def test_ci_workflow_uses_dev_checks_enforce_for_quality_harness_job() -> None:
+    workflow = _load_ci_workflow()
+    jobs = workflow["jobs"]
+    quality_job = jobs["quality-harness"]
+    steps = quality_job["steps"]
+
+    run_enforce = next(step for step in steps if step.get("name") == "Run dev checks enforce")
+    assert run_enforce["run"] == (
+        "uv run python -m ableton_cli.dev_checks_enforce "
+        "--config .quality-harness.yml "
+        "--report quality-harness-report.json "
+        "--action-log quality-harness-action-log.json"
+    )
+
+    assert any(step.get("name") == "Upload quality harness report" for step in steps)
+    assert any(step.get("name") == "Upload quality harness action log" for step in steps)
+
+
 def test_ci_workflow_has_summary_job() -> None:
     workflow = _load_ci_workflow()
     jobs = workflow["jobs"]

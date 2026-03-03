@@ -2,7 +2,12 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
-from .._validation import invalid_argument, require_non_empty_string, require_non_negative
+from .._validation import (
+    invalid_argument,
+    require_non_empty_string,
+    require_non_negative,
+    resolve_uri_or_path_target,
+)
 
 
 def parse_duplicate_destinations(
@@ -107,6 +112,148 @@ def parse_clip_name_assignments(mapping: str) -> list[tuple[int, str]]:
             hint="Use clip:name pairs like 1:Main,2:Var.",
         )
     return assignments
+
+
+def parse_cut_to_drum_rack_source(
+    *,
+    source_track: int | None,
+    source_clip: int | None,
+    source: str | None,
+) -> tuple[int | None, int | None, str | None, str | None]:
+    has_session_source = source_track is not None or source_clip is not None
+    has_browser_source = source is not None
+
+    if has_session_source and has_browser_source:
+        raise invalid_argument(
+            message="--source-track/--source-clip and --source are mutually exclusive",
+            hint="Use either session clip source or browser source.",
+        )
+
+    if has_browser_source:
+        assert source is not None
+        parsed_source = require_non_empty_string(
+            "source",
+            source,
+            hint="Pass a browser URI/path like sounds/Loop.wav or clip:loop.",
+        )
+        source_uri, source_path = resolve_uri_or_path_target(
+            target=parsed_source,
+            name="source",
+            hint="Use a browser URI/path like sounds/Loop.wav or clip:loop.",
+        )
+        return None, None, source_uri, source_path
+
+    if not has_session_source:
+        raise invalid_argument(
+            message="Either --source-track/--source-clip or --source must be provided",
+            hint="Use session clip source or browser source.",
+        )
+    if source_track is None or source_clip is None:
+        raise invalid_argument(
+            message="--source-track and --source-clip must be provided together",
+            hint="Provide both --source-track and --source-clip for session clip source.",
+        )
+
+    valid_source_track = require_non_negative(
+        "source_track",
+        source_track,
+        hint="Use a valid source track index from 'ableton-cli tracks list'.",
+    )
+    valid_source_clip = require_non_negative(
+        "source_clip",
+        source_clip,
+        hint="Use a valid source clip slot index.",
+    )
+    return valid_source_track, valid_source_clip, None, None
+
+
+def parse_cut_to_drum_rack_slice_spec(
+    *,
+    grid: str | None,
+    slice_count: int | None,
+) -> tuple[str | None, int | None]:
+    if grid is None and slice_count is None:
+        raise invalid_argument(
+            message="Either --grid or --slice-count must be provided",
+            hint="Choose one slicing mode with --grid or --slice-count.",
+        )
+    if grid is not None and slice_count is not None:
+        raise invalid_argument(
+            message="--grid and --slice-count are mutually exclusive",
+            hint="Use either --grid or --slice-count.",
+        )
+    if grid is not None:
+        valid_grid = require_non_empty_string(
+            "grid",
+            grid,
+            hint="Use a grid like 1/16 or 0.25.",
+        )
+        return valid_grid, None
+
+    assert slice_count is not None
+    if slice_count <= 0:
+        raise invalid_argument(
+            message=f"slice_count must be > 0, got {slice_count}",
+            hint="Use a positive --slice-count.",
+        )
+    return None, slice_count
+
+
+def parse_arrangement_scene_durations(scenes: str) -> list[dict[str, float]]:
+    parsed = require_non_empty_string(
+        "scenes",
+        scenes,
+        hint="Use scene:duration pairs like 0:24,1:48.",
+    )
+    tokens = [token.strip() for token in parsed.split(",")]
+    if any(not token for token in tokens):
+        raise invalid_argument(
+            message="--scenes contains an empty entry",
+            hint="Use scene:duration pairs like 0:24,1:48.",
+        )
+
+    parsed_entries: list[dict[str, float]] = []
+    for token in tokens:
+        if ":" not in token:
+            raise invalid_argument(
+                message=f"Invalid scene:duration pair in --scenes: {token!r}",
+                hint="Use scene:duration pairs like 0:24,1:48.",
+            )
+        scene_raw, duration_raw = token.split(":", 1)
+        scene_text = scene_raw.strip()
+        duration_text = duration_raw.strip()
+        if not scene_text or not duration_text:
+            raise invalid_argument(
+                message=f"Invalid scene:duration pair in --scenes: {token!r}",
+                hint="Use scene:duration pairs like 0:24,1:48.",
+            )
+        try:
+            scene_index = int(scene_text)
+        except ValueError as exc:
+            raise invalid_argument(
+                message=f"scene index must be an integer, got {scene_text!r}",
+                hint="Use scene indexes like 0:24,1:48.",
+            ) from exc
+        if scene_index < 0:
+            raise invalid_argument(
+                message=f"scene index must be >= 0, got {scene_index}",
+                hint="Use non-negative scene indexes in --scenes.",
+            )
+        try:
+            duration_beats = float(duration_text)
+        except ValueError as exc:
+            raise invalid_argument(
+                message=f"duration must be numeric, got {duration_text!r}",
+                hint="Use beat durations like 0:24,1:48.",
+            ) from exc
+        if duration_beats <= 0:
+            raise invalid_argument(
+                message=f"duration must be > 0, got {duration_beats}",
+                hint="Use positive beat durations in --scenes.",
+            )
+        parsed_entries.append({"scene": scene_index, "duration_beats": duration_beats})
+
+    return parsed_entries
 
 
 def _parse_destination_csv(

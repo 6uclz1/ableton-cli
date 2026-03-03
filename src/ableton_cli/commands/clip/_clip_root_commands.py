@@ -4,8 +4,13 @@ from typing import Annotated
 
 import typer
 
-from .._validation import require_non_negative, require_positive_float
-from ._parsers import parse_duplicate_destinations, parse_place_pattern_destinations
+from .._validation import invalid_argument, require_non_negative, require_positive_float
+from ._parsers import (
+    parse_cut_to_drum_rack_slice_spec,
+    parse_cut_to_drum_rack_source,
+    parse_duplicate_destinations,
+    parse_place_pattern_destinations,
+)
 from ._shared import (
     execute_clip_command,
     execute_track_clip_command,
@@ -21,6 +26,7 @@ def register_clip_root_commands(clip_app: typer.Typer) -> None:
     clip_app.command("duplicate")(clip_duplicate)
     clip_app.command("duplicate-many")(clip_duplicate_many)
     clip_app.command("place-pattern")(clip_place_pattern)
+    clip_app.command("cut-to-drum-rack")(clip_cut_to_drum_rack)
 
 
 def clip_create(
@@ -206,5 +212,121 @@ def clip_place_pattern(
         ctx,
         command="clip place-pattern",
         args={"track": track, "clip": clip, "scenes": scenes},
+        action=_run,
+    )
+
+
+def clip_cut_to_drum_rack(
+    ctx: typer.Context,
+    source_track: Annotated[
+        int | None,
+        typer.Option("--source-track", help="Source session track index (0-based)"),
+    ] = None,
+    source_clip: Annotated[
+        int | None,
+        typer.Option("--source-clip", help="Source session clip slot index (0-based)"),
+    ] = None,
+    source: Annotated[
+        str | None,
+        typer.Option("--source", help="Source browser target (URI or path)"),
+    ] = None,
+    target_track: Annotated[
+        int | None,
+        typer.Option("--target-track", help="Destination track index (0-based)"),
+    ] = None,
+    grid: Annotated[
+        str | None,
+        typer.Option("--grid", help="Slice grid (fraction or beats, e.g. 1/16 or 0.25)"),
+    ] = None,
+    slice_count: Annotated[
+        int | None,
+        typer.Option("--slice-count", help="Number of equal slices"),
+    ] = None,
+    start_pad: Annotated[
+        int,
+        typer.Option("--start-pad", help="Destination start pad index (0-based)"),
+    ] = 0,
+    create_trigger_clip: Annotated[
+        bool,
+        typer.Option("--create-trigger-clip", help="Create trigger MIDI clip on destination track"),
+    ] = False,
+    trigger_clip_slot: Annotated[
+        int | None,
+        typer.Option("--trigger-clip-slot", help="Trigger clip slot index (0-based)"),
+    ] = None,
+) -> None:
+    def _run() -> dict[str, object]:
+        (
+            valid_source_track,
+            valid_source_clip,
+            source_uri,
+            source_path,
+        ) = parse_cut_to_drum_rack_source(
+            source_track=source_track,
+            source_clip=source_clip,
+            source=source,
+        )
+        valid_grid, valid_slice_count = parse_cut_to_drum_rack_slice_spec(
+            grid=grid,
+            slice_count=slice_count,
+        )
+        valid_target_track = (
+            require_non_negative(
+                "target_track",
+                target_track,
+                hint="Use a valid target track index from 'ableton-cli tracks list'.",
+            )
+            if target_track is not None
+            else None
+        )
+        valid_start_pad = require_non_negative(
+            "start_pad",
+            start_pad,
+            hint="Use a non-negative --start-pad value.",
+        )
+        valid_trigger_clip_slot = (
+            require_non_negative(
+                "trigger_clip_slot",
+                trigger_clip_slot,
+                hint="Use a non-negative --trigger-clip-slot value.",
+            )
+            if trigger_clip_slot is not None
+            else None
+        )
+        if not create_trigger_clip and valid_trigger_clip_slot is not None:
+            raise invalid_argument(
+                message="--trigger-clip-slot requires --create-trigger-clip",
+                hint="Use --create-trigger-clip with --trigger-clip-slot.",
+            )
+        if create_trigger_clip and valid_trigger_clip_slot is None:
+            valid_trigger_clip_slot = 0
+
+        return resolve_client(ctx).clip_cut_to_drum_rack(
+            source_track=valid_source_track,
+            source_clip=valid_source_clip,
+            source_uri=source_uri,
+            source_path=source_path,
+            target_track=valid_target_track,
+            grid=valid_grid,
+            slice_count=valid_slice_count,
+            start_pad=valid_start_pad,
+            create_trigger_clip=create_trigger_clip,
+            trigger_clip_slot=valid_trigger_clip_slot,
+        )
+
+    execute_clip_command(
+        ctx,
+        command="clip cut-to-drum-rack",
+        args={
+            "source_track": source_track,
+            "source_clip": source_clip,
+            "source": source,
+            "target_track": target_track,
+            "grid": grid,
+            "slice_count": slice_count,
+            "start_pad": start_pad,
+            "create_trigger_clip": create_trigger_clip,
+            "trigger_clip_slot": trigger_clip_slot,
+        },
         action=_run,
     )

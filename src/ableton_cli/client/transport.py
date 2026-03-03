@@ -2,9 +2,14 @@ from __future__ import annotations
 
 import json
 import socket
-from typing import Any
+from pathlib import Path
+from typing import Any, Protocol
 
 from ..errors import AppError, ExitCode
+
+
+class JsonTransport(Protocol):
+    def send(self, payload: dict[str, Any]) -> dict[str, Any]: ...
 
 
 class TcpJsonlTransport:
@@ -72,3 +77,197 @@ class TcpJsonlTransport:
             )
 
         return decoded
+
+
+class RecordingTransport:
+    def __init__(self, *, inner: JsonTransport, path: str) -> None:
+        self.inner = inner
+        self.path = Path(path)
+
+    def _append_entry(self, payload: dict[str, Any]) -> None:
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        with self.path.open("a", encoding="utf-8") as file_obj:
+            file_obj.write(json.dumps(payload, ensure_ascii=False, separators=(",", ":")) + "\n")
+
+    def send(self, payload: dict[str, Any]) -> dict[str, Any]:
+        try:
+            response = self.inner.send(payload)
+            self._append_entry(
+                {
+                    "request": payload,
+                    "response": response,
+                    "error": None,
+                }
+            )
+            return response
+        except AppError as exc:
+            self._append_entry(
+                {
+                    "request": payload,
+                    "response": None,
+                    "error": {
+                        "error_code": exc.error_code,
+                        "message": exc.message,
+                        "hint": exc.hint,
+                        "exit_code": int(exc.exit_code.value),
+                        "details": exc.details,
+                    },
+                }
+            )
+            raise
+
+
+class ReplayTransport:
+    def __init__(self, *, path: str) -> None:
+        self.path = Path(path)
+        if not self.path.exists():
+            raise AppError(
+                error_code="INVALID_ARGUMENT",
+                message=f"Replay file does not exist: {self.path}",
+                hint="Provide an existing JSONL path to --replay.",
+                exit_code=ExitCode.INVALID_ARGUMENT,
+            )
+
+        self._entries_by_key: dict[str, list[dict[str, Any]]] = {}
+        replay_lines = self.path.read_text(encoding="utf-8").splitlines()
+        for line_number, raw_line in enumerate(replay_lines, start=1):
+            if not raw_line.strip():
+                continue
+            try:
+                entry = json.loads(raw_line)
+            except json.JSONDecodeError as exc:
+                raise AppError(
+                    error_code="PROTOCOL_INVALID_RESPONSE",
+                    message=f"Replay file line {line_number} is not valid JSON",
+                    hint="Fix JSONL formatting in replay file.",
+                    exit_code=ExitCode.PROTOCOL_MISMATCH,
+                ) from exc
+
+            if not isinstance(entry, dict):
+                raise AppError(
+                    error_code="PROTOCOL_INVALID_RESPONSE",
+                    message=f"Replay file line {line_number} must be an object",
+                    hint="Use object-per-line JSONL format.",
+                    exit_code=ExitCode.PROTOCOL_MISMATCH,
+                )
+            request = entry.get("request")
+            if not isinstance(request, dict):
+                raise AppError(
+                    error_code="PROTOCOL_INVALID_RESPONSE",
+                    message=f"Replay file line {line_number}.request must be an object",
+                    hint="Each replay entry requires a request object.",
+                    exit_code=ExitCode.PROTOCOL_MISMATCH,
+                )
+            key = self._request_key(request)
+            self._entries_by_key.setdefault(key, []).append(entry)
+
+    @staticmethod
+    def _request_key(request: dict[str, Any]) -> str:
+        name = request.get("name")
+        args = request.get("args", {})
+        if not isinstance(name, str) or not name:
+            raise AppError(
+                error_code="PROTOCOL_INVALID_RESPONSE",
+                message="Replay request.name must be a non-empty string",
+                hint="Record new replay fixtures with --record.",
+                exit_code=ExitCode.PROTOCOL_MISMATCH,
+            )
+        if not isinstance(args, dict):
+            raise AppError(
+                error_code="PROTOCOL_INVALID_RESPONSE",
+                message="Replay request.args must be an object",
+                hint="Record new replay fixtures with --record.",
+                exit_code=ExitCode.PROTOCOL_MISMATCH,
+            )
+        normalized = {"name": name, "args": args}
+        return json.dumps(normalized, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+
+    @staticmethod
+    def _raise_replay_error(payload: Any) -> None:
+        if not isinstance(payload, dict):
+            raise AppError(
+                error_code="PROTOCOL_INVALID_RESPONSE",
+                message="Replay error payload must be an object",
+                hint="Record new replay fixtures with --record.",
+                exit_code=ExitCode.PROTOCOL_MISMATCH,
+            )
+
+        code_value = payload.get("error_code", payload.get("code"))
+        if not isinstance(code_value, str) or not code_value:
+            raise AppError(
+                error_code="PROTOCOL_INVALID_RESPONSE",
+                message="Replay error payload is missing error_code",
+                hint="Record new replay fixtures with --record.",
+                exit_code=ExitCode.PROTOCOL_MISMATCH,
+            )
+        message = payload.get("message")
+        if not isinstance(message, str) or not message:
+            raise AppError(
+                error_code="PROTOCOL_INVALID_RESPONSE",
+                message="Replay error payload is missing message",
+                hint="Record new replay fixtures with --record.",
+                exit_code=ExitCode.PROTOCOL_MISMATCH,
+            )
+        hint = payload.get("hint")
+        if hint is not None and not isinstance(hint, str):
+            raise AppError(
+                error_code="PROTOCOL_INVALID_RESPONSE",
+                message="Replay error payload hint must be a string or null",
+                hint="Record new replay fixtures with --record.",
+                exit_code=ExitCode.PROTOCOL_MISMATCH,
+            )
+        raw_exit_code = payload.get("exit_code")
+        try:
+            exit_code = ExitCode(int(raw_exit_code))
+        except (TypeError, ValueError) as exc:
+            raise AppError(
+                error_code="PROTOCOL_INVALID_RESPONSE",
+                message="Replay error payload exit_code is invalid",
+                hint="Record new replay fixtures with --record.",
+                exit_code=ExitCode.PROTOCOL_MISMATCH,
+            ) from exc
+        details = payload.get("details", {})
+        if details is not None and not isinstance(details, dict):
+            raise AppError(
+                error_code="PROTOCOL_INVALID_RESPONSE",
+                message="Replay error payload details must be an object or null",
+                hint="Record new replay fixtures with --record.",
+                exit_code=ExitCode.PROTOCOL_MISMATCH,
+            )
+        raise AppError(
+            error_code=code_value,
+            message=message,
+            hint=hint,
+            exit_code=exit_code,
+            details={} if details is None else details,
+        )
+
+    def send(self, payload: dict[str, Any]) -> dict[str, Any]:
+        key = self._request_key(payload)
+        bucket = self._entries_by_key.get(key)
+        if not bucket:
+            raise AppError(
+                error_code="PROTOCOL_INVALID_RESPONSE",
+                message="Replay fixture does not contain a matching request",
+                hint="Record fixtures with --record for the exact name+args sequence.",
+                exit_code=ExitCode.PROTOCOL_MISMATCH,
+                details={"name": payload.get("name"), "args": payload.get("args")},
+            )
+
+        entry = bucket.pop(0)
+        replay_error = entry.get("error")
+        if replay_error is not None:
+            self._raise_replay_error(replay_error)
+
+        response = entry.get("response")
+        if not isinstance(response, dict):
+            raise AppError(
+                error_code="PROTOCOL_INVALID_RESPONSE",
+                message="Replay entry response must be an object",
+                hint="Record new replay fixtures with --record.",
+                exit_code=ExitCode.PROTOCOL_MISMATCH,
+            )
+        replayed_response = dict(response)
+        if "request_id" in payload:
+            replayed_response["request_id"] = payload["request_id"]
+        return replayed_response

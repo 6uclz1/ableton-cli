@@ -24,6 +24,11 @@ jobs:
       - name: Sync dependencies
         run: uv sync --dev
 
+      - name: Verify generated skill docs
+        run: |
+          uv run python tools/generate_skill_docs.py
+          git diff --exit-code
+
       - name: Run lint and tests
         run: uv run python -m ableton_cli.dev_checks --report dev-checks-report.json --pytest-junitxml pytest-report.xml
 

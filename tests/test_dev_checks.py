@@ -25,7 +25,7 @@ def test_run_default_checks_runs_commands_in_order(monkeypatch) -> None:
 
 def test_run_default_checks_runs_all_commands_and_returns_failure(monkeypatch) -> None:
     commands: list[tuple[str, ...]] = []
-    exits = [0, 1, 0]
+    exits = [0, 1, 0, 0]
 
     def _run(command: tuple[str, ...], check: bool) -> SimpleNamespace:  # noqa: ANN202
         assert check is False
@@ -61,7 +61,7 @@ def test_run_default_checks_adds_junitxml_option_to_pytest_command(
 
 
 def test_main_writes_report_json(monkeypatch, tmp_path: Path) -> None:
-    exits = [0, 0, 1]
+    exits = [0, 0, 0, 1]
 
     def _run(command: tuple[str, ...], check: bool) -> SimpleNamespace:  # noqa: ANN202
         assert check is False
@@ -85,8 +85,8 @@ def test_main_writes_report_json(monkeypatch, tmp_path: Path) -> None:
     assert report["schema_version"] == 1
     assert report["status"] == "fail"
     assert report["exit_code"] == 1
-    assert len(report["commands"]) == 3
-    assert report["commands"][2]["command"] == [
+    assert len(report["commands"]) == 4
+    assert report["commands"][3]["command"] == [
         "uv",
         "run",
         "pytest",

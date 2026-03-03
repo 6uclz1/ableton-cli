@@ -22,6 +22,10 @@ def build_runtime_context(
     config: Path | None,
     no_color: bool,
     quiet: bool,
+    record: str | None,
+    replay: str | None,
+    read_only: bool,
+    compact: bool,
 ) -> RuntimeContext:
     cli_overrides: dict[str, Any] = {
         "host": host,
@@ -41,4 +45,8 @@ def build_runtime_context(
         output_mode=output,
         quiet=quiet,
         no_color=no_color,
+        record_path=record,
+        replay_path=replay,
+        read_only=read_only,
+        compact=compact,
     )

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 
 def test_config_show_outputs_json_envelope(runner, cli_app, tmp_path) -> None:
@@ -295,3 +296,168 @@ def test_protocol_version_global_option_overrides_config(runner, cli_app, tmp_pa
     payload = json.loads(result.stdout)
     assert payload["ok"] is True
     assert payload["result"]["protocol_version"] == 11
+
+
+def test_ping_supports_replay_option_without_network(runner, cli_app, tmp_path: Path) -> None:
+    replay_path = tmp_path / "ping-replay.jsonl"
+    replay_path.write_text(
+        json.dumps(
+            {
+                "request": {"name": "ping", "args": {}},
+                "response": {
+                    "ok": True,
+                    "request_id": "recorded-request-id",
+                    "protocol_version": 2,
+                    "result": {
+                        "protocol_version": 2,
+                        "remote_script_version": "9.9.9",
+                        "supported_commands": ["ping"],
+                        "command_set_hash": "hash",
+                        "api_support": {},
+                    },
+                    "error": None,
+                },
+                "error": None,
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    result = runner.invoke(
+        cli_app,
+        ["--output", "json", "--replay", str(replay_path), "ping"],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["ok"] is True
+    assert payload["result"]["remote_script_version"] == "9.9.9"
+
+
+def test_record_and_replay_cannot_be_enabled_together(runner, cli_app, tmp_path: Path) -> None:
+    record_path = tmp_path / "record.jsonl"
+    replay_path = tmp_path / "replay.jsonl"
+
+    result = runner.invoke(
+        cli_app,
+        [
+            "--output",
+            "json",
+            "--record",
+            str(record_path),
+            "--replay",
+            str(replay_path),
+            "ping",
+        ],
+    )
+
+    assert result.exit_code == 2
+    payload = json.loads(result.stdout)
+    assert payload["ok"] is False
+    assert payload["error"]["code"] == "INVALID_ARGUMENT"
+
+
+def test_read_only_allows_read_commands(runner, cli_app, tmp_path: Path) -> None:
+    replay_path = tmp_path / "song-info-replay.jsonl"
+    replay_path.write_text(
+        json.dumps(
+            {
+                "request": {"name": "song_info", "args": {}},
+                "response": {
+                    "ok": True,
+                    "request_id": "recorded-request-id",
+                    "protocol_version": 2,
+                    "result": {"tempo": 120.0},
+                    "error": None,
+                },
+                "error": None,
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    result = runner.invoke(
+        cli_app,
+        ["--output", "json", "--read-only", "--replay", str(replay_path), "song", "info"],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["ok"] is True
+    assert payload["result"]["tempo"] == 120.0
+
+
+def test_read_only_blocks_write_commands(runner, cli_app, tmp_path: Path) -> None:
+    replay_path = tmp_path / "empty-replay.jsonl"
+    replay_path.write_text("", encoding="utf-8")
+
+    result = runner.invoke(
+        cli_app,
+        [
+            "--output",
+            "json",
+            "--read-only",
+            "--replay",
+            str(replay_path),
+            "track",
+            "volume",
+            "set",
+            "0",
+            "0.5",
+        ],
+    )
+
+    assert result.exit_code == 20
+    payload = json.loads(result.stdout)
+    assert payload["ok"] is False
+    assert payload["error"]["code"] == "READ_ONLY_VIOLATION"
+
+
+def test_read_only_batch_rejects_write_steps(runner, cli_app, tmp_path: Path) -> None:
+    replay_path = tmp_path / "batch-replay.jsonl"
+    replay_path.write_text(
+        json.dumps(
+            {
+                "request": {"name": "tracks_list", "args": {}},
+                "response": {
+                    "ok": True,
+                    "request_id": "recorded-request-id",
+                    "protocol_version": 2,
+                    "result": {"tracks": []},
+                    "error": None,
+                },
+                "error": None,
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    result = runner.invoke(
+        cli_app,
+        [
+            "--output",
+            "json",
+            "--read-only",
+            "--replay",
+            str(replay_path),
+            "batch",
+            "run",
+            "--steps-json",
+            json.dumps(
+                {
+                    "steps": [
+                        {"name": "tracks_list", "args": {}},
+                        {"name": "track_volume_set", "args": {"track": 0, "value": 0.5}},
+                    ]
+                }
+            ),
+        ],
+    )
+
+    assert result.exit_code == 20
+    payload = json.loads(result.stdout)
+    assert payload["ok"] is False
+    assert payload["error"]["code"] == "READ_ONLY_VIOLATION"

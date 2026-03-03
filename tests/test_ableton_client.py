@@ -105,6 +105,39 @@ def test_client_does_not_retry_write_command_on_timeout(monkeypatch) -> None:
     assert [request["name"] for request in requests] == ["track_volume_set"]
 
 
+def test_client_read_only_blocks_write_command_before_transport(monkeypatch) -> None:
+    client = AbletonClient(_settings(), read_only=True)
+    requests: list[dict[str, Any]] = []
+
+    def _send(request: dict[str, Any]):  # noqa: ANN202
+        requests.append(request)
+        return _ok_response(request, {"ok": True})
+
+    monkeypatch.setattr(client.transport, "send", _send)
+
+    with pytest.raises(AppError) as exc_info:
+        client.track_volume_set(0, 0.5)
+
+    assert exc_info.value.error_code == "READ_ONLY_VIOLATION"
+    assert requests == []
+
+
+def test_client_read_only_allows_read_command(monkeypatch) -> None:
+    client = AbletonClient(_settings(), read_only=True)
+    requests: list[dict[str, Any]] = []
+
+    def _send(request: dict[str, Any]):  # noqa: ANN202
+        requests.append(request)
+        return _ok_response(request, {"tempo": 120.0})
+
+    monkeypatch.setattr(client.transport, "send", _send)
+
+    result = client.song_info()
+
+    assert result["tempo"] == 120.0
+    assert [request["name"] for request in requests] == ["song_info"]
+
+
 def test_client_sends_request_timeout_meta(monkeypatch) -> None:
     client = AbletonClient(_settings())
     requests = _capture_requests(monkeypatch, client)

@@ -36,7 +36,7 @@ def test_execute_command_quiet_suppresses_custom_human_formatter(monkeypatch) ->
             _context(quiet=True),
             command="doctor",
             args={},
-            action=lambda: {"summary": {"pass": 1, "warn": 0, "fail": 0}},
+            action=lambda: {"summary": {"pass": 1, "warn": 0, "fail": 0}, "checks": []},
             human_formatter=lambda _: "Doctor Results",
         )
 
@@ -58,7 +58,7 @@ def test_execute_command_not_quiet_emits_custom_human_formatter(monkeypatch) -> 
             _context(quiet=False),
             command="doctor",
             args={},
-            action=lambda: {"summary": {"pass": 1, "warn": 0, "fail": 0}},
+            action=lambda: {"summary": {"pass": 1, "warn": 0, "fail": 0}, "checks": []},
             human_formatter=lambda _: "Doctor Results",
         )
 

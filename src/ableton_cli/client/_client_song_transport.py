@@ -11,6 +11,12 @@ class _AbletonClientSongTransportMixin:
     def song_new(self) -> dict[str, object]:
         return self._call("song_new")
 
+    def song_undo(self) -> dict[str, object]:
+        return self._call("song_undo")
+
+    def song_redo(self) -> dict[str, object]:
+        return self._call("song_redo")
+
     def song_save(self, path: str) -> dict[str, object]:
         return self._call("song_save", {"path": path})
 

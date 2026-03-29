@@ -10,6 +10,8 @@ _REQUIRED_REMOTE_COMMANDS = frozenset(
         "ping",
         "song_info",
         "song_new",
+        "song_undo",
+        "song_redo",
         "song_save",
         "song_export_audio",
         "get_session_info",
@@ -128,67 +130,15 @@ _REQUIRED_REMOTE_COMMANDS = frozenset(
     }
 )
 
-_READ_ONLY_REMOTE_COMMANDS = frozenset(
-    {
-        "ping",
-        "song_info",
-        "get_session_info",
-        "session_snapshot",
-        "get_track_info",
-        "tracks_list",
-        "transport_tempo_get",
-        "transport_position_get",
-        "track_volume_get",
-        "track_mute_get",
-        "track_solo_get",
-        "track_arm_get",
-        "track_panning_get",
-        "track_send_get",
-        "return_tracks_list",
-        "return_track_volume_get",
-        "return_track_mute_get",
-        "return_track_solo_get",
-        "master_info",
-        "master_volume_get",
-        "master_panning_get",
-        "master_devices_list",
-        "mixer_crossfader_get",
-        "mixer_cue_volume_get",
-        "mixer_cue_routing_get",
-        "track_routing_input_get",
-        "track_routing_output_get",
-        "arrangement_clip_list",
-        "arrangement_clip_notes_get",
-        "get_clip_notes",
-        "clip_active_get",
-        "clip_groove_get",
-        "get_browser_tree",
-        "get_browser_items_at_path",
-        "get_browser_item",
-        "get_browser_categories",
-        "get_browser_items",
-        "search_browser_items",
-        "scenes_list",
-        "find_synth_devices",
-        "list_synth_parameters",
-        "observe_synth_parameters",
-        "list_standard_synth_keys",
-        "observe_standard_synth_state",
-        "find_effect_devices",
-        "list_effect_parameters",
-        "observe_effect_parameters",
-        "list_standard_effect_keys",
-        "observe_standard_effect_state",
-    }
-)
-
 
 def required_remote_commands() -> set[str]:
     return set(_REQUIRED_REMOTE_COMMANDS)
 
 
 def read_only_remote_commands() -> set[str]:
-    return set(_READ_ONLY_REMOTE_COMMANDS)
+    from .contracts.registry import read_only_remote_command_names
+
+    return read_only_remote_command_names()
 
 
 def compute_command_set_hash(commands: list[str] | set[str]) -> str:

@@ -7,6 +7,8 @@ Stable action names and CLI mappings for automation wrappers.
 | `ping` | `uv run ableton-cli --output json ping` | Check connectivity and protocol metadata. |
 | `get_song_info` | `uv run ableton-cli --output json song info` | Read global song state such as tempo and transport status. |
 | `song_new` | `uv run ableton-cli --output json song new` | Create a new Ableton Set when supported by Live API. |
+| `song_undo` | `uv run ableton-cli --output json song undo` | Undo the most recent Ableton operation when supported by Live API. |
+| `song_redo` | `uv run ableton-cli --output json song redo` | Redo the most recently undone Ableton operation when supported by Live API. |
 | `song_save` | `uv run ableton-cli --output json song save --path <als>` | Save the current Ableton Set to a target path when supported. |
 | `song_export_audio` | `uv run ableton-cli --output json song export audio --path <wav>` | Export session audio to a target path when supported. |
 | `get_session_info` | `uv run ableton-cli --output json session info` | Read session view state and structure information. |

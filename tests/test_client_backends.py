@@ -70,3 +70,17 @@ def test_client_read_only_stops_dispatch_before_backend(monkeypatch: pytest.Monk
         client.track_volume_set(0, 0.5)
 
     assert exc_info.value.error_code == ErrorCode.READ_ONLY_VIOLATION
+
+
+def test_client_read_only_blocks_song_undo(monkeypatch: pytest.MonkeyPatch) -> None:
+    client = AbletonClient(_settings(), read_only=True)
+
+    def _dispatch(_name: str, _args: dict[str, Any]) -> dict[str, Any]:
+        raise AssertionError("backend dispatch must not run for blocked write commands")
+
+    monkeypatch.setattr(client._backend, "dispatch", _dispatch)
+
+    with pytest.raises(AppError) as exc_info:
+        client.song_undo()
+
+    assert exc_info.value.error_code == ErrorCode.READ_ONLY_VIOLATION

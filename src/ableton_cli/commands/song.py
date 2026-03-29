@@ -26,6 +26,14 @@ SONG_NEW_SPEC = SongCommandSpec(
     command_name="song new",
     client_method="song_new",
 )
+SONG_UNDO_SPEC = SongCommandSpec(
+    command_name="song undo",
+    client_method="song_undo",
+)
+SONG_REDO_SPEC = SongCommandSpec(
+    command_name="song redo",
+    client_method="song_redo",
+)
 SONG_SAVE_SPEC = SongCommandSpec(
     command_name="song save",
     client_method="song_save",
@@ -84,6 +92,24 @@ def song_new(ctx: typer.Context) -> None:
     run_client_command_spec(
         ctx,
         spec=SONG_NEW_SPEC,
+        args={},
+    )
+
+
+@song_app.command("undo")
+def song_undo(ctx: typer.Context) -> None:
+    run_client_command_spec(
+        ctx,
+        spec=SONG_UNDO_SPEC,
+        args={},
+    )
+
+
+@song_app.command("redo")
+def song_redo(ctx: typer.Context) -> None:
+    run_client_command_spec(
+        ctx,
+        spec=SONG_REDO_SPEC,
         args={},
     )
 

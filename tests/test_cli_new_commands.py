@@ -10,6 +10,12 @@ class _ClientStub:
     def song_new(self):  # noqa: ANN201
         return {"created": True}
 
+    def song_undo(self):  # noqa: ANN201
+        return {"undone": True}
+
+    def song_redo(self):  # noqa: ANN201
+        return {"redone": True}
+
     def song_save(self, path: str):  # noqa: ANN201
         return {"saved": True, "path": path}
 
@@ -1049,6 +1055,23 @@ def test_song_new_save_export_commands_output_json_envelope(runner, cli_app, mon
     assert saved_payload["result"]["path"] == "/tmp/demo.als"
     assert exported_payload["result"]["exported"] is True
     assert exported_payload["result"]["path"] == "/tmp/demo.wav"
+
+
+def test_song_undo_redo_commands_output_json_envelope(runner, cli_app, monkeypatch) -> None:
+    from ableton_cli.commands import song
+
+    monkeypatch.setattr(song, "get_client", lambda ctx: _ClientStub())
+
+    undone = runner.invoke(cli_app, ["--output", "json", "song", "undo"])
+    redone = runner.invoke(cli_app, ["--output", "json", "song", "redo"])
+
+    assert undone.exit_code == 0
+    assert redone.exit_code == 0
+
+    undo_payload = json.loads(undone.stdout)
+    redo_payload = json.loads(redone.stdout)
+    assert undo_payload["result"]["undone"] is True
+    assert redo_payload["result"]["redone"] is True
 
 
 def test_clip_notes_add_parses_json_and_calls_client(runner, cli_app, monkeypatch) -> None:

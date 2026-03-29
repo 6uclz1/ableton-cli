@@ -41,6 +41,8 @@ To verify that the latest Remote Script is active, run `uv run ableton-cli --out
 ```bash
 uv run ableton-cli song info
 uv run ableton-cli song new
+uv run ableton-cli song undo
+uv run ableton-cli song redo
 uv run ableton-cli song save --path /tmp/demo.als
 uv run ableton-cli song export audio --path /tmp/demo.wav
 uv run ableton-cli session info
@@ -347,6 +349,8 @@ uv run ableton-cli --output json ping
 - `ping` -> `uv run ableton-cli --output json ping`
 - `get_song_info` -> `uv run ableton-cli --output json song info`
 - `song_new` -> `uv run ableton-cli --output json song new`
+- `song_undo` -> `uv run ableton-cli --output json song undo`
+- `song_redo` -> `uv run ableton-cli --output json song redo`
 - `song_save` -> `uv run ableton-cli --output json song save --path <als>`
 - `song_export_audio` -> `uv run ableton-cli --output json song export audio --path <wav>`
 - `get_session_info` -> `uv run ableton-cli --output json session info`

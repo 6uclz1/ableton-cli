@@ -27,6 +27,16 @@ STABLE_ACTION_MAPPINGS: tuple[StableActionMapping, ...] = (
         capability="Create a new Ableton Set when supported by Live API.",
     ),
     StableActionMapping(
+        action="song_undo",
+        command="uv run ableton-cli --output json song undo",
+        capability="Undo the most recent Ableton operation when supported by Live API.",
+    ),
+    StableActionMapping(
+        action="song_redo",
+        command="uv run ableton-cli --output json song redo",
+        capability="Redo the most recently undone Ableton operation when supported by Live API.",
+    ),
+    StableActionMapping(
         action="song_save",
         command="uv run ableton-cli --output json song save --path <als>",
         capability="Save the current Ableton Set to a target path when supported.",

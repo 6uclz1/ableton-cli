@@ -35,6 +35,28 @@ class LiveBackendSongSessionMixin:
         create_set()
         return {"created": True}
 
+    def song_undo(self) -> dict[str, Any]:
+        app = self._application()
+        undo = getattr(app, "undo", None)
+        if not callable(undo):
+            raise _not_supported_by_live_api(
+                message="Song undo API is not available in Live API",
+                hint="Undo manually from Ableton Live.",
+            )
+        undo()
+        return {"undone": True}
+
+    def song_redo(self) -> dict[str, Any]:
+        app = self._application()
+        redo = getattr(app, "redo", None)
+        if not callable(redo):
+            raise _not_supported_by_live_api(
+                message="Song redo API is not available in Live API",
+                hint="Redo manually from Ableton Live.",
+            )
+        redo()
+        return {"redone": True}
+
     def song_save(self, path: str) -> dict[str, Any]:
         app = self._application()
         save_set = getattr(app, "save_live_set", None)

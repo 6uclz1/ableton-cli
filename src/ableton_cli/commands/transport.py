@@ -5,6 +5,7 @@ from typing import Annotated
 
 import typer
 
+from ..command_specs import TRANSPORT_COMMAND_SPECS
 from ..errors import AppError, ErrorCode, ExitCode
 from ..runtime import execute_command, get_client
 from ._client_command_runner import CommandSpec
@@ -19,38 +20,39 @@ position_app = typer.Typer(help="Playhead position controls", no_args_is_help=Tr
 
 TransportCommandSpec = CommandSpec
 
+_TRANSPORT_SPEC_BY_NAME = {item.command_name: item for item in TRANSPORT_COMMAND_SPECS}
 
 TRANSPORT_PLAY_SPEC = TransportCommandSpec(
-    command_name="transport play",
-    client_method="transport_play",
+    command_name=_TRANSPORT_SPEC_BY_NAME["transport play"].command_name,
+    client_method=_TRANSPORT_SPEC_BY_NAME["transport play"].client_method,
 )
 TRANSPORT_STOP_SPEC = TransportCommandSpec(
-    command_name="transport stop",
-    client_method="transport_stop",
+    command_name=_TRANSPORT_SPEC_BY_NAME["transport stop"].command_name,
+    client_method=_TRANSPORT_SPEC_BY_NAME["transport stop"].client_method,
 )
 TRANSPORT_TOGGLE_SPEC = TransportCommandSpec(
-    command_name="transport toggle",
-    client_method="transport_toggle",
+    command_name=_TRANSPORT_SPEC_BY_NAME["transport toggle"].command_name,
+    client_method=_TRANSPORT_SPEC_BY_NAME["transport toggle"].client_method,
 )
 TRANSPORT_TEMPO_GET_SPEC = TransportCommandSpec(
-    command_name="transport tempo get",
-    client_method="transport_tempo_get",
+    command_name=_TRANSPORT_SPEC_BY_NAME["transport tempo get"].command_name,
+    client_method=_TRANSPORT_SPEC_BY_NAME["transport tempo get"].client_method,
 )
 TRANSPORT_TEMPO_SET_SPEC = TransportCommandSpec(
-    command_name="transport tempo set",
-    client_method="transport_tempo_set",
+    command_name=_TRANSPORT_SPEC_BY_NAME["transport tempo set"].command_name,
+    client_method=_TRANSPORT_SPEC_BY_NAME["transport tempo set"].client_method,
 )
 TRANSPORT_POSITION_GET_SPEC = TransportCommandSpec(
-    command_name="transport position get",
-    client_method="transport_position_get",
+    command_name=_TRANSPORT_SPEC_BY_NAME["transport position get"].command_name,
+    client_method=_TRANSPORT_SPEC_BY_NAME["transport position get"].client_method,
 )
 TRANSPORT_POSITION_SET_SPEC = TransportCommandSpec(
-    command_name="transport position set",
-    client_method="transport_position_set",
+    command_name=_TRANSPORT_SPEC_BY_NAME["transport position set"].command_name,
+    client_method=_TRANSPORT_SPEC_BY_NAME["transport position set"].client_method,
 )
 TRANSPORT_REWIND_SPEC = TransportCommandSpec(
-    command_name="transport rewind",
-    client_method="transport_rewind",
+    command_name=_TRANSPORT_SPEC_BY_NAME["transport rewind"].command_name,
+    client_method=_TRANSPORT_SPEC_BY_NAME["transport rewind"].client_method,
 )
 
 

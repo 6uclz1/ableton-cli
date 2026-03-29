@@ -47,6 +47,8 @@ uv run ableton-cli install-remote-script --yes
 uv run ableton-cli install-skill --yes
 uv run ableton-cli wait-ready
 uv run ableton-cli song info
+uv run ableton-cli song undo
+uv run ableton-cli song redo
 uv run ableton-cli transport play
 uv run ableton-cli transport tempo set 128
 uv run ableton-cli transport position get
@@ -231,7 +233,7 @@ If a command is exposed by CLI/Remote but Live API cannot perform it, the comman
 - `error.code=INVALID_ARGUMENT`
 - `error.details.reason=not_supported_by_live_api`
 
-This currently applies to API-limited operations such as `song new/save/export`, `arrangement record start|stop`, `scenes move`, and `tracks delete` when the running Live API lacks the required primitive.
+This currently applies to API-limited operations such as `song new/undo/redo/save/export`, `arrangement record start|stop`, `scenes move`, and `tracks delete` when the running Live API lacks the required primitive.
 
 ## Completion
 

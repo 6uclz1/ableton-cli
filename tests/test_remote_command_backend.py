@@ -37,6 +37,12 @@ class _BackendStub:
     def song_new(self):  # noqa: ANN201
         return {"created": True}
 
+    def song_undo(self):  # noqa: ANN201
+        return {"undone": True}
+
+    def song_redo(self):  # noqa: ANN201
+        return {"redone": True}
+
     def song_save(self, path: str):  # noqa: ANN201
         return {"saved": True, "path": path}
 
@@ -946,6 +952,16 @@ def test_dispatch_calls_backend_for_tempo_set() -> None:
     backend = _BackendStub()
     result = dispatch_command(backend, "transport_tempo_set", {"bpm": 128})
     assert result == {"tempo": 128.0}
+
+
+def test_dispatch_calls_backend_for_song_undo_redo() -> None:
+    backend = _BackendStub()
+
+    undone = dispatch_command(backend, "song_undo", {})
+    redone = dispatch_command(backend, "song_redo", {})
+
+    assert undone == {"undone": True}
+    assert redone == {"redone": True}
 
 
 def test_dispatch_calls_backend_for_transport_position_commands() -> None:

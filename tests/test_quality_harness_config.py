@@ -20,4 +20,4 @@ def test_function_args_threshold_allows_cli_entry_points() -> None:
 
     function_args_threshold = config.thresholds.function["args"]
     assert function_args_threshold.warn == 8
-    assert function_args_threshold.fail == 17
+    assert function_args_threshold.fail == 20

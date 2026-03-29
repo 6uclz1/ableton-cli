@@ -103,25 +103,7 @@ class LiveBackendSongSessionMixin:
             )
 
         devices = []
-        for device_index, device in enumerate(list(target.devices)):
-            params = []
-            for param_index, param in enumerate(list(getattr(device, "parameters", []))):
-                params.append(
-                    {
-                        "index": param_index,
-                        "name": str(getattr(param, "name", f"Parameter {param_index}")),
-                        "value": float(getattr(param, "value", 0.0)),
-                    }
-                )
-            devices.append(
-                {
-                    "index": device_index,
-                    "name": str(getattr(device, "name", "")),
-                    "class_name": str(getattr(device, "class_name", "")),
-                    "type": self._get_device_type(device),
-                    "parameters": params,
-                }
-            )
+        devices = self._serialize_devices(list(target.devices))
 
         return {
             "index": track,
@@ -183,6 +165,81 @@ class LiveBackendSongSessionMixin:
 
 
 class LiveBackendTransportMixerMixin:
+    @staticmethod
+    def _string_choices(values: list[object]) -> list[str]:
+        return [str(value) for value in values]
+
+    def _require_track_routing_support(
+        self,
+        track: Any,
+        direction: str,
+    ) -> tuple[list[str], list[str]]:
+        types_attr = f"available_{direction}_routing_types"
+        channels_attr = f"available_{direction}_routing_channels"
+        current_type_attr = f"{direction}_routing_type"
+        current_channel_attr = f"{direction}_routing_channel"
+        if not all(
+            hasattr(track, attribute)
+            for attribute in (types_attr, channels_attr, current_type_attr, current_channel_attr)
+        ):
+            raise _not_supported_by_live_api(
+                message=f"{direction} routing API is not available in Live API",
+                hint=f"Use a Live version exposing track {direction} routing properties.",
+            )
+        return (
+            self._string_choices(list(getattr(track, types_attr))),
+            self._string_choices(list(getattr(track, channels_attr))),
+        )
+
+    def _track_routing_payload(self, track_index: int, direction: str) -> dict[str, Any]:
+        track = self._track_at(track_index)
+        available_types, available_channels = self._require_track_routing_support(track, direction)
+        return {
+            "track": track_index,
+            "current": {
+                "type": str(getattr(track, f"{direction}_routing_type")),
+                "channel": str(getattr(track, f"{direction}_routing_channel")),
+            },
+            "available": {
+                "types": available_types,
+                "channels": available_channels,
+            },
+        }
+
+    def _set_track_routing(
+        self,
+        *,
+        track_index: int,
+        direction: str,
+        routing_type: str,
+        routing_channel: str,
+    ) -> dict[str, Any]:
+        track = self._track_at(track_index)
+        available_types, available_channels = self._require_track_routing_support(track, direction)
+        if routing_type not in available_types:
+            raise _invalid_argument(
+                message=f"Unsupported {direction} routing type: {routing_type}",
+                hint="Use one of the exact routing types reported by the get command.",
+            )
+        if routing_channel not in available_channels:
+            raise _invalid_argument(
+                message=f"Unsupported {direction} routing channel: {routing_channel}",
+                hint="Use one of the exact routing channels reported by the get command.",
+            )
+        setattr(track, f"{direction}_routing_type", routing_type)
+        setattr(track, f"{direction}_routing_channel", routing_channel)
+        return self._track_routing_payload(track_index, direction)
+
+    def _require_cue_routing_support(self) -> tuple[Any, list[str]]:
+        song = self._song()
+        if not hasattr(song, "cue_routing") or not hasattr(song, "available_cue_routings"):
+            raise _not_supported_by_live_api(
+                message="Cue routing API is not available in Live API",
+                hint="Use a Live version exposing cue routing properties.",
+            )
+        available = self._string_choices(list(song.available_cue_routings))
+        return song, available
+
     def _wait_for_transport_state(self, *, expected: bool | None = None) -> bool:
         deadline = time.monotonic() + _TRANSPORT_STATE_TIMEOUT_SECONDS
         while True:
@@ -323,3 +380,185 @@ class LiveBackendTransportMixerMixin:
         target = self._track_at(track)
         target.mixer_device.panning.value = float(value)
         return {"track": track, "panning": float(target.mixer_device.panning.value)}
+
+    def track_send_get(self, track: int, send: int) -> dict[str, Any]:
+        target = self._track_at(track)
+        sends = list(getattr(target.mixer_device, "sends", []))
+        if send < 0 or send >= len(sends):
+            raise _invalid_argument(
+                message=f"send out of range: {send}",
+                hint="Use a valid 0-based send index.",
+            )
+        return {"track": track, "send": send, "value": float(sends[send].value)}
+
+    def track_send_set(self, track: int, send: int, value: float) -> dict[str, Any]:
+        if value < MIN_VOLUME or value > MAX_VOLUME:
+            raise _invalid_argument(
+                message=f"value must be between {MIN_VOLUME} and {MAX_VOLUME}",
+                hint="Use a normalized volume value in [0.0, 1.0].",
+            )
+        target = self._track_at(track)
+        sends = list(getattr(target.mixer_device, "sends", []))
+        if send < 0 or send >= len(sends):
+            raise _invalid_argument(
+                message=f"send out of range: {send}",
+                hint="Use a valid 0-based send index.",
+            )
+        sends[send].value = float(value)
+        return {"track": track, "send": send, "value": float(sends[send].value)}
+
+    def return_tracks_list(self) -> dict[str, Any]:
+        tracks = []
+        for index, track in enumerate(getattr(self._song(), "return_tracks", [])):
+            tracks.append(
+                {
+                    "index": index,
+                    "name": str(getattr(track, "name", f"Return {index}")),
+                    "mute": bool(getattr(track, "mute", False)),
+                    "solo": bool(getattr(track, "solo", False)),
+                    "volume": float(track.mixer_device.volume.value),
+                }
+            )
+        return {"return_tracks": tracks}
+
+    def return_track_volume_get(self, return_track: int) -> dict[str, Any]:
+        target = self._return_track_at(return_track)
+        return {"return_track": return_track, "volume": float(target.mixer_device.volume.value)}
+
+    def return_track_volume_set(self, return_track: int, value: float) -> dict[str, Any]:
+        if value < MIN_VOLUME or value > MAX_VOLUME:
+            raise _invalid_argument(
+                message=f"value must be between {MIN_VOLUME} and {MAX_VOLUME}",
+                hint="Use a normalized volume value in [0.0, 1.0].",
+            )
+        target = self._return_track_at(return_track)
+        target.mixer_device.volume.value = float(value)
+        return {"return_track": return_track, "volume": float(target.mixer_device.volume.value)}
+
+    def return_track_mute_get(self, return_track: int) -> dict[str, Any]:
+        target = self._return_track_at(return_track)
+        return {"return_track": return_track, "mute": bool(target.mute)}
+
+    def return_track_mute_set(self, return_track: int, value: bool) -> dict[str, Any]:
+        target = self._return_track_at(return_track)
+        target.mute = bool(value)
+        return {"return_track": return_track, "mute": bool(target.mute)}
+
+    def return_track_solo_get(self, return_track: int) -> dict[str, Any]:
+        target = self._return_track_at(return_track)
+        return {"return_track": return_track, "solo": bool(target.solo)}
+
+    def return_track_solo_set(self, return_track: int, value: bool) -> dict[str, Any]:
+        target = self._return_track_at(return_track)
+        target.solo = bool(value)
+        return {"return_track": return_track, "solo": bool(target.solo)}
+
+    def master_info(self) -> dict[str, Any]:
+        target = self._song().master_track
+        return {
+            "name": str(getattr(target, "name", "Master")),
+            "volume": float(target.mixer_device.volume.value),
+            "panning": float(target.mixer_device.panning.value),
+        }
+
+    def master_volume_get(self) -> dict[str, Any]:
+        target = self._song().master_track
+        return {"volume": float(target.mixer_device.volume.value)}
+
+    def master_panning_get(self) -> dict[str, Any]:
+        target = self._song().master_track
+        return {"panning": float(target.mixer_device.panning.value)}
+
+    def master_devices_list(self) -> dict[str, Any]:
+        target = self._song().master_track
+        return {"devices": self._serialize_devices(list(getattr(target, "devices", [])))}
+
+    def mixer_crossfader_get(self) -> dict[str, Any]:
+        mixer = self._song().master_track.mixer_device
+        if not hasattr(mixer, "crossfader"):
+            raise _not_supported_by_live_api(
+                message="Crossfader API is not available in Live API",
+                hint="Use a Live version exposing mixer crossfader properties.",
+            )
+        return {"value": float(mixer.crossfader.value)}
+
+    def mixer_crossfader_set(self, value: float) -> dict[str, Any]:
+        mixer = self._song().master_track.mixer_device
+        if not hasattr(mixer, "crossfader"):
+            raise _not_supported_by_live_api(
+                message="Crossfader API is not available in Live API",
+                hint="Use a Live version exposing mixer crossfader properties.",
+            )
+        mixer.crossfader.value = float(value)
+        return {"value": float(mixer.crossfader.value)}
+
+    def mixer_cue_volume_get(self) -> dict[str, Any]:
+        mixer = self._song().master_track.mixer_device
+        if not hasattr(mixer, "cue_volume"):
+            raise _not_supported_by_live_api(
+                message="Cue volume API is not available in Live API",
+                hint="Use a Live version exposing cue volume properties.",
+            )
+        return {"value": float(mixer.cue_volume.value)}
+
+    def mixer_cue_volume_set(self, value: float) -> dict[str, Any]:
+        mixer = self._song().master_track.mixer_device
+        if not hasattr(mixer, "cue_volume"):
+            raise _not_supported_by_live_api(
+                message="Cue volume API is not available in Live API",
+                hint="Use a Live version exposing cue volume properties.",
+            )
+        mixer.cue_volume.value = float(value)
+        return {"value": float(mixer.cue_volume.value)}
+
+    def mixer_cue_routing_get(self) -> dict[str, Any]:
+        song, available = self._require_cue_routing_support()
+        return {
+            "routing": str(song.cue_routing),
+            "available_routings": available,
+        }
+
+    def mixer_cue_routing_set(self, routing: str) -> dict[str, Any]:
+        song, available = self._require_cue_routing_support()
+        if routing not in available:
+            raise _invalid_argument(
+                message=f"Unsupported cue routing: {routing}",
+                hint="Use one of the exact routing names reported by mixer cue-routing get.",
+            )
+        song.cue_routing = routing
+        return {
+            "routing": str(song.cue_routing),
+            "available_routings": available,
+        }
+
+    def track_routing_input_get(self, track: int) -> dict[str, Any]:
+        return self._track_routing_payload(track, "input")
+
+    def track_routing_input_set(
+        self,
+        track: int,
+        routing_type: str,
+        routing_channel: str,
+    ) -> dict[str, Any]:
+        return self._set_track_routing(
+            track_index=track,
+            direction="input",
+            routing_type=routing_type,
+            routing_channel=routing_channel,
+        )
+
+    def track_routing_output_get(self, track: int) -> dict[str, Any]:
+        return self._track_routing_payload(track, "output")
+
+    def track_routing_output_set(
+        self,
+        track: int,
+        routing_type: str,
+        routing_channel: str,
+    ) -> dict[str, Any]:
+        return self._set_track_routing(
+            track_index=track,
+            direction="output",
+            routing_type=routing_type,
+            routing_channel=routing_channel,
+        )

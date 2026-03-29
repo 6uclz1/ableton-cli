@@ -44,6 +44,12 @@ Scenes and mixer operations:
   ableton-cli session snapshot
   ableton-cli track mute set 0 true
   ableton-cli track panning set 0 -- -0.25
+  ableton-cli track send set 0 1 0.6
+  ableton-cli return-tracks list
+  ableton-cli return-track volume set 0 0.5
+  ableton-cli master info
+  ableton-cli mixer crossfader set -- -0.2
+  ableton-cli mixer cue-routing get
 
 Config and protocol override:
 

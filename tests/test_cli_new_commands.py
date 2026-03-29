@@ -394,6 +394,101 @@ class _ClientStub:
     def track_panning_set(self, track: int, value: float):  # noqa: ANN201
         return {"track": track, "panning": value}
 
+    def track_send_get(self, track: int, send: int):  # noqa: ANN201
+        return {"track": track, "send": send, "value": 0.25}
+
+    def track_send_set(self, track: int, send: int, value: float):  # noqa: ANN201
+        return {"track": track, "send": send, "value": value}
+
+    def return_tracks_list(self):  # noqa: ANN201
+        return {"return_tracks": [{"index": 0, "name": "Reverb"}]}
+
+    def return_track_volume_get(self, return_track: int):  # noqa: ANN201
+        return {"return_track": return_track, "volume": 0.5}
+
+    def return_track_volume_set(self, return_track: int, value: float):  # noqa: ANN201
+        return {"return_track": return_track, "volume": value}
+
+    def return_track_mute_get(self, return_track: int):  # noqa: ANN201
+        return {"return_track": return_track, "mute": False}
+
+    def return_track_mute_set(self, return_track: int, value: bool):  # noqa: ANN201
+        return {"return_track": return_track, "mute": value}
+
+    def return_track_solo_get(self, return_track: int):  # noqa: ANN201
+        return {"return_track": return_track, "solo": True}
+
+    def return_track_solo_set(self, return_track: int, value: bool):  # noqa: ANN201
+        return {"return_track": return_track, "solo": value}
+
+    def master_info(self):  # noqa: ANN201
+        return {"name": "Master", "volume": 0.9, "panning": 0.0}
+
+    def master_volume_get(self):  # noqa: ANN201
+        return {"volume": 0.9}
+
+    def master_panning_get(self):  # noqa: ANN201
+        return {"panning": 0.0}
+
+    def master_devices_list(self):  # noqa: ANN201
+        return {"devices": [{"index": 0, "name": "Limiter"}]}
+
+    def mixer_crossfader_get(self):  # noqa: ANN201
+        return {"value": 0.1}
+
+    def mixer_crossfader_set(self, value: float):  # noqa: ANN201
+        return {"value": value}
+
+    def mixer_cue_volume_get(self):  # noqa: ANN201
+        return {"value": 0.8}
+
+    def mixer_cue_volume_set(self, value: float):  # noqa: ANN201
+        return {"value": value}
+
+    def mixer_cue_routing_get(self):  # noqa: ANN201
+        return {"routing": "Master", "available_routings": ["Master", "Ext. Out"]}
+
+    def mixer_cue_routing_set(self, routing: str):  # noqa: ANN201
+        return {"routing": routing, "available_routings": ["Master", "Ext. Out"]}
+
+    def track_routing_input_get(self, track: int):  # noqa: ANN201
+        return {
+            "track": track,
+            "current": {"type": "Ext. In", "channel": "1/2"},
+            "available": {"types": ["Ext. In"], "channels": ["1/2", "3/4"]},
+        }
+
+    def track_routing_input_set(
+        self,
+        track: int,
+        routing_type: str,
+        routing_channel: str,
+    ):  # noqa: ANN201
+        return {
+            "track": track,
+            "current": {"type": routing_type, "channel": routing_channel},
+            "available": {"types": ["Ext. In"], "channels": ["1/2", "3/4"]},
+        }
+
+    def track_routing_output_get(self, track: int):  # noqa: ANN201
+        return {
+            "track": track,
+            "current": {"type": "Master", "channel": "1/2"},
+            "available": {"types": ["Master"], "channels": ["1/2", "3/4"]},
+        }
+
+    def track_routing_output_set(
+        self,
+        track: int,
+        routing_type: str,
+        routing_channel: str,
+    ):  # noqa: ANN201
+        return {
+            "track": track,
+            "current": {"type": routing_type, "channel": routing_channel},
+            "available": {"types": ["Master"], "channels": ["1/2", "3/4"]},
+        }
+
     def transport_position_get(self):  # noqa: ANN201
         return {"current_time": 4.0, "beat_position": 4.0}
 
@@ -1573,6 +1668,144 @@ def test_track_mixer_commands_output_json_envelope(runner, cli_app, monkeypatch)
     assert solo_payload["result"]["solo"] is False
     assert arm_payload["result"]["arm"] is False
     assert panning_payload["result"]["panning"] == -0.3
+
+
+def test_track_send_commands_output_json_envelope(runner, cli_app, monkeypatch) -> None:
+    from ableton_cli.commands import track
+
+    monkeypatch.setattr(track, "get_client", lambda ctx: _ClientStub())
+
+    get_result = runner.invoke(
+        cli_app,
+        ["--output", "json", "track", "send", "get", "0", "1"],
+    )
+    set_result = runner.invoke(
+        cli_app,
+        ["--output", "json", "track", "send", "set", "0", "1", "0.6"],
+    )
+
+    assert get_result.exit_code == 0
+    assert set_result.exit_code == 0
+
+    get_payload = json.loads(get_result.stdout)
+    set_payload = json.loads(set_result.stdout)
+    assert get_payload["result"] == {"track": 0, "send": 1, "value": 0.25}
+    assert set_payload["result"] == {"track": 0, "send": 1, "value": 0.6}
+
+
+def test_return_track_commands_output_json_envelope(runner, cli_app, monkeypatch) -> None:
+    from ableton_cli.commands import return_track, return_tracks
+
+    monkeypatch.setattr(return_tracks, "get_client", lambda ctx: _ClientStub())
+    monkeypatch.setattr(return_track, "get_client", lambda ctx: _ClientStub())
+
+    listed = runner.invoke(cli_app, ["--output", "json", "return-tracks", "list"])
+    volume = runner.invoke(
+        cli_app,
+        ["--output", "json", "return-track", "volume", "set", "0", "0.7"],
+    )
+    mute = runner.invoke(
+        cli_app,
+        ["--output", "json", "return-track", "mute", "set", "0", "true"],
+    )
+    solo = runner.invoke(
+        cli_app,
+        ["--output", "json", "return-track", "solo", "get", "0"],
+    )
+
+    assert listed.exit_code == 0
+    assert volume.exit_code == 0
+    assert mute.exit_code == 0
+    assert solo.exit_code == 0
+
+    listed_payload = json.loads(listed.stdout)
+    volume_payload = json.loads(volume.stdout)
+    mute_payload = json.loads(mute.stdout)
+    solo_payload = json.loads(solo.stdout)
+    assert listed_payload["result"]["return_tracks"][0]["name"] == "Reverb"
+    assert volume_payload["result"] == {"return_track": 0, "volume": 0.7}
+    assert mute_payload["result"] == {"return_track": 0, "mute": True}
+    assert solo_payload["result"] == {"return_track": 0, "solo": True}
+
+
+def test_master_commands_output_json_envelope(runner, cli_app, monkeypatch) -> None:
+    from ableton_cli.commands import master
+
+    monkeypatch.setattr(master, "get_client", lambda ctx: _ClientStub())
+
+    info = runner.invoke(cli_app, ["--output", "json", "master", "info"])
+    volume = runner.invoke(cli_app, ["--output", "json", "master", "volume", "get"])
+    panning = runner.invoke(cli_app, ["--output", "json", "master", "panning", "get"])
+    devices = runner.invoke(cli_app, ["--output", "json", "master", "devices", "list"])
+
+    assert info.exit_code == 0
+    assert volume.exit_code == 0
+    assert panning.exit_code == 0
+    assert devices.exit_code == 0
+
+    info_payload = json.loads(info.stdout)
+    volume_payload = json.loads(volume.stdout)
+    panning_payload = json.loads(panning.stdout)
+    devices_payload = json.loads(devices.stdout)
+    assert info_payload["result"] == {"name": "Master", "volume": 0.9, "panning": 0.0}
+    assert volume_payload["result"] == {"volume": 0.9}
+    assert panning_payload["result"] == {"panning": 0.0}
+    assert devices_payload["result"] == {"devices": [{"index": 0, "name": "Limiter"}]}
+
+
+def test_mixer_and_track_routing_commands_output_json_envelope(
+    runner,
+    cli_app,
+    monkeypatch,
+) -> None:
+    from ableton_cli.commands import mixer, track
+
+    monkeypatch.setattr(mixer, "get_client", lambda ctx: _ClientStub())
+    monkeypatch.setattr(track, "get_client", lambda ctx: _ClientStub())
+
+    crossfader = runner.invoke(cli_app, ["--output", "json", "mixer", "crossfader", "set", "0.2"])
+    cue_volume = runner.invoke(cli_app, ["--output", "json", "mixer", "cue-volume", "get"])
+    cue_routing = runner.invoke(
+        cli_app,
+        ["--output", "json", "mixer", "cue-routing", "set", "Ext. Out"],
+    )
+    input_routing = runner.invoke(
+        cli_app,
+        ["--output", "json", "track", "routing", "input", "get", "0"],
+    )
+    output_routing = runner.invoke(
+        cli_app,
+        [
+            "--output",
+            "json",
+            "track",
+            "routing",
+            "output",
+            "set",
+            "0",
+            "--type",
+            "Master",
+            "--channel",
+            "3/4",
+        ],
+    )
+
+    assert crossfader.exit_code == 0
+    assert cue_volume.exit_code == 0
+    assert cue_routing.exit_code == 0
+    assert input_routing.exit_code == 0
+    assert output_routing.exit_code == 0
+
+    crossfader_payload = json.loads(crossfader.stdout)
+    cue_volume_payload = json.loads(cue_volume.stdout)
+    cue_routing_payload = json.loads(cue_routing.stdout)
+    input_payload = json.loads(input_routing.stdout)
+    output_payload = json.loads(output_routing.stdout)
+    assert crossfader_payload["result"] == {"value": 0.2}
+    assert cue_volume_payload["result"] == {"value": 0.8}
+    assert cue_routing_payload["result"]["routing"] == "Ext. Out"
+    assert input_payload["result"]["current"] == {"type": "Ext. In", "channel": "1/2"}
+    assert output_payload["result"]["current"] == {"type": "Master", "channel": "3/4"}
 
 
 def test_scenes_commands_output_json_envelope(runner, cli_app, monkeypatch) -> None:

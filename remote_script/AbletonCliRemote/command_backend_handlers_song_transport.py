@@ -175,6 +175,137 @@ def _handle_track_panning_set(backend: CommandBackend, args: dict[str, Any]) -> 
     return backend.track_panning_set(track, _panning(args.get("value")))
 
 
+def _handle_track_send_get(backend: CommandBackend, args: dict[str, Any]) -> dict[str, Any]:
+    track = _track_index("track", args.get("track"))
+    send = _track_index("send", args.get("send"))
+    return backend.track_send_get(track, send)
+
+
+def _handle_track_send_set(backend: CommandBackend, args: dict[str, Any]) -> dict[str, Any]:
+    track = _track_index("track", args.get("track"))
+    send = _track_index("send", args.get("send"))
+    return backend.track_send_set(track, send, _volume(args.get("value")))
+
+
+def _handle_return_tracks_list(backend: CommandBackend, _args: dict[str, Any]) -> dict[str, Any]:
+    return backend.return_tracks_list()
+
+
+def _handle_return_track_volume_get(
+    backend: CommandBackend,
+    args: dict[str, Any],
+) -> dict[str, Any]:
+    return_track = _track_index("return_track", args.get("return_track"))
+    return backend.return_track_volume_get(return_track)
+
+
+def _handle_return_track_volume_set(
+    backend: CommandBackend,
+    args: dict[str, Any],
+) -> dict[str, Any]:
+    return_track = _track_index("return_track", args.get("return_track"))
+    return backend.return_track_volume_set(return_track, _volume(args.get("value")))
+
+
+def _handle_return_track_mute_get(backend: CommandBackend, args: dict[str, Any]) -> dict[str, Any]:
+    return_track = _track_index("return_track", args.get("return_track"))
+    return backend.return_track_mute_get(return_track)
+
+
+def _handle_return_track_mute_set(backend: CommandBackend, args: dict[str, Any]) -> dict[str, Any]:
+    return_track = _track_index("return_track", args.get("return_track"))
+    value = _as_bool("value", args.get("value"))
+    return backend.return_track_mute_set(return_track, value)
+
+
+def _handle_return_track_solo_get(backend: CommandBackend, args: dict[str, Any]) -> dict[str, Any]:
+    return_track = _track_index("return_track", args.get("return_track"))
+    return backend.return_track_solo_get(return_track)
+
+
+def _handle_return_track_solo_set(backend: CommandBackend, args: dict[str, Any]) -> dict[str, Any]:
+    return_track = _track_index("return_track", args.get("return_track"))
+    value = _as_bool("value", args.get("value"))
+    return backend.return_track_solo_set(return_track, value)
+
+
+def _handle_master_info(backend: CommandBackend, _args: dict[str, Any]) -> dict[str, Any]:
+    return backend.master_info()
+
+
+def _handle_master_volume_get(backend: CommandBackend, _args: dict[str, Any]) -> dict[str, Any]:
+    return backend.master_volume_get()
+
+
+def _handle_master_panning_get(backend: CommandBackend, _args: dict[str, Any]) -> dict[str, Any]:
+    return backend.master_panning_get()
+
+
+def _handle_master_devices_list(backend: CommandBackend, _args: dict[str, Any]) -> dict[str, Any]:
+    return backend.master_devices_list()
+
+
+def _handle_mixer_crossfader_get(backend: CommandBackend, _args: dict[str, Any]) -> dict[str, Any]:
+    return backend.mixer_crossfader_get()
+
+
+def _handle_mixer_crossfader_set(backend: CommandBackend, args: dict[str, Any]) -> dict[str, Any]:
+    return backend.mixer_crossfader_set(_panning(args.get("value")))
+
+
+def _handle_mixer_cue_volume_get(backend: CommandBackend, _args: dict[str, Any]) -> dict[str, Any]:
+    return backend.mixer_cue_volume_get()
+
+
+def _handle_mixer_cue_volume_set(backend: CommandBackend, args: dict[str, Any]) -> dict[str, Any]:
+    return backend.mixer_cue_volume_set(_volume(args.get("value")))
+
+
+def _handle_mixer_cue_routing_get(backend: CommandBackend, _args: dict[str, Any]) -> dict[str, Any]:
+    return backend.mixer_cue_routing_get()
+
+
+def _handle_mixer_cue_routing_set(backend: CommandBackend, args: dict[str, Any]) -> dict[str, Any]:
+    routing = _non_empty_string("routing", args.get("routing"))
+    return backend.mixer_cue_routing_set(routing)
+
+
+def _handle_track_routing_input_get(
+    backend: CommandBackend,
+    args: dict[str, Any],
+) -> dict[str, Any]:
+    track = _track_index("track", args.get("track"))
+    return backend.track_routing_input_get(track)
+
+
+def _handle_track_routing_input_set(
+    backend: CommandBackend,
+    args: dict[str, Any],
+) -> dict[str, Any]:
+    track = _track_index("track", args.get("track"))
+    routing_type = _non_empty_string("routing_type", args.get("routing_type"))
+    routing_channel = _non_empty_string("routing_channel", args.get("routing_channel"))
+    return backend.track_routing_input_set(track, routing_type, routing_channel)
+
+
+def _handle_track_routing_output_get(
+    backend: CommandBackend,
+    args: dict[str, Any],
+) -> dict[str, Any]:
+    track = _track_index("track", args.get("track"))
+    return backend.track_routing_output_get(track)
+
+
+def _handle_track_routing_output_set(
+    backend: CommandBackend,
+    args: dict[str, Any],
+) -> dict[str, Any]:
+    track = _track_index("track", args.get("track"))
+    routing_type = _non_empty_string("routing_type", args.get("routing_type"))
+    routing_channel = _non_empty_string("routing_channel", args.get("routing_channel"))
+    return backend.track_routing_output_set(track, routing_type, routing_channel)
+
+
 SONG_TRANSPORT_HANDLERS: dict[str, Handler] = {
     "song_info": _handle_song_info,
     "song_new": _handle_song_new,
@@ -208,4 +339,27 @@ SONG_TRANSPORT_HANDLERS: dict[str, Handler] = {
     "track_arm_set": _handle_track_arm_set,
     "track_panning_get": _handle_track_panning_get,
     "track_panning_set": _handle_track_panning_set,
+    "track_send_get": _handle_track_send_get,
+    "track_send_set": _handle_track_send_set,
+    "return_tracks_list": _handle_return_tracks_list,
+    "return_track_volume_get": _handle_return_track_volume_get,
+    "return_track_volume_set": _handle_return_track_volume_set,
+    "return_track_mute_get": _handle_return_track_mute_get,
+    "return_track_mute_set": _handle_return_track_mute_set,
+    "return_track_solo_get": _handle_return_track_solo_get,
+    "return_track_solo_set": _handle_return_track_solo_set,
+    "master_info": _handle_master_info,
+    "master_volume_get": _handle_master_volume_get,
+    "master_panning_get": _handle_master_panning_get,
+    "master_devices_list": _handle_master_devices_list,
+    "mixer_crossfader_get": _handle_mixer_crossfader_get,
+    "mixer_crossfader_set": _handle_mixer_crossfader_set,
+    "mixer_cue_volume_get": _handle_mixer_cue_volume_get,
+    "mixer_cue_volume_set": _handle_mixer_cue_volume_set,
+    "mixer_cue_routing_get": _handle_mixer_cue_routing_get,
+    "mixer_cue_routing_set": _handle_mixer_cue_routing_set,
+    "track_routing_input_get": _handle_track_routing_input_get,
+    "track_routing_input_set": _handle_track_routing_input_set,
+    "track_routing_output_get": _handle_track_routing_output_get,
+    "track_routing_output_set": _handle_track_routing_output_set,
 }

@@ -109,6 +109,39 @@ uv run ableton-cli track arm get 0
 uv run ableton-cli track arm set 0 false
 uv run ableton-cli track panning get 0
 uv run ableton-cli track panning set 0 -- -0.25
+uv run ableton-cli track send get 0 1
+uv run ableton-cli track send set 0 1 0.6
+uv run ableton-cli track routing input get 0
+uv run ableton-cli track routing input set 0 --type Ext.\ In --channel 1/2
+uv run ableton-cli track routing output get 0
+uv run ableton-cli track routing output set 0 --type Master --channel 3/4
+```
+
+### Return Track
+
+```bash
+uv run ableton-cli return-tracks list
+uv run ableton-cli return-track volume get 0
+uv run ableton-cli return-track volume set 0 0.5
+uv run ableton-cli return-track mute get 0
+uv run ableton-cli return-track mute set 0 true
+uv run ableton-cli return-track solo get 0
+uv run ableton-cli return-track solo set 0 false
+```
+
+### Master / Mixer
+
+```bash
+uv run ableton-cli master info
+uv run ableton-cli master volume get
+uv run ableton-cli master panning get
+uv run ableton-cli master devices list
+uv run ableton-cli mixer crossfader get
+uv run ableton-cli mixer crossfader set -- -0.2
+uv run ableton-cli mixer cue-volume get
+uv run ableton-cli mixer cue-volume set 0.75
+uv run ableton-cli mixer cue-routing get
+uv run ableton-cli mixer cue-routing set Ext.\ Out
 ```
 
 ### Clip
@@ -340,6 +373,16 @@ uv run ableton-cli --output json ping
 - `set_track_arm` -> `uv run ableton-cli --output json track arm set <track> <value>`
 - `get_track_panning` -> `uv run ableton-cli --output json track panning get <track>`
 - `set_track_panning` -> `uv run ableton-cli --output json track panning set <track> <value>`
+- `get_track_send` -> `uv run ableton-cli --output json track send get <track> <send>`
+- `set_track_send` -> `uv run ableton-cli --output json track send set <track> <send> <value>`
+- `list_return_tracks` -> `uv run ableton-cli --output json return-tracks list`
+- `set_return_track_volume` -> `uv run ableton-cli --output json return-track volume set <return-track> <value>`
+- `get_master_info` -> `uv run ableton-cli --output json master info`
+- `list_master_devices` -> `uv run ableton-cli --output json master devices list`
+- `set_mixer_crossfader` -> `uv run ableton-cli --output json mixer crossfader set <value>`
+- `set_mixer_cue_routing` -> `uv run ableton-cli --output json mixer cue-routing set <routing>`
+- `get_track_routing_input` -> `uv run ableton-cli --output json track routing input get <track>`
+- `set_track_routing_output` -> `uv run ableton-cli --output json track routing output set <track> --type <routing-type> --channel <routing-channel>`
 - `create_clip` -> `uv run ableton-cli --output json clip create <track> <clip> --length <beats>`
 - `add_notes_to_clip` -> `uv run ableton-cli --output json clip notes add <track> <clip> (--notes-json '<json-array>' | --notes-file <path>)`
 - `get_clip_notes` -> `uv run ableton-cli --output json clip notes get <track> <clip> [--start-time <beats>] [--end-time <beats>] [--pitch <midi>]`

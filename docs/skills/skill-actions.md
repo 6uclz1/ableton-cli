@@ -33,6 +33,16 @@ Stable action names and CLI mappings for automation wrappers.
 | `set_track_arm` | `uv run ableton-cli --output json track arm set <track> <value>` | Update track arm state. |
 | `get_track_panning` | `uv run ableton-cli --output json track panning get <track>` | Read track panning value. |
 | `set_track_panning` | `uv run ableton-cli --output json track panning set <track> <value>` | Update track panning in range -1.0 to 1.0. |
+| `get_track_send` | `uv run ableton-cli --output json track send get <track> <send>` | Read one track send level by 0-based send index. |
+| `set_track_send` | `uv run ableton-cli --output json track send set <track> <send> <value>` | Update one track send level in range 0.0 to 1.0. |
+| `list_return_tracks` | `uv run ableton-cli --output json return-tracks list` | List all return tracks and their mixer state. |
+| `set_return_track_volume` | `uv run ableton-cli --output json return-track volume set <return-track> <value>` | Update one return-track volume in range 0.0 to 1.0. |
+| `get_master_info` | `uv run ableton-cli --output json master info` | Read master track name, volume, and panning. |
+| `list_master_devices` | `uv run ableton-cli --output json master devices list` | List master track devices and parameters. |
+| `set_mixer_crossfader` | `uv run ableton-cli --output json mixer crossfader set <value>` | Update mixer crossfader position in range -1.0 to 1.0. |
+| `set_mixer_cue_routing` | `uv run ableton-cli --output json mixer cue-routing set <routing>` | Update cue routing using an exact routing name. |
+| `get_track_routing_input` | `uv run ableton-cli --output json track routing input get <track>` | Read current and available input routing for one track. |
+| `set_track_routing_output` | `uv run ableton-cli --output json track routing output set <track> --type <routing-type> --channel <routing-channel>` | Update output routing using exact type and channel names. |
 | `create_clip` | `uv run ableton-cli --output json clip create <track> <clip> --length <beats>` | Create a clip in a slot with a target beat length. |
 | `add_notes_to_clip` | `uv run ableton-cli --output json clip notes add <track> <clip> (--notes-json '<json-array>' | --notes-file <path>)` | Add MIDI notes to an existing clip slot. |
 | `get_clip_notes` | `uv run ableton-cli --output json clip notes get <track> <clip> [--start-time <beats>] [--end-time <beats>] [--pitch <midi>]` | Read clip notes with optional time/pitch filters. |

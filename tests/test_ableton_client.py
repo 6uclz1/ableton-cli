@@ -151,6 +151,60 @@ def test_client_sends_request_timeout_meta(monkeypatch) -> None:
     ("runner", "expected_command", "expected_args"),
     [
         (
+            lambda client: client.mixer_crossfader_set(value=0.2),
+            "mixer_crossfader_set",
+            {"value": 0.2},
+        ),
+        (
+            lambda client: client.track_routing_input_set(
+                track=0,
+                routing_type="Ext. In",
+                routing_channel="1/2",
+            ),
+            "track_routing_input_set",
+            {"track": 0, "routing_type": "Ext. In", "routing_channel": "1/2"},
+        ),
+        (
+            lambda client: client.track_routing_output_get(track=1),
+            "track_routing_output_get",
+            {"track": 1},
+        ),
+        (
+            lambda client: client.master_info(),
+            "master_info",
+            {},
+        ),
+        (
+            lambda client: client.master_devices_list(),
+            "master_devices_list",
+            {},
+        ),
+        (
+            lambda client: client.return_tracks_list(),
+            "return_tracks_list",
+            {},
+        ),
+        (
+            lambda client: client.return_track_volume_set(return_track=1, value=0.4),
+            "return_track_volume_set",
+            {"return_track": 1, "value": 0.4},
+        ),
+        (
+            lambda client: client.return_track_solo_get(return_track=2),
+            "return_track_solo_get",
+            {"return_track": 2},
+        ),
+        (
+            lambda client: client.track_send_get(track=1, send=2),
+            "track_send_get",
+            {"track": 1, "send": 2},
+        ),
+        (
+            lambda client: client.track_send_set(track=3, send=4, value=0.75),
+            "track_send_set",
+            {"track": 3, "send": 4, "value": 0.75},
+        ),
+        (
             lambda client: client.get_clip_notes(
                 track=1,
                 clip=2,

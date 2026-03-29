@@ -56,6 +56,15 @@ uv run ableton-cli tracks list
 uv run ableton-cli track volume get 0
 uv run ableton-cli track volume set 0 0.7
 uv run ableton-cli track panning set 0 -- -0.25
+uv run ableton-cli track send set 0 1 0.6
+uv run ableton-cli track routing input get 0
+uv run ableton-cli track routing output set 0 --type Master --channel 3/4
+uv run ableton-cli return-tracks list
+uv run ableton-cli return-track volume set 0 0.5
+uv run ableton-cli master info
+uv run ableton-cli master devices list
+uv run ableton-cli mixer crossfader set -- -0.2
+uv run ableton-cli mixer cue-routing get
 uv run ableton-cli clip create 0 0 --length 4
 uv run ableton-cli clip notes add 0 0 --notes-json '[{"pitch":60,"start_time":0.0,"duration":0.5,"velocity":100,"mute":false}]'
 uv run ableton-cli clip cut-to-drum-rack --source-track 1 --source-clip 0 --slice-count 8 --create-trigger-clip --trigger-clip-slot 1

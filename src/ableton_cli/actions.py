@@ -157,6 +157,59 @@ STABLE_ACTION_MAPPINGS: tuple[StableActionMapping, ...] = (
         capability="Update track panning in range -1.0 to 1.0.",
     ),
     StableActionMapping(
+        action="get_track_send",
+        command="uv run ableton-cli --output json track send get <track> <send>",
+        capability="Read one track send level by 0-based send index.",
+    ),
+    StableActionMapping(
+        action="set_track_send",
+        command="uv run ableton-cli --output json track send set <track> <send> <value>",
+        capability="Update one track send level in range 0.0 to 1.0.",
+    ),
+    StableActionMapping(
+        action="list_return_tracks",
+        command="uv run ableton-cli --output json return-tracks list",
+        capability="List all return tracks and their mixer state.",
+    ),
+    StableActionMapping(
+        action="set_return_track_volume",
+        command="uv run ableton-cli --output json return-track volume set <return-track> <value>",
+        capability="Update one return-track volume in range 0.0 to 1.0.",
+    ),
+    StableActionMapping(
+        action="get_master_info",
+        command="uv run ableton-cli --output json master info",
+        capability="Read master track name, volume, and panning.",
+    ),
+    StableActionMapping(
+        action="list_master_devices",
+        command="uv run ableton-cli --output json master devices list",
+        capability="List master track devices and parameters.",
+    ),
+    StableActionMapping(
+        action="set_mixer_crossfader",
+        command="uv run ableton-cli --output json mixer crossfader set <value>",
+        capability="Update mixer crossfader position in range -1.0 to 1.0.",
+    ),
+    StableActionMapping(
+        action="set_mixer_cue_routing",
+        command="uv run ableton-cli --output json mixer cue-routing set <routing>",
+        capability="Update cue routing using an exact routing name.",
+    ),
+    StableActionMapping(
+        action="get_track_routing_input",
+        command="uv run ableton-cli --output json track routing input get <track>",
+        capability="Read current and available input routing for one track.",
+    ),
+    StableActionMapping(
+        action="set_track_routing_output",
+        command=(
+            "uv run ableton-cli --output json track routing output set <track> --type "
+            "<routing-type> --channel <routing-channel>"
+        ),
+        capability="Update output routing using exact type and channel names.",
+    ),
+    StableActionMapping(
         action="create_clip",
         command="uv run ableton-cli --output json clip create <track> <clip> --length <beats>",
         capability="Create a clip in a slot with a target beat length.",

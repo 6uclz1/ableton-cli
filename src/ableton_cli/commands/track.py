@@ -11,6 +11,8 @@ from ._track_info_commands import register_commands as register_info_commands
 from ._track_mute_commands import register_commands as register_mute_commands
 from ._track_name_commands import register_commands as register_name_commands
 from ._track_panning_commands import register_commands as register_panning_commands
+from ._track_routing_commands import register_commands as register_routing_commands
+from ._track_send_commands import register_commands as register_send_commands
 from ._track_shared import (
     TrackAction,
     TrackValidator,
@@ -126,6 +128,8 @@ mute_app = typer.Typer(help="Track mute commands", no_args_is_help=True)
 solo_app = typer.Typer(help="Track solo commands", no_args_is_help=True)
 arm_app = typer.Typer(help="Track arm commands", no_args_is_help=True)
 panning_app = typer.Typer(help="Track panning commands", no_args_is_help=True)
+send_app = typer.Typer(help="Track send commands", no_args_is_help=True)
+routing_app = typer.Typer(help="Track routing commands", no_args_is_help=True)
 
 register_info_commands(track_app, run_track_command_spec=run_track_command_spec)
 register_volume_commands(
@@ -159,12 +163,160 @@ register_panning_commands(
 )
 
 
+def _run_send_command(ctx, *, command_name, track, send, fn, validator) -> None:
+    run_track_send_command(
+        ctx,
+        command_name=command_name,
+        track=track,
+        send=send,
+        fn=fn,
+        validator=validator,
+    )
+
+
+def _run_send_value_command(ctx, *, command_name, track, send, value, fn, validator) -> None:
+    run_track_send_value_command(
+        ctx,
+        command_name=command_name,
+        track=track,
+        send=send,
+        value=value,
+        fn=fn,
+        validator=validator,
+    )
+
+
+register_send_commands(
+    send_app,
+    run_track_send_command=_run_send_command,
+    run_track_send_value_command=_run_send_value_command,
+)
+
+
+def _run_routing_get(ctx, *, command_name, track, fn_name) -> None:
+    run_track_routing_get(
+        ctx,
+        command_name=command_name,
+        track=track,
+        fn_name=fn_name,
+    )
+
+
+def _run_routing_set(
+    ctx,
+    *,
+    command_name,
+    track,
+    routing_type,
+    routing_channel,
+    fn_name,
+) -> None:
+    run_track_routing_set(
+        ctx,
+        command_name=command_name,
+        track=track,
+        routing_type=routing_type,
+        routing_channel=routing_channel,
+        fn_name=fn_name,
+    )
+
+
+register_routing_commands(
+    routing_app,
+    run_track_routing_get=_run_routing_get,
+    run_track_routing_set=_run_routing_set,
+)
+
+
 track_app.add_typer(volume_app, name="volume")
 track_app.add_typer(name_app, name="name")
 track_app.add_typer(mute_app, name="mute")
 track_app.add_typer(solo_app, name="solo")
 track_app.add_typer(arm_app, name="arm")
 track_app.add_typer(panning_app, name="panning")
+track_app.add_typer(send_app, name="send")
+track_app.add_typer(routing_app, name="routing")
+
+
+def run_track_send_command(
+    ctx: typer.Context,
+    *,
+    command_name: str,
+    track: int,
+    send: int,
+    fn,
+    validator,
+) -> None:
+    def _run() -> dict[str, object]:
+        valid_track, valid_send = validator(track, send)
+        client = get_client(ctx)
+        return fn(client, valid_track, valid_send)
+
+    execute_command(
+        ctx,
+        command=command_name,
+        args={"track": track, "send": send},
+        action=_run,
+    )
+
+
+def run_track_send_value_command(
+    ctx: typer.Context,
+    *,
+    command_name: str,
+    track: int,
+    send: int,
+    value: float,
+    fn,
+    validator,
+) -> None:
+    def _run() -> dict[str, object]:
+        valid_track, valid_send, valid_value = validator(track, send, value)
+        client = get_client(ctx)
+        return fn(client, valid_track, valid_send, valid_value)
+
+    execute_command(
+        ctx,
+        command=command_name,
+        args={"track": track, "send": send, "value": value},
+        action=_run,
+    )
+
+
+def run_track_routing_get(
+    ctx: typer.Context,
+    *,
+    command_name: str,
+    track: int,
+    fn_name: str,
+) -> None:
+    execute_command(
+        ctx,
+        command=command_name,
+        args={"track": track},
+        action=lambda: getattr(get_client(ctx), fn_name)(track),
+    )
+
+
+def run_track_routing_set(
+    ctx: typer.Context,
+    *,
+    command_name: str,
+    track: int,
+    routing_type: str,
+    routing_channel: str,
+    fn_name: str,
+) -> None:
+    execute_command(
+        ctx,
+        command=command_name,
+        args={
+            "track": track,
+            "routing_type": routing_type,
+            "routing_channel": routing_channel,
+        },
+        action=lambda: getattr(get_client(ctx), fn_name)(track, routing_type, routing_channel),
+    )
 
 
 def register(app: typer.Typer) -> None:

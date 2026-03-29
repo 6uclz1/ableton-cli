@@ -25,6 +25,9 @@ class _Value:
 class _Mixer:
     volume: _Value
     panning: _Value
+    sends: list[_Value] = field(default_factory=list)
+    crossfader: _Value = field(default_factory=lambda: _Value(0.0))
+    cue_volume: _Value = field(default_factory=lambda: _Value(0.85))
 
 
 @dataclass(slots=True)
@@ -248,7 +251,11 @@ class _Track:
     solo: bool = False
     arm: bool = False
     mixer_device: _Mixer = field(
-        default_factory=lambda: _Mixer(volume=_Value(0.75), panning=_Value(0.0))
+        default_factory=lambda: _Mixer(
+            volume=_Value(0.75),
+            panning=_Value(0.0),
+            sends=[_Value(0.1), _Value(0.2), _Value(0.3)],
+        )
     )
     clip_slots: list[_ClipSlot] = field(default_factory=lambda: [_ClipSlot(), _ClipSlot()])
     devices: list[_Device] = field(
@@ -257,6 +264,14 @@ class _Track:
     arrangement_clips: list[_ArrangementClip] = field(default_factory=list)
     arrangement_midi_clips: list[tuple[float, float]] = field(default_factory=list)
     arrangement_audio_clips: list[tuple[str, float]] = field(default_factory=list)
+    input_routing_type: str = "Ext. In"
+    input_routing_channel: str = "1/2"
+    available_input_routing_types: list[str] = field(default_factory=lambda: ["Ext. In"])
+    available_input_routing_channels: list[str] = field(default_factory=lambda: ["1/2", "3/4"])
+    output_routing_type: str = "Master"
+    output_routing_channel: str = "1/2"
+    available_output_routing_types: list[str] = field(default_factory=lambda: ["Master"])
+    available_output_routing_channels: list[str] = field(default_factory=lambda: ["1/2", "3/4"])
 
     def create_midi_clip(self, start_time: float, length: float) -> None:
         normalized_start = float(start_time)
@@ -467,17 +482,22 @@ class _Song:
             _Track(name="Track 1", has_audio_input=False, has_midi_input=True),
             _Track(name="Track 2", has_audio_input=True, has_midi_input=False),
         ]
-        self.return_tracks: list[_Track] = []
+        self.return_tracks: list[_Track] = [
+            _Track(name="Reverb", has_audio_input=False, has_midi_input=False),
+            _Track(name="Delay", has_audio_input=False, has_midi_input=False),
+        ]
         self.scenes = [_Scene("Scene 1"), _Scene("Scene 2")]
         self.master_track = _Track(
             name="Master",
             has_audio_input=False,
             has_midi_input=False,
             clip_slots=[],
-            devices=[],
+            devices=[_Device("Limiter", "AudioEffect", [_Parameter("Threshold", 0.0)])],
         )
         self.view = _SongView(selected_track=self.tracks[0], selected_scene=self.scenes[0])
         self.stop_all_clips_calls = 0
+        self.cue_routing = "Master"
+        self.available_cue_routings = ["Master", "Ext. Out"]
 
     def start_playing(self) -> None:
         self.is_playing = True
@@ -3133,6 +3153,101 @@ def test_live_backend_track_mixer_controls() -> None:
     assert backend.track_arm_get(0) == {"track": 0, "arm": True}
     assert backend.track_panning_set(0, -0.4) == {"track": 0, "panning": -0.4}
     assert backend.track_panning_get(0) == {"track": 0, "panning": -0.4}
+    assert backend.track_send_get(0, 1) == {"track": 0, "send": 1, "value": 0.2}
+    assert backend.track_send_set(0, 1, 0.6) == {"track": 0, "send": 1, "value": 0.6}
+
+
+def test_live_backend_return_track_controls() -> None:
+    backend = LiveBackend(_SurfaceStub())
+
+    assert backend.return_tracks_list() == {
+        "return_tracks": [
+            {"index": 0, "name": "Reverb", "mute": False, "solo": False, "volume": 0.75},
+            {"index": 1, "name": "Delay", "mute": False, "solo": False, "volume": 0.75},
+        ]
+    }
+    assert backend.return_track_volume_set(0, 0.5) == {"return_track": 0, "volume": 0.5}
+    assert backend.return_track_mute_set(0, True) == {"return_track": 0, "mute": True}
+    assert backend.return_track_solo_get(0) == {"return_track": 0, "solo": False}
+
+
+def test_live_backend_master_commands() -> None:
+    backend = LiveBackend(_SurfaceStub())
+
+    assert backend.master_info() == {"name": "Master", "volume": 0.75, "panning": 0.0}
+    assert backend.master_volume_get() == {"volume": 0.75}
+    assert backend.master_panning_get() == {"panning": 0.0}
+    assert backend.master_devices_list() == {
+        "devices": [
+            {
+                "index": 0,
+                "name": "Limiter",
+                "class_name": "AudioEffect",
+                "type": "audio_effect",
+                "parameters": [
+                    {
+                        "index": 0,
+                        "name": "Threshold",
+                        "value": 0.0,
+                    }
+                ],
+            }
+        ]
+    }
+
+
+def test_live_backend_mixer_and_track_routing_commands() -> None:
+    backend = LiveBackend(_SurfaceStub())
+
+    assert backend.mixer_crossfader_set(0.25) == {"value": 0.25}
+    assert backend.mixer_cue_volume_get() == {"value": 0.85}
+    assert backend.mixer_cue_routing_set("Ext. Out") == {
+        "routing": "Ext. Out",
+        "available_routings": ["Master", "Ext. Out"],
+    }
+    assert backend.track_routing_input_get(0) == {
+        "track": 0,
+        "current": {"type": "Ext. In", "channel": "1/2"},
+        "available": {"types": ["Ext. In"], "channels": ["1/2", "3/4"]},
+    }
+    assert backend.track_routing_output_set(0, "Master", "3/4") == {
+        "track": 0,
+        "current": {"type": "Master", "channel": "3/4"},
+        "available": {"types": ["Master"], "channels": ["1/2", "3/4"]},
+    }
+
+
+def test_live_backend_track_routing_set_rejects_unknown_values() -> None:
+    backend = LiveBackend(_SurfaceStub())
+
+    with pytest.raises(CommandError) as exc_info:
+        backend.track_routing_input_set(0, "Resampling", "1/2")
+
+    assert exc_info.value.code == "INVALID_ARGUMENT"
+
+
+def test_live_backend_track_routing_get_requires_live_api_support() -> None:
+    class _TrackNoRouting:
+        def __init__(self, original: _Track) -> None:
+            self.name = original.name
+            self.has_audio_input = original.has_audio_input
+            self.has_midi_input = original.has_midi_input
+            self.mute = original.mute
+            self.solo = original.solo
+            self.arm = original.arm
+            self.mixer_device = original.mixer_device
+            self.clip_slots = original.clip_slots
+            self.devices = original.devices
+
+    surface = _SurfaceStub()
+    surface.song().tracks[0] = _TrackNoRouting(surface.song().tracks[0])
+    backend = LiveBackend(surface)
+
+    with pytest.raises(CommandError) as exc_info:
+        backend.track_routing_input_get(0)
+
+    assert exc_info.value.code == "INVALID_ARGUMENT"
+    assert exc_info.value.details == {"reason": "not_supported_by_live_api"}
 
 
 def test_live_backend_track_arm_set_rejects_unarmable_track() -> None:

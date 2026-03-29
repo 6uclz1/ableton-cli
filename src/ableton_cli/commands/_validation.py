@@ -8,6 +8,7 @@ from ..errors import AppError, ErrorCode, ExitCode
 
 NOTE_KEYS = {"pitch", "start_time", "duration", "velocity", "mute"}
 TRACK_INDEX_HINT = "Use a valid track index from 'ableton-cli tracks list'."
+SEND_INDEX_HINT = "Use a valid 0-based send index."
 DEVICE_INDEX_HINT = "Use a valid device index from 'ableton-cli track info'."
 SCENE_INDEX_HINT = "Use a valid scene index from 'scenes list'."
 SCENE_SOURCE_HINT = "Use a valid source scene index from 'scenes list'."
@@ -42,6 +43,10 @@ def require_track_index(value: int, *, hint: str = TRACK_INDEX_HINT) -> int:
 
 def require_device_index(value: int, *, hint: str = DEVICE_INDEX_HINT) -> int:
     return require_non_negative("device", value, hint=hint)
+
+
+def require_send_index(value: int, *, hint: str = SEND_INDEX_HINT) -> int:
+    return require_non_negative("send", value, hint=hint)
 
 
 def require_scene_index(value: int, *, hint: str = SCENE_INDEX_HINT) -> int:
@@ -148,6 +153,22 @@ def require_track_and_pan(track: int, value: float) -> tuple[int, float]:
         hint=PAN_VALUE_HINT,
     )
     return valid_track, valid_value
+
+
+def require_track_send(track: int, send: int) -> tuple[int, int]:
+    return require_track_index(track), require_send_index(send)
+
+
+def require_track_send_and_volume(track: int, send: int, value: float) -> tuple[int, int, float]:
+    valid_track, valid_send = require_track_send(track, send)
+    valid_value = require_float_in_range(
+        "value",
+        value,
+        minimum=0.0,
+        maximum=1.0,
+        hint=VOLUME_VALUE_HINT,
+    )
+    return valid_track, valid_send, valid_value
 
 
 def require_non_empty_string(name: str, value: str, *, hint: str) -> str:

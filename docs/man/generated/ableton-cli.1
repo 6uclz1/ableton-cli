@@ -22,6 +22,14 @@ Control and inspect Ableton Live through a local Remote Script.
 ??? \fB\-\-config\fR                    PATH          Config file path                   ???
 ??? \fB\-\-no\-color\fR                                Disable color output               ???
 ??? \fB\-\-quiet\fR                                   Suppress human success output      ???
+??? \fB\-\-record\fR                    TEXT          Record request/response transport  ???
+???                                           data to JSONL file                 ???
+??? \fB\-\-replay\fR                    TEXT          Replay request/response transport  ???
+???                                           data from JSONL file               ???
+??? \fB\-\-read\-only\fR                               Reject write commands before       ???
+???                                           dispatch                           ???
+??? \fB\-\-compact\fR                                 Compact large JSON arrays into     ???
+???                                           summaries                          ???
 ??? \fB\-\-version\fR                                 Show version and exit              ???
 ??? \fB\-\-install\-completion\fR                      Install completion for the current ???
 ???                                           shell.                             ???
@@ -43,6 +51,10 @@ Control and inspect Ableton Live through a local Remote Script.
 ??? arrangement            Arrangement commands                                  ???
 ??? session                Session information commands                          ???
 ??? scenes                 Scenes commands                                       ???
+??? master                 Master track commands                                 ???
+??? mixer                  Mixer and cue commands                                ???
+??? return\-tracks          Return track collection commands                      ???
+??? return\-track           Single return\-track commands                          ???
 ??? tracks                 Track collection commands                             ???
 ??? transport              Transport control commands                            ???
 ??? track                  Single\-track commands                                 ???
@@ -108,6 +120,12 @@ Scenes and mixer operations:
   ableton-cli session snapshot
   ableton-cli track mute set 0 true
   ableton-cli track panning set 0 -- -0.25
+  ableton-cli track send set 0 1 0.6
+  ableton-cli return-tracks list
+  ableton-cli return-track volume set 0 0.5
+  ableton-cli master info
+  ableton-cli mixer crossfader set -- -0.2
+  ableton-cli mixer cue-routing get
 
 Config and protocol override:
 

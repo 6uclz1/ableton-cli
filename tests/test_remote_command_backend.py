@@ -625,6 +625,101 @@ class _BackendStub:
     def track_panning_set(self, track: int, value: float):  # noqa: ANN201
         return {"track": track, "panning": value}
 
+    def track_send_get(self, track: int, send: int):  # noqa: ANN201
+        return {"track": track, "send": send, "value": 0.2}
+
+    def track_send_set(self, track: int, send: int, value: float):  # noqa: ANN201
+        return {"track": track, "send": send, "value": value}
+
+    def return_tracks_list(self):  # noqa: ANN201
+        return {"return_tracks": [{"index": 0, "name": "Reverb"}]}
+
+    def return_track_volume_get(self, return_track: int):  # noqa: ANN201
+        return {"return_track": return_track, "volume": 0.5}
+
+    def return_track_volume_set(self, return_track: int, value: float):  # noqa: ANN201
+        return {"return_track": return_track, "volume": value}
+
+    def return_track_mute_get(self, return_track: int):  # noqa: ANN201
+        return {"return_track": return_track, "mute": False}
+
+    def return_track_mute_set(self, return_track: int, value: bool):  # noqa: ANN201
+        return {"return_track": return_track, "mute": value}
+
+    def return_track_solo_get(self, return_track: int):  # noqa: ANN201
+        return {"return_track": return_track, "solo": True}
+
+    def return_track_solo_set(self, return_track: int, value: bool):  # noqa: ANN201
+        return {"return_track": return_track, "solo": value}
+
+    def master_info(self):  # noqa: ANN201
+        return {"name": "Master", "volume": 0.9, "panning": 0.0}
+
+    def master_volume_get(self):  # noqa: ANN201
+        return {"volume": 0.9}
+
+    def master_panning_get(self):  # noqa: ANN201
+        return {"panning": 0.0}
+
+    def master_devices_list(self):  # noqa: ANN201
+        return {"devices": [{"index": 0, "name": "Limiter"}]}
+
+    def mixer_crossfader_get(self):  # noqa: ANN201
+        return {"value": 0.1}
+
+    def mixer_crossfader_set(self, value: float):  # noqa: ANN201
+        return {"value": value}
+
+    def mixer_cue_volume_get(self):  # noqa: ANN201
+        return {"value": 0.8}
+
+    def mixer_cue_volume_set(self, value: float):  # noqa: ANN201
+        return {"value": value}
+
+    def mixer_cue_routing_get(self):  # noqa: ANN201
+        return {"routing": "Master", "available_routings": ["Master", "Ext. Out"]}
+
+    def mixer_cue_routing_set(self, routing: str):  # noqa: ANN201
+        return {"routing": routing, "available_routings": ["Master", "Ext. Out"]}
+
+    def track_routing_input_get(self, track: int):  # noqa: ANN201
+        return {
+            "track": track,
+            "current": {"type": "Ext. In", "channel": "1/2"},
+            "available": {"types": ["Ext. In"], "channels": ["1/2", "3/4"]},
+        }
+
+    def track_routing_input_set(
+        self,
+        track: int,
+        routing_type: str,
+        routing_channel: str,
+    ):  # noqa: ANN201
+        return {
+            "track": track,
+            "current": {"type": routing_type, "channel": routing_channel},
+            "available": {"types": ["Ext. In"], "channels": ["1/2", "3/4"]},
+        }
+
+    def track_routing_output_get(self, track: int):  # noqa: ANN201
+        return {
+            "track": track,
+            "current": {"type": "Master", "channel": "1/2"},
+            "available": {"types": ["Master"], "channels": ["1/2", "3/4"]},
+        }
+
+    def track_routing_output_set(
+        self,
+        track: int,
+        routing_type: str,
+        routing_channel: str,
+    ):  # noqa: ANN201
+        return {
+            "track": track,
+            "current": {"type": routing_type, "channel": routing_channel},
+            "available": {"types": ["Master"], "channels": ["1/2", "3/4"]},
+        }
+
     def tracks_delete(self, track: int):  # noqa: ANN201
         return {"track": track, "deleted": True}
 
@@ -1383,11 +1478,67 @@ def test_dispatch_calls_backend_for_track_mixer_commands() -> None:
     solo = dispatch_command(backend, "track_solo_get", {"track": 0})
     arm = dispatch_command(backend, "track_arm_set", {"track": 0, "value": False})
     panning = dispatch_command(backend, "track_panning_set", {"track": 0, "value": -0.25})
+    send_get = dispatch_command(backend, "track_send_get", {"track": 0, "send": 1})
+    send_set = dispatch_command(
+        backend,
+        "track_send_set",
+        {"track": 0, "send": 1, "value": 0.8},
+    )
 
     assert mute == {"track": 0, "mute": True}
     assert solo == {"track": 0, "solo": False}
     assert arm == {"track": 0, "arm": False}
     assert panning == {"track": 0, "panning": -0.25}
+    assert send_get == {"track": 0, "send": 1, "value": 0.2}
+    assert send_set == {"track": 0, "send": 1, "value": 0.8}
+
+
+def test_dispatch_calls_backend_for_return_track_commands() -> None:
+    backend = _BackendStub()
+
+    listed = dispatch_command(backend, "return_tracks_list", {})
+    volume = dispatch_command(backend, "return_track_volume_set", {"return_track": 0, "value": 0.6})
+    mute = dispatch_command(backend, "return_track_mute_set", {"return_track": 0, "value": True})
+    solo = dispatch_command(backend, "return_track_solo_get", {"return_track": 0})
+
+    assert listed == {"return_tracks": [{"index": 0, "name": "Reverb"}]}
+    assert volume == {"return_track": 0, "volume": 0.6}
+    assert mute == {"return_track": 0, "mute": True}
+    assert solo == {"return_track": 0, "solo": True}
+
+
+def test_dispatch_calls_backend_for_master_commands() -> None:
+    backend = _BackendStub()
+
+    info = dispatch_command(backend, "master_info", {})
+    volume = dispatch_command(backend, "master_volume_get", {})
+    panning = dispatch_command(backend, "master_panning_get", {})
+    devices = dispatch_command(backend, "master_devices_list", {})
+
+    assert info == {"name": "Master", "volume": 0.9, "panning": 0.0}
+    assert volume == {"volume": 0.9}
+    assert panning == {"panning": 0.0}
+    assert devices == {"devices": [{"index": 0, "name": "Limiter"}]}
+
+
+def test_dispatch_calls_backend_for_mixer_and_routing_commands() -> None:
+    backend = _BackendStub()
+
+    crossfader = dispatch_command(backend, "mixer_crossfader_set", {"value": 0.4})
+    cue_volume = dispatch_command(backend, "mixer_cue_volume_get", {})
+    cue_routing = dispatch_command(backend, "mixer_cue_routing_set", {"routing": "Ext. Out"})
+    input_routing = dispatch_command(backend, "track_routing_input_get", {"track": 0})
+    output_routing = dispatch_command(
+        backend,
+        "track_routing_output_set",
+        {"track": 0, "routing_type": "Master", "routing_channel": "3/4"},
+    )
+
+    assert crossfader == {"value": 0.4}
+    assert cue_volume == {"value": 0.8}
+    assert cue_routing["routing"] == "Ext. Out"
+    assert input_routing["current"] == {"type": "Ext. In", "channel": "1/2"}
+    assert output_routing["current"] == {"type": "Master", "channel": "3/4"}
 
 
 def test_dispatch_calls_backend_for_new_todo_commands() -> None:

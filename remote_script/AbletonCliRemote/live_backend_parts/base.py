@@ -112,6 +112,15 @@ class LiveBackendBaseMixin:
             )
         return scenes[index]
 
+    def _return_track_at(self, index: int) -> Any:
+        tracks = list(getattr(self._song(), "return_tracks", []))
+        if index < 0 or index >= len(tracks):
+            raise _invalid_argument(
+                message=f"return_track out of range: {index}",
+                hint="Use a valid return track index from return-tracks list.",
+            )
+        return tracks[index]
+
     def _device_at(self, track: int, device: int) -> Any:
         target = self._track_at(track)
         devices = list(target.devices)
@@ -149,6 +158,28 @@ class LiveBackendBaseMixin:
             "is_enabled": bool(getattr(parameter, "is_enabled", True)),
             "is_quantized": bool(getattr(parameter, "is_quantized", False)),
         }
+
+    def _serialize_devices(self, devices: list[Any]) -> list[dict[str, Any]]:
+        payload: list[dict[str, Any]] = []
+        for device_index, device in enumerate(devices):
+            parameters = [
+                {
+                    "index": parameter_index,
+                    "name": str(getattr(parameter, "name", f"Parameter {parameter_index}")),
+                    "value": float(getattr(parameter, "value", 0.0)),
+                }
+                for parameter_index, parameter in enumerate(list(getattr(device, "parameters", [])))
+            ]
+            payload.append(
+                {
+                    "index": device_index,
+                    "name": str(getattr(device, "name", "")),
+                    "class_name": str(getattr(device, "class_name", "")),
+                    "type": self._get_device_type(device),
+                    "parameters": parameters,
+                }
+            )
+        return payload
 
     def _synth_type_for_device(self, device: Any) -> str | None:
         return detect_synth_type(device)
@@ -346,9 +377,9 @@ class LiveBackendBaseMixin:
             class_name = str(getattr(device, "class_name", "")).lower()
             if "instrument" in class_display_name:
                 return "instrument"
-            if "audio_effect" in class_name:
+            if "audio_effect" in class_name or "audioeffect" in class_name:
                 return "audio_effect"
-            if "midi_effect" in class_name:
+            if "midi_effect" in class_name or "midieffect" in class_name:
                 return "midi_effect"
             return "unknown"
         except Exception:  # noqa: BLE001

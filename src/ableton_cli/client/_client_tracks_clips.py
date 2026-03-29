@@ -71,6 +71,99 @@ class _AbletonClientTracksClipsMixin:
     def track_panning_set(self, track: int, value: float) -> dict[str, Any]:
         return self._call("track_panning_set", {"track": track, "value": value})
 
+    def track_send_get(self, track: int, send: int) -> dict[str, Any]:
+        return self._call("track_send_get", {"track": track, "send": send})
+
+    def track_send_set(self, track: int, send: int, value: float) -> dict[str, Any]:
+        return self._call("track_send_set", {"track": track, "send": send, "value": value})
+
+    def return_tracks_list(self) -> dict[str, Any]:
+        return self._call("return_tracks_list")
+
+    def return_track_volume_get(self, return_track: int) -> dict[str, Any]:
+        return self._call("return_track_volume_get", {"return_track": return_track})
+
+    def return_track_volume_set(self, return_track: int, value: float) -> dict[str, Any]:
+        return self._call("return_track_volume_set", {"return_track": return_track, "value": value})
+
+    def return_track_mute_get(self, return_track: int) -> dict[str, Any]:
+        return self._call("return_track_mute_get", {"return_track": return_track})
+
+    def return_track_mute_set(self, return_track: int, value: bool) -> dict[str, Any]:
+        return self._call("return_track_mute_set", {"return_track": return_track, "value": value})
+
+    def return_track_solo_get(self, return_track: int) -> dict[str, Any]:
+        return self._call("return_track_solo_get", {"return_track": return_track})
+
+    def return_track_solo_set(self, return_track: int, value: bool) -> dict[str, Any]:
+        return self._call("return_track_solo_set", {"return_track": return_track, "value": value})
+
+    def master_info(self) -> dict[str, Any]:
+        return self._call("master_info")
+
+    def master_volume_get(self) -> dict[str, Any]:
+        return self._call("master_volume_get")
+
+    def master_panning_get(self) -> dict[str, Any]:
+        return self._call("master_panning_get")
+
+    def master_devices_list(self) -> dict[str, Any]:
+        return self._call("master_devices_list")
+
+    def mixer_crossfader_get(self) -> dict[str, Any]:
+        return self._call("mixer_crossfader_get")
+
+    def mixer_crossfader_set(self, value: float) -> dict[str, Any]:
+        return self._call("mixer_crossfader_set", {"value": value})
+
+    def mixer_cue_volume_get(self) -> dict[str, Any]:
+        return self._call("mixer_cue_volume_get")
+
+    def mixer_cue_volume_set(self, value: float) -> dict[str, Any]:
+        return self._call("mixer_cue_volume_set", {"value": value})
+
+    def mixer_cue_routing_get(self) -> dict[str, Any]:
+        return self._call("mixer_cue_routing_get")
+
+    def mixer_cue_routing_set(self, routing: str) -> dict[str, Any]:
+        return self._call("mixer_cue_routing_set", {"routing": routing})
+
+    def track_routing_input_get(self, track: int) -> dict[str, Any]:
+        return self._call("track_routing_input_get", {"track": track})
+
+    def track_routing_input_set(
+        self,
+        track: int,
+        routing_type: str,
+        routing_channel: str,
+    ) -> dict[str, Any]:
+        return self._call(
+            "track_routing_input_set",
+            {
+                "track": track,
+                "routing_type": routing_type,
+                "routing_channel": routing_channel,
+            },
+        )
+
+    def track_routing_output_get(self, track: int) -> dict[str, Any]:
+        return self._call("track_routing_output_get", {"track": track})
+
+    def track_routing_output_set(
+        self,
+        track: int,
+        routing_type: str,
+        routing_channel: str,
+    ) -> dict[str, Any]:
+        return self._call(
+            "track_routing_output_set",
+            {
+                "track": track,
+                "routing_type": routing_type,
+                "routing_channel": routing_channel,
+            },
+        )
+
     def create_clip(self, track: int, clip: int, length: float) -> dict[str, Any]:
         return self._call("create_clip", {"track": track, "clip": clip, "length": length})
 

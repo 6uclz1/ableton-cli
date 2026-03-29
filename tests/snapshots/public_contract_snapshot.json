@@ -37,6 +37,226 @@
         "type": "object"
       }
     },
+    "master devices list": {
+      "args": {
+        "additional_properties": false,
+        "type": "object"
+      },
+      "result": {
+        "additional_properties": false,
+        "properties": {
+          "devices": {
+            "type": "array"
+          }
+        },
+        "required": [
+          "devices"
+        ],
+        "type": "object"
+      }
+    },
+    "master info": {
+      "args": {
+        "additional_properties": false,
+        "type": "object"
+      },
+      "result": {
+        "additional_properties": false,
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "panning": {
+            "type": "number"
+          },
+          "volume": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "name",
+          "volume",
+          "panning"
+        ],
+        "type": "object"
+      }
+    },
+    "master panning get": {
+      "args": {
+        "additional_properties": false,
+        "type": "object"
+      },
+      "result": {
+        "additional_properties": false,
+        "properties": {
+          "panning": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "panning"
+        ],
+        "type": "object"
+      }
+    },
+    "master volume get": {
+      "args": {
+        "additional_properties": false,
+        "type": "object"
+      },
+      "result": {
+        "additional_properties": false,
+        "properties": {
+          "volume": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "volume"
+        ],
+        "type": "object"
+      }
+    },
+    "mixer crossfader get": {
+      "args": {
+        "additional_properties": false,
+        "type": "object"
+      },
+      "result": {
+        "additional_properties": false,
+        "properties": {
+          "value": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "value"
+        ],
+        "type": "object"
+      }
+    },
+    "mixer crossfader set": {
+      "args": {
+        "additional_properties": false,
+        "properties": {
+          "value": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "value"
+        ],
+        "type": "object"
+      },
+      "result": {
+        "additional_properties": false,
+        "properties": {
+          "value": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "value"
+        ],
+        "type": "object"
+      }
+    },
+    "mixer cue-routing get": {
+      "args": {
+        "additional_properties": false,
+        "type": "object"
+      },
+      "result": {
+        "additional_properties": false,
+        "properties": {
+          "available_routings": {
+            "type": "array"
+          },
+          "routing": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "routing",
+          "available_routings"
+        ],
+        "type": "object"
+      }
+    },
+    "mixer cue-routing set": {
+      "args": {
+        "additional_properties": false,
+        "properties": {
+          "routing": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "routing"
+        ],
+        "type": "object"
+      },
+      "result": {
+        "additional_properties": false,
+        "properties": {
+          "available_routings": {
+            "type": "array"
+          },
+          "routing": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "routing",
+          "available_routings"
+        ],
+        "type": "object"
+      }
+    },
+    "mixer cue-volume get": {
+      "args": {
+        "additional_properties": false,
+        "type": "object"
+      },
+      "result": {
+        "additional_properties": false,
+        "properties": {
+          "value": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "value"
+        ],
+        "type": "object"
+      }
+    },
+    "mixer cue-volume set": {
+      "args": {
+        "additional_properties": false,
+        "properties": {
+          "value": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "value"
+        ],
+        "type": "object"
+      },
+      "result": {
+        "additional_properties": false,
+        "properties": {
+          "value": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "value"
+        ],
+        "type": "object"
+      }
+    },
     "ping": {
       "args": {
         "additional_properties": false,
@@ -91,6 +311,216 @@
           "host",
           "port",
           "rtt_ms"
+        ],
+        "type": "object"
+      }
+    },
+    "return-track mute get": {
+      "args": {
+        "additional_properties": false,
+        "properties": {
+          "return_track": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "return_track"
+        ],
+        "type": "object"
+      },
+      "result": {
+        "additional_properties": false,
+        "properties": {
+          "mute": {
+            "type": "boolean"
+          },
+          "return_track": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "return_track",
+          "mute"
+        ],
+        "type": "object"
+      }
+    },
+    "return-track mute set": {
+      "args": {
+        "additional_properties": false,
+        "properties": {
+          "return_track": {
+            "type": "integer"
+          },
+          "value": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "return_track",
+          "value"
+        ],
+        "type": "object"
+      },
+      "result": {
+        "additional_properties": false,
+        "properties": {
+          "mute": {
+            "type": "boolean"
+          },
+          "return_track": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "return_track",
+          "mute"
+        ],
+        "type": "object"
+      }
+    },
+    "return-track solo get": {
+      "args": {
+        "additional_properties": false,
+        "properties": {
+          "return_track": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "return_track"
+        ],
+        "type": "object"
+      },
+      "result": {
+        "additional_properties": false,
+        "properties": {
+          "return_track": {
+            "type": "integer"
+          },
+          "solo": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "return_track",
+          "solo"
+        ],
+        "type": "object"
+      }
+    },
+    "return-track solo set": {
+      "args": {
+        "additional_properties": false,
+        "properties": {
+          "return_track": {
+            "type": "integer"
+          },
+          "value": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "return_track",
+          "value"
+        ],
+        "type": "object"
+      },
+      "result": {
+        "additional_properties": false,
+        "properties": {
+          "return_track": {
+            "type": "integer"
+          },
+          "solo": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "return_track",
+          "solo"
+        ],
+        "type": "object"
+      }
+    },
+    "return-track volume get": {
+      "args": {
+        "additional_properties": false,
+        "properties": {
+          "return_track": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "return_track"
+        ],
+        "type": "object"
+      },
+      "result": {
+        "additional_properties": false,
+        "properties": {
+          "return_track": {
+            "type": "integer"
+          },
+          "volume": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "return_track",
+          "volume"
+        ],
+        "type": "object"
+      }
+    },
+    "return-track volume set": {
+      "args": {
+        "additional_properties": false,
+        "properties": {
+          "return_track": {
+            "type": "integer"
+          },
+          "value": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "return_track",
+          "value"
+        ],
+        "type": "object"
+      },
+      "result": {
+        "additional_properties": false,
+        "properties": {
+          "return_track": {
+            "type": "integer"
+          },
+          "volume": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "return_track",
+          "volume"
+        ],
+        "type": "object"
+      }
+    },
+    "return-tracks list": {
+      "args": {
+        "additional_properties": false,
+        "type": "object"
+      },
+      "result": {
+        "additional_properties": false,
+        "properties": {
+          "return_tracks": {
+            "type": "array"
+          }
+        },
+        "required": [
+          "return_tracks"
         ],
         "type": "object"
       }
@@ -150,6 +580,238 @@
             "type": "number"
           }
         },
+        "type": "object"
+      }
+    },
+    "track routing input get": {
+      "args": {
+        "additional_properties": false,
+        "properties": {
+          "track": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "track"
+        ],
+        "type": "object"
+      },
+      "result": {
+        "additional_properties": false,
+        "properties": {
+          "available": {
+            "type": "object"
+          },
+          "current": {
+            "type": "object"
+          },
+          "track": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "track",
+          "current",
+          "available"
+        ],
+        "type": "object"
+      }
+    },
+    "track routing input set": {
+      "args": {
+        "additional_properties": false,
+        "properties": {
+          "routing_channel": {
+            "type": "string"
+          },
+          "routing_type": {
+            "type": "string"
+          },
+          "track": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "track",
+          "routing_type",
+          "routing_channel"
+        ],
+        "type": "object"
+      },
+      "result": {
+        "additional_properties": false,
+        "properties": {
+          "available": {
+            "type": "object"
+          },
+          "current": {
+            "type": "object"
+          },
+          "track": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "track",
+          "current",
+          "available"
+        ],
+        "type": "object"
+      }
+    },
+    "track routing output get": {
+      "args": {
+        "additional_properties": false,
+        "properties": {
+          "track": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "track"
+        ],
+        "type": "object"
+      },
+      "result": {
+        "additional_properties": false,
+        "properties": {
+          "available": {
+            "type": "object"
+          },
+          "current": {
+            "type": "object"
+          },
+          "track": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "track",
+          "current",
+          "available"
+        ],
+        "type": "object"
+      }
+    },
+    "track routing output set": {
+      "args": {
+        "additional_properties": false,
+        "properties": {
+          "routing_channel": {
+            "type": "string"
+          },
+          "routing_type": {
+            "type": "string"
+          },
+          "track": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "track",
+          "routing_type",
+          "routing_channel"
+        ],
+        "type": "object"
+      },
+      "result": {
+        "additional_properties": false,
+        "properties": {
+          "available": {
+            "type": "object"
+          },
+          "current": {
+            "type": "object"
+          },
+          "track": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "track",
+          "current",
+          "available"
+        ],
+        "type": "object"
+      }
+    },
+    "track send get": {
+      "args": {
+        "additional_properties": false,
+        "properties": {
+          "send": {
+            "type": "integer"
+          },
+          "track": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "track",
+          "send"
+        ],
+        "type": "object"
+      },
+      "result": {
+        "additional_properties": false,
+        "properties": {
+          "send": {
+            "type": "integer"
+          },
+          "track": {
+            "type": "integer"
+          },
+          "value": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "track",
+          "send",
+          "value"
+        ],
+        "type": "object"
+      }
+    },
+    "track send set": {
+      "args": {
+        "additional_properties": false,
+        "properties": {
+          "send": {
+            "type": "integer"
+          },
+          "track": {
+            "type": "integer"
+          },
+          "value": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "track",
+          "send",
+          "value"
+        ],
+        "type": "object"
+      },
+      "result": {
+        "additional_properties": false,
+        "properties": {
+          "send": {
+            "type": "integer"
+          },
+          "track": {
+            "type": "integer"
+          },
+          "value": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "track",
+          "send",
+          "value"
+        ],
         "type": "object"
       }
     },

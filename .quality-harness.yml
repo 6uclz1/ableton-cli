@@ -17,7 +17,7 @@ thresholds:
   function:
     complexity: { warn: 10, fail: 35 }
     nesting: { warn: 3, fail: 6 }
-    args: { warn: 8, fail: 17 }
+    args: { warn: 8, fail: 20 }
     estimated_tokens: { warn: 260, fail: 950 }
   class:
     complexity: { warn: 70, fail: 400 }

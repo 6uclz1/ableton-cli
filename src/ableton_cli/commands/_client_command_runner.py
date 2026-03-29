@@ -39,13 +39,16 @@ def run_client_command(
     fn: ClientAction,
     get_client_fn: GetClientFn,
     execute_command_fn: ExecuteCommandFn,
+    resolved_args: Callable[[], dict[str, object]] | None = None,
 ) -> None:
-    execute_command_fn(
-        ctx,
-        command=command_name,
-        args=args,
-        action=lambda: fn(get_client_fn(ctx)),
-    )
+    execute_kwargs: dict[str, object] = {
+        "command": command_name,
+        "args": args,
+        "action": lambda: fn(get_client_fn(ctx)),
+    }
+    if resolved_args is not None:
+        execute_kwargs["resolved_args"] = resolved_args
+    execute_command_fn(ctx, **execute_kwargs)
 
 
 def run_client_command_spec(
@@ -56,6 +59,7 @@ def run_client_command_spec(
     get_client_fn: GetClientFn,
     execute_command_fn: ExecuteCommandFn,
     method_kwargs: MethodKwargs = None,
+    resolved_args: Callable[[], dict[str, object]] | None = None,
 ) -> None:
     run_client_command(
         ctx,
@@ -67,4 +71,5 @@ def run_client_command_spec(
         ),
         get_client_fn=get_client_fn,
         execute_command_fn=execute_command_fn,
+        resolved_args=resolved_args,
     )

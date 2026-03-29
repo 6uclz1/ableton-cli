@@ -547,6 +547,94 @@ class _TrackProxy:
         setattr(self._target, name, value)
 
 
+class _ParameterProxy:
+    __slots__ = ("_target",)
+
+    def __init__(self, target: _Parameter) -> None:
+        object.__setattr__(self, "_target", target)
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._target, name)
+
+    def __setattr__(self, name: str, value: Any) -> None:
+        setattr(self._target, name, value)
+
+
+class _DeviceProxy:
+    __slots__ = ("_target",)
+
+    def __init__(self, target: _Device) -> None:
+        object.__setattr__(self, "_target", target)
+
+    def __getattr__(self, name: str) -> Any:
+        if name == "parameters":
+            return [_ParameterProxy(parameter) for parameter in self._target.parameters]
+        return getattr(self._target, name)
+
+    def __setattr__(self, name: str, value: Any) -> None:
+        setattr(self._target, name, value)
+
+
+@dataclass(slots=True)
+class _TrackView:
+    selected_device: Any | None
+
+
+class _NestedProxyTrackProxy(_TrackProxy):
+    def __getattr__(self, name: str) -> Any:
+        if name == "devices":
+            return [_DeviceProxy(device) for device in self._target.devices]
+        if name == "view":
+            selected_device = self._target.devices[0] if self._target.devices else None
+            if selected_device is None:
+                return _TrackView(selected_device=None)
+            return _TrackView(selected_device=_DeviceProxy(selected_device))
+        return super().__getattr__(name)
+
+
+class _OpaqueParameterProxy:
+    __slots__ = ("_wrapped",)
+
+    def __init__(self, wrapped: _Parameter) -> None:
+        object.__setattr__(self, "_wrapped", wrapped)
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._wrapped, name)
+
+    def __setattr__(self, name: str, value: Any) -> None:
+        setattr(self._wrapped, name, value)
+
+
+class _OpaqueDeviceProxy:
+    __slots__ = ("_wrapped",)
+
+    def __init__(self, wrapped: _Device) -> None:
+        object.__setattr__(self, "_wrapped", wrapped)
+
+    def __getattr__(self, name: str) -> Any:
+        if name == "parameters":
+            return [_OpaqueParameterProxy(parameter) for parameter in self._wrapped.parameters]
+        return getattr(self._wrapped, name)
+
+    def __setattr__(self, name: str, value: Any) -> None:
+        setattr(self._wrapped, name, value)
+
+
+class _OpaqueTrackProxy:
+    __slots__ = ("_wrapped",)
+
+    def __init__(self, wrapped: _Track) -> None:
+        object.__setattr__(self, "_wrapped", wrapped)
+
+    def __getattr__(self, name: str) -> Any:
+        if name == "devices":
+            return [_OpaqueDeviceProxy(device) for device in self._wrapped.devices]
+        return getattr(self._wrapped, name)
+
+    def __setattr__(self, name: str, value: Any) -> None:
+        setattr(self._wrapped, name, value)
+
+
 class _TupleArrangementTrack:
     def __init__(self, original: _Track) -> None:
         self.name = original.name
@@ -720,6 +808,38 @@ class _EventuallyConsistentSurfaceStub(_SurfaceStub):
 class _ProxyIdentitySurfaceStub(_SurfaceStub):
     def __init__(self) -> None:
         self._song_obj = _ProxyIdentitySong()
+        self._app = _Application(self._song_obj)
+
+
+class _NestedProxyIdentitySong(_ProxyIdentitySong):
+    @property
+    def tracks(self) -> list[_NestedProxyTrackProxy]:
+        return [_NestedProxyTrackProxy(track) for track in self._stable_tracks]
+
+    @tracks.setter
+    def tracks(self, value: list[_Track]) -> None:
+        self._stable_tracks = list(value)
+
+
+class _NestedProxyIdentitySurfaceStub(_SurfaceStub):
+    def __init__(self) -> None:
+        self._song_obj = _NestedProxyIdentitySong()
+        self._app = _Application(self._song_obj)
+
+
+class _OpaqueProxyIdentitySong(_ProxyIdentitySong):
+    @property
+    def tracks(self) -> list[_OpaqueTrackProxy]:
+        return [_OpaqueTrackProxy(track) for track in self._stable_tracks]
+
+    @tracks.setter
+    def tracks(self, value: list[_Track]) -> None:
+        self._stable_tracks = list(value)
+
+
+class _OpaqueProxyIdentitySurfaceStub(_SurfaceStub):
+    def __init__(self) -> None:
+        self._song_obj = _OpaqueProxyIdentitySong()
         self._app = _Application(self._song_obj)
 
 
@@ -1991,7 +2111,111 @@ def test_live_backend_transport_stop_waits_for_longer_eventual_consistency(monke
 def test_live_backend_device_parameter_set() -> None:
     backend = LiveBackend(_SurfaceStub())
     result = backend.set_device_parameter(track=0, device=0, parameter=0, value=0.33)
-    assert result == {"track": 0, "device": 0, "parameter": 0, "value": 0.33}
+    assert result["track"] == 0
+    assert result["device"] == 0
+    assert result["parameter"] == 0
+    assert result["value"] == 0.33
+    assert result["track_stable_ref"].startswith("track:")
+    assert result["device_stable_ref"].startswith("device:")
+    assert result["parameter_stable_ref"].startswith("parameter:")
+
+
+def test_live_backend_track_stable_ref_survives_proxy_identity_refresh() -> None:
+    backend = LiveBackend(_ProxyIdentitySurfaceStub())
+
+    listed = backend.tracks_list()
+    stable_ref = listed["tracks"][0]["stable_ref"]
+
+    assert backend.resolve_track_ref({"mode": "stable_ref", "stable_ref": stable_ref}) == 0
+    assert backend.get_track_info(0)["stable_ref"] == stable_ref
+
+
+def test_live_backend_selected_track_survives_proxy_identity_refresh() -> None:
+    backend = LiveBackend(_ProxyIdentitySurfaceStub())
+
+    assert backend.resolve_track_ref({"mode": "selected"}) == 0
+
+
+def test_live_backend_track_stable_ref_survives_opaque_proxy_refresh() -> None:
+    backend = LiveBackend(_OpaqueProxyIdentitySurfaceStub())
+
+    listed = backend.tracks_list()
+    stable_ref = listed["tracks"][0]["stable_ref"]
+
+    assert backend.resolve_track_ref({"mode": "stable_ref", "stable_ref": stable_ref}) == 0
+    assert backend.get_track_info(0)["stable_ref"] == stable_ref
+
+
+def test_live_backend_device_stable_ref_survives_nested_proxy_identity_refresh() -> None:
+    backend = LiveBackend(_NestedProxyIdentitySurfaceStub())
+
+    listed = backend.get_track_info(0)
+    stable_ref = listed["devices"][0]["stable_ref"]
+
+    assert (
+        backend.resolve_device_ref(
+            0,
+            {"mode": "stable_ref", "stable_ref": stable_ref},
+        )
+        == 0
+    )
+    assert backend.get_track_info(0)["devices"][0]["stable_ref"] == stable_ref
+
+
+def test_live_backend_selected_device_survives_nested_proxy_identity_refresh() -> None:
+    backend = LiveBackend(_NestedProxyIdentitySurfaceStub())
+
+    assert backend.resolve_device_ref(0, {"mode": "selected"}) == 0
+
+
+def test_live_backend_device_stable_ref_survives_opaque_proxy_refresh() -> None:
+    backend = LiveBackend(_OpaqueProxyIdentitySurfaceStub())
+
+    listed = backend.get_track_info(0)
+    stable_ref = listed["devices"][0]["stable_ref"]
+
+    assert (
+        backend.resolve_device_ref(
+            0,
+            {"mode": "stable_ref", "stable_ref": stable_ref},
+        )
+        == 0
+    )
+    assert backend.get_track_info(0)["devices"][0]["stable_ref"] == stable_ref
+
+
+def test_live_backend_parameter_stable_ref_survives_nested_proxy_identity_refresh() -> None:
+    backend = LiveBackend(_NestedProxyIdentitySurfaceStub())
+
+    listed = backend.list_effect_parameters(0, 0)
+    stable_ref = listed["parameters"][0]["stable_ref"]
+
+    assert (
+        backend.resolve_parameter_ref(
+            0,
+            0,
+            {"mode": "stable_ref", "stable_ref": stable_ref},
+        )
+        == 0
+    )
+    assert backend.list_effect_parameters(0, 0)["parameters"][0]["stable_ref"] == stable_ref
+
+
+def test_live_backend_parameter_stable_ref_survives_opaque_proxy_refresh() -> None:
+    backend = LiveBackend(_OpaqueProxyIdentitySurfaceStub())
+
+    listed = backend.list_effect_parameters(0, 0)
+    stable_ref = listed["parameters"][0]["stable_ref"]
+
+    assert (
+        backend.resolve_parameter_ref(
+            0,
+            0,
+            {"mode": "stable_ref", "stable_ref": stable_ref},
+        )
+        == 0
+    )
+    assert backend.list_effect_parameters(0, 0)["parameters"][0]["stable_ref"] == stable_ref
 
 
 def test_live_backend_find_synth_devices_with_filters() -> None:
@@ -3177,23 +3401,22 @@ def test_live_backend_master_commands() -> None:
     assert backend.master_info() == {"name": "Master", "volume": 0.75, "panning": 0.0}
     assert backend.master_volume_get() == {"volume": 0.75}
     assert backend.master_panning_get() == {"panning": 0.0}
-    assert backend.master_devices_list() == {
-        "devices": [
-            {
-                "index": 0,
-                "name": "Limiter",
-                "class_name": "AudioEffect",
-                "type": "audio_effect",
-                "parameters": [
-                    {
-                        "index": 0,
-                        "name": "Threshold",
-                        "value": 0.0,
-                    }
-                ],
-            }
-        ]
-    }
+    result = backend.master_devices_list()
+    assert result["devices"][0]["index"] == 0
+    assert result["devices"][0]["name"] == "Limiter"
+    assert result["devices"][0]["class_name"] == "AudioEffect"
+    assert result["devices"][0]["type"] == "audio_effect"
+    assert "track_stable_ref" not in result["devices"][0]
+    assert result["devices"][0]["stable_ref"].startswith("device:")
+    assert result["devices"][0]["parameters"] == [
+        {
+            "index": 0,
+            "stable_ref": result["devices"][0]["parameters"][0]["stable_ref"],
+            "name": "Threshold",
+            "value": 0.0,
+        }
+    ]
+    assert result["devices"][0]["parameters"][0]["stable_ref"].startswith("parameter:")
 
 
 def test_live_backend_mixer_and_track_routing_commands() -> None:

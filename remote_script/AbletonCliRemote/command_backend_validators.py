@@ -462,9 +462,65 @@ def _parse_exclusive_string_args(
     return first, second
 
 
-def _device_parameter_args(args: dict[str, Any]) -> tuple[int, int, int, float]:
-    track = _track_index("track", args.get("track"))
-    device = _track_index("device", args.get("device"))
-    parameter = _track_index("parameter", args.get("parameter"))
+def _ref_object(name: str, value: Any, *, allowed_modes: set[str]) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        raise _invalid_argument(
+            message=f"{name} must be an object",
+            hint=f"Pass a JSON object for '{name}'.",
+        )
+    mode = _non_empty_string(f"{name}.mode", value.get("mode"))
+    if mode not in allowed_modes:
+        raise _invalid_argument(
+            message=f"{name}.mode must be one of {', '.join(sorted(allowed_modes))}",
+            hint=f"Use a supported selector mode for '{name}'.",
+        )
+    if mode == "index":
+        return {"mode": mode, "index": _track_index(f"{name}.index", value.get("index"))}
+    if mode == "name":
+        return {"mode": mode, "name": _non_empty_string(f"{name}.name", value.get("name"))}
+    if mode == "selected":
+        return {"mode": mode}
+    if mode == "query":
+        return {"mode": mode, "query": _non_empty_string(f"{name}.query", value.get("query"))}
+    if mode == "stable_ref":
+        return {
+            "mode": mode,
+            "stable_ref": _non_empty_string(f"{name}.stable_ref", value.get("stable_ref")),
+        }
+    if mode == "key":
+        return {"mode": mode, "key": _non_empty_string(f"{name}.key", value.get("key"))}
+    raise AssertionError(f"unsupported mode: {mode}")
+
+
+def _track_ref(value: Any) -> dict[str, Any]:
+    return _ref_object(
+        "track_ref",
+        value,
+        allowed_modes={"index", "name", "selected", "query", "stable_ref"},
+    )
+
+
+def _device_ref(value: Any) -> dict[str, Any]:
+    return _ref_object(
+        "device_ref",
+        value,
+        allowed_modes={"index", "name", "selected", "query", "stable_ref"},
+    )
+
+
+def _parameter_ref(value: Any) -> dict[str, Any]:
+    return _ref_object(
+        "parameter_ref",
+        value,
+        allowed_modes={"index", "name", "query", "stable_ref", "key"},
+    )
+
+
+def _device_parameter_args(
+    args: dict[str, Any],
+) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any], float]:
+    track = _track_ref(args.get("track_ref"))
+    device = _device_ref(args.get("device_ref"))
+    parameter = _parameter_ref(args.get("parameter_ref"))
     value = _as_float("value", args.get("value"))
     return track, device, parameter, value

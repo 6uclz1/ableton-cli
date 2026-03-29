@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from typing import cast
 
 import typer
 
+from ..refs import RefPayload
 from ..runtime import execute_command, get_client
 from ._track_arm_commands import register_commands as register_arm_commands
 from ._track_info_commands import register_commands as register_info_commands
@@ -15,87 +16,88 @@ from ._track_routing_commands import register_commands as register_routing_comma
 from ._track_send_commands import register_commands as register_send_commands
 from ._track_shared import (
     TrackAction,
-    TrackValidator,
     TrackValueAction,
-    TrackValueValidator,
     TValue,
+    ValueValidator,
 )
 from ._track_solo_commands import register_commands as register_solo_commands
 from ._track_specs import TrackCommandSpec, TrackValueCommandSpec
 from ._track_volume_commands import register_commands as register_volume_commands
-from ._validation import (
-    require_track_and_value,
-    require_track_index,
-)
+
+
+def _resolve_track_ref(track_ref: RefPayload | Callable[[], RefPayload]) -> RefPayload:
+    if callable(track_ref):
+        return cast(RefPayload, track_ref())
+    return track_ref
 
 
 def run_track_command(
     ctx: typer.Context,
     *,
     command_name: str,
-    track: int,
+    track_ref: RefPayload | Callable[[], RefPayload],
     fn: TrackAction,
-    validators: Sequence[TrackValidator] | None = None,
 ) -> None:
-    active_validators = validators if validators is not None else (require_track_index,)
-
     def _run() -> dict[str, object]:
-        valid_track = track
-        for validator in active_validators:
-            valid_track = validator(valid_track)
         client = get_client(ctx)
-        return fn(client, valid_track)
+        return fn(client, _resolve_track_ref(track_ref))
 
-    execute_command(
-        ctx,
-        command=command_name,
-        args={"track": track},
-        action=_run,
-    )
+    execute_kwargs: dict[str, object] = {
+        "command": command_name,
+        "args": {"track_ref": None if callable(track_ref) else track_ref},
+        "action": _run,
+    }
+    if callable(track_ref):
+        execute_kwargs["resolved_args"] = lambda: {"track_ref": _resolve_track_ref(track_ref)}
+    execute_command(ctx, **execute_kwargs)
 
 
 def run_track_value_command(
     ctx: typer.Context,
     *,
     command_name: str,
-    track: int,
+    track_ref: RefPayload | Callable[[], RefPayload],
     value: TValue,
     fn: TrackValueAction[TValue],
     value_name: str = "value",
-    validators: Sequence[TrackValueValidator[TValue]] | None = None,
+    validators: Sequence[ValueValidator[TValue]] | None = None,
 ) -> None:
-    active_validators = validators if validators is not None else (require_track_and_value,)
+    active_validators = validators if validators is not None else ()
 
     def _run() -> dict[str, object]:
-        valid_track = track
+        resolved_track_ref = _resolve_track_ref(track_ref)
         valid_value = value
         for validator in active_validators:
-            valid_track, valid_value = validator(valid_track, valid_value)
+            valid_value = validator(valid_value)
         client = get_client(ctx)
-        return fn(client, valid_track, valid_value)
+        return fn(client, resolved_track_ref, valid_value)
 
-    execute_command(
-        ctx,
-        command=command_name,
-        args={"track": track, value_name: value},
-        action=_run,
-    )
+    execute_kwargs: dict[str, object] = {
+        "command": command_name,
+        "args": {"track_ref": None if callable(track_ref) else track_ref, value_name: value},
+        "action": _run,
+    }
+    if callable(track_ref):
+        execute_kwargs["resolved_args"] = lambda: {
+            "track_ref": _resolve_track_ref(track_ref),
+            value_name: value,
+        }
+    execute_command(ctx, **execute_kwargs)
 
 
 def run_track_command_spec(
     ctx: typer.Context,
     *,
     spec: TrackCommandSpec,
-    track: int,
+    track_ref: RefPayload,
 ) -> None:
     run_track_command(
         ctx,
         command_name=spec.command_name,
-        track=track,
-        validators=spec.validators,
-        fn=lambda client, valid_track: cast(
+        track_ref=track_ref,
+        fn=lambda client, resolved_track_ref: cast(
             dict[str, object],
-            getattr(client, spec.client_method)(valid_track),
+            getattr(client, spec.client_method)(resolved_track_ref),
         ),
     )
 
@@ -104,19 +106,19 @@ def run_track_value_command_spec(
     ctx: typer.Context,
     *,
     spec: TrackValueCommandSpec[TValue],
-    track: int,
+    track_ref: RefPayload,
     value: TValue,
 ) -> None:
     run_track_value_command(
         ctx,
         command_name=spec.command_name,
-        track=track,
+        track_ref=track_ref,
         value=value,
         value_name=spec.value_name,
         validators=spec.validators,
-        fn=lambda client, valid_track, valid_value: cast(
+        fn=lambda client, resolved_track_ref, valid_value: cast(
             dict[str, object],
-            getattr(client, spec.client_method)(valid_track, valid_value),
+            getattr(client, spec.client_method)(resolved_track_ref, valid_value),
         ),
     )
 
@@ -163,26 +165,24 @@ register_panning_commands(
 )
 
 
-def _run_send_command(ctx, *, command_name, track, send, fn, validator) -> None:
+def _run_send_command(ctx, *, command_name, track_ref, send, fn) -> None:
     run_track_send_command(
         ctx,
         command_name=command_name,
-        track=track,
+        track_ref=track_ref,
         send=send,
         fn=fn,
-        validator=validator,
     )
 
 
-def _run_send_value_command(ctx, *, command_name, track, send, value, fn, validator) -> None:
+def _run_send_value_command(ctx, *, command_name, track_ref, send, value, fn) -> None:
     run_track_send_value_command(
         ctx,
         command_name=command_name,
-        track=track,
+        track_ref=track_ref,
         send=send,
         value=value,
         fn=fn,
-        validator=validator,
     )
 
 
@@ -193,11 +193,11 @@ register_send_commands(
 )
 
 
-def _run_routing_get(ctx, *, command_name, track, fn_name) -> None:
+def _run_routing_get(ctx, *, command_name, track_ref, fn_name) -> None:
     run_track_routing_get(
         ctx,
         command_name=command_name,
-        track=track,
+        track_ref=track_ref,
         fn_name=fn_name,
     )
 
@@ -206,7 +206,7 @@ def _run_routing_set(
     ctx,
     *,
     command_name,
-    track,
+    track_ref,
     routing_type,
     routing_channel,
     fn_name,
@@ -214,7 +214,7 @@ def _run_routing_set(
     run_track_routing_set(
         ctx,
         command_name=command_name,
-        track=track,
+        track_ref=track_ref,
         routing_type=routing_type,
         routing_channel=routing_channel,
         fn_name=fn_name,
@@ -242,81 +242,111 @@ def run_track_send_command(
     ctx: typer.Context,
     *,
     command_name: str,
-    track: int,
+    track_ref: RefPayload | Callable[[], RefPayload],
     send: int,
     fn,
-    validator,
 ) -> None:
     def _run() -> dict[str, object]:
-        valid_track, valid_send = validator(track, send)
         client = get_client(ctx)
-        return fn(client, valid_track, valid_send)
+        return fn(client, _resolve_track_ref(track_ref), send)
 
-    execute_command(
-        ctx,
-        command=command_name,
-        args={"track": track, "send": send},
-        action=_run,
-    )
+    execute_kwargs: dict[str, object] = {
+        "command": command_name,
+        "args": {"track_ref": None if callable(track_ref) else track_ref, "send": send},
+        "action": _run,
+    }
+    if callable(track_ref):
+        execute_kwargs["resolved_args"] = lambda: {
+            "track_ref": _resolve_track_ref(track_ref),
+            "send": send,
+        }
+    execute_command(ctx, **execute_kwargs)
 
 
 def run_track_send_value_command(
     ctx: typer.Context,
     *,
     command_name: str,
-    track: int,
+    track_ref: RefPayload | Callable[[], RefPayload],
     send: int,
     value: float,
     fn,
-    validator,
 ) -> None:
     def _run() -> dict[str, object]:
-        valid_track, valid_send, valid_value = validator(track, send, value)
         client = get_client(ctx)
-        return fn(client, valid_track, valid_send, valid_value)
+        return fn(client, _resolve_track_ref(track_ref), send, value)
 
-    execute_command(
-        ctx,
-        command=command_name,
-        args={"track": track, "send": send, "value": value},
-        action=_run,
-    )
+    execute_kwargs: dict[str, object] = {
+        "command": command_name,
+        "args": {
+            "track_ref": None if callable(track_ref) else track_ref,
+            "send": send,
+            "value": value,
+        },
+        "action": _run,
+    }
+    if callable(track_ref):
+        execute_kwargs["resolved_args"] = lambda: {
+            "track_ref": _resolve_track_ref(track_ref),
+            "send": send,
+            "value": value,
+        }
+    execute_command(ctx, **execute_kwargs)
 
 
 def run_track_routing_get(
     ctx: typer.Context,
     *,
     command_name: str,
-    track: int,
+    track_ref: RefPayload | Callable[[], RefPayload],
     fn_name: str,
 ) -> None:
-    execute_command(
-        ctx,
-        command=command_name,
-        args={"track": track},
-        action=lambda: getattr(get_client(ctx), fn_name)(track),
-    )
+    def _run() -> dict[str, object]:
+        client = get_client(ctx)
+        return cast(dict[str, object], getattr(client, fn_name)(_resolve_track_ref(track_ref)))
+
+    execute_kwargs: dict[str, object] = {
+        "command": command_name,
+        "args": {"track_ref": None if callable(track_ref) else track_ref},
+        "action": _run,
+    }
+    if callable(track_ref):
+        execute_kwargs["resolved_args"] = lambda: {"track_ref": _resolve_track_ref(track_ref)}
+    execute_command(ctx, **execute_kwargs)
 
 
 def run_track_routing_set(
     ctx: typer.Context,
     *,
     command_name: str,
-    track: int,
+    track_ref: RefPayload | Callable[[], RefPayload],
     routing_type: str,
     routing_channel: str,
     fn_name: str,
 ) -> None:
-    execute_command(
-        ctx,
-        command=command_name,
-        args={
-            "track": track,
+    def _run() -> dict[str, object]:
+        client = get_client(ctx)
+        return cast(
+            dict[str, object],
+            getattr(client, fn_name)(_resolve_track_ref(track_ref), routing_type, routing_channel),
+        )
+
+    execute_kwargs: dict[str, object] = {
+        "command": command_name,
+        "args": {
+            "track_ref": None if callable(track_ref) else track_ref,
             "routing_type": routing_type,
             "routing_channel": routing_channel,
         },
-        action=lambda: getattr(get_client(ctx), fn_name)(track, routing_type, routing_channel),
-    )
+        "action": _run,
+    }
+    if callable(track_ref):
+        execute_kwargs["resolved_args"] = lambda: {
+            "track_ref": _resolve_track_ref(track_ref),
+            "routing_type": routing_type,
+            "routing_channel": routing_channel,
+        }
+    execute_command(ctx, **execute_kwargs)
 
 
 def register(app: typer.Typer) -> None:

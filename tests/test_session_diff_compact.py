@@ -94,7 +94,20 @@ def test_compact_reduces_large_json_arrays(runner, cli_app, monkeypatch) -> None
 
     class _ClientStub:
         def tracks_list(self):  # noqa: ANN201
-            return {"tracks": [{"index": index, "name": f"Track {index}"} for index in range(40)]}
+            return {
+                "tracks": [
+                    {
+                        "index": index,
+                        "stable_ref": f"track:{index}",
+                        "name": f"Track {index}",
+                        "mute": False,
+                        "solo": False,
+                        "arm": False,
+                        "volume": 0.75,
+                    }
+                    for index in range(40)
+                ]
+            }
 
     monkeypatch.setattr(tracks, "get_client", lambda _ctx: _ClientStub())
 
@@ -119,7 +132,19 @@ def test_compact_keeps_small_arrays_unmodified(runner, cli_app, monkeypatch) -> 
 
     class _ClientStub:
         def tracks_list(self):  # noqa: ANN201
-            return {"tracks": [{"index": 0, "name": "Only"}]}
+            return {
+                "tracks": [
+                    {
+                        "index": 0,
+                        "stable_ref": "track:0",
+                        "name": "Only",
+                        "mute": False,
+                        "solo": False,
+                        "arm": False,
+                        "volume": 0.75,
+                    }
+                ]
+            }
 
     monkeypatch.setattr(tracks, "get_client", lambda _ctx: _ClientStub())
 

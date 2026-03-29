@@ -5,27 +5,43 @@ from typing import Annotated
 
 import typer
 
+from ..refs import (
+    DeviceIndexOption,
+    DeviceNameOption,
+    DeviceQueryOption,
+    DeviceStableRefOption,
+    ParameterIndexOption,
+    ParameterKeyOption,
+    ParameterNameOption,
+    ParameterQueryOption,
+    ParameterStableRefOption,
+    RefPayload,
+    SelectedDeviceOption,
+    SelectedTrackOption,
+    TrackIndexOption,
+    TrackNameOption,
+    TrackQueryOption,
+    TrackStableRefOption,
+    build_device_ref,
+    build_parameter_ref,
+    build_track_ref,
+)
 from ..runtime import execute_command, get_client
 from ._validation import (
     invalid_argument,
     require_non_empty_string,
     require_optional_track_index,
-    require_parameter_index,
-    require_track_and_device,
 )
 
 _SUPPORTED_SYNTH_TYPES = ("wavetable", "drift", "meld")
-
-TrackArgument = Annotated[int, typer.Argument(help="Track index (0-based)")]
-DeviceArgument = Annotated[int, typer.Argument(help="Device index (0-based)")]
-ParameterArgument = Annotated[int, typer.Argument(help="Parameter index (0-based)")]
 
 synth_app = typer.Typer(help="Synth control commands", no_args_is_help=True)
 parameters_app = typer.Typer(help="Synth parameter listing commands", no_args_is_help=True)
 parameter_app = typer.Typer(help="Synth parameter write commands", no_args_is_help=True)
 
-TrackDeviceValidator = Callable[[int, int], tuple[int, int]]
-TrackDeviceAction = Callable[[object, int, int], dict[str, object]]
+TrackDeviceValidator = Callable[[RefPayload, RefPayload], tuple[RefPayload, RefPayload]]
+TrackDeviceAction = Callable[[object, RefPayload, RefPayload], dict[str, object]]
+RefFactory = RefPayload | Callable[[], RefPayload]
 
 
 def _normalize_synth_type(value: str) -> str:
@@ -39,38 +55,45 @@ def _normalize_synth_type(value: str) -> str:
     return normalized
 
 
-def _require_synth_parameter_index(parameter: int) -> int:
-    return require_parameter_index(
-        parameter,
-        hint="Use a valid parameter index from 'ableton-cli synth parameters list'.",
-    )
+def _resolve_ref(ref: RefFactory) -> RefPayload:
+    if callable(ref):
+        return ref()
+    return ref
 
 
 def run_track_device_command(
     ctx: typer.Context,
     *,
     command_name: str,
-    track: int,
-    device: int,
+    track_ref: RefFactory,
+    device_ref: RefFactory,
     fn: TrackDeviceAction,
     validators: Sequence[TrackDeviceValidator] | None = None,
 ) -> None:
-    active_validators = validators if validators is not None else (require_track_and_device,)
+    active_validators = validators if validators is not None else ()
 
     def _run() -> dict[str, object]:
-        valid_track = track
-        valid_device = device
+        valid_track_ref = _resolve_ref(track_ref)
+        valid_device_ref = _resolve_ref(device_ref)
         for validator in active_validators:
-            valid_track, valid_device = validator(valid_track, valid_device)
+            valid_track_ref, valid_device_ref = validator(valid_track_ref, valid_device_ref)
         client = get_client(ctx)
-        return fn(client, valid_track, valid_device)
+        return fn(client, valid_track_ref, valid_device_ref)
 
-    execute_command(
-        ctx,
-        command=command_name,
-        args={"track": track, "device": device},
-        action=_run,
-    )
+    execute_kwargs: dict[str, object] = {
+        "command": command_name,
+        "args": {
+            "track_ref": None if callable(track_ref) else track_ref,
+            "device_ref": None if callable(device_ref) else device_ref,
+        },
+        "action": _run,
+    }
+    if callable(track_ref) or callable(device_ref):
+        execute_kwargs["resolved_args"] = lambda: {
+            "track_ref": _resolve_ref(track_ref),
+            "device_ref": _resolve_ref(device_ref),
+        }
+    execute_command(ctx, **execute_kwargs)
 
 
 @synth_app.command("find")
@@ -102,17 +125,37 @@ def synth_find(
 @parameters_app.command("list")
 def synth_parameters_list(
     ctx: typer.Context,
-    track: TrackArgument,
-    device: DeviceArgument,
+    track_index: TrackIndexOption = None,
+    track_name: TrackNameOption = None,
+    selected_track: SelectedTrackOption = False,
+    track_query: TrackQueryOption = None,
+    track_ref: TrackStableRefOption = None,
+    device_index: DeviceIndexOption = None,
+    device_name: DeviceNameOption = None,
+    selected_device: SelectedDeviceOption = False,
+    device_query: DeviceQueryOption = None,
+    device_ref: DeviceStableRefOption = None,
 ) -> None:
     run_track_device_command(
         ctx,
         command_name="synth parameters list",
-        track=track,
-        device=device,
-        fn=lambda client, valid_track, valid_device: client.list_synth_parameters(
-            track=valid_track,
-            device=valid_device,
+        track_ref=lambda: build_track_ref(
+            track_index=track_index,
+            track_name=track_name,
+            selected_track=selected_track,
+            track_query=track_query,
+            track_ref=track_ref,
+        ),
+        device_ref=lambda: build_device_ref(
+            device_index=device_index,
+            device_name=device_name,
+            selected_device=selected_device,
+            device_query=device_query,
+            device_ref=device_ref,
+        ),
+        fn=lambda client, resolved_track_ref, resolved_device_ref: client.list_synth_parameters(
+            track_ref=resolved_track_ref,
+            device_ref=resolved_device_ref,
         ),
     )
 
@@ -120,26 +163,73 @@ def synth_parameters_list(
 @parameter_app.command("set")
 def synth_parameter_set(
     ctx: typer.Context,
-    track: TrackArgument,
-    device: DeviceArgument,
-    parameter: ParameterArgument,
     value: Annotated[float, typer.Argument(help="Target parameter value")],
+    track_index: TrackIndexOption = None,
+    track_name: TrackNameOption = None,
+    selected_track: SelectedTrackOption = False,
+    track_query: TrackQueryOption = None,
+    track_ref: TrackStableRefOption = None,
+    device_index: DeviceIndexOption = None,
+    device_name: DeviceNameOption = None,
+    selected_device: SelectedDeviceOption = False,
+    device_query: DeviceQueryOption = None,
+    device_ref: DeviceStableRefOption = None,
+    parameter_index: ParameterIndexOption = None,
+    parameter_name: ParameterNameOption = None,
+    parameter_query: ParameterQueryOption = None,
+    parameter_key: ParameterKeyOption = None,
+    parameter_ref: ParameterStableRefOption = None,
 ) -> None:
+    def _resolved_refs() -> tuple[RefPayload, RefPayload, RefPayload]:
+        return (
+            build_track_ref(
+                track_index=track_index,
+                track_name=track_name,
+                selected_track=selected_track,
+                track_query=track_query,
+                track_ref=track_ref,
+            ),
+            build_device_ref(
+                device_index=device_index,
+                device_name=device_name,
+                selected_device=selected_device,
+                device_query=device_query,
+                device_ref=device_ref,
+            ),
+            build_parameter_ref(
+                parameter_index=parameter_index,
+                parameter_name=parameter_name,
+                parameter_query=parameter_query,
+                parameter_key=parameter_key,
+                parameter_ref=parameter_ref,
+            ),
+        )
+
     def _run() -> dict[str, object]:
-        valid_track, valid_device = require_track_and_device(track, device)
-        valid_parameter = _require_synth_parameter_index(parameter)
+        resolved_track_ref, resolved_device_ref, resolved_parameter_ref = _resolved_refs()
         client = get_client(ctx)
         return client.set_synth_parameter_safe(
-            track=valid_track,
-            device=valid_device,
-            parameter=valid_parameter,
+            track_ref=resolved_track_ref,
+            device_ref=resolved_device_ref,
+            parameter_ref=resolved_parameter_ref,
             value=value,
         )
 
     execute_command(
         ctx,
         command="synth parameter set",
-        args={"track": track, "device": device, "parameter": parameter, "value": value},
+        args={
+            "track_ref": None,
+            "device_ref": None,
+            "parameter_ref": None,
+            "value": value,
+        },
+        resolved_args=lambda: {
+            "track_ref": _resolved_refs()[0],
+            "device_ref": _resolved_refs()[1],
+            "parameter_ref": _resolved_refs()[2],
+            "value": value,
+        },
         action=_run,
     )
 
@@ -147,17 +237,37 @@ def synth_parameter_set(
 @synth_app.command("observe")
 def synth_observe(
     ctx: typer.Context,
-    track: TrackArgument,
-    device: DeviceArgument,
+    track_index: TrackIndexOption = None,
+    track_name: TrackNameOption = None,
+    selected_track: SelectedTrackOption = False,
+    track_query: TrackQueryOption = None,
+    track_ref: TrackStableRefOption = None,
+    device_index: DeviceIndexOption = None,
+    device_name: DeviceNameOption = None,
+    selected_device: SelectedDeviceOption = False,
+    device_query: DeviceQueryOption = None,
+    device_ref: DeviceStableRefOption = None,
 ) -> None:
     run_track_device_command(
         ctx,
         command_name="synth observe",
-        track=track,
-        device=device,
-        fn=lambda client, valid_track, valid_device: client.observe_synth_parameters(
-            track=valid_track,
-            device=valid_device,
+        track_ref=lambda: build_track_ref(
+            track_index=track_index,
+            track_name=track_name,
+            selected_track=selected_track,
+            track_query=track_query,
+            track_ref=track_ref,
+        ),
+        device_ref=lambda: build_device_ref(
+            device_index=device_index,
+            device_name=device_name,
+            selected_device=selected_device,
+            device_query=device_query,
+            device_ref=device_ref,
+        ),
+        fn=lambda client, resolved_track_ref, resolved_device_ref: client.observe_synth_parameters(
+            track_ref=resolved_track_ref,
+            device_ref=resolved_device_ref,
         ),
     )
 
@@ -184,49 +294,111 @@ def _build_standard_synth_app(synth_type: str) -> typer.Typer:
     @standard_app.command("set")
     def standard_set(
         ctx: typer.Context,
-        track: TrackArgument,
-        device: DeviceArgument,
-        key: Annotated[str, typer.Argument(help="Stable synth key")],
         value: Annotated[float, typer.Argument(help="Target parameter value")],
+        track_index: TrackIndexOption = None,
+        track_name: TrackNameOption = None,
+        selected_track: SelectedTrackOption = False,
+        track_query: TrackQueryOption = None,
+        track_ref: TrackStableRefOption = None,
+        device_index: DeviceIndexOption = None,
+        device_name: DeviceNameOption = None,
+        selected_device: SelectedDeviceOption = False,
+        device_query: DeviceQueryOption = None,
+        device_ref: DeviceStableRefOption = None,
+        parameter_key: ParameterKeyOption = None,
     ) -> None:
-        def _run() -> dict[str, object]:
-            valid_track, valid_device = require_track_and_device(track, device)
-            valid_key = require_non_empty_string(
-                "key",
-                key,
-                hint="Pass a non-empty stable synth key.",
+        def _resolved_refs() -> tuple[RefPayload, RefPayload, RefPayload]:
+            return (
+                build_track_ref(
+                    track_index=track_index,
+                    track_name=track_name,
+                    selected_track=selected_track,
+                    track_query=track_query,
+                    track_ref=track_ref,
+                ),
+                build_device_ref(
+                    device_index=device_index,
+                    device_name=device_name,
+                    selected_device=selected_device,
+                    device_query=device_query,
+                    device_ref=device_ref,
+                ),
+                build_parameter_ref(
+                    parameter_index=None,
+                    parameter_name=None,
+                    parameter_query=None,
+                    parameter_key=parameter_key,
+                    parameter_ref=None,
+                ),
             )
+
+        def _run() -> dict[str, object]:
+            resolved_track_ref, resolved_device_ref, resolved_parameter_ref = _resolved_refs()
             client = get_client(ctx)
             return client.set_standard_synth_parameter_safe(
                 synth_type=synth_type,
-                track=valid_track,
-                device=valid_device,
-                key=valid_key,
+                track_ref=resolved_track_ref,
+                device_ref=resolved_device_ref,
+                parameter_ref=resolved_parameter_ref,
+                key=str(resolved_parameter_ref["key"]),
                 value=value,
             )
 
         execute_command(
             ctx,
             command=f"synth {synth_type} set",
-            args={"track": track, "device": device, "key": key, "value": value},
+            args={
+                "track_ref": None,
+                "device_ref": None,
+                "parameter_ref": None,
+                "value": value,
+            },
+            resolved_args=lambda: {
+                "track_ref": _resolved_refs()[0],
+                "device_ref": _resolved_refs()[1],
+                "parameter_ref": _resolved_refs()[2],
+                "value": value,
+            },
             action=_run,
         )
 
     @standard_app.command("observe")
     def standard_observe(
         ctx: typer.Context,
-        track: TrackArgument,
-        device: DeviceArgument,
+        track_index: TrackIndexOption = None,
+        track_name: TrackNameOption = None,
+        selected_track: SelectedTrackOption = False,
+        track_query: TrackQueryOption = None,
+        track_ref: TrackStableRefOption = None,
+        device_index: DeviceIndexOption = None,
+        device_name: DeviceNameOption = None,
+        selected_device: SelectedDeviceOption = False,
+        device_query: DeviceQueryOption = None,
+        device_ref: DeviceStableRefOption = None,
     ) -> None:
         run_track_device_command(
             ctx,
             command_name=f"synth {synth_type} observe",
-            track=track,
-            device=device,
-            fn=lambda client, valid_track, valid_device: client.observe_standard_synth_state(
-                synth_type=synth_type,
-                track=valid_track,
-                device=valid_device,
+            track_ref=lambda: build_track_ref(
+                track_index=track_index,
+                track_name=track_name,
+                selected_track=selected_track,
+                track_query=track_query,
+                track_ref=track_ref,
+            ),
+            device_ref=lambda: build_device_ref(
+                device_index=device_index,
+                device_name=device_name,
+                selected_device=selected_device,
+                device_query=device_query,
+                device_ref=device_ref,
+            ),
+            fn=lambda client, resolved_track_ref, resolved_device_ref: (
+                client.observe_standard_synth_state(
+                    synth_type=synth_type,
+                    track_ref=resolved_track_ref,
+                    device_ref=resolved_device_ref,
+                )
             ),
         )
 

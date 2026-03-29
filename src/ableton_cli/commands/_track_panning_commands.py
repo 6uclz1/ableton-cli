@@ -1,12 +1,20 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from typing import Annotated
 
 import typer
 
-from ._track_shared import PanningValueArgument, TrackArgument
+from ..refs import (
+    SelectedTrackOption,
+    TrackIndexOption,
+    TrackNameOption,
+    TrackQueryOption,
+    TrackStableRefOption,
+    build_track_ref,
+)
 from ._track_specs import TrackCommandSpec, TrackValueCommandSpec
-from ._validation import require_track_and_pan
+from ._validation import require_pan_value
 
 PANNING_GET_SPEC = TrackCommandSpec(
     command_name="track panning get",
@@ -16,7 +24,7 @@ PANNING_GET_SPEC = TrackCommandSpec(
 PANNING_SET_SPEC = TrackValueCommandSpec[float](
     command_name="track panning set",
     client_method="track_panning_set",
-    validators=(require_track_and_pan,),
+    validators=(require_pan_value,),
 )
 
 
@@ -29,23 +37,43 @@ def register_commands(
     @panning_app.command("get")
     def panning_get(
         ctx: typer.Context,
-        track: TrackArgument,
+        track_index: TrackIndexOption = None,
+        track_name: TrackNameOption = None,
+        selected_track: SelectedTrackOption = False,
+        track_query: TrackQueryOption = None,
+        track_ref: TrackStableRefOption = None,
     ) -> None:
         run_track_command_spec(
             ctx,
             spec=PANNING_GET_SPEC,
-            track=track,
+            track_ref=lambda: build_track_ref(
+                track_index=track_index,
+                track_name=track_name,
+                selected_track=selected_track,
+                track_query=track_query,
+                track_ref=track_ref,
+            ),
         )
 
     @panning_app.command("set")
     def panning_set(
         ctx: typer.Context,
-        track: TrackArgument,
-        value: PanningValueArgument,
+        value: Annotated[float, typer.Argument(help="Panning value in [-1.0, 1.0]")],
+        track_index: TrackIndexOption = None,
+        track_name: TrackNameOption = None,
+        selected_track: SelectedTrackOption = False,
+        track_query: TrackQueryOption = None,
+        track_ref: TrackStableRefOption = None,
     ) -> None:
         run_track_value_command_spec(
             ctx,
             spec=PANNING_SET_SPEC,
-            track=track,
+            track_ref=lambda: build_track_ref(
+                track_index=track_index,
+                track_name=track_name,
+                selected_track=selected_track,
+                track_query=track_query,
+                track_ref=track_ref,
+            ),
             value=value,
         )

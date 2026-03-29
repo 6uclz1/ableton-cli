@@ -99,25 +99,31 @@ uv run ableton-cli arrangement from-session --scenes "0:24,1:48"
 ### Track
 
 ```bash
-uv run ableton-cli track info 0
-uv run ableton-cli track volume get 0
-uv run ableton-cli track volume set 0 0.7
-uv run ableton-cli track name set 0 "Lead Synth"
-uv run ableton-cli track mute get 0
-uv run ableton-cli track mute set 0 true
-uv run ableton-cli track solo get 0
-uv run ableton-cli track solo set 0 true
-uv run ableton-cli track arm get 0
-uv run ableton-cli track arm set 0 false
-uv run ableton-cli track panning get 0
-uv run ableton-cli track panning set 0 -- -0.25
-uv run ableton-cli track send get 0 1
-uv run ableton-cli track send set 0 1 0.6
-uv run ableton-cli track routing input get 0
-uv run ableton-cli track routing input set 0 --type Ext.\ In --channel 1/2
-uv run ableton-cli track routing output get 0
-uv run ableton-cli track routing output set 0 --type Master --channel 3/4
+uv run ableton-cli track info --track-index 0
+uv run ableton-cli track volume get --track-index 0
+uv run ableton-cli track volume set 0.7 --track-index 0
+uv run ableton-cli track name set "Lead Synth" --track-index 0
+uv run ableton-cli track mute get --track-index 0
+uv run ableton-cli track mute set true --track-index 0
+uv run ableton-cli track solo get --track-index 0
+uv run ableton-cli track solo set true --track-index 0
+uv run ableton-cli track arm get --track-index 0
+uv run ableton-cli track arm set false --track-index 0
+uv run ableton-cli track panning get --track-index 0
+uv run ableton-cli track panning set -- -0.25 --track-index 0
+uv run ableton-cli track send get 1 --track-index 0
+uv run ableton-cli track send set 1 0.6 --track-index 0
+uv run ableton-cli track routing input get --selected-track
+uv run ableton-cli track routing input set --type Ext.\ In --channel 1/2 --track-index 0
+uv run ableton-cli track routing output get --track-index 0
+uv run ableton-cli track routing output set --type Master --channel 3/4 --track-index 0
 ```
+
+Ref-aware commands use selector flags, not positional indexes.
+Track selectors: `--track-index`, `--track-name`, `--selected-track`, `--track-query`, `--track-ref`.
+Device selectors: `--device-index`, `--device-name`, `--selected-device`, `--device-query`, `--device-ref`.
+Parameter selectors: `--parameter-index`, `--parameter-name`, `--parameter-query`, `--parameter-key`, `--parameter-ref`.
+Reuse `stable_ref` values emitted by `tracks list`, `track info`, synth/effect finds, and parameter listings when you need an exact session-local target.
 
 ### Return Track
 
@@ -216,7 +222,7 @@ echo '{"id":"req-1","steps":[{"name":"song_info","args":{}}]}' | uv run ableton-
 ### Device
 
 ```bash
-uv run ableton-cli device parameter set 0 0 0 0.25
+uv run ableton-cli device parameter set 0.25 --track-index 0 --device-index 0 --parameter-index 0
 ```
 
 ### Synth
@@ -224,18 +230,18 @@ uv run ableton-cli device parameter set 0 0 0 0.25
 ```bash
 uv run ableton-cli synth find
 uv run ableton-cli synth find --track 0 --type wavetable
-uv run ableton-cli synth parameters list 0 0
-uv run ableton-cli synth parameter set 0 0 0 0.5
-uv run ableton-cli synth observe 0 0
+uv run ableton-cli synth parameters list --track-index 0 --device-index 0
+uv run ableton-cli synth parameter set 0.5 --track-index 0 --device-index 0 --parameter-index 0
+uv run ableton-cli synth observe --track-index 0 --device-index 0
 uv run ableton-cli synth wavetable keys
-uv run ableton-cli synth wavetable set 0 0 filter_cutoff 0.6
-uv run ableton-cli synth wavetable observe 0 0
+uv run ableton-cli synth wavetable set 0.6 --track-index 0 --device-index 0 --parameter-key filter_cutoff
+uv run ableton-cli synth wavetable observe --track-index 0 --device-index 0
 uv run ableton-cli synth drift keys
-uv run ableton-cli synth drift set 0 0 drift_amount 0.4
-uv run ableton-cli synth drift observe 0 0
+uv run ableton-cli synth drift set 0.4 --track-index 0 --device-index 0 --parameter-key drift_amount
+uv run ableton-cli synth drift observe --track-index 0 --device-index 0
 uv run ableton-cli synth meld keys
-uv run ableton-cli synth meld set 0 0 spread_amount 0.3
-uv run ableton-cli synth meld observe 0 0
+uv run ableton-cli synth meld set 0.3 --track-index 0 --device-index 0 --parameter-key spread_amount
+uv run ableton-cli synth meld observe --track-index 0 --device-index 0
 ```
 
 ### Effect
@@ -243,16 +249,16 @@ uv run ableton-cli synth meld observe 0 0
 ```bash
 uv run ableton-cli effect find
 uv run ableton-cli effect find --track 0 --type eq8
-uv run ableton-cli effect parameters list 0 0
-uv run ableton-cli effect parameter set 0 0 0 0.5
-uv run ableton-cli effect parameter set 0 0 7 -- -2.0
-uv run ableton-cli effect observe 0 0
+uv run ableton-cli effect parameters list --track-index 0 --device-index 0
+uv run ableton-cli effect parameter set 0.5 --track-index 0 --device-index 0 --parameter-index 0
+uv run ableton-cli effect parameter set -- -2.0 --track-index 0 --device-index 0 --parameter-index 7
+uv run ableton-cli effect observe --track-index 0 --device-index 0
 uv run ableton-cli effect eq8 keys
-uv run ableton-cli effect eq8 set 0 0 band1_freq 0.6
-uv run ableton-cli effect eq8 observe 0 0
+uv run ableton-cli effect eq8 set 0.6 --track-index 0 --device-index 0 --parameter-key band1_freq
+uv run ableton-cli effect eq8 observe --track-index 0 --device-index 0
 uv run ableton-cli effect limiter keys
-uv run ableton-cli effect limiter set 0 0 ceiling 0.4
-uv run ableton-cli effect limiter observe 0 0
+uv run ableton-cli effect limiter set 0.4 --track-index 0 --device-index 0 --parameter-key ceiling
+uv run ableton-cli effect limiter observe --track-index 0 --device-index 0
 uv run ableton-cli effect compressor keys
 uv run ableton-cli effect compressor set 0 0 ratio 0.5
 uv run ableton-cli effect compressor observe 0 0
@@ -282,14 +288,14 @@ uv run ableton-cli --show-completion
 ## Operational notes
 
 - For positional numeric arguments that begin with `-`, insert `--` before the value.
-  - Example: `uv run ableton-cli track panning set 0 -- -0.25`
-  - Example: `uv run ableton-cli effect parameter set 0 0 7 -- -2.0`
+  - Example: `uv run ableton-cli track panning set -- -0.25 --track-index 0`
+  - Example: `uv run ableton-cli effect parameter set -- -2.0 --track-index 0 --device-index 0 --parameter-index 7`
 - For low-latency repeated automation operations, prefer `uv run ableton-cli batch stream`.
 - Capability and compatibility checks are explicit through `uv run ableton-cli ping` and `uv run ableton-cli doctor`.
 - Standard wrapper commands (`synth <type> ...`, `effect <type> ...`) are strict and intentionally fail if required parameter names are missing.
   - If you get `Missing required standard ... keys`, use generic commands instead:
-    - `uv run ableton-cli --output json effect parameters list <track> <device>`
-    - `uv run ableton-cli --output json effect parameter set <track> <device> <parameter> <value>`
+    - `uv run ableton-cli --output json effect parameters list --track-index <track> --device-index <device>`
+    - `uv run ableton-cli --output json effect parameter set <value> --track-index <track> --device-index <device> --parameter-index <parameter>`
   - Use this path for locale/device-variant differences to avoid workflow stalls.
 
 ## Global options
@@ -354,7 +360,7 @@ uv run ableton-cli --output json ping
 - `song_save` -> `uv run ableton-cli --output json song save --path <als>`
 - `song_export_audio` -> `uv run ableton-cli --output json song export audio --path <wav>`
 - `get_session_info` -> `uv run ableton-cli --output json session info`
-- `get_track_info` -> `uv run ableton-cli --output json track info <track>`
+- `get_track_info` -> `uv run ableton-cli --output json track info --track-index <track>`
 - `play` -> `uv run ableton-cli --output json transport play`
 - `stop` -> `uv run ableton-cli --output json transport stop`
 - `arrangement_record_start` -> `uv run ableton-cli --output json arrangement record start`
@@ -367,26 +373,26 @@ uv run ableton-cli --output json ping
 - `create_midi_track` -> `uv run ableton-cli --output json tracks create midi [--index <index>]`
 - `create_audio_track` -> `uv run ableton-cli --output json tracks create audio [--index <index>]`
 - `tracks_delete` -> `uv run ableton-cli --output json tracks delete <track>`
-- `set_track_name` -> `uv run ableton-cli --output json track name set <track> <name>`
-- `set_track_volume` -> `uv run ableton-cli --output json track volume set <track> <value>`
-- `get_track_mute` -> `uv run ableton-cli --output json track mute get <track>`
-- `set_track_mute` -> `uv run ableton-cli --output json track mute set <track> <value>`
-- `get_track_solo` -> `uv run ableton-cli --output json track solo get <track>`
-- `set_track_solo` -> `uv run ableton-cli --output json track solo set <track> <value>`
-- `get_track_arm` -> `uv run ableton-cli --output json track arm get <track>`
-- `set_track_arm` -> `uv run ableton-cli --output json track arm set <track> <value>`
-- `get_track_panning` -> `uv run ableton-cli --output json track panning get <track>`
-- `set_track_panning` -> `uv run ableton-cli --output json track panning set <track> <value>`
-- `get_track_send` -> `uv run ableton-cli --output json track send get <track> <send>`
-- `set_track_send` -> `uv run ableton-cli --output json track send set <track> <send> <value>`
+- `set_track_name` -> `uv run ableton-cli --output json track name set <name> --track-index <track>`
+- `set_track_volume` -> `uv run ableton-cli --output json track volume set <value> --track-index <track>`
+- `get_track_mute` -> `uv run ableton-cli --output json track mute get --track-index <track>`
+- `set_track_mute` -> `uv run ableton-cli --output json track mute set <value> --track-index <track>`
+- `get_track_solo` -> `uv run ableton-cli --output json track solo get --track-index <track>`
+- `set_track_solo` -> `uv run ableton-cli --output json track solo set <value> --track-index <track>`
+- `get_track_arm` -> `uv run ableton-cli --output json track arm get --track-index <track>`
+- `set_track_arm` -> `uv run ableton-cli --output json track arm set <value> --track-index <track>`
+- `get_track_panning` -> `uv run ableton-cli --output json track panning get --track-index <track>`
+- `set_track_panning` -> `uv run ableton-cli --output json track panning set <value> --track-index <track>`
+- `get_track_send` -> `uv run ableton-cli --output json track send get <send> --track-index <track>`
+- `set_track_send` -> `uv run ableton-cli --output json track send set <send> <value> --track-index <track>`
 - `list_return_tracks` -> `uv run ableton-cli --output json return-tracks list`
 - `set_return_track_volume` -> `uv run ableton-cli --output json return-track volume set <return-track> <value>`
 - `get_master_info` -> `uv run ableton-cli --output json master info`
 - `list_master_devices` -> `uv run ableton-cli --output json master devices list`
 - `set_mixer_crossfader` -> `uv run ableton-cli --output json mixer crossfader set <value>`
 - `set_mixer_cue_routing` -> `uv run ableton-cli --output json mixer cue-routing set <routing>`
-- `get_track_routing_input` -> `uv run ableton-cli --output json track routing input get <track>`
-- `set_track_routing_output` -> `uv run ableton-cli --output json track routing output set <track> --type <routing-type> --channel <routing-channel>`
+- `get_track_routing_input` -> `uv run ableton-cli --output json track routing input get --track-index <track>`
+- `set_track_routing_output` -> `uv run ableton-cli --output json track routing output set --track-index <track> --type <routing-type> --channel <routing-channel>`
 - `create_clip` -> `uv run ableton-cli --output json clip create <track> <clip> --length <beats>`
 - `add_notes_to_clip` -> `uv run ableton-cli --output json clip notes add <track> <clip> (--notes-json '<json-array>' | --notes-file <path>)`
 - `get_clip_notes` -> `uv run ableton-cli --output json clip notes get <track> <clip> [--start-time <beats>] [--end-time <beats>] [--pitch <midi>]`
@@ -417,21 +423,21 @@ uv run ableton-cli --output json ping
 - `search_browser_items` -> `uv run ableton-cli --output json browser search <query> [--path <path>] [--item-type <all,folder,device,loadable>] [--limit <n>] [--offset <n>] [--exact] [--case-sensitive]`
 - `load_instrument_or_effect` -> `uv run ableton-cli --output json browser load <track> <target>`
 - `load_drum_kit` -> `uv run ableton-cli --output json browser load-drum-kit <track> <rack_uri> (--kit-uri <uri> | --kit-path <path>)`
-- `set_device_parameter` -> `uv run ableton-cli --output json device parameter set <track> <device> <parameter> <value>`
+- `set_device_parameter` -> `uv run ableton-cli --output json device parameter set <value> --track-index <track> --device-index <device> --parameter-index <parameter>`
 - `find_synth_devices` -> `uv run ableton-cli --output json synth find [--track <track>] [--type <wavetable|drift|meld>]`
-- `list_synth_parameters` -> `uv run ableton-cli --output json synth parameters list <track> <device>`
-- `set_synth_parameter_safe` -> `uv run ableton-cli --output json synth parameter set <track> <device> <parameter> <value>`
-- `observe_synth_parameters` -> `uv run ableton-cli --output json synth observe <track> <device>`
+- `list_synth_parameters` -> `uv run ableton-cli --output json synth parameters list --track-index <track> --device-index <device>`
+- `set_synth_parameter_safe` -> `uv run ableton-cli --output json synth parameter set <value> --track-index <track> --device-index <device> --parameter-index <parameter>`
+- `observe_synth_parameters` -> `uv run ableton-cli --output json synth observe --track-index <track> --device-index <device>`
 - `list_standard_synth_keys` -> `uv run ableton-cli --output json synth <wavetable|drift|meld> keys`
-- `set_standard_synth_parameter_safe` -> `uv run ableton-cli --output json synth <wavetable|drift|meld> set <track> <device> <key> <value>`
-- `observe_standard_synth_state` -> `uv run ableton-cli --output json synth <wavetable|drift|meld> observe <track> <device>`
+- `set_standard_synth_parameter_safe` -> `uv run ableton-cli --output json synth <wavetable|drift|meld> set <value> --track-index <track> --device-index <device> --parameter-key <key>`
+- `observe_standard_synth_state` -> `uv run ableton-cli --output json synth <wavetable|drift|meld> observe --track-index <track> --device-index <device>`
 - `find_effect_devices` -> `uv run ableton-cli --output json effect find [--track <track>] [--type <eq8|limiter|compressor|auto_filter|reverb|utility>]`
-- `list_effect_parameters` -> `uv run ableton-cli --output json effect parameters list <track> <device>`
-- `set_effect_parameter_safe` -> `uv run ableton-cli --output json effect parameter set <track> <device> <parameter> <value>`
-- `observe_effect_parameters` -> `uv run ableton-cli --output json effect observe <track> <device>`
+- `list_effect_parameters` -> `uv run ableton-cli --output json effect parameters list --track-index <track> --device-index <device>`
+- `set_effect_parameter_safe` -> `uv run ableton-cli --output json effect parameter set <value> --track-index <track> --device-index <device> --parameter-index <parameter>`
+- `observe_effect_parameters` -> `uv run ableton-cli --output json effect observe --track-index <track> --device-index <device>`
 - `list_standard_effect_keys` -> `uv run ableton-cli --output json effect <eq8|limiter|compressor|auto-filter|reverb|utility> keys`
-- `set_standard_effect_parameter_safe` -> `uv run ableton-cli --output json effect <eq8|limiter|compressor|auto-filter|reverb|utility> set <track> <device> <key> <value>`
-- `observe_standard_effect_state` -> `uv run ableton-cli --output json effect <eq8|limiter|compressor|auto-filter|reverb|utility> observe <track> <device>`
+- `set_standard_effect_parameter_safe` -> `uv run ableton-cli --output json effect <eq8|limiter|compressor|auto-filter|reverb|utility> set <value> --track-index <track> --device-index <device> --parameter-key <key>`
+- `observe_standard_effect_state` -> `uv run ableton-cli --output json effect <eq8|limiter|compressor|auto-filter|reverb|utility> observe --track-index <track> --device-index <device>`
 - `execute_batch` -> `uv run ableton-cli --output json batch run (--steps-file <path> | --steps-json '<json>' | --steps-stdin)`
 
 ## Examples

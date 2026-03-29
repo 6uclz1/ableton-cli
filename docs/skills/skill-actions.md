@@ -12,7 +12,7 @@ Stable action names and CLI mappings for automation wrappers.
 | `song_save` | `uv run ableton-cli --output json song save --path <als>` | Save the current Ableton Set to a target path when supported. |
 | `song_export_audio` | `uv run ableton-cli --output json song export audio --path <wav>` | Export session audio to a target path when supported. |
 | `get_session_info` | `uv run ableton-cli --output json session info` | Read session view state and structure information. |
-| `get_track_info` | `uv run ableton-cli --output json track info <track>` | Read one track details by index. |
+| `get_track_info` | `uv run ableton-cli --output json track info --track-index <track>` | Read one track details by selector. |
 | `play` | `uv run ableton-cli --output json transport play` | Start transport playback. |
 | `stop` | `uv run ableton-cli --output json transport stop` | Stop transport playback. |
 | `arrangement_record_start` | `uv run ableton-cli --output json arrangement record start` | Start arrangement recording when supported by Live API. |
@@ -25,26 +25,26 @@ Stable action names and CLI mappings for automation wrappers.
 | `create_midi_track` | `uv run ableton-cli --output json tracks create midi [--index <index>]` | Insert a MIDI track at an index or append. |
 | `create_audio_track` | `uv run ableton-cli --output json tracks create audio [--index <index>]` | Insert an audio track at an index or append. |
 | `tracks_delete` | `uv run ableton-cli --output json tracks delete <track>` | Delete a track by index when supported by Live API. |
-| `set_track_name` | `uv run ableton-cli --output json track name set <track> <name>` | Rename a track. |
-| `set_track_volume` | `uv run ableton-cli --output json track volume set <track> <value>` | Set track volume in range 0.0 to 1.0. |
-| `get_track_mute` | `uv run ableton-cli --output json track mute get <track>` | Read track mute state. |
-| `set_track_mute` | `uv run ableton-cli --output json track mute set <track> <value>` | Update track mute state. |
-| `get_track_solo` | `uv run ableton-cli --output json track solo get <track>` | Read track solo state. |
-| `set_track_solo` | `uv run ableton-cli --output json track solo set <track> <value>` | Update track solo state. |
-| `get_track_arm` | `uv run ableton-cli --output json track arm get <track>` | Read track arm state. |
-| `set_track_arm` | `uv run ableton-cli --output json track arm set <track> <value>` | Update track arm state. |
-| `get_track_panning` | `uv run ableton-cli --output json track panning get <track>` | Read track panning value. |
-| `set_track_panning` | `uv run ableton-cli --output json track panning set <track> <value>` | Update track panning in range -1.0 to 1.0. |
-| `get_track_send` | `uv run ableton-cli --output json track send get <track> <send>` | Read one track send level by 0-based send index. |
-| `set_track_send` | `uv run ableton-cli --output json track send set <track> <send> <value>` | Update one track send level in range 0.0 to 1.0. |
+| `set_track_name` | `uv run ableton-cli --output json track name set <name> --track-index <track>` | Rename a track. |
+| `set_track_volume` | `uv run ableton-cli --output json track volume set <value> --track-index <track>` | Set track volume in range 0.0 to 1.0. |
+| `get_track_mute` | `uv run ableton-cli --output json track mute get --track-index <track>` | Read track mute state. |
+| `set_track_mute` | `uv run ableton-cli --output json track mute set <value> --track-index <track>` | Update track mute state. |
+| `get_track_solo` | `uv run ableton-cli --output json track solo get --track-index <track>` | Read track solo state. |
+| `set_track_solo` | `uv run ableton-cli --output json track solo set <value> --track-index <track>` | Update track solo state. |
+| `get_track_arm` | `uv run ableton-cli --output json track arm get --track-index <track>` | Read track arm state. |
+| `set_track_arm` | `uv run ableton-cli --output json track arm set <value> --track-index <track>` | Update track arm state. |
+| `get_track_panning` | `uv run ableton-cli --output json track panning get --track-index <track>` | Read track panning value. |
+| `set_track_panning` | `uv run ableton-cli --output json track panning set <value> --track-index <track>` | Update track panning in range -1.0 to 1.0. |
+| `get_track_send` | `uv run ableton-cli --output json track send get <send> --track-index <track>` | Read one track send level by 0-based send index. |
+| `set_track_send` | `uv run ableton-cli --output json track send set <send> <value> --track-index <track>` | Update one track send level in range 0.0 to 1.0. |
 | `list_return_tracks` | `uv run ableton-cli --output json return-tracks list` | List all return tracks and their mixer state. |
 | `set_return_track_volume` | `uv run ableton-cli --output json return-track volume set <return-track> <value>` | Update one return-track volume in range 0.0 to 1.0. |
 | `get_master_info` | `uv run ableton-cli --output json master info` | Read master track name, volume, and panning. |
 | `list_master_devices` | `uv run ableton-cli --output json master devices list` | List master track devices and parameters. |
 | `set_mixer_crossfader` | `uv run ableton-cli --output json mixer crossfader set <value>` | Update mixer crossfader position in range -1.0 to 1.0. |
 | `set_mixer_cue_routing` | `uv run ableton-cli --output json mixer cue-routing set <routing>` | Update cue routing using an exact routing name. |
-| `get_track_routing_input` | `uv run ableton-cli --output json track routing input get <track>` | Read current and available input routing for one track. |
-| `set_track_routing_output` | `uv run ableton-cli --output json track routing output set <track> --type <routing-type> --channel <routing-channel>` | Update output routing using exact type and channel names. |
+| `get_track_routing_input` | `uv run ableton-cli --output json track routing input get --track-index <track>` | Read current and available input routing for one track. |
+| `set_track_routing_output` | `uv run ableton-cli --output json track routing output set --track-index <track> --type <routing-type> --channel <routing-channel>` | Update output routing using exact type and channel names. |
 | `create_clip` | `uv run ableton-cli --output json clip create <track> <clip> --length <beats>` | Create a clip in a slot with a target beat length. |
 | `add_notes_to_clip` | `uv run ableton-cli --output json clip notes add <track> <clip> (--notes-json '<json-array>' | --notes-file <path>)` | Add MIDI notes to an existing clip slot. |
 | `get_clip_notes` | `uv run ableton-cli --output json clip notes get <track> <clip> [--start-time <beats>] [--end-time <beats>] [--pitch <midi>]` | Read clip notes with optional time/pitch filters. |
@@ -75,21 +75,21 @@ Stable action names and CLI mappings for automation wrappers.
 | `search_browser_items` | `uv run ableton-cli --output json browser search <query> [--path <path>] [--item-type <all,folder,device,loadable>] [--limit <n>] [--offset <n>] [--exact] [--case-sensitive]` | Search browser items by query across categories or a subtree path. |
 | `load_instrument_or_effect` | `uv run ableton-cli --output json browser load <track> <target>` | Load a browser item by URI or path target onto a track. |
 | `load_drum_kit` | `uv run ableton-cli --output json browser load-drum-kit <track> <rack_uri> (--kit-uri <uri> | --kit-path <path>)` | Load a drum rack and an explicitly selected kit onto a track. |
-| `set_device_parameter` | `uv run ableton-cli --output json device parameter set <track> <device> <parameter> <value>` | Set a device parameter value by index. |
+| `set_device_parameter` | `uv run ableton-cli --output json device parameter set <value> --track-index <track> --device-index <device> --parameter-index <parameter>` | Set a device parameter value by selector. |
 | `find_synth_devices` | `uv run ableton-cli --output json synth find [--track <track>] [--type <wavetable|drift|meld>]` | Find supported synth devices (Wavetable, Drift, Meld). |
-| `list_synth_parameters` | `uv run ableton-cli --output json synth parameters list <track> <device>` | List synth parameters with safety metadata (min/max/enabled/quantized). |
-| `set_synth_parameter_safe` | `uv run ableton-cli --output json synth parameter set <track> <device> <parameter> <value>` | Safely set a synth parameter by index with strict range validation. |
-| `observe_synth_parameters` | `uv run ableton-cli --output json synth observe <track> <device>` | Capture one-shot synth parameter snapshot. |
+| `list_synth_parameters` | `uv run ableton-cli --output json synth parameters list --track-index <track> --device-index <device>` | List synth parameters with safety metadata and stable refs. |
+| `set_synth_parameter_safe` | `uv run ableton-cli --output json synth parameter set <value> --track-index <track> --device-index <device> --parameter-index <parameter>` | Safely set a synth parameter by selector with strict range validation. |
+| `observe_synth_parameters` | `uv run ableton-cli --output json synth observe --track-index <track> --device-index <device>` | Capture one-shot synth parameter snapshot. |
 | `list_standard_synth_keys` | `uv run ableton-cli --output json synth <wavetable|drift|meld> keys` | List stable wrapper keys for a standard synth type. |
-| `set_standard_synth_parameter_safe` | `uv run ableton-cli --output json synth <wavetable|drift|meld> set <track> <device> <key> <value>` | Safely set a standard synth key resolved to native parameter index. |
-| `observe_standard_synth_state` | `uv run ableton-cli --output json synth <wavetable|drift|meld> observe <track> <device>` | Capture one-shot wrapper state snapshot keyed by stable synth keys. |
+| `set_standard_synth_parameter_safe` | `uv run ableton-cli --output json synth <wavetable|drift|meld> set <value> --track-index <track> --device-index <device> --parameter-key <key>` | Safely set a standard synth key resolved to native parameter index. |
+| `observe_standard_synth_state` | `uv run ableton-cli --output json synth <wavetable|drift|meld> observe --track-index <track> --device-index <device>` | Capture one-shot wrapper state snapshot keyed by stable synth keys. |
 | `find_effect_devices` | `uv run ableton-cli --output json effect find [--track <track>] [--type <eq8|limiter|compressor|auto_filter|reverb|utility>]` | Find supported effect devices (EQ Eight, Limiter, Compressor, Auto Filter, Reverb, Utility). |
-| `list_effect_parameters` | `uv run ableton-cli --output json effect parameters list <track> <device>` | List effect parameters with safety metadata (min/max/enabled/quantized). |
-| `set_effect_parameter_safe` | `uv run ableton-cli --output json effect parameter set <track> <device> <parameter> <value>` | Safely set an effect parameter by index with strict range validation. |
-| `observe_effect_parameters` | `uv run ableton-cli --output json effect observe <track> <device>` | Capture one-shot effect parameter snapshot. |
+| `list_effect_parameters` | `uv run ableton-cli --output json effect parameters list --track-index <track> --device-index <device>` | List effect parameters with safety metadata and stable refs. |
+| `set_effect_parameter_safe` | `uv run ableton-cli --output json effect parameter set <value> --track-index <track> --device-index <device> --parameter-index <parameter>` | Safely set an effect parameter by selector with strict range validation. |
+| `observe_effect_parameters` | `uv run ableton-cli --output json effect observe --track-index <track> --device-index <device>` | Capture one-shot effect parameter snapshot. |
 | `list_standard_effect_keys` | `uv run ableton-cli --output json effect <eq8|limiter|compressor|auto-filter|reverb|utility> keys` | List stable wrapper keys for a standard effect type. |
-| `set_standard_effect_parameter_safe` | `uv run ableton-cli --output json effect <eq8|limiter|compressor|auto-filter|reverb|utility> set <track> <device> <key> <value>` | Safely set a standard effect key resolved to native parameter index. |
-| `observe_standard_effect_state` | `uv run ableton-cli --output json effect <eq8|limiter|compressor|auto-filter|reverb|utility> observe <track> <device>` | Capture one-shot wrapper state snapshot keyed by stable effect keys. |
+| `set_standard_effect_parameter_safe` | `uv run ableton-cli --output json effect <eq8|limiter|compressor|auto-filter|reverb|utility> set <value> --track-index <track> --device-index <device> --parameter-key <key>` | Safely set a standard effect key resolved to native parameter index. |
+| `observe_standard_effect_state` | `uv run ableton-cli --output json effect <eq8|limiter|compressor|auto-filter|reverb|utility> observe --track-index <track> --device-index <device>` | Capture one-shot wrapper state snapshot keyed by stable effect keys. |
 | `execute_batch` | `uv run ableton-cli --output json batch run (--steps-file <path> | --steps-json '<json>' | --steps-stdin)` | Execute multiple remote commands atomically from JSON input. |
 
 ## CLI-only commands (not stable actions)
@@ -104,7 +104,7 @@ Stable action names and CLI mappings for automation wrappers.
 - `uv run ableton-cli --protocol-version <n> ...`: Override config protocol version for one invocation.
 - `uv run ableton-cli transport toggle`: Toggle play and stop state.
 - `uv run ableton-cli transport tempo get`: Read current tempo only.
-- `uv run ableton-cli track volume get <track>`: Read current track volume only.
+- `uv run ableton-cli track volume get --track-index <track>`: Read current track volume only.
 - `uv run ableton-cli session snapshot`: Fetch song/session/tracks/scenes in one call.
 - `uv run ableton-cli session diff --from <snapshot-before.json> --to <snapshot-after.json>`: Compute deterministic added/removed/changed session deltas from two snapshots.
 - `uv run ableton-cli batch stream`: Execute one JSON request per stdin line and receive one JSON response line for low-latency repeated automation.
@@ -124,8 +124,10 @@ Operational note: verify the active Remote Script via `uv run ableton-cli --outp
 
 Operational note: run `uv run ableton-cli doctor` to validate protocol/capability integrity when compatibility issues are suspected.
 
-Operational note: when passing a negative positional number, use `--` before the value (for example, `track panning set 0 -- -0.25`, `effect parameter set 0 0 7 -- -2.0`).
+Operational note: ref-aware commands use selectors, not positional track/device/parameter indexes. Track selectors: `--track-index|--track-name|--selected-track|--track-query|--track-ref`. Device selectors: `--device-index|--device-name|--selected-device|--device-query|--device-ref`. Parameter selectors: `--parameter-index|--parameter-name|--parameter-query|--parameter-key|--parameter-ref`.
+
+Operational note: when passing a negative positional value, use `--` before the value (for example, `track panning set -- -0.25 --track-index 0`, `effect parameter set -- -2.0 --track-index 0 --device-index 0 --parameter-index 7`).
 
 Operational note: standard wrapper commands (`synth <type> ...`, `effect <type> ...`) intentionally fail if required parameter-name keys are missing. If you see `Missing required standard ... keys`, switch to generic indexed commands:
-- `uv run ableton-cli --output json effect parameters list <track> <device>`
-- `uv run ableton-cli --output json effect parameter set <track> <device> <parameter> <value>`
+- `uv run ableton-cli --output json effect parameters list --track-index <track> --device-index <device>`
+- `uv run ableton-cli --output json effect parameter set <value> --track-index <track> --device-index <device> --parameter-index <parameter>`

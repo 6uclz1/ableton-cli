@@ -6,6 +6,25 @@ from ableton_cli.capabilities import required_remote_commands
 from remote_script.AbletonCliRemote.command_backend import CommandError, dispatch_command
 
 
+def _track_selector(index: int) -> dict[str, object]:
+    return {"track_ref": {"mode": "index", "index": index}}
+
+
+def _device_selector(track: int, device: int) -> dict[str, object]:
+    return {
+        "track_ref": {"mode": "index", "index": track},
+        "device_ref": {"mode": "index", "index": device},
+    }
+
+
+def _parameter_selector(track: int, device: int, parameter: int) -> dict[str, object]:
+    return {
+        "track_ref": {"mode": "index", "index": track},
+        "device_ref": {"mode": "index", "index": device},
+        "parameter_ref": {"mode": "index", "index": parameter},
+    }
+
+
 class _BackendStub:
     def ping_info(self):  # noqa: ANN201
         return {
@@ -48,6 +67,22 @@ class _BackendStub:
 
     def song_export_audio(self, path: str):  # noqa: ANN201
         return {"exported": True, "path": path}
+
+    def resolve_track_ref(self, track_ref: dict[str, object]) -> int:
+        return int(track_ref["index"])
+
+    def resolve_device_ref(self, track: int, device_ref: dict[str, object]) -> int:  # noqa: ARG002
+        return int(device_ref["index"])
+
+    def resolve_parameter_ref(
+        self,
+        track: int,  # noqa: ARG002
+        device: int,  # noqa: ARG002
+        parameter_ref: dict[str, object],
+    ) -> int:
+        if parameter_ref["mode"] == "key":
+            return 0
+        return int(parameter_ref["index"])
 
     def get_track_info(self, track: int):  # noqa: ANN201
         return {"index": track}
@@ -1016,7 +1051,7 @@ def test_dispatch_calls_backend_for_device_parameter_set() -> None:
     result = dispatch_command(
         backend,
         "set_device_parameter",
-        {"track": 1, "device": 0, "parameter": 3, "value": 0.25},
+        {**_parameter_selector(1, 0, 3), "value": 0.25},
     )
     assert result == {"track": 1, "device": 0, "parameter": 3, "value": 0.25}
 
@@ -1032,17 +1067,17 @@ def test_dispatch_calls_backend_for_synth_foundation_commands() -> None:
     listed = dispatch_command(
         backend,
         "list_synth_parameters",
-        {"track": 0, "device": 1},
+        _device_selector(0, 1),
     )
     set_result = dispatch_command(
         backend,
         "set_synth_parameter_safe",
-        {"track": 0, "device": 1, "parameter": 0, "value": 0.75},
+        {**_parameter_selector(0, 1, 0), "value": 0.75},
     )
     observed = dispatch_command(
         backend,
         "observe_synth_parameters",
-        {"track": 0, "device": 1},
+        _device_selector(0, 1),
     )
 
     assert found["synth_type"] == "wavetable"
@@ -1065,16 +1100,15 @@ def test_dispatch_calls_backend_for_standard_synth_commands() -> None:
         "set_standard_synth_parameter_safe",
         {
             "synth_type": "wavetable",
-            "track": 0,
-            "device": 1,
-            "key": "filter_cutoff",
+            **_device_selector(0, 1),
+            "parameter_ref": {"mode": "key", "key": "filter_cutoff"},
             "value": 0.66,
         },
     )
     observed = dispatch_command(
         backend,
         "observe_standard_synth_state",
-        {"synth_type": "wavetable", "track": 0, "device": 1},
+        {"synth_type": "wavetable", **_device_selector(0, 1)},
     )
 
     assert keys == {
@@ -1098,17 +1132,17 @@ def test_dispatch_calls_backend_for_effect_foundation_commands() -> None:
     listed = dispatch_command(
         backend,
         "list_effect_parameters",
-        {"track": 0, "device": 2},
+        _device_selector(0, 2),
     )
     set_result = dispatch_command(
         backend,
         "set_effect_parameter_safe",
-        {"track": 0, "device": 2, "parameter": 0, "value": 0.75},
+        {**_parameter_selector(0, 2, 0), "value": 0.75},
     )
     observed = dispatch_command(
         backend,
         "observe_effect_parameters",
-        {"track": 0, "device": 2},
+        _device_selector(0, 2),
     )
 
     assert found["effect_type"] == "eq8"
@@ -1131,16 +1165,15 @@ def test_dispatch_calls_backend_for_standard_effect_commands() -> None:
         "set_standard_effect_parameter_safe",
         {
             "effect_type": "eq8",
-            "track": 0,
-            "device": 2,
-            "key": "band1_freq",
+            **_device_selector(0, 2),
+            "parameter_ref": {"mode": "key", "key": "band1_freq"},
             "value": 0.66,
         },
     )
     observed = dispatch_command(
         backend,
         "observe_standard_effect_state",
-        {"effect_type": "eq8", "track": 0, "device": 2},
+        {"effect_type": "eq8", **_device_selector(0, 2)},
     )
 
     assert keys == {
@@ -1475,7 +1508,7 @@ def test_dispatch_execute_batch_stops_on_first_failure() -> None:
             {
                 "steps": [
                     {"name": "tracks_list", "args": {}},
-                    {"name": "track_volume_set", "args": {"track": 0, "value": 99.0}},
+                    {"name": "track_volume_set", "args": {**_track_selector(0), "value": 99.0}},
                     {"name": "transport_play", "args": {}},
                 ]
             },
@@ -1490,15 +1523,15 @@ def test_dispatch_execute_batch_stops_on_first_failure() -> None:
 def test_dispatch_calls_backend_for_track_mixer_commands() -> None:
     backend = _BackendStub()
 
-    mute = dispatch_command(backend, "track_mute_set", {"track": 0, "value": True})
-    solo = dispatch_command(backend, "track_solo_get", {"track": 0})
-    arm = dispatch_command(backend, "track_arm_set", {"track": 0, "value": False})
-    panning = dispatch_command(backend, "track_panning_set", {"track": 0, "value": -0.25})
-    send_get = dispatch_command(backend, "track_send_get", {"track": 0, "send": 1})
+    mute = dispatch_command(backend, "track_mute_set", {**_track_selector(0), "value": True})
+    solo = dispatch_command(backend, "track_solo_get", _track_selector(0))
+    arm = dispatch_command(backend, "track_arm_set", {**_track_selector(0), "value": False})
+    panning = dispatch_command(backend, "track_panning_set", {**_track_selector(0), "value": -0.25})
+    send_get = dispatch_command(backend, "track_send_get", {**_track_selector(0), "send": 1})
     send_set = dispatch_command(
         backend,
         "track_send_set",
-        {"track": 0, "send": 1, "value": 0.8},
+        {**_track_selector(0), "send": 1, "value": 0.8},
     )
 
     assert mute == {"track": 0, "mute": True}
@@ -1543,11 +1576,11 @@ def test_dispatch_calls_backend_for_mixer_and_routing_commands() -> None:
     crossfader = dispatch_command(backend, "mixer_crossfader_set", {"value": 0.4})
     cue_volume = dispatch_command(backend, "mixer_cue_volume_get", {})
     cue_routing = dispatch_command(backend, "mixer_cue_routing_set", {"routing": "Ext. Out"})
-    input_routing = dispatch_command(backend, "track_routing_input_get", {"track": 0})
+    input_routing = dispatch_command(backend, "track_routing_input_get", _track_selector(0))
     output_routing = dispatch_command(
         backend,
         "track_routing_output_set",
-        {"track": 0, "routing_type": "Master", "routing_channel": "3/4"},
+        {**_track_selector(0), "routing_type": "Master", "routing_channel": "3/4"},
     )
 
     assert crossfader == {"value": 0.4}
@@ -1998,7 +2031,7 @@ def test_dispatch_rejects_unknown_command() -> None:
 def test_dispatch_rejects_invalid_volume() -> None:
     backend = _BackendStub()
     with pytest.raises(CommandError) as exc_info:
-        dispatch_command(backend, "track_volume_set", {"track": 0, "value": 1.5})
+        dispatch_command(backend, "track_volume_set", {**_track_selector(0), "value": 1.5})
 
     assert exc_info.value.code == "INVALID_ARGUMENT"
 
@@ -2017,7 +2050,12 @@ def test_dispatch_rejects_set_device_parameter_negative_device() -> None:
         dispatch_command(
             backend,
             "set_device_parameter",
-            {"track": 0, "device": -1, "parameter": 0, "value": 0.1},
+            {
+                "track_ref": {"mode": "index", "index": 0},
+                "device_ref": {"mode": "index", "index": -1},
+                "parameter_ref": {"mode": "index", "index": 0},
+                "value": 0.1,
+            },
         )
 
     assert exc_info.value.code == "INVALID_ARGUMENT"
@@ -2043,9 +2081,8 @@ def test_dispatch_rejects_set_standard_synth_parameter_empty_key() -> None:
             "set_standard_synth_parameter_safe",
             {
                 "synth_type": "wavetable",
-                "track": 0,
-                "device": 1,
-                "key": "   ",
+                **_device_selector(0, 1),
+                "parameter_ref": {"mode": "key", "key": "   "},
                 "value": 0.5,
             },
         )
@@ -2073,9 +2110,8 @@ def test_dispatch_rejects_set_standard_effect_parameter_empty_key() -> None:
             "set_standard_effect_parameter_safe",
             {
                 "effect_type": "eq8",
-                "track": 0,
-                "device": 2,
-                "key": "   ",
+                **_device_selector(0, 2),
+                "parameter_ref": {"mode": "key", "key": "   "},
                 "value": 0.5,
             },
         )
@@ -2322,7 +2358,7 @@ def test_dispatch_rejects_track_panning_out_of_range() -> None:
         dispatch_command(
             backend,
             "track_panning_set",
-            {"track": 0, "value": 1.1},
+            {**_track_selector(0), "value": 1.1},
         )
 
     assert exc_info.value.code == "INVALID_ARGUMENT"

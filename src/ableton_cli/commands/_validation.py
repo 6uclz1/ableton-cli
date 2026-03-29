@@ -143,6 +143,16 @@ def require_track_and_volume(track: int, value: float) -> tuple[int, float]:
     return valid_track, valid_value
 
 
+def require_volume_value(value: float) -> float:
+    return require_float_in_range(
+        "value",
+        value,
+        minimum=0.0,
+        maximum=1.0,
+        hint=VOLUME_VALUE_HINT,
+    )
+
+
 def require_track_and_pan(track: int, value: float) -> tuple[int, float]:
     valid_track = require_track_index(track)
     valid_value = require_float_in_range(
@@ -153,6 +163,16 @@ def require_track_and_pan(track: int, value: float) -> tuple[int, float]:
         hint=PAN_VALUE_HINT,
     )
     return valid_track, valid_value
+
+
+def require_pan_value(value: float) -> float:
+    return require_float_in_range(
+        "value",
+        value,
+        minimum=-1.0,
+        maximum=1.0,
+        hint=PAN_VALUE_HINT,
+    )
 
 
 def require_track_send(track: int, send: int) -> tuple[int, int]:

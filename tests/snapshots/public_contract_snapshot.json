@@ -1766,6 +1766,93 @@
     },
     "device parameter set": {
       "args": {
+        "additional_properties": false,
+        "properties": {
+          "device_ref": {
+            "additional_properties": false,
+            "properties": {
+              "index": {
+                "type": "integer"
+              },
+              "mode": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "query": {
+                "type": "string"
+              },
+              "stable_ref": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "mode"
+            ],
+            "type": "object"
+          },
+          "parameter_ref": {
+            "additional_properties": false,
+            "properties": {
+              "index": {
+                "type": "integer"
+              },
+              "key": {
+                "type": "string"
+              },
+              "mode": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "query": {
+                "type": "string"
+              },
+              "stable_ref": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "mode"
+            ],
+            "type": "object"
+          },
+          "track_ref": {
+            "additional_properties": false,
+            "properties": {
+              "index": {
+                "type": "integer"
+              },
+              "mode": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "query": {
+                "type": "string"
+              },
+              "stable_ref": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "mode"
+            ],
+            "type": "object"
+          },
+          "value": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "track_ref",
+          "device_ref",
+          "parameter_ref",
+          "value"
+        ],
         "type": "object"
       },
       "errors": {
@@ -1792,6 +1879,39 @@
         ]
       },
       "result": {
+        "additional_properties": false,
+        "properties": {
+          "device": {
+            "type": "integer"
+          },
+          "device_stable_ref": {
+            "type": "string"
+          },
+          "parameter": {
+            "type": "integer"
+          },
+          "parameter_stable_ref": {
+            "type": "string"
+          },
+          "track": {
+            "type": "integer"
+          },
+          "track_stable_ref": {
+            "type": "string"
+          },
+          "value": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "track",
+          "device",
+          "parameter",
+          "track_stable_ref",
+          "device_stable_ref",
+          "parameter_stable_ref",
+          "value"
+        ],
         "type": "object"
       },
       "side_effect": {
@@ -1903,6 +2023,61 @@
     },
     "effect auto-filter observe": {
       "args": {
+        "additional_properties": false,
+        "properties": {
+          "device_ref": {
+            "additional_properties": false,
+            "properties": {
+              "index": {
+                "type": "integer"
+              },
+              "mode": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "query": {
+                "type": "string"
+              },
+              "stable_ref": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "mode"
+            ],
+            "type": "object"
+          },
+          "track_ref": {
+            "additional_properties": false,
+            "properties": {
+              "index": {
+                "type": "integer"
+              },
+              "mode": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "query": {
+                "type": "string"
+              },
+              "stable_ref": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "mode"
+            ],
+            "type": "object"
+          }
+        },
+        "required": [
+          "track_ref",
+          "device_ref"
+        ],
         "type": "object"
       },
       "errors": {
@@ -1929,6 +2104,46 @@
         ]
       },
       "result": {
+        "additional_properties": false,
+        "properties": {
+          "device": {
+            "type": "integer"
+          },
+          "device_stable_ref": {
+            "type": "string"
+          },
+          "effect_type": {
+            "type": "string"
+          },
+          "key_count": {
+            "type": "integer"
+          },
+          "keys": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "state": {
+            "type": "object"
+          },
+          "track": {
+            "type": "integer"
+          },
+          "track_stable_ref": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "effect_type",
+          "track",
+          "device",
+          "track_stable_ref",
+          "device_stable_ref",
+          "key_count",
+          "keys",
+          "state"
+        ],
         "type": "object"
       },
       "side_effect": {
@@ -1939,6 +2154,93 @@
     },
     "effect auto-filter set": {
       "args": {
+        "additional_properties": false,
+        "properties": {
+          "device_ref": {
+            "additional_properties": false,
+            "properties": {
+              "index": {
+                "type": "integer"
+              },
+              "mode": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "query": {
+                "type": "string"
+              },
+              "stable_ref": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "mode"
+            ],
+            "type": "object"
+          },
+          "parameter_ref": {
+            "additional_properties": false,
+            "properties": {
+              "index": {
+                "type": "integer"
+              },
+              "key": {
+                "type": "string"
+              },
+              "mode": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "query": {
+                "type": "string"
+              },
+              "stable_ref": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "mode"
+            ],
+            "type": "object"
+          },
+          "track_ref": {
+            "additional_properties": false,
+            "properties": {
+              "index": {
+                "type": "integer"
+              },
+              "mode": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "query": {
+                "type": "string"
+              },
+              "stable_ref": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "mode"
+            ],
+            "type": "object"
+          },
+          "value": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "track_ref",
+          "device_ref",
+          "parameter_ref",
+          "value"
+        ],
         "type": "object"
       },
       "errors": {
@@ -1965,6 +2267,75 @@
         ]
       },
       "result": {
+        "additional_properties": false,
+        "properties": {
+          "after": {
+            "type": "number"
+          },
+          "before": {
+            "type": "number"
+          },
+          "detected_type": {
+            "type": "string"
+          },
+          "device": {
+            "type": "integer"
+          },
+          "device_stable_ref": {
+            "type": "string"
+          },
+          "effect_type": {
+            "type": "string"
+          },
+          "is_enabled": {
+            "type": "boolean"
+          },
+          "is_quantized": {
+            "type": "boolean"
+          },
+          "key": {
+            "type": "string"
+          },
+          "max": {
+            "type": "number"
+          },
+          "min": {
+            "type": "number"
+          },
+          "parameter": {
+            "type": "integer"
+          },
+          "parameter_stable_ref": {
+            "type": "string"
+          },
+          "resolved_parameter": {
+            "type": "integer"
+          },
+          "track": {
+            "type": "integer"
+          },
+          "track_stable_ref": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "track",
+          "device",
+          "parameter",
+          "track_stable_ref",
+          "device_stable_ref",
+          "parameter_stable_ref",
+          "before",
+          "after",
+          "min",
+          "max",
+          "is_enabled",
+          "is_quantized",
+          "detected_type",
+          "effect_type",
+          "key",
+          "resolved_parameter"
+        ],
         "type": "object"
       },
       "side_effect": {
@@ -2011,6 +2382,61 @@
     },
     "effect compressor observe": {
       "args": {
+        "additional_properties": false,
+        "properties": {
+          "device_ref": {
+            "additional_properties": false,
+            "properties": {
+              "index": {
+                "type": "integer"
+              },
+              "mode": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "query": {
+                "type": "string"
+              },
+              "stable_ref": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "mode"
+            ],
+            "type": "object"
+          },
+          "track_ref": {
+            "additional_properties": false,
+            "properties": {
+              "index": {
+                "type": "integer"
+              },
+              "mode": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "query": {
+                "type": "string"
+              },
+              "stable_ref": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "mode"
+            ],
+            "type": "object"
+          }
+        },
+        "required": [
+          "track_ref",
+          "device_ref"
+        ],
         "type": "object"
       },
       "errors": {
@@ -2037,6 +2463,46 @@
         ]
       },
       "result": {
+        "additional_properties": false,
+        "properties": {
+          "device": {
+            "type": "integer"
+          },
+          "device_stable_ref": {
+            "type": "string"
+          },
+          "effect_type": {
+            "type": "string"
+          },
+          "key_count": {
+            "type": "integer"
+          },
+          "keys": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "state": {
+            "type": "object"
+          },
+          "track": {
+            "type": "integer"
+          },
+          "track_stable_ref": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "effect_type",
+          "track",
+          "device",
+          "track_stable_ref",
+          "device_stable_ref",
+          "key_count",
+          "keys",
+          "state"
+        ],
         "type": "object"
       },
       "side_effect": {
@@ -2047,6 +2513,93 @@
     },
     "effect compressor set": {
       "args": {
+        "additional_properties": false,
+        "properties": {
+          "device_ref": {
+            "additional_properties": false,
+            "properties": {
+              "index": {
+                "type": "integer"
+              },
+              "mode": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "query": {
+                "type": "string"
+              },
+              "stable_ref": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "mode"
+            ],
+            "type": "object"
+          },
+          "parameter_ref": {
+            "additional_properties": false,
+            "properties": {
+              "index": {
+                "type": "integer"
+              },
+              "key": {
+                "type": "string"
+              },
+              "mode": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "query": {
+                "type": "string"
+              },
+              "stable_ref": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "mode"
+            ],
+            "type": "object"
+          },
+          "track_ref": {
+            "additional_properties": false,
+            "properties": {
+              "index": {
+                "type": "integer"
+              },
+              "mode": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "query": {
+                "type": "string"
+              },
+              "stable_ref": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "mode"
+            ],
+            "type": "object"
+          },
+          "value": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "track_ref",
+          "device_ref",
+          "parameter_ref",
+          "value"
+        ],
         "type": "object"
       },
       "errors": {
@@ -2073,6 +2626,75 @@
         ]
       },
       "result": {
+        "additional_properties": false,
+        "properties": {
+          "after": {
+            "type": "number"
+          },
+          "before": {
+            "type": "number"
+          },
+          "detected_type": {
+            "type": "string"
+          },
+          "device": {
+            "type": "integer"
+          },
+          "device_stable_ref": {
+            "type": "string"
+          },
+          "effect_type": {
+            "type": "string"
+          },
+          "is_enabled": {
+            "type": "boolean"
+          },
+          "is_quantized": {
+            "type": "boolean"
+          },
+          "key": {
+            "type": "string"
+          },
+          "max": {
+            "type": "number"
+          },
+          "min": {
+            "type": "number"
+          },
+          "parameter": {
+            "type": "integer"
+          },
+          "parameter_stable_ref": {
+            "type": "string"
+          },
+          "resolved_parameter": {
+            "type": "integer"
+          },
+          "track": {
+            "type": "integer"
+          },
+          "track_stable_ref": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "track",
+          "device",
+          "parameter",
+          "track_stable_ref",
+          "device_stable_ref",
+          "parameter_stable_ref",
+          "before",
+          "after",
+          "min",
+          "max",
+          "is_enabled",
+          "is_quantized",
+          "detected_type",
+          "effect_type",
+          "key",
+          "resolved_parameter"
+        ],
         "type": "object"
       },
       "side_effect": {
@@ -2119,6 +2741,61 @@
     },
     "effect eq8 observe": {
       "args": {
+        "additional_properties": false,
+        "properties": {
+          "device_ref": {
+            "additional_properties": false,
+            "properties": {
+              "index": {
+                "type": "integer"
+              },
+              "mode": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "query": {
+                "type": "string"
+              },
+              "stable_ref": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "mode"
+            ],
+            "type": "object"
+          },
+          "track_ref": {
+            "additional_properties": false,
+            "properties": {
+              "index": {
+                "type": "integer"
+              },
+              "mode": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "query": {
+                "type": "string"
+              },
+              "stable_ref": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "mode"
+            ],
+            "type": "object"
+          }
+        },
+        "required": [
+          "track_ref",
+          "device_ref"
+        ],
         "type": "object"
       },
       "errors": {
@@ -2145,6 +2822,46 @@
         ]
       },
       "result": {
+        "additional_properties": false,
+        "properties": {
+          "device": {
+            "type": "integer"
+          },
+          "device_stable_ref": {
+            "type": "string"
+          },
+          "effect_type": {
+            "type": "string"
+          },
+          "key_count": {
+            "type": "integer"
+          },
+          "keys": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "state": {
+            "type": "object"
+          },
+          "track": {
+            "type": "integer"
+          },
+          "track_stable_ref": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "effect_type",
+          "track",
+          "device",
+          "track_stable_ref",
+          "device_stable_ref",
+          "key_count",
+          "keys",
+          "state"
+        ],
         "type": "object"
       },
       "side_effect": {
@@ -2155,6 +2872,93 @@
     },
     "effect eq8 set": {
       "args": {
+        "additional_properties": false,
+        "properties": {
+          "device_ref": {
+            "additional_properties": false,
+            "properties": {
+              "index": {
+                "type": "integer"
+              },
+              "mode": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "query": {
+                "type": "string"
+              },
+              "stable_ref": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "mode"
+            ],
+            "type": "object"
+          },
+          "parameter_ref": {
+            "additional_properties": false,
+            "properties": {
+              "index": {
+                "type": "integer"
+              },
+              "key": {
+                "type": "string"
+              },
+              "mode": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "query": {
+                "type": "string"
+              },
+              "stable_ref": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "mode"
+            ],
+            "type": "object"
+          },
+          "track_ref": {
+            "additional_properties": false,
+            "properties": {
+              "index": {
+                "type": "integer"
+              },
+              "mode": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "query": {
+                "type": "string"
+              },
+              "stable_ref": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "mode"
+            ],
+            "type": "object"
+          },
+          "value": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "track_ref",
+          "device_ref",
+          "parameter_ref",
+          "value"
+        ],
         "type": "object"
       },
       "errors": {
@@ -2181,6 +2985,75 @@
         ]
       },
       "result": {
+        "additional_properties": false,
+        "properties": {
+          "after": {
+            "type": "number"
+          },
+          "before": {
+            "type": "number"
+          },
+          "detected_type": {
+            "type": "string"
+          },
+          "device": {
+            "type": "integer"
+          },
+          "device_stable_ref": {
+            "type": "string"
+          },
+          "effect_type": {
+            "type": "string"
+          },
+          "is_enabled": {
+            "type": "boolean"
+          },
+          "is_quantized": {
+            "type": "boolean"
+          },
+          "key": {
+            "type": "string"
+          },
+          "max": {
+            "type": "number"
+          },
+          "min": {
+            "type": "number"
+          },
+          "parameter": {
+            "type": "integer"
+          },
+          "parameter_stable_ref": {
+            "type": "string"
+          },
+          "resolved_parameter": {
+            "type": "integer"
+          },
+          "track": {
+            "type": "integer"
+          },
+          "track_stable_ref": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "track",
+          "device",
+          "parameter",
+          "track_stable_ref",
+          "device_stable_ref",
+          "parameter_stable_ref",
+          "before",
+          "after",
+          "min",
+          "max",
+          "is_enabled",
+          "is_quantized",
+          "detected_type",
+          "effect_type",
+          "key",
+          "resolved_parameter"
+        ],
         "type": "object"
       },
       "side_effect": {
@@ -2217,6 +3090,73 @@
         ]
       },
       "result": {
+        "additional_properties": false,
+        "properties": {
+          "count": {
+            "type": "integer"
+          },
+          "devices": {
+            "items": {
+              "additional_properties": false,
+              "properties": {
+                "class_name": {
+                  "type": "string"
+                },
+                "detected_type": {
+                  "type": "string"
+                },
+                "device": {
+                  "type": "integer"
+                },
+                "device_name": {
+                  "type": "string"
+                },
+                "stable_ref": {
+                  "type": "string"
+                },
+                "track": {
+                  "type": "integer"
+                },
+                "track_name": {
+                  "type": "string"
+                },
+                "track_stable_ref": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "track",
+                "device",
+                "track_stable_ref",
+                "stable_ref",
+                "track_name",
+                "device_name",
+                "class_name",
+                "detected_type"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "effect_type": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "track": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "track",
+          "effect_type",
+          "count",
+          "devices"
+        ],
         "type": "object"
       },
       "side_effect": {
@@ -2263,6 +3203,61 @@
     },
     "effect limiter observe": {
       "args": {
+        "additional_properties": false,
+        "properties": {
+          "device_ref": {
+            "additional_properties": false,
+            "properties": {
+              "index": {
+                "type": "integer"
+              },
+              "mode": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "query": {
+                "type": "string"
+              },
+              "stable_ref": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "mode"
+            ],
+            "type": "object"
+          },
+          "track_ref": {
+            "additional_properties": false,
+            "properties": {
+              "index": {
+                "type": "integer"
+              },
+              "mode": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "query": {
+                "type": "string"
+              },
+              "stable_ref": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "mode"
+            ],
+            "type": "object"
+          }
+        },
+        "required": [
+          "track_ref",
+          "device_ref"
+        ],
         "type": "object"
       },
       "errors": {
@@ -2289,6 +3284,46 @@
         ]
       },
       "result": {
+        "additional_properties": false,
+        "properties": {
+          "device": {
+            "type": "integer"
+          },
+          "device_stable_ref": {
+            "type": "string"
+          },
+          "effect_type": {
+            "type": "string"
+          },
+          "key_count": {
+            "type": "integer"
+          },
+          "keys": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "state": {
+            "type": "object"
+          },
+          "track": {
+            "type": "integer"
+          },
+          "track_stable_ref": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "effect_type",
+          "track",
+          "device",
+          "track_stable_ref",
+          "device_stable_ref",
+          "key_count",
+          "keys",
+          "state"
+        ],
         "type": "object"
       },
       "side_effect": {
@@ -2299,6 +3334,93 @@
     },
     "effect limiter set": {
       "args": {
+        "additional_properties": false,
+        "properties": {
+          "device_ref": {
+            "additional_properties": false,
+            "properties": {
+              "index": {
+                "type": "integer"
+              },
+              "mode": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "query": {
+                "type": "string"
+              },
+              "stable_ref": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "mode"
+            ],
+            "type": "object"
+          },
+          "parameter_ref": {
+            "additional_properties": false,
+            "properties": {
+              "index": {
+                "type": "integer"
+              },
+              "key": {
+                "type": "string"
+              },
+              "mode": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "query": {
+                "type": "string"
+              },
+              "stable_ref": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "mode"
+            ],
+            "type": "object"
+          },
+          "track_ref": {
+            "additional_properties": false,
+            "properties": {
+              "index": {
+                "type": "integer"
+              },
+              "mode": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "query": {
+                "type": "string"
+              },
+              "stable_ref": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "mode"
+            ],
+            "type": "object"
+          },
+          "value": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "track_ref",
+          "device_ref",
+          "parameter_ref",
+          "value"
+        ],
         "type": "object"
       },
       "errors": {
@@ -2325,6 +3447,75 @@
         ]
       },
       "result": {
+        "additional_properties": false,
+        "properties": {
+          "after": {
+            "type": "number"
+          },
+          "before": {
+            "type": "number"
+          },
+          "detected_type": {
+            "type": "string"
+          },
+          "device": {
+            "type": "integer"
+          },
+          "device_stable_ref": {
+            "type": "string"
+          },
+          "effect_type": {
+            "type": "string"
+          },
+          "is_enabled": {
+            "type": "boolean"
+          },
+          "is_quantized": {
+            "type": "boolean"
+          },
+          "key": {
+            "type": "string"
+          },
+          "max": {
+            "type": "number"
+          },
+          "min": {
+            "type": "number"
+          },
+          "parameter": {
+            "type": "integer"
+          },
+          "parameter_stable_ref": {
+            "type": "string"
+          },
+          "resolved_parameter": {
+            "type": "integer"
+          },
+          "track": {
+            "type": "integer"
+          },
+          "track_stable_ref": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "track",
+          "device",
+          "parameter",
+          "track_stable_ref",
+          "device_stable_ref",
+          "parameter_stable_ref",
+          "before",
+          "after",
+          "min",
+          "max",
+          "is_enabled",
+          "is_quantized",
+          "detected_type",
+          "effect_type",
+          "key",
+          "resolved_parameter"
+        ],
         "type": "object"
       },
       "side_effect": {
@@ -2335,6 +3526,61 @@
     },
     "effect observe": {
       "args": {
+        "additional_properties": false,
+        "properties": {
+          "device_ref": {
+            "additional_properties": false,
+            "properties": {
+              "index": {
+                "type": "integer"
+              },
+              "mode": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "query": {
+                "type": "string"
+              },
+              "stable_ref": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "mode"
+            ],
+            "type": "object"
+          },
+          "track_ref": {
+            "additional_properties": false,
+            "properties": {
+              "index": {
+                "type": "integer"
+              },
+              "mode": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "query": {
+                "type": "string"
+              },
+              "stable_ref": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "mode"
+            ],
+            "type": "object"
+          }
+        },
+        "required": [
+          "track_ref",
+          "device_ref"
+        ],
         "type": "object"
       },
       "errors": {
@@ -2361,6 +3607,93 @@
         ]
       },
       "result": {
+        "additional_properties": false,
+        "properties": {
+          "class_name": {
+            "type": "string"
+          },
+          "detected_type": {
+            "type": "string"
+          },
+          "device": {
+            "type": "integer"
+          },
+          "device_name": {
+            "type": "string"
+          },
+          "device_stable_ref": {
+            "type": "string"
+          },
+          "parameter_count": {
+            "type": "integer"
+          },
+          "parameters": {
+            "items": {
+              "additional_properties": false,
+              "properties": {
+                "index": {
+                  "type": "integer"
+                },
+                "is_enabled": {
+                  "type": "boolean"
+                },
+                "is_quantized": {
+                  "type": "boolean"
+                },
+                "max": {
+                  "type": [
+                    "number",
+                    "null"
+                  ]
+                },
+                "min": {
+                  "type": [
+                    "number",
+                    "null"
+                  ]
+                },
+                "name": {
+                  "type": "string"
+                },
+                "stable_ref": {
+                  "type": "string"
+                },
+                "value": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "index",
+                "stable_ref",
+                "name",
+                "value",
+                "min",
+                "max",
+                "is_enabled",
+                "is_quantized"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "track": {
+            "type": "integer"
+          },
+          "track_stable_ref": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "track",
+          "device",
+          "track_stable_ref",
+          "device_stable_ref",
+          "device_name",
+          "class_name",
+          "parameter_count",
+          "parameters",
+          "detected_type"
+        ],
         "type": "object"
       },
       "side_effect": {
@@ -2371,6 +3704,93 @@
     },
     "effect parameter set": {
       "args": {
+        "additional_properties": false,
+        "properties": {
+          "device_ref": {
+            "additional_properties": false,
+            "properties": {
+              "index": {
+                "type": "integer"
+              },
+              "mode": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "query": {
+                "type": "string"
+              },
+              "stable_ref": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "mode"
+            ],
+            "type": "object"
+          },
+          "parameter_ref": {
+            "additional_properties": false,
+            "properties": {
+              "index": {
+                "type": "integer"
+              },
+              "key": {
+                "type": "string"
+              },
+              "mode": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "query": {
+                "type": "string"
+              },
+              "stable_ref": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "mode"
+            ],
+            "type": "object"
+          },
+          "track_ref": {
+            "additional_properties": false,
+            "properties": {
+              "index": {
+                "type": "integer"
+              },
+              "mode": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "query": {
+                "type": "string"
+              },
+              "stable_ref": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "mode"
+            ],
+            "type": "object"
+          },
+          "value": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "track_ref",
+          "device_ref",
+          "parameter_ref",
+          "value"
+        ],
         "type": "object"
       },
       "errors": {
@@ -2397,6 +3817,63 @@
         ]
       },
       "result": {
+        "additional_properties": false,
+        "properties": {
+          "after": {
+            "type": "number"
+          },
+          "before": {
+            "type": "number"
+          },
+          "detected_type": {
+            "type": "string"
+          },
+          "device": {
+            "type": "integer"
+          },
+          "device_stable_ref": {
+            "type": "string"
+          },
+          "is_enabled": {
+            "type": "boolean"
+          },
+          "is_quantized": {
+            "type": "boolean"
+          },
+          "max": {
+            "type": "number"
+          },
+          "min": {
+            "type": "number"
+          },
+          "parameter": {
+            "type": "integer"
+          },
+          "parameter_stable_ref": {
+            "type": "string"
+          },
+          "track": {
+            "type": "integer"
+          },
+          "track_stable_ref": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "track",
+          "device",
+          "parameter",
+          "track_stable_ref",
+          "device_stable_ref",
+          "parameter_stable_ref",
+          "before",
+          "after",
+          "min",
+          "max",
+          "is_enabled",
+          "is_quantized",
+          "detected_type"
+        ],
         "type": "object"
       },
       "side_effect": {
@@ -2407,6 +3884,61 @@
     },
     "effect parameters list": {
       "args": {
+        "additional_properties": false,
+        "properties": {
+          "device_ref": {
+            "additional_properties": false,
+            "properties": {
+              "index": {
+                "type": "integer"
+              },
+              "mode": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "query": {
+                "type": "string"
+              },
+              "stable_ref": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "mode"
+            ],
+            "type": "object"
+          },
+          "track_ref": {
+            "additional_properties": false,
+            "properties": {
+              "index": {
+                "type": "integer"
+              },
+              "mode": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "query": {
+                "type": "string"
+              },
+              "stable_ref": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "mode"
+            ],
+            "type": "object"
+          }
+        },
+        "required": [
+          "track_ref",
+          "device_ref"
+        ],
         "type": "object"
       },
       "errors": {
@@ -2433,6 +3965,93 @@
         ]
       },
       "result": {
+        "additional_properties": false,
+        "properties": {
+          "class_name": {
+            "type": "string"
+          },
+          "detected_type": {
+            "type": "string"
+          },
+          "device": {
+            "type": "integer"
+          },
+          "device_name": {
+            "type": "string"
+          },
+          "device_stable_ref": {
+            "type": "string"
+          },
+          "parameter_count": {
+            "type": "integer"
+          },
+          "parameters": {
+            "items": {
+              "additional_properties": false,
+              "properties": {
+                "index": {
+                  "type": "integer"
+                },
+                "is_enabled": {
+                  "type": "boolean"
+                },
+                "is_quantized": {
+                  "type": "boolean"
+                },
+                "max": {
+                  "type": [
+                    "number",
+                    "null"
+                  ]
+                },
+                "min": {
+                  "type": [
+                    "number",
+                    "null"
+                  ]
+                },
+                "name": {
+                  "type": "string"
+                },
+                "stable_ref": {
+                  "type": "string"
+                },
+                "value": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "index",
+                "stable_ref",
+                "name",
+                "value",
+                "min",
+                "max",
+                "is_enabled",
+                "is_quantized"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "track": {
+            "type": "integer"
+          },
+          "track_stable_ref": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "track",
+          "device",
+          "track_stable_ref",
+          "device_stable_ref",
+          "device_name",
+          "class_name",
+          "parameter_count",
+          "parameters",
+          "detected_type"
+        ],
         "type": "object"
       },
       "side_effect": {
@@ -2479,6 +4098,61 @@
     },
     "effect reverb observe": {
       "args": {
+        "additional_properties": false,
+        "properties": {
+          "device_ref": {
+            "additional_properties": false,
+            "properties": {
+              "index": {
+                "type": "integer"
+              },
+              "mode": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "query": {
+                "type": "string"
+              },
+              "stable_ref": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "mode"
+            ],
+            "type": "object"
+          },
+          "track_ref": {
+            "additional_properties": false,
+            "properties": {
+              "index": {
+                "type": "integer"
+              },
+              "mode": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "query": {
+                "type": "string"
+              },
+              "stable_ref": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "mode"
+            ],
+            "type": "object"
+          }
+        },
+        "required": [
+          "track_ref",
+          "device_ref"
+        ],
         "type": "object"
       },
       "errors": {
@@ -2505,6 +4179,46 @@
         ]
       },
       "result": {
+        "additional_properties": false,
+        "properties": {
+          "device": {
+            "type": "integer"
+          },
+          "device_stable_ref": {
+            "type": "string"
+          },
+          "effect_type": {
+            "type": "string"
+          },
+          "key_count": {
+            "type": "integer"
+          },
+          "keys": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "state": {
+            "type": "object"
+          },
+          "track": {
+            "type": "integer"
+          },
+          "track_stable_ref": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "effect_type",
+          "track",
+          "device",
+          "track_stable_ref",
+          "device_stable_ref",
+          "key_count",
+          "keys",
+          "state"
+        ],
         "type": "object"
       },
       "side_effect": {
@@ -2515,6 +4229,93 @@
     },
     "effect reverb set": {
       "args": {
+        "additional_properties": false,
+        "properties": {
+          "device_ref": {
+            "additional_properties": false,
+            "properties": {
+              "index": {
+                "type": "integer"
+              },
+              "mode": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "query": {
+                "type": "string"
+              },
+              "stable_ref": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "mode"
+            ],
+            "type": "object"
+          },
+          "parameter_ref": {
+            "additional_properties": false,
+            "properties": {
+              "index": {
+                "type": "integer"
+              },
+              "key": {
+                "type": "string"
+              },
+              "mode": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "query": {
+                "type": "string"
+              },
+              "stable_ref": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "mode"
+            ],
+            "type": "object"
+          },
+          "track_ref": {
+            "additional_properties": false,
+            "properties": {
+              "index": {
+                "type": "integer"
+              },
+              "mode": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "query": {
+                "type": "string"
+              },
+              "stable_ref": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "mode"
+            ],
+            "type": "object"
+          },
+          "value": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "track_ref",
+          "device_ref",
+          "parameter_ref",
+          "value"
+        ],
         "type": "object"
       },
       "errors": {
@@ -2541,6 +4342,75 @@
         ]
       },
       "result": {
+        "additional_properties": false,
+        "properties": {
+          "after": {
+            "type": "number"
+          },
+          "before": {
+            "type": "number"
+          },
+          "detected_type": {
+            "type": "string"
+          },
+          "device": {
+            "type": "integer"
+          },
+          "device_stable_ref": {
+            "type": "string"
+          },
+          "effect_type": {
+            "type": "string"
+          },
+          "is_enabled": {
+            "type": "boolean"
+          },
+          "is_quantized": {
+            "type": "boolean"
+          },
+          "key": {
+            "type": "string"
+          },
+          "max": {
+            "type": "number"
+          },
+          "min": {
+            "type": "number"
+          },
+          "parameter": {
+            "type": "integer"
+          },
+          "parameter_stable_ref": {
+            "type": "string"
+          },
+          "resolved_parameter": {
+            "type": "integer"
+          },
+          "track": {
+            "type": "integer"
+          },
+          "track_stable_ref": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "track",
+          "device",
+          "parameter",
+          "track_stable_ref",
+          "device_stable_ref",
+          "parameter_stable_ref",
+          "before",
+          "after",
+          "min",
+          "max",
+          "is_enabled",
+          "is_quantized",
+          "detected_type",
+          "effect_type",
+          "key",
+          "resolved_parameter"
+        ],
         "type": "object"
       },
       "side_effect": {
@@ -2587,6 +4457,61 @@
     },
     "effect utility observe": {
       "args": {
+        "additional_properties": false,
+        "properties": {
+          "device_ref": {
+            "additional_properties": false,
+            "properties": {
+              "index": {
+                "type": "integer"
+              },
+              "mode": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "query": {
+                "type": "string"
+              },
+              "stable_ref": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "mode"
+            ],
+            "type": "object"
+          },
+          "track_ref": {
+            "additional_properties": false,
+            "properties": {
+              "index": {
+                "type": "integer"
+              },
+              "mode": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "query": {
+                "type": "string"
+              },
+              "stable_ref": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "mode"
+            ],
+            "type": "object"
+          }
+        },
+        "required": [
+          "track_ref",
+          "device_ref"
+        ],
         "type": "object"
       },
       "errors": {
@@ -2613,6 +4538,46 @@
         ]
       },
       "result": {
+        "additional_properties": false,
+        "properties": {
+          "device": {
+            "type": "integer"
+          },
+          "device_stable_ref": {
+            "type": "string"
+          },
+          "effect_type": {
+            "type": "string"
+          },
+          "key_count": {
+            "type": "integer"
+          },
+          "keys": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "state": {
+            "type": "object"
+          },
+          "track": {
+            "type": "integer"
+          },
+          "track_stable_ref": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "effect_type",
+          "track",
+          "device",
+          "track_stable_ref",
+          "device_stable_ref",
+          "key_count",
+          "keys",
+          "state"
+        ],
         "type": "object"
       },
       "side_effect": {
@@ -2623,6 +4588,93 @@
     },
     "effect utility set": {
       "args": {
+        "additional_properties": false,
+        "properties": {
+          "device_ref": {
+            "additional_properties": false,
+            "properties": {
+              "index": {
+                "type": "integer"
+              },
+              "mode": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "query": {
+                "type": "string"
+              },
+              "stable_ref": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "mode"
+            ],
+            "type": "object"
+          },
+          "parameter_ref": {
+            "additional_properties": false,
+            "properties": {
+              "index": {
+                "type": "integer"
+              },
+              "key": {
+                "type": "string"
+              },
+              "mode": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "query": {
+                "type": "string"
+              },
+              "stable_ref": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "mode"
+            ],
+            "type": "object"
+          },
+          "track_ref": {
+            "additional_properties": false,
+            "properties": {
+              "index": {
+                "type": "integer"
+              },
+              "mode": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "query": {
+                "type": "string"
+              },
+              "stable_ref": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "mode"
+            ],
+            "type": "object"
+          },
+          "value": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "track_ref",
+          "device_ref",
+          "parameter_ref",
+          "value"
+        ],
         "type": "object"
       },
       "errors": {
@@ -2649,6 +4701,75 @@
         ]
       },
       "result": {
+        "additional_properties": false,
+        "properties": {
+          "after": {
+            "type": "number"
+          },
+          "before": {
+            "type": "number"
+          },
+          "detected_type": {
+            "type": "string"
+          },
+          "device": {
+            "type": "integer"
+          },
+          "device_stable_ref": {
+            "type": "string"
+          },
+          "effect_type": {
+            "type": "string"
+          },
+          "is_enabled": {
+            "type": "boolean"
+          },
+          "is_quantized": {
+            "type": "boolean"
+          },
+          "key": {
+            "type": "string"
+          },
+          "max": {
+            "type": "number"
+          },
+          "min": {
+            "type": "number"
+          },
+          "parameter": {
+            "type": "integer"
+          },
+          "parameter_stable_ref": {
+            "type": "string"
+          },
+          "resolved_parameter": {
+            "type": "integer"
+          },
+          "track": {
+            "type": "integer"
+          },
+          "track_stable_ref": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "track",
+          "device",
+          "parameter",
+          "track_stable_ref",
+          "device_stable_ref",
+          "parameter_stable_ref",
+          "before",
+          "after",
+          "min",
+          "max",
+          "is_enabled",
+          "is_quantized",
+          "detected_type",
+          "effect_type",
+          "key",
+          "resolved_parameter"
+        ],
         "type": "object"
       },
       "side_effect": {
@@ -4341,6 +6462,61 @@
     },
     "synth drift observe": {
       "args": {
+        "additional_properties": false,
+        "properties": {
+          "device_ref": {
+            "additional_properties": false,
+            "properties": {
+              "index": {
+                "type": "integer"
+              },
+              "mode": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "query": {
+                "type": "string"
+              },
+              "stable_ref": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "mode"
+            ],
+            "type": "object"
+          },
+          "track_ref": {
+            "additional_properties": false,
+            "properties": {
+              "index": {
+                "type": "integer"
+              },
+              "mode": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "query": {
+                "type": "string"
+              },
+              "stable_ref": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "mode"
+            ],
+            "type": "object"
+          }
+        },
+        "required": [
+          "track_ref",
+          "device_ref"
+        ],
         "type": "object"
       },
       "errors": {
@@ -4367,6 +6543,46 @@
         ]
       },
       "result": {
+        "additional_properties": false,
+        "properties": {
+          "device": {
+            "type": "integer"
+          },
+          "device_stable_ref": {
+            "type": "string"
+          },
+          "key_count": {
+            "type": "integer"
+          },
+          "keys": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "state": {
+            "type": "object"
+          },
+          "synth_type": {
+            "type": "string"
+          },
+          "track": {
+            "type": "integer"
+          },
+          "track_stable_ref": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "synth_type",
+          "track",
+          "device",
+          "track_stable_ref",
+          "device_stable_ref",
+          "key_count",
+          "keys",
+          "state"
+        ],
         "type": "object"
       },
       "side_effect": {
@@ -4377,6 +6593,93 @@
     },
     "synth drift set": {
       "args": {
+        "additional_properties": false,
+        "properties": {
+          "device_ref": {
+            "additional_properties": false,
+            "properties": {
+              "index": {
+                "type": "integer"
+              },
+              "mode": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "query": {
+                "type": "string"
+              },
+              "stable_ref": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "mode"
+            ],
+            "type": "object"
+          },
+          "parameter_ref": {
+            "additional_properties": false,
+            "properties": {
+              "index": {
+                "type": "integer"
+              },
+              "key": {
+                "type": "string"
+              },
+              "mode": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "query": {
+                "type": "string"
+              },
+              "stable_ref": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "mode"
+            ],
+            "type": "object"
+          },
+          "track_ref": {
+            "additional_properties": false,
+            "properties": {
+              "index": {
+                "type": "integer"
+              },
+              "mode": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "query": {
+                "type": "string"
+              },
+              "stable_ref": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "mode"
+            ],
+            "type": "object"
+          },
+          "value": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "track_ref",
+          "device_ref",
+          "parameter_ref",
+          "value"
+        ],
         "type": "object"
       },
       "errors": {
@@ -4403,6 +6706,75 @@
         ]
       },
       "result": {
+        "additional_properties": false,
+        "properties": {
+          "after": {
+            "type": "number"
+          },
+          "before": {
+            "type": "number"
+          },
+          "detected_type": {
+            "type": "string"
+          },
+          "device": {
+            "type": "integer"
+          },
+          "device_stable_ref": {
+            "type": "string"
+          },
+          "is_enabled": {
+            "type": "boolean"
+          },
+          "is_quantized": {
+            "type": "boolean"
+          },
+          "key": {
+            "type": "string"
+          },
+          "max": {
+            "type": "number"
+          },
+          "min": {
+            "type": "number"
+          },
+          "parameter": {
+            "type": "integer"
+          },
+          "parameter_stable_ref": {
+            "type": "string"
+          },
+          "resolved_parameter": {
+            "type": "integer"
+          },
+          "synth_type": {
+            "type": "string"
+          },
+          "track": {
+            "type": "integer"
+          },
+          "track_stable_ref": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "track",
+          "device",
+          "parameter",
+          "track_stable_ref",
+          "device_stable_ref",
+          "parameter_stable_ref",
+          "before",
+          "after",
+          "min",
+          "max",
+          "is_enabled",
+          "is_quantized",
+          "detected_type",
+          "synth_type",
+          "key",
+          "resolved_parameter"
+        ],
         "type": "object"
       },
       "side_effect": {
@@ -4439,6 +6811,73 @@
         ]
       },
       "result": {
+        "additional_properties": false,
+        "properties": {
+          "count": {
+            "type": "integer"
+          },
+          "devices": {
+            "items": {
+              "additional_properties": false,
+              "properties": {
+                "class_name": {
+                  "type": "string"
+                },
+                "detected_type": {
+                  "type": "string"
+                },
+                "device": {
+                  "type": "integer"
+                },
+                "device_name": {
+                  "type": "string"
+                },
+                "stable_ref": {
+                  "type": "string"
+                },
+                "track": {
+                  "type": "integer"
+                },
+                "track_name": {
+                  "type": "string"
+                },
+                "track_stable_ref": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "track",
+                "device",
+                "track_stable_ref",
+                "stable_ref",
+                "track_name",
+                "device_name",
+                "class_name",
+                "detected_type"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "synth_type": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "track": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "track",
+          "synth_type",
+          "count",
+          "devices"
+        ],
         "type": "object"
       },
       "side_effect": {
@@ -4485,6 +6924,61 @@
     },
     "synth meld observe": {
       "args": {
+        "additional_properties": false,
+        "properties": {
+          "device_ref": {
+            "additional_properties": false,
+            "properties": {
+              "index": {
+                "type": "integer"
+              },
+              "mode": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "query": {
+                "type": "string"
+              },
+              "stable_ref": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "mode"
+            ],
+            "type": "object"
+          },
+          "track_ref": {
+            "additional_properties": false,
+            "properties": {
+              "index": {
+                "type": "integer"
+              },
+              "mode": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "query": {
+                "type": "string"
+              },
+              "stable_ref": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "mode"
+            ],
+            "type": "object"
+          }
+        },
+        "required": [
+          "track_ref",
+          "device_ref"
+        ],
         "type": "object"
       },
       "errors": {
@@ -4511,6 +7005,46 @@
         ]
       },
       "result": {
+        "additional_properties": false,
+        "properties": {
+          "device": {
+            "type": "integer"
+          },
+          "device_stable_ref": {
+            "type": "string"
+          },
+          "key_count": {
+            "type": "integer"
+          },
+          "keys": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "state": {
+            "type": "object"
+          },
+          "synth_type": {
+            "type": "string"
+          },
+          "track": {
+            "type": "integer"
+          },
+          "track_stable_ref": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "synth_type",
+          "track",
+          "device",
+          "track_stable_ref",
+          "device_stable_ref",
+          "key_count",
+          "keys",
+          "state"
+        ],
         "type": "object"
       },
       "side_effect": {
@@ -4521,6 +7055,93 @@
     },
     "synth meld set": {
       "args": {
+        "additional_properties": false,
+        "properties": {
+          "device_ref": {
+            "additional_properties": false,
+            "properties": {
+              "index": {
+                "type": "integer"
+              },
+              "mode": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "query": {
+                "type": "string"
+              },
+              "stable_ref": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "mode"
+            ],
+            "type": "object"
+          },
+          "parameter_ref": {
+            "additional_properties": false,
+            "properties": {
+              "index": {
+                "type": "integer"
+              },
+              "key": {
+                "type": "string"
+              },
+              "mode": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "query": {
+                "type": "string"
+              },
+              "stable_ref": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "mode"
+            ],
+            "type": "object"
+          },
+          "track_ref": {
+            "additional_properties": false,
+            "properties": {
+              "index": {
+                "type": "integer"
+              },
+              "mode": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "query": {
+                "type": "string"
+              },
+              "stable_ref": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "mode"
+            ],
+            "type": "object"
+          },
+          "value": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "track_ref",
+          "device_ref",
+          "parameter_ref",
+          "value"
+        ],
         "type": "object"
       },
       "errors": {
@@ -4547,6 +7168,75 @@
         ]
       },
       "result": {
+        "additional_properties": false,
+        "properties": {
+          "after": {
+            "type": "number"
+          },
+          "before": {
+            "type": "number"
+          },
+          "detected_type": {
+            "type": "string"
+          },
+          "device": {
+            "type": "integer"
+          },
+          "device_stable_ref": {
+            "type": "string"
+          },
+          "is_enabled": {
+            "type": "boolean"
+          },
+          "is_quantized": {
+            "type": "boolean"
+          },
+          "key": {
+            "type": "string"
+          },
+          "max": {
+            "type": "number"
+          },
+          "min": {
+            "type": "number"
+          },
+          "parameter": {
+            "type": "integer"
+          },
+          "parameter_stable_ref": {
+            "type": "string"
+          },
+          "resolved_parameter": {
+            "type": "integer"
+          },
+          "synth_type": {
+            "type": "string"
+          },
+          "track": {
+            "type": "integer"
+          },
+          "track_stable_ref": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "track",
+          "device",
+          "parameter",
+          "track_stable_ref",
+          "device_stable_ref",
+          "parameter_stable_ref",
+          "before",
+          "after",
+          "min",
+          "max",
+          "is_enabled",
+          "is_quantized",
+          "detected_type",
+          "synth_type",
+          "key",
+          "resolved_parameter"
+        ],
         "type": "object"
       },
       "side_effect": {
@@ -4557,6 +7247,61 @@
     },
     "synth observe": {
       "args": {
+        "additional_properties": false,
+        "properties": {
+          "device_ref": {
+            "additional_properties": false,
+            "properties": {
+              "index": {
+                "type": "integer"
+              },
+              "mode": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "query": {
+                "type": "string"
+              },
+              "stable_ref": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "mode"
+            ],
+            "type": "object"
+          },
+          "track_ref": {
+            "additional_properties": false,
+            "properties": {
+              "index": {
+                "type": "integer"
+              },
+              "mode": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "query": {
+                "type": "string"
+              },
+              "stable_ref": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "mode"
+            ],
+            "type": "object"
+          }
+        },
+        "required": [
+          "track_ref",
+          "device_ref"
+        ],
         "type": "object"
       },
       "errors": {
@@ -4583,6 +7328,93 @@
         ]
       },
       "result": {
+        "additional_properties": false,
+        "properties": {
+          "class_name": {
+            "type": "string"
+          },
+          "detected_type": {
+            "type": "string"
+          },
+          "device": {
+            "type": "integer"
+          },
+          "device_name": {
+            "type": "string"
+          },
+          "device_stable_ref": {
+            "type": "string"
+          },
+          "parameter_count": {
+            "type": "integer"
+          },
+          "parameters": {
+            "items": {
+              "additional_properties": false,
+              "properties": {
+                "index": {
+                  "type": "integer"
+                },
+                "is_enabled": {
+                  "type": "boolean"
+                },
+                "is_quantized": {
+                  "type": "boolean"
+                },
+                "max": {
+                  "type": [
+                    "number",
+                    "null"
+                  ]
+                },
+                "min": {
+                  "type": [
+                    "number",
+                    "null"
+                  ]
+                },
+                "name": {
+                  "type": "string"
+                },
+                "stable_ref": {
+                  "type": "string"
+                },
+                "value": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "index",
+                "stable_ref",
+                "name",
+                "value",
+                "min",
+                "max",
+                "is_enabled",
+                "is_quantized"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "track": {
+            "type": "integer"
+          },
+          "track_stable_ref": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "track",
+          "device",
+          "track_stable_ref",
+          "device_stable_ref",
+          "device_name",
+          "class_name",
+          "parameter_count",
+          "parameters",
+          "detected_type"
+        ],
         "type": "object"
       },
       "side_effect": {
@@ -4593,6 +7425,93 @@
     },
     "synth parameter set": {
       "args": {
+        "additional_properties": false,
+        "properties": {
+          "device_ref": {
+            "additional_properties": false,
+            "properties": {
+              "index": {
+                "type": "integer"
+              },
+              "mode": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "query": {
+                "type": "string"
+              },
+              "stable_ref": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "mode"
+            ],
+            "type": "object"
+          },
+          "parameter_ref": {
+            "additional_properties": false,
+            "properties": {
+              "index": {
+                "type": "integer"
+              },
+              "key": {
+                "type": "string"
+              },
+              "mode": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "query": {
+                "type": "string"
+              },
+              "stable_ref": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "mode"
+            ],
+            "type": "object"
+          },
+          "track_ref": {
+            "additional_properties": false,
+            "properties": {
+              "index": {
+                "type": "integer"
+              },
+              "mode": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "query": {
+                "type": "string"
+              },
+              "stable_ref": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "mode"
+            ],
+            "type": "object"
+          },
+          "value": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "track_ref",
+          "device_ref",
+          "parameter_ref",
+          "value"
+        ],
         "type": "object"
       },
       "errors": {
@@ -4619,6 +7538,63 @@
         ]
       },
       "result": {
+        "additional_properties": false,
+        "properties": {
+          "after": {
+            "type": "number"
+          },
+          "before": {
+            "type": "number"
+          },
+          "detected_type": {
+            "type": "string"
+          },
+          "device": {
+            "type": "integer"
+          },
+          "device_stable_ref": {
+            "type": "string"
+          },
+          "is_enabled": {
+            "type": "boolean"
+          },
+          "is_quantized": {
+            "type": "boolean"
+          },
+          "max": {
+            "type": "number"
+          },
+          "min": {
+            "type": "number"
+          },
+          "parameter": {
+            "type": "integer"
+          },
+          "parameter_stable_ref": {
+            "type": "string"
+          },
+          "track": {
+            "type": "integer"
+          },
+          "track_stable_ref": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "track",
+          "device",
+          "parameter",
+          "track_stable_ref",
+          "device_stable_ref",
+          "parameter_stable_ref",
+          "before",
+          "after",
+          "min",
+          "max",
+          "is_enabled",
+          "is_quantized",
+          "detected_type"
+        ],
         "type": "object"
       },
       "side_effect": {
@@ -4629,6 +7605,61 @@
     },
     "synth parameters list": {
       "args": {
+        "additional_properties": false,
+        "properties": {
+          "device_ref": {
+            "additional_properties": false,
+            "properties": {
+              "index": {
+                "type": "integer"
+              },
+              "mode": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "query": {
+                "type": "string"
+              },
+              "stable_ref": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "mode"
+            ],
+            "type": "object"
+          },
+          "track_ref": {
+            "additional_properties": false,
+            "properties": {
+              "index": {
+                "type": "integer"
+              },
+              "mode": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "query": {
+                "type": "string"
+              },
+              "stable_ref": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "mode"
+            ],
+            "type": "object"
+          }
+        },
+        "required": [
+          "track_ref",
+          "device_ref"
+        ],
         "type": "object"
       },
       "errors": {
@@ -4655,6 +7686,93 @@
         ]
       },
       "result": {
+        "additional_properties": false,
+        "properties": {
+          "class_name": {
+            "type": "string"
+          },
+          "detected_type": {
+            "type": "string"
+          },
+          "device": {
+            "type": "integer"
+          },
+          "device_name": {
+            "type": "string"
+          },
+          "device_stable_ref": {
+            "type": "string"
+          },
+          "parameter_count": {
+            "type": "integer"
+          },
+          "parameters": {
+            "items": {
+              "additional_properties": false,
+              "properties": {
+                "index": {
+                  "type": "integer"
+                },
+                "is_enabled": {
+                  "type": "boolean"
+                },
+                "is_quantized": {
+                  "type": "boolean"
+                },
+                "max": {
+                  "type": [
+                    "number",
+                    "null"
+                  ]
+                },
+                "min": {
+                  "type": [
+                    "number",
+                    "null"
+                  ]
+                },
+                "name": {
+                  "type": "string"
+                },
+                "stable_ref": {
+                  "type": "string"
+                },
+                "value": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "index",
+                "stable_ref",
+                "name",
+                "value",
+                "min",
+                "max",
+                "is_enabled",
+                "is_quantized"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "track": {
+            "type": "integer"
+          },
+          "track_stable_ref": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "track",
+          "device",
+          "track_stable_ref",
+          "device_stable_ref",
+          "device_name",
+          "class_name",
+          "parameter_count",
+          "parameters",
+          "detected_type"
+        ],
         "type": "object"
       },
       "side_effect": {
@@ -4701,6 +7819,61 @@
     },
     "synth wavetable observe": {
       "args": {
+        "additional_properties": false,
+        "properties": {
+          "device_ref": {
+            "additional_properties": false,
+            "properties": {
+              "index": {
+                "type": "integer"
+              },
+              "mode": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "query": {
+                "type": "string"
+              },
+              "stable_ref": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "mode"
+            ],
+            "type": "object"
+          },
+          "track_ref": {
+            "additional_properties": false,
+            "properties": {
+              "index": {
+                "type": "integer"
+              },
+              "mode": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "query": {
+                "type": "string"
+              },
+              "stable_ref": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "mode"
+            ],
+            "type": "object"
+          }
+        },
+        "required": [
+          "track_ref",
+          "device_ref"
+        ],
         "type": "object"
       },
       "errors": {
@@ -4727,6 +7900,46 @@
         ]
       },
       "result": {
+        "additional_properties": false,
+        "properties": {
+          "device": {
+            "type": "integer"
+          },
+          "device_stable_ref": {
+            "type": "string"
+          },
+          "key_count": {
+            "type": "integer"
+          },
+          "keys": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "state": {
+            "type": "object"
+          },
+          "synth_type": {
+            "type": "string"
+          },
+          "track": {
+            "type": "integer"
+          },
+          "track_stable_ref": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "synth_type",
+          "track",
+          "device",
+          "track_stable_ref",
+          "device_stable_ref",
+          "key_count",
+          "keys",
+          "state"
+        ],
         "type": "object"
       },
       "side_effect": {
@@ -4737,6 +7950,93 @@
     },
     "synth wavetable set": {
       "args": {
+        "additional_properties": false,
+        "properties": {
+          "device_ref": {
+            "additional_properties": false,
+            "properties": {
+              "index": {
+                "type": "integer"
+              },
+              "mode": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "query": {
+                "type": "string"
+              },
+              "stable_ref": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "mode"
+            ],
+            "type": "object"
+          },
+          "parameter_ref": {
+            "additional_properties": false,
+            "properties": {
+              "index": {
+                "type": "integer"
+              },
+              "key": {
+                "type": "string"
+              },
+              "mode": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "query": {
+                "type": "string"
+              },
+              "stable_ref": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "mode"
+            ],
+            "type": "object"
+          },
+          "track_ref": {
+            "additional_properties": false,
+            "properties": {
+              "index": {
+                "type": "integer"
+              },
+              "mode": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "query": {
+                "type": "string"
+              },
+              "stable_ref": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "mode"
+            ],
+            "type": "object"
+          },
+          "value": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "track_ref",
+          "device_ref",
+          "parameter_ref",
+          "value"
+        ],
         "type": "object"
       },
       "errors": {
@@ -4763,6 +8063,75 @@
         ]
       },
       "result": {
+        "additional_properties": false,
+        "properties": {
+          "after": {
+            "type": "number"
+          },
+          "before": {
+            "type": "number"
+          },
+          "detected_type": {
+            "type": "string"
+          },
+          "device": {
+            "type": "integer"
+          },
+          "device_stable_ref": {
+            "type": "string"
+          },
+          "is_enabled": {
+            "type": "boolean"
+          },
+          "is_quantized": {
+            "type": "boolean"
+          },
+          "key": {
+            "type": "string"
+          },
+          "max": {
+            "type": "number"
+          },
+          "min": {
+            "type": "number"
+          },
+          "parameter": {
+            "type": "integer"
+          },
+          "parameter_stable_ref": {
+            "type": "string"
+          },
+          "resolved_parameter": {
+            "type": "integer"
+          },
+          "synth_type": {
+            "type": "string"
+          },
+          "track": {
+            "type": "integer"
+          },
+          "track_stable_ref": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "track",
+          "device",
+          "parameter",
+          "track_stable_ref",
+          "device_stable_ref",
+          "parameter_stable_ref",
+          "before",
+          "after",
+          "min",
+          "max",
+          "is_enabled",
+          "is_quantized",
+          "detected_type",
+          "synth_type",
+          "key",
+          "resolved_parameter"
+        ],
         "type": "object"
       },
       "side_effect": {
@@ -4773,6 +8142,36 @@
     },
     "track arm get": {
       "args": {
+        "additional_properties": false,
+        "properties": {
+          "track_ref": {
+            "additional_properties": false,
+            "properties": {
+              "index": {
+                "type": "integer"
+              },
+              "mode": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "query": {
+                "type": "string"
+              },
+              "stable_ref": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "mode"
+            ],
+            "type": "object"
+          }
+        },
+        "required": [
+          "track_ref"
+        ],
         "type": "object"
       },
       "errors": {
@@ -4799,6 +8198,19 @@
         ]
       },
       "result": {
+        "additional_properties": false,
+        "properties": {
+          "arm": {
+            "type": "boolean"
+          },
+          "track": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "track",
+          "arm"
+        ],
         "type": "object"
       },
       "side_effect": {
@@ -4809,6 +8221,40 @@
     },
     "track arm set": {
       "args": {
+        "additional_properties": false,
+        "properties": {
+          "track_ref": {
+            "additional_properties": false,
+            "properties": {
+              "index": {
+                "type": "integer"
+              },
+              "mode": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "query": {
+                "type": "string"
+              },
+              "stable_ref": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "mode"
+            ],
+            "type": "object"
+          },
+          "value": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "track_ref",
+          "value"
+        ],
         "type": "object"
       },
       "errors": {
@@ -4835,6 +8281,19 @@
         ]
       },
       "result": {
+        "additional_properties": false,
+        "properties": {
+          "arm": {
+            "type": "boolean"
+          },
+          "track": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "track",
+          "arm"
+        ],
         "type": "object"
       },
       "side_effect": {
@@ -4845,6 +8304,36 @@
     },
     "track info": {
       "args": {
+        "additional_properties": false,
+        "properties": {
+          "track_ref": {
+            "additional_properties": false,
+            "properties": {
+              "index": {
+                "type": "integer"
+              },
+              "mode": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "query": {
+                "type": "string"
+              },
+              "stable_ref": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "mode"
+            ],
+            "type": "object"
+          }
+        },
+        "required": [
+          "track_ref"
+        ],
         "type": "object"
       },
       "errors": {
@@ -4871,6 +8360,119 @@
         ]
       },
       "result": {
+        "additional_properties": false,
+        "properties": {
+          "arm": {
+            "type": "boolean"
+          },
+          "clip_slots": {
+            "type": "array"
+          },
+          "devices": {
+            "items": {
+              "additional_properties": false,
+              "properties": {
+                "class_name": {
+                  "type": "string"
+                },
+                "index": {
+                  "type": "integer"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "parameters": {
+                  "items": {
+                    "additional_properties": false,
+                    "properties": {
+                      "index": {
+                        "type": "integer"
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "stable_ref": {
+                        "type": "string"
+                      },
+                      "value": {
+                        "type": "number"
+                      }
+                    },
+                    "required": [
+                      "index",
+                      "stable_ref",
+                      "name",
+                      "value"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                "stable_ref": {
+                  "type": "string"
+                },
+                "track_stable_ref": {
+                  "type": "string"
+                },
+                "type": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "index",
+                "stable_ref",
+                "name",
+                "class_name",
+                "type",
+                "parameters",
+                "track_stable_ref"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "index": {
+            "type": "integer"
+          },
+          "is_audio_track": {
+            "type": "boolean"
+          },
+          "is_midi_track": {
+            "type": "boolean"
+          },
+          "mute": {
+            "type": "boolean"
+          },
+          "name": {
+            "type": "string"
+          },
+          "panning": {
+            "type": "number"
+          },
+          "solo": {
+            "type": "boolean"
+          },
+          "stable_ref": {
+            "type": "string"
+          },
+          "volume": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "index",
+          "stable_ref",
+          "name",
+          "is_audio_track",
+          "is_midi_track",
+          "mute",
+          "solo",
+          "arm",
+          "volume",
+          "panning",
+          "clip_slots",
+          "devices"
+        ],
         "type": "object"
       },
       "side_effect": {
@@ -4881,6 +8483,36 @@
     },
     "track mute get": {
       "args": {
+        "additional_properties": false,
+        "properties": {
+          "track_ref": {
+            "additional_properties": false,
+            "properties": {
+              "index": {
+                "type": "integer"
+              },
+              "mode": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "query": {
+                "type": "string"
+              },
+              "stable_ref": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "mode"
+            ],
+            "type": "object"
+          }
+        },
+        "required": [
+          "track_ref"
+        ],
         "type": "object"
       },
       "errors": {
@@ -4907,6 +8539,19 @@
         ]
       },
       "result": {
+        "additional_properties": false,
+        "properties": {
+          "mute": {
+            "type": "boolean"
+          },
+          "track": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "track",
+          "mute"
+        ],
         "type": "object"
       },
       "side_effect": {
@@ -4917,6 +8562,40 @@
     },
     "track mute set": {
       "args": {
+        "additional_properties": false,
+        "properties": {
+          "track_ref": {
+            "additional_properties": false,
+            "properties": {
+              "index": {
+                "type": "integer"
+              },
+              "mode": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "query": {
+                "type": "string"
+              },
+              "stable_ref": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "mode"
+            ],
+            "type": "object"
+          },
+          "value": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "track_ref",
+          "value"
+        ],
         "type": "object"
       },
       "errors": {
@@ -4943,6 +8622,19 @@
         ]
       },
       "result": {
+        "additional_properties": false,
+        "properties": {
+          "mute": {
+            "type": "boolean"
+          },
+          "track": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "track",
+          "mute"
+        ],
         "type": "object"
       },
       "side_effect": {
@@ -4953,6 +8645,40 @@
     },
     "track name set": {
       "args": {
+        "additional_properties": false,
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "track_ref": {
+            "additional_properties": false,
+            "properties": {
+              "index": {
+                "type": "integer"
+              },
+              "mode": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "query": {
+                "type": "string"
+              },
+              "stable_ref": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "mode"
+            ],
+            "type": "object"
+          }
+        },
+        "required": [
+          "track_ref",
+          "name"
+        ],
         "type": "object"
       },
       "errors": {
@@ -4979,6 +8705,19 @@
         ]
       },
       "result": {
+        "additional_properties": false,
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "track": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "track",
+          "name"
+        ],
         "type": "object"
       },
       "side_effect": {
@@ -4989,6 +8728,36 @@
     },
     "track panning get": {
       "args": {
+        "additional_properties": false,
+        "properties": {
+          "track_ref": {
+            "additional_properties": false,
+            "properties": {
+              "index": {
+                "type": "integer"
+              },
+              "mode": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "query": {
+                "type": "string"
+              },
+              "stable_ref": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "mode"
+            ],
+            "type": "object"
+          }
+        },
+        "required": [
+          "track_ref"
+        ],
         "type": "object"
       },
       "errors": {
@@ -5015,6 +8784,19 @@
         ]
       },
       "result": {
+        "additional_properties": false,
+        "properties": {
+          "panning": {
+            "type": "number"
+          },
+          "track": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "track",
+          "panning"
+        ],
         "type": "object"
       },
       "side_effect": {
@@ -5025,6 +8807,40 @@
     },
     "track panning set": {
       "args": {
+        "additional_properties": false,
+        "properties": {
+          "track_ref": {
+            "additional_properties": false,
+            "properties": {
+              "index": {
+                "type": "integer"
+              },
+              "mode": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "query": {
+                "type": "string"
+              },
+              "stable_ref": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "mode"
+            ],
+            "type": "object"
+          },
+          "value": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "track_ref",
+          "value"
+        ],
         "type": "object"
       },
       "errors": {
@@ -5051,6 +8867,19 @@
         ]
       },
       "result": {
+        "additional_properties": false,
+        "properties": {
+          "panning": {
+            "type": "number"
+          },
+          "track": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "track",
+          "panning"
+        ],
         "type": "object"
       },
       "side_effect": {
@@ -5063,12 +8892,33 @@
       "args": {
         "additional_properties": false,
         "properties": {
-          "track": {
-            "type": "integer"
+          "track_ref": {
+            "additional_properties": false,
+            "properties": {
+              "index": {
+                "type": "integer"
+              },
+              "mode": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "query": {
+                "type": "string"
+              },
+              "stable_ref": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "mode"
+            ],
+            "type": "object"
           }
         },
         "required": [
-          "track"
+          "track_ref"
         ],
         "type": "object"
       },
@@ -5131,12 +8981,33 @@
           "routing_type": {
             "type": "string"
           },
-          "track": {
-            "type": "integer"
+          "track_ref": {
+            "additional_properties": false,
+            "properties": {
+              "index": {
+                "type": "integer"
+              },
+              "mode": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "query": {
+                "type": "string"
+              },
+              "stable_ref": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "mode"
+            ],
+            "type": "object"
           }
         },
         "required": [
-          "track",
+          "track_ref",
           "routing_type",
           "routing_channel"
         ],
@@ -5195,12 +9066,33 @@
       "args": {
         "additional_properties": false,
         "properties": {
-          "track": {
-            "type": "integer"
+          "track_ref": {
+            "additional_properties": false,
+            "properties": {
+              "index": {
+                "type": "integer"
+              },
+              "mode": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "query": {
+                "type": "string"
+              },
+              "stable_ref": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "mode"
+            ],
+            "type": "object"
           }
         },
         "required": [
-          "track"
+          "track_ref"
         ],
         "type": "object"
       },
@@ -5263,12 +9155,33 @@
           "routing_type": {
             "type": "string"
           },
-          "track": {
-            "type": "integer"
+          "track_ref": {
+            "additional_properties": false,
+            "properties": {
+              "index": {
+                "type": "integer"
+              },
+              "mode": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "query": {
+                "type": "string"
+              },
+              "stable_ref": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "mode"
+            ],
+            "type": "object"
           }
         },
         "required": [
-          "track",
+          "track_ref",
           "routing_type",
           "routing_channel"
         ],
@@ -5330,12 +9243,33 @@
           "send": {
             "type": "integer"
           },
-          "track": {
-            "type": "integer"
+          "track_ref": {
+            "additional_properties": false,
+            "properties": {
+              "index": {
+                "type": "integer"
+              },
+              "mode": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "query": {
+                "type": "string"
+              },
+              "stable_ref": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "mode"
+            ],
+            "type": "object"
           }
         },
         "required": [
-          "track",
+          "track_ref",
           "send"
         ],
         "type": "object"
@@ -5396,15 +9330,36 @@
           "send": {
             "type": "integer"
           },
-          "track": {
-            "type": "integer"
+          "track_ref": {
+            "additional_properties": false,
+            "properties": {
+              "index": {
+                "type": "integer"
+              },
+              "mode": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "query": {
+                "type": "string"
+              },
+              "stable_ref": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "mode"
+            ],
+            "type": "object"
           },
           "value": {
             "type": "number"
           }
         },
         "required": [
-          "track",
+          "track_ref",
           "send",
           "value"
         ],
@@ -5461,6 +9416,36 @@
     },
     "track solo get": {
       "args": {
+        "additional_properties": false,
+        "properties": {
+          "track_ref": {
+            "additional_properties": false,
+            "properties": {
+              "index": {
+                "type": "integer"
+              },
+              "mode": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "query": {
+                "type": "string"
+              },
+              "stable_ref": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "mode"
+            ],
+            "type": "object"
+          }
+        },
+        "required": [
+          "track_ref"
+        ],
         "type": "object"
       },
       "errors": {
@@ -5487,6 +9472,19 @@
         ]
       },
       "result": {
+        "additional_properties": false,
+        "properties": {
+          "solo": {
+            "type": "boolean"
+          },
+          "track": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "track",
+          "solo"
+        ],
         "type": "object"
       },
       "side_effect": {
@@ -5497,6 +9495,40 @@
     },
     "track solo set": {
       "args": {
+        "additional_properties": false,
+        "properties": {
+          "track_ref": {
+            "additional_properties": false,
+            "properties": {
+              "index": {
+                "type": "integer"
+              },
+              "mode": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "query": {
+                "type": "string"
+              },
+              "stable_ref": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "mode"
+            ],
+            "type": "object"
+          },
+          "value": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "track_ref",
+          "value"
+        ],
         "type": "object"
       },
       "errors": {
@@ -5523,6 +9555,19 @@
         ]
       },
       "result": {
+        "additional_properties": false,
+        "properties": {
+          "solo": {
+            "type": "boolean"
+          },
+          "track": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "track",
+          "solo"
+        ],
         "type": "object"
       },
       "side_effect": {
@@ -5533,6 +9578,36 @@
     },
     "track volume get": {
       "args": {
+        "additional_properties": false,
+        "properties": {
+          "track_ref": {
+            "additional_properties": false,
+            "properties": {
+              "index": {
+                "type": "integer"
+              },
+              "mode": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "query": {
+                "type": "string"
+              },
+              "stable_ref": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "mode"
+            ],
+            "type": "object"
+          }
+        },
+        "required": [
+          "track_ref"
+        ],
         "type": "object"
       },
       "errors": {
@@ -5559,6 +9634,19 @@
         ]
       },
       "result": {
+        "additional_properties": false,
+        "properties": {
+          "track": {
+            "type": "integer"
+          },
+          "volume": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "track",
+          "volume"
+        ],
         "type": "object"
       },
       "side_effect": {
@@ -5569,6 +9657,40 @@
     },
     "track volume set": {
       "args": {
+        "additional_properties": false,
+        "properties": {
+          "track_ref": {
+            "additional_properties": false,
+            "properties": {
+              "index": {
+                "type": "integer"
+              },
+              "mode": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "query": {
+                "type": "string"
+              },
+              "stable_ref": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "mode"
+            ],
+            "type": "object"
+          },
+          "value": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "track_ref",
+          "value"
+        ],
         "type": "object"
       },
       "errors": {
@@ -5595,6 +9717,19 @@
         ]
       },
       "result": {
+        "additional_properties": false,
+        "properties": {
+          "track": {
+            "type": "integer"
+          },
+          "volume": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "track",
+          "volume"
+        ],
         "type": "object"
       },
       "side_effect": {
@@ -5713,7 +9848,6 @@
     },
     "tracks list": {
       "args": {
-        "additional_properties": false,
         "type": "object"
       },
       "errors": {
@@ -5740,8 +9874,45 @@
         ]
       },
       "result": {
+        "additional_properties": false,
         "properties": {
           "tracks": {
+            "items": {
+              "additional_properties": false,
+              "properties": {
+                "arm": {
+                  "type": "boolean"
+                },
+                "index": {
+                  "type": "integer"
+                },
+                "mute": {
+                  "type": "boolean"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "solo": {
+                  "type": "boolean"
+                },
+                "stable_ref": {
+                  "type": "string"
+                },
+                "volume": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "index",
+                "stable_ref",
+                "name",
+                "mute",
+                "solo",
+                "arm",
+                "volume"
+              ],
+              "type": "object"
+            },
             "type": "array"
           }
         },

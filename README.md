@@ -55,12 +55,12 @@ uv run ableton-cli transport position get
 uv run ableton-cli transport position set 32
 uv run ableton-cli transport rewind
 uv run ableton-cli tracks list
-uv run ableton-cli track volume get 0
-uv run ableton-cli track volume set 0 0.7
-uv run ableton-cli track panning set 0 -- -0.25
-uv run ableton-cli track send set 0 1 0.6
-uv run ableton-cli track routing input get 0
-uv run ableton-cli track routing output set 0 --type Master --channel 3/4
+uv run ableton-cli track volume get --track-index 0
+uv run ableton-cli track volume set 0.7 --track-index 0
+uv run ableton-cli track panning set -- -0.25 --track-index 0
+uv run ableton-cli track send set 1 0.6 --track-index 0
+uv run ableton-cli track routing input get --selected-track
+uv run ableton-cli track routing output set --type Master --channel 3/4 --track-name "Bass"
 uv run ableton-cli return-tracks list
 uv run ableton-cli return-track volume set 0 0.5
 uv run ableton-cli master info
@@ -81,14 +81,20 @@ uv run ableton-cli browser search drift --item-type loadable
 uv run ableton-cli browser load 0 query:Synths#Operator
 uv run ableton-cli browser load-drum-kit 0 rack:drums --kit-uri kit:acoustic
 uv run ableton-cli batch run --steps-file ./steps.json
-uv run ableton-cli device parameter set 0 0 0 0.25
+uv run ableton-cli device parameter set 0.25 --track-index 0 --device-index 0 --parameter-index 0
 uv run ableton-cli synth find --type wavetable
 uv run ableton-cli synth wavetable keys
-uv run ableton-cli synth wavetable set 0 0 filter_cutoff 0.6
+uv run ableton-cli synth wavetable set 0.6 --selected-track --selected-device --parameter-key filter_cutoff
 uv run ableton-cli effect find --type eq8
 uv run ableton-cli effect eq8 keys
-uv run ableton-cli effect eq8 set 0 0 band1_freq 0.6
+uv run ableton-cli effect eq8 set 0.6 --track-query Bass --device-query EQ --parameter-key band1_freq
 ```
+
+Ref-aware track, device, and parameter commands now use mutually exclusive selector flags instead of positional indexes.
+Track selectors: `--track-index`, `--track-name`, `--selected-track`, `--track-query`, `--track-ref`.
+Device selectors: `--device-index`, `--device-name`, `--selected-device`, `--device-query`, `--device-ref`.
+Parameter selectors: `--parameter-index`, `--parameter-name`, `--parameter-query`, `--parameter-key`, `--parameter-ref`.
+`tracks list`, `track info`, synth/effect device discovery, and parameter listings emit `stable_ref` fields so later commands can reuse exact session-local objects.
 
 Complete command coverage:
 
@@ -205,7 +211,7 @@ For repeated automation commands, prefer `batch stream` to keep one process aliv
 ```bash
 cat <<'JSONL' | uv run ableton-cli batch stream
 {"id":"a1","steps":[{"name":"song_info","args":{}}]}
-{"id":"a2","steps":[{"name":"track_volume_get","args":{"track":0}}]}
+{"id":"a2","steps":[{"name":"track_volume_get","args":{"track_ref":{"mode":"index","index":0}}}]}
 JSONL
 ```
 

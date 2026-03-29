@@ -6,6 +6,16 @@ from pathlib import Path
 from ableton_cli.errors import AppError, ExitCode
 
 
+def _ref_index(ref: object) -> int:
+    if isinstance(ref, dict):
+        return int(ref["index"])
+    return int(ref)
+
+
+def _stable_ref(kind: str, index: int) -> str:
+    return f"{kind}:{index}"
+
+
 class _ClientStub:
     def song_new(self):  # noqa: ANN201
         return {"created": True}
@@ -29,7 +39,9 @@ class _ClientStub:
         return {
             "song_info": {"tempo": 123.0, "is_playing": False},
             "session_info": {"track_count": 2},
-            "tracks_list": {"tracks": [{"index": 0, "name": "Track 1"}]},
+            "tracks_list": {
+                "tracks": [{"index": 0, "stable_ref": _stable_ref("track", 0), "name": "Track 1"}]
+            },
             "scenes_list": {"scenes": [{"index": 0, "name": "Intro"}]},
         }
 
@@ -37,12 +49,22 @@ class _ClientStub:
         return {"stopped": True}
 
     def set_device_parameter(  # noqa: ANN201
-        self, track: int, device: int, parameter: int, value: float
+        self,
+        track_ref,
+        device_ref,
+        parameter_ref,
+        value: float,
     ):
+        track_index = _ref_index(track_ref)
+        device_index = _ref_index(device_ref)
+        parameter_index = _ref_index(parameter_ref)
         return {
-            "track": track,
-            "device": device,
-            "parameter": parameter,
+            "track": track_index,
+            "device": device_index,
+            "parameter": parameter_index,
+            "track_stable_ref": _stable_ref("track", track_index),
+            "device_stable_ref": _stable_ref("device", device_index),
+            "parameter_stable_ref": _stable_ref("parameter", parameter_index),
             "value": value,
         }
 
@@ -376,35 +398,35 @@ class _ClientStub:
             "loaded": True,
         }
 
-    def track_mute_get(self, track: int):  # noqa: ANN201
-        return {"track": track, "mute": False}
+    def track_mute_get(self, track_ref):  # noqa: ANN001, ANN201
+        return {"track": _ref_index(track_ref), "mute": False}
 
-    def track_mute_set(self, track: int, value: bool):  # noqa: ANN201
-        return {"track": track, "mute": value}
+    def track_mute_set(self, track_ref, value: bool):  # noqa: ANN001, ANN201
+        return {"track": _ref_index(track_ref), "mute": value}
 
-    def track_solo_get(self, track: int):  # noqa: ANN201
-        return {"track": track, "solo": False}
+    def track_solo_get(self, track_ref):  # noqa: ANN001, ANN201
+        return {"track": _ref_index(track_ref), "solo": False}
 
-    def track_solo_set(self, track: int, value: bool):  # noqa: ANN201
-        return {"track": track, "solo": value}
+    def track_solo_set(self, track_ref, value: bool):  # noqa: ANN001, ANN201
+        return {"track": _ref_index(track_ref), "solo": value}
 
-    def track_arm_get(self, track: int):  # noqa: ANN201
-        return {"track": track, "arm": False}
+    def track_arm_get(self, track_ref):  # noqa: ANN001, ANN201
+        return {"track": _ref_index(track_ref), "arm": False}
 
-    def track_arm_set(self, track: int, value: bool):  # noqa: ANN201
-        return {"track": track, "arm": value}
+    def track_arm_set(self, track_ref, value: bool):  # noqa: ANN001, ANN201
+        return {"track": _ref_index(track_ref), "arm": value}
 
-    def track_panning_get(self, track: int):  # noqa: ANN201
-        return {"track": track, "panning": 0.0}
+    def track_panning_get(self, track_ref):  # noqa: ANN001, ANN201
+        return {"track": _ref_index(track_ref), "panning": 0.0}
 
-    def track_panning_set(self, track: int, value: float):  # noqa: ANN201
-        return {"track": track, "panning": value}
+    def track_panning_set(self, track_ref, value: float):  # noqa: ANN001, ANN201
+        return {"track": _ref_index(track_ref), "panning": value}
 
-    def track_send_get(self, track: int, send: int):  # noqa: ANN201
-        return {"track": track, "send": send, "value": 0.25}
+    def track_send_get(self, track_ref, send: int):  # noqa: ANN001, ANN201
+        return {"track": _ref_index(track_ref), "send": send, "value": 0.25}
 
-    def track_send_set(self, track: int, send: int, value: float):  # noqa: ANN201
-        return {"track": track, "send": send, "value": value}
+    def track_send_set(self, track_ref, send: int, value: float):  # noqa: ANN001, ANN201
+        return {"track": _ref_index(track_ref), "send": send, "value": value}
 
     def return_tracks_list(self):  # noqa: ANN201
         return {"return_tracks": [{"index": 0, "name": "Reverb"}]}
@@ -457,40 +479,40 @@ class _ClientStub:
     def mixer_cue_routing_set(self, routing: str):  # noqa: ANN201
         return {"routing": routing, "available_routings": ["Master", "Ext. Out"]}
 
-    def track_routing_input_get(self, track: int):  # noqa: ANN201
+    def track_routing_input_get(self, track_ref):  # noqa: ANN001, ANN201
         return {
-            "track": track,
+            "track": _ref_index(track_ref),
             "current": {"type": "Ext. In", "channel": "1/2"},
             "available": {"types": ["Ext. In"], "channels": ["1/2", "3/4"]},
         }
 
     def track_routing_input_set(
         self,
-        track: int,
+        track_ref,
         routing_type: str,
         routing_channel: str,
     ):  # noqa: ANN201
         return {
-            "track": track,
+            "track": _ref_index(track_ref),
             "current": {"type": routing_type, "channel": routing_channel},
             "available": {"types": ["Ext. In"], "channels": ["1/2", "3/4"]},
         }
 
-    def track_routing_output_get(self, track: int):  # noqa: ANN201
+    def track_routing_output_get(self, track_ref):  # noqa: ANN001, ANN201
         return {
-            "track": track,
+            "track": _ref_index(track_ref),
             "current": {"type": "Master", "channel": "1/2"},
             "available": {"types": ["Master"], "channels": ["1/2", "3/4"]},
         }
 
     def track_routing_output_set(
         self,
-        track: int,
+        track_ref,
         routing_type: str,
         routing_channel: str,
     ):  # noqa: ANN201
         return {
-            "track": track,
+            "track": _ref_index(track_ref),
             "current": {"type": routing_type, "channel": routing_channel},
             "available": {"types": ["Master"], "channels": ["1/2", "3/4"]},
         }
@@ -728,18 +750,36 @@ class _ClientStub:
             "track": track,
             "synth_type": synth_type,
             "count": 1,
-            "devices": [{"track": 0, "device": 1, "detected_type": "wavetable"}],
+            "devices": [
+                {
+                    "track": 0,
+                    "device": 1,
+                    "track_stable_ref": _stable_ref("track", 0),
+                    "stable_ref": _stable_ref("device", 1),
+                    "track_name": "Track 1",
+                    "device_name": "Wavetable",
+                    "class_name": "InstrumentVector",
+                    "detected_type": "wavetable",
+                }
+            ],
         }
 
-    def list_synth_parameters(self, track: int, device: int):  # noqa: ANN201
+    def list_synth_parameters(self, track_ref, device_ref):  # noqa: ANN001, ANN201
+        track_index = _ref_index(track_ref)
+        device_index = _ref_index(device_ref)
         return {
-            "track": track,
-            "device": device,
+            "track": track_index,
+            "device": device_index,
+            "track_stable_ref": _stable_ref("track", track_index),
+            "device_stable_ref": _stable_ref("device", device_index),
+            "device_name": "Wavetable",
+            "class_name": "InstrumentVector",
             "detected_type": "wavetable",
             "parameter_count": 1,
             "parameters": [
                 {
                     "index": 0,
+                    "stable_ref": _stable_ref("parameter", 0),
                     "name": "Filter Freq",
                     "value": 0.5,
                     "min": 0.0,
@@ -752,26 +792,54 @@ class _ClientStub:
 
     def set_synth_parameter_safe(  # noqa: ANN201
         self,
-        track: int,
-        device: int,
-        parameter: int,
+        track_ref,
+        device_ref,
+        parameter_ref,
         value: float,
     ):
+        track_index = _ref_index(track_ref)
+        device_index = _ref_index(device_ref)
+        parameter_index = _ref_index(parameter_ref)
         return {
-            "track": track,
-            "device": device,
-            "parameter": parameter,
+            "track": track_index,
+            "device": device_index,
+            "parameter": parameter_index,
+            "track_stable_ref": _stable_ref("track", track_index),
+            "device_stable_ref": _stable_ref("device", device_index),
+            "parameter_stable_ref": _stable_ref("parameter", parameter_index),
+            "detected_type": "wavetable",
             "before": 0.3,
             "after": value,
+            "min": 0.0,
+            "max": 1.0,
+            "is_enabled": True,
+            "is_quantized": False,
         }
 
-    def observe_synth_parameters(self, track: int, device: int):  # noqa: ANN201
+    def observe_synth_parameters(self, track_ref, device_ref):  # noqa: ANN001, ANN201
+        track_index = _ref_index(track_ref)
+        device_index = _ref_index(device_ref)
         return {
-            "track": track,
-            "device": device,
+            "track": track_index,
+            "device": device_index,
+            "track_stable_ref": _stable_ref("track", track_index),
+            "device_stable_ref": _stable_ref("device", device_index),
+            "device_name": "Wavetable",
+            "class_name": "InstrumentVector",
             "detected_type": "wavetable",
             "parameter_count": 1,
-            "parameters": [{"index": 0, "name": "Filter Freq", "value": 0.5}],
+            "parameters": [
+                {
+                    "index": 0,
+                    "stable_ref": _stable_ref("parameter", 0),
+                    "name": "Filter Freq",
+                    "value": 0.5,
+                    "min": 0.0,
+                    "max": 1.0,
+                    "is_enabled": True,
+                    "is_quantized": False,
+                }
+            ],
         }
 
     def list_standard_synth_keys(self, synth_type: str):  # noqa: ANN201
@@ -794,30 +862,47 @@ class _ClientStub:
     def set_standard_synth_parameter_safe(  # noqa: ANN201
         self,
         synth_type: str,
-        track: int,
-        device: int,
+        track_ref,
+        device_ref,
+        parameter_ref,
         key: str,
         value: float,
     ):
+        track_index = _ref_index(track_ref)
+        device_index = _ref_index(device_ref)
         return {
             "synth_type": synth_type,
-            "track": track,
-            "device": device,
+            "track": track_index,
+            "device": device_index,
+            "track_stable_ref": _stable_ref("track", track_index),
+            "device_stable_ref": _stable_ref("device", device_index),
+            "parameter_stable_ref": _stable_ref("parameter", 0),
+            "parameter": 0,
+            "detected_type": synth_type,
             "key": key,
             "before": 0.4,
             "after": value,
+            "min": 0.0,
+            "max": 1.0,
+            "is_enabled": True,
+            "is_quantized": False,
+            "resolved_parameter": 0,
         }
 
     def observe_standard_synth_state(  # noqa: ANN201
         self,
         synth_type: str,
-        track: int,
-        device: int,
+        track_ref,
+        device_ref,
     ):
         return {
             "synth_type": synth_type,
-            "track": track,
-            "device": device,
+            "track": _ref_index(track_ref),
+            "device": _ref_index(device_ref),
+            "track_stable_ref": _stable_ref("track", _ref_index(track_ref)),
+            "device_stable_ref": _stable_ref("device", _ref_index(device_ref)),
+            "key_count": 1,
+            "keys": ["filter_cutoff"],
             "state": {"filter_cutoff": 0.5},
         }
 
@@ -830,18 +915,36 @@ class _ClientStub:
             "track": track,
             "effect_type": effect_type,
             "count": 1,
-            "devices": [{"track": 0, "device": 2, "detected_type": "eq8"}],
+            "devices": [
+                {
+                    "track": 0,
+                    "device": 2,
+                    "track_stable_ref": _stable_ref("track", 0),
+                    "stable_ref": _stable_ref("device", 2),
+                    "track_name": "Track 1",
+                    "device_name": "EQ Eight",
+                    "class_name": "AudioEffectGroupDevice",
+                    "detected_type": "eq8",
+                }
+            ],
         }
 
-    def list_effect_parameters(self, track: int, device: int):  # noqa: ANN201
+    def list_effect_parameters(self, track_ref, device_ref):  # noqa: ANN001, ANN201
+        track_index = _ref_index(track_ref)
+        device_index = _ref_index(device_ref)
         return {
-            "track": track,
-            "device": device,
+            "track": track_index,
+            "device": device_index,
+            "track_stable_ref": _stable_ref("track", track_index),
+            "device_stable_ref": _stable_ref("device", device_index),
+            "device_name": "EQ Eight",
+            "class_name": "AudioEffectGroupDevice",
             "detected_type": "eq8",
             "parameter_count": 1,
             "parameters": [
                 {
                     "index": 0,
+                    "stable_ref": _stable_ref("parameter", 0),
                     "name": "1 Frequency A",
                     "value": 0.5,
                     "min": 0.0,
@@ -854,26 +957,54 @@ class _ClientStub:
 
     def set_effect_parameter_safe(  # noqa: ANN201
         self,
-        track: int,
-        device: int,
-        parameter: int,
+        track_ref,
+        device_ref,
+        parameter_ref,
         value: float,
     ):
+        track_index = _ref_index(track_ref)
+        device_index = _ref_index(device_ref)
+        parameter_index = _ref_index(parameter_ref)
         return {
-            "track": track,
-            "device": device,
-            "parameter": parameter,
+            "track": track_index,
+            "device": device_index,
+            "parameter": parameter_index,
+            "track_stable_ref": _stable_ref("track", track_index),
+            "device_stable_ref": _stable_ref("device", device_index),
+            "parameter_stable_ref": _stable_ref("parameter", parameter_index),
+            "detected_type": "eq8",
             "before": 0.2,
             "after": value,
+            "min": 0.0,
+            "max": 1.0,
+            "is_enabled": True,
+            "is_quantized": False,
         }
 
-    def observe_effect_parameters(self, track: int, device: int):  # noqa: ANN201
+    def observe_effect_parameters(self, track_ref, device_ref):  # noqa: ANN001, ANN201
+        track_index = _ref_index(track_ref)
+        device_index = _ref_index(device_ref)
         return {
-            "track": track,
-            "device": device,
+            "track": track_index,
+            "device": device_index,
+            "track_stable_ref": _stable_ref("track", track_index),
+            "device_stable_ref": _stable_ref("device", device_index),
+            "device_name": "EQ Eight",
+            "class_name": "AudioEffectGroupDevice",
             "detected_type": "eq8",
             "parameter_count": 1,
-            "parameters": [{"index": 0, "name": "1 Frequency A", "value": 0.5}],
+            "parameters": [
+                {
+                    "index": 0,
+                    "stable_ref": _stable_ref("parameter", 0),
+                    "name": "1 Frequency A",
+                    "value": 0.5,
+                    "min": 0.0,
+                    "max": 1.0,
+                    "is_enabled": True,
+                    "is_quantized": False,
+                }
+            ],
         }
 
     def list_standard_effect_keys(self, effect_type: str):  # noqa: ANN201
@@ -892,30 +1023,47 @@ class _ClientStub:
     def set_standard_effect_parameter_safe(  # noqa: ANN201
         self,
         effect_type: str,
-        track: int,
-        device: int,
+        track_ref,
+        device_ref,
+        parameter_ref,
         key: str,
         value: float,
     ):
+        track_index = _ref_index(track_ref)
+        device_index = _ref_index(device_ref)
         return {
             "effect_type": effect_type,
-            "track": track,
-            "device": device,
+            "track": track_index,
+            "device": device_index,
+            "track_stable_ref": _stable_ref("track", track_index),
+            "device_stable_ref": _stable_ref("device", device_index),
+            "parameter_stable_ref": _stable_ref("parameter", 0),
+            "parameter": 0,
+            "detected_type": effect_type,
             "key": key,
             "before": 0.1,
             "after": value,
+            "min": 0.0,
+            "max": 1.0,
+            "is_enabled": True,
+            "is_quantized": False,
+            "resolved_parameter": 0,
         }
 
     def observe_standard_effect_state(  # noqa: ANN201
         self,
         effect_type: str,
-        track: int,
-        device: int,
+        track_ref,
+        device_ref,
     ):
         return {
             "effect_type": effect_type,
-            "track": track,
-            "device": device,
+            "track": _ref_index(track_ref),
+            "device": _ref_index(device_ref),
+            "track_stable_ref": _stable_ref("track", _ref_index(track_ref)),
+            "device_stable_ref": _stable_ref("device", _ref_index(device_ref)),
+            "key_count": 1,
+            "keys": ["band1_freq"],
             "state": {"band1_freq": 0.5},
         }
 
@@ -995,13 +1143,34 @@ def test_device_parameter_set_outputs_json_envelope(runner, cli_app, monkeypatch
 
     result = runner.invoke(
         cli_app,
-        ["--output", "json", "device", "parameter", "set", "1", "2", "3", "0.75"],
+        [
+            "--output",
+            "json",
+            "device",
+            "parameter",
+            "set",
+            "0.75",
+            "--track-index",
+            "1",
+            "--device-index",
+            "2",
+            "--parameter-index",
+            "3",
+        ],
     )
 
     assert result.exit_code == 0
     payload = json.loads(result.stdout)
     assert payload["ok"] is True
-    assert payload["result"] == {"track": 1, "device": 2, "parameter": 3, "value": 0.75}
+    assert payload["result"] == {
+        "track": 1,
+        "device": 2,
+        "parameter": 3,
+        "track_stable_ref": "track:1",
+        "device_stable_ref": "device:2",
+        "parameter_stable_ref": "parameter:3",
+        "value": 0.75,
+    }
 
 
 def test_tracks_create_commands_accept_index_option(runner, cli_app, monkeypatch) -> None:
@@ -1670,12 +1839,21 @@ def test_track_mixer_commands_output_json_envelope(runner, cli_app, monkeypatch)
 
     monkeypatch.setattr(track, "get_client", lambda ctx: _ClientStub())
 
-    mute = runner.invoke(cli_app, ["--output", "json", "track", "mute", "set", "0", "true"])
-    solo = runner.invoke(cli_app, ["--output", "json", "track", "solo", "get", "0"])
-    arm = runner.invoke(cli_app, ["--output", "json", "track", "arm", "set", "0", "false"])
+    mute = runner.invoke(
+        cli_app,
+        ["--output", "json", "track", "mute", "set", "true", "--track-index", "0"],
+    )
+    solo = runner.invoke(
+        cli_app,
+        ["--output", "json", "track", "solo", "get", "--track-index", "0"],
+    )
+    arm = runner.invoke(
+        cli_app,
+        ["--output", "json", "track", "arm", "set", "false", "--track-index", "0"],
+    )
     panning = runner.invoke(
         cli_app,
-        ["--output", "json", "track", "panning", "set", "0", "--", "-0.3"],
+        ["--output", "json", "track", "panning", "set", "--track-index", "0", "--", "-0.3"],
     )
 
     assert mute.exit_code == 0
@@ -1700,11 +1878,11 @@ def test_track_send_commands_output_json_envelope(runner, cli_app, monkeypatch) 
 
     get_result = runner.invoke(
         cli_app,
-        ["--output", "json", "track", "send", "get", "0", "1"],
+        ["--output", "json", "track", "send", "get", "1", "--track-index", "0"],
     )
     set_result = runner.invoke(
         cli_app,
-        ["--output", "json", "track", "send", "set", "0", "1", "0.6"],
+        ["--output", "json", "track", "send", "set", "1", "0.6", "--track-index", "0"],
     )
 
     assert get_result.exit_code == 0
@@ -1794,7 +1972,7 @@ def test_mixer_and_track_routing_commands_output_json_envelope(
     )
     input_routing = runner.invoke(
         cli_app,
-        ["--output", "json", "track", "routing", "input", "get", "0"],
+        ["--output", "json", "track", "routing", "input", "get", "--track-index", "0"],
     )
     output_routing = runner.invoke(
         cli_app,
@@ -1805,11 +1983,12 @@ def test_mixer_and_track_routing_commands_output_json_envelope(
             "routing",
             "output",
             "set",
-            "0",
             "--type",
             "Master",
             "--channel",
             "3/4",
+            "--track-index",
+            "0",
         ],
     )
 
@@ -2724,15 +2903,38 @@ def test_synth_foundation_commands_output_json_envelope(runner, cli_app, monkeyp
     )
     listed = runner.invoke(
         cli_app,
-        ["--output", "json", "synth", "parameters", "list", "0", "1"],
+        [
+            "--output",
+            "json",
+            "synth",
+            "parameters",
+            "list",
+            "--track-index",
+            "0",
+            "--device-index",
+            "1",
+        ],
     )
     set_result = runner.invoke(
         cli_app,
-        ["--output", "json", "synth", "parameter", "set", "0", "1", "0", "0.77"],
+        [
+            "--output",
+            "json",
+            "synth",
+            "parameter",
+            "set",
+            "0.77",
+            "--track-index",
+            "0",
+            "--device-index",
+            "1",
+            "--parameter-index",
+            "0",
+        ],
     )
     observed = runner.invoke(
         cli_app,
-        ["--output", "json", "synth", "observe", "0", "1"],
+        ["--output", "json", "synth", "observe", "--track-index", "0", "--device-index", "1"],
     )
 
     assert found.exit_code == 0
@@ -2767,15 +2969,28 @@ def test_synth_standard_wrapper_commands_output_json_envelope(runner, cli_app, m
             "synth",
             "wavetable",
             "set",
-            "0",
-            "1",
-            "filter_cutoff",
             "0.62",
+            "--track-index",
+            "0",
+            "--device-index",
+            "1",
+            "--parameter-key",
+            "filter_cutoff",
         ],
     )
     observed = runner.invoke(
         cli_app,
-        ["--output", "json", "synth", "wavetable", "observe", "0", "1"],
+        [
+            "--output",
+            "json",
+            "synth",
+            "wavetable",
+            "observe",
+            "--track-index",
+            "0",
+            "--device-index",
+            "1",
+        ],
     )
 
     assert keys.exit_code == 0
@@ -2802,15 +3017,38 @@ def test_effect_foundation_commands_output_json_envelope(runner, cli_app, monkey
     )
     listed = runner.invoke(
         cli_app,
-        ["--output", "json", "effect", "parameters", "list", "0", "2"],
+        [
+            "--output",
+            "json",
+            "effect",
+            "parameters",
+            "list",
+            "--track-index",
+            "0",
+            "--device-index",
+            "2",
+        ],
     )
     set_result = runner.invoke(
         cli_app,
-        ["--output", "json", "effect", "parameter", "set", "0", "2", "0", "0.77"],
+        [
+            "--output",
+            "json",
+            "effect",
+            "parameter",
+            "set",
+            "0.77",
+            "--track-index",
+            "0",
+            "--device-index",
+            "2",
+            "--parameter-index",
+            "0",
+        ],
     )
     observed = runner.invoke(
         cli_app,
-        ["--output", "json", "effect", "observe", "0", "2"],
+        ["--output", "json", "effect", "observe", "--track-index", "0", "--device-index", "2"],
     )
 
     assert found.exit_code == 0
@@ -2847,15 +3085,28 @@ def test_effect_standard_wrapper_commands_output_json_envelope(
             "effect",
             "eq8",
             "set",
-            "0",
-            "2",
-            "band1_freq",
             "0.62",
+            "--track-index",
+            "0",
+            "--device-index",
+            "2",
+            "--parameter-key",
+            "band1_freq",
         ],
     )
     observed = runner.invoke(
         cli_app,
-        ["--output", "json", "effect", "eq8", "observe", "0", "2"],
+        [
+            "--output",
+            "json",
+            "effect",
+            "eq8",
+            "observe",
+            "--track-index",
+            "0",
+            "--device-index",
+            "2",
+        ],
     )
 
     assert keys.exit_code == 0

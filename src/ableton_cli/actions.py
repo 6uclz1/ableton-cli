@@ -53,8 +53,8 @@ STABLE_ACTION_MAPPINGS: tuple[StableActionMapping, ...] = (
     ),
     StableActionMapping(
         action="get_track_info",
-        command="uv run ableton-cli --output json track info <track>",
-        capability="Read one track details by index.",
+        command="uv run ableton-cli --output json track info --track-index <track>",
+        capability="Read one track details by selector.",
     ),
     StableActionMapping(
         action="play",
@@ -118,62 +118,64 @@ STABLE_ACTION_MAPPINGS: tuple[StableActionMapping, ...] = (
     ),
     StableActionMapping(
         action="set_track_name",
-        command="uv run ableton-cli --output json track name set <track> <name>",
+        command="uv run ableton-cli --output json track name set <name> --track-index <track>",
         capability="Rename a track.",
     ),
     StableActionMapping(
         action="set_track_volume",
-        command="uv run ableton-cli --output json track volume set <track> <value>",
+        command="uv run ableton-cli --output json track volume set <value> --track-index <track>",
         capability="Set track volume in range 0.0 to 1.0.",
     ),
     StableActionMapping(
         action="get_track_mute",
-        command="uv run ableton-cli --output json track mute get <track>",
+        command="uv run ableton-cli --output json track mute get --track-index <track>",
         capability="Read track mute state.",
     ),
     StableActionMapping(
         action="set_track_mute",
-        command="uv run ableton-cli --output json track mute set <track> <value>",
+        command="uv run ableton-cli --output json track mute set <value> --track-index <track>",
         capability="Update track mute state.",
     ),
     StableActionMapping(
         action="get_track_solo",
-        command="uv run ableton-cli --output json track solo get <track>",
+        command="uv run ableton-cli --output json track solo get --track-index <track>",
         capability="Read track solo state.",
     ),
     StableActionMapping(
         action="set_track_solo",
-        command="uv run ableton-cli --output json track solo set <track> <value>",
+        command="uv run ableton-cli --output json track solo set <value> --track-index <track>",
         capability="Update track solo state.",
     ),
     StableActionMapping(
         action="get_track_arm",
-        command="uv run ableton-cli --output json track arm get <track>",
+        command="uv run ableton-cli --output json track arm get --track-index <track>",
         capability="Read track arm state.",
     ),
     StableActionMapping(
         action="set_track_arm",
-        command="uv run ableton-cli --output json track arm set <track> <value>",
+        command="uv run ableton-cli --output json track arm set <value> --track-index <track>",
         capability="Update track arm state.",
     ),
     StableActionMapping(
         action="get_track_panning",
-        command="uv run ableton-cli --output json track panning get <track>",
+        command="uv run ableton-cli --output json track panning get --track-index <track>",
         capability="Read track panning value.",
     ),
     StableActionMapping(
         action="set_track_panning",
-        command="uv run ableton-cli --output json track panning set <track> <value>",
+        command="uv run ableton-cli --output json track panning set <value> --track-index <track>",
         capability="Update track panning in range -1.0 to 1.0.",
     ),
     StableActionMapping(
         action="get_track_send",
-        command="uv run ableton-cli --output json track send get <track> <send>",
+        command="uv run ableton-cli --output json track send get <send> --track-index <track>",
         capability="Read one track send level by 0-based send index.",
     ),
     StableActionMapping(
         action="set_track_send",
-        command="uv run ableton-cli --output json track send set <track> <send> <value>",
+        command=(
+            "uv run ableton-cli --output json track send set <send> <value> --track-index <track>"
+        ),
         capability="Update one track send level in range 0.0 to 1.0.",
     ),
     StableActionMapping(
@@ -208,14 +210,14 @@ STABLE_ACTION_MAPPINGS: tuple[StableActionMapping, ...] = (
     ),
     StableActionMapping(
         action="get_track_routing_input",
-        command="uv run ableton-cli --output json track routing input get <track>",
+        command="uv run ableton-cli --output json track routing input get --track-index <track>",
         capability="Read current and available input routing for one track.",
     ),
     StableActionMapping(
         action="set_track_routing_output",
         command=(
-            "uv run ableton-cli --output json track routing output set <track> --type "
-            "<routing-type> --channel <routing-channel>"
+            "uv run ableton-cli --output json track routing output set --track-index <track> "
+            "--type <routing-type> --channel <routing-channel>"
         ),
         capability="Update output routing using exact type and channel names.",
     ),
@@ -415,10 +417,10 @@ STABLE_ACTION_MAPPINGS: tuple[StableActionMapping, ...] = (
     StableActionMapping(
         action="set_device_parameter",
         command=(
-            "uv run ableton-cli --output json device parameter set <track> <device> <pa"
-            "rameter> <value>"
+            "uv run ableton-cli --output json device parameter set <value> --track-index <track> "
+            "--device-index <device> --parameter-index <parameter>"
         ),
-        capability="Set a device parameter value by index.",
+        capability="Set a device parameter value by selector.",
     ),
     StableActionMapping(
         action="find_synth_devices",
@@ -430,20 +432,26 @@ STABLE_ACTION_MAPPINGS: tuple[StableActionMapping, ...] = (
     ),
     StableActionMapping(
         action="list_synth_parameters",
-        command="uv run ableton-cli --output json synth parameters list <track> <device>",
-        capability="List synth parameters with safety metadata (min/max/enabled/quantized).",
+        command=(
+            "uv run ableton-cli --output json synth parameters list --track-index <track> "
+            "--device-index <device>"
+        ),
+        capability="List synth parameters with safety metadata and stable refs.",
     ),
     StableActionMapping(
         action="set_synth_parameter_safe",
         command=(
-            "uv run ableton-cli --output json synth parameter set <track> <device> <par"
-            "ameter> <value>"
+            "uv run ableton-cli --output json synth parameter set <value> --track-index <track> "
+            "--device-index <device> --parameter-index <parameter>"
         ),
-        capability="Safely set a synth parameter by index with strict range validation.",
+        capability="Safely set a synth parameter by selector with strict range validation.",
     ),
     StableActionMapping(
         action="observe_synth_parameters",
-        command="uv run ableton-cli --output json synth observe <track> <device>",
+        command=(
+            "uv run ableton-cli --output json synth observe --track-index <track> "
+            "--device-index <device>"
+        ),
         capability="Capture one-shot synth parameter snapshot.",
     ),
     StableActionMapping(
@@ -454,15 +462,16 @@ STABLE_ACTION_MAPPINGS: tuple[StableActionMapping, ...] = (
     StableActionMapping(
         action="set_standard_synth_parameter_safe",
         command=(
-            "uv run ableton-cli --output json synth <wavetable|drift|meld> set <track> "
-            "<device> <key> <value>"
+            "uv run ableton-cli --output json synth <wavetable|drift|meld> set <value> "
+            "--track-index <track> --device-index <device> --parameter-key <key>"
         ),
         capability="Safely set a standard synth key resolved to native parameter index.",
     ),
     StableActionMapping(
         action="observe_standard_synth_state",
         command=(
-            "uv run ableton-cli --output json synth <wavetable|drift|meld> observe <track> <device>"
+            "uv run ableton-cli --output json synth <wavetable|drift|meld> observe "
+            "--track-index <track> --device-index <device>"
         ),
         capability="Capture one-shot wrapper state snapshot keyed by stable synth keys.",
     ),
@@ -479,20 +488,26 @@ STABLE_ACTION_MAPPINGS: tuple[StableActionMapping, ...] = (
     ),
     StableActionMapping(
         action="list_effect_parameters",
-        command="uv run ableton-cli --output json effect parameters list <track> <device>",
-        capability="List effect parameters with safety metadata (min/max/enabled/quantized).",
+        command=(
+            "uv run ableton-cli --output json effect parameters list --track-index <track> "
+            "--device-index <device>"
+        ),
+        capability="List effect parameters with safety metadata and stable refs.",
     ),
     StableActionMapping(
         action="set_effect_parameter_safe",
         command=(
-            "uv run ableton-cli --output json effect parameter set <track> <device> <pa"
-            "rameter> <value>"
+            "uv run ableton-cli --output json effect parameter set <value> --track-index <track> "
+            "--device-index <device> --parameter-index <parameter>"
         ),
-        capability="Safely set an effect parameter by index with strict range validation.",
+        capability="Safely set an effect parameter by selector with strict range validation.",
     ),
     StableActionMapping(
         action="observe_effect_parameters",
-        command="uv run ableton-cli --output json effect observe <track> <device>",
+        command=(
+            "uv run ableton-cli --output json effect observe --track-index <track> "
+            "--device-index <device>"
+        ),
         capability="Capture one-shot effect parameter snapshot.",
     ),
     StableActionMapping(
@@ -507,7 +522,8 @@ STABLE_ACTION_MAPPINGS: tuple[StableActionMapping, ...] = (
         action="set_standard_effect_parameter_safe",
         command=(
             "uv run ableton-cli --output json effect <eq8|limiter|compressor|auto-filte"
-            "r|reverb|utility> set <track> <device> <key> <value>"
+            "r|reverb|utility> set <value> --track-index <track> --device-index <device> "
+            "--parameter-key <key>"
         ),
         capability="Safely set a standard effect key resolved to native parameter index.",
     ),
@@ -515,7 +531,7 @@ STABLE_ACTION_MAPPINGS: tuple[StableActionMapping, ...] = (
         action="observe_standard_effect_state",
         command=(
             "uv run ableton-cli --output json effect <eq8|limiter|compressor|auto-filte"
-            "r|reverb|utility> observe <track> <device>"
+            "r|reverb|utility> observe --track-index <track> --device-index <device>"
         ),
         capability="Capture one-shot wrapper state snapshot keyed by stable effect keys.",
     ),

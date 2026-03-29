@@ -1,12 +1,20 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from typing import Annotated
 
 import typer
 
-from ._track_shared import TrackArgument, VolumeValueArgument
+from ..refs import (
+    SelectedTrackOption,
+    TrackIndexOption,
+    TrackNameOption,
+    TrackQueryOption,
+    TrackStableRefOption,
+    build_track_ref,
+)
 from ._track_specs import TrackCommandSpec, TrackValueCommandSpec
-from ._validation import require_track_and_volume
+from ._validation import require_volume_value
 
 VOLUME_GET_SPEC = TrackCommandSpec(
     command_name="track volume get",
@@ -16,7 +24,7 @@ VOLUME_GET_SPEC = TrackCommandSpec(
 VOLUME_SET_SPEC = TrackValueCommandSpec[float](
     command_name="track volume set",
     client_method="track_volume_set",
-    validators=(require_track_and_volume,),
+    validators=(require_volume_value,),
 )
 
 
@@ -29,23 +37,43 @@ def register_commands(
     @volume_app.command("get")
     def volume_get(
         ctx: typer.Context,
-        track: TrackArgument,
+        track_index: TrackIndexOption = None,
+        track_name: TrackNameOption = None,
+        selected_track: SelectedTrackOption = False,
+        track_query: TrackQueryOption = None,
+        track_ref: TrackStableRefOption = None,
     ) -> None:
         run_track_command_spec(
             ctx,
             spec=VOLUME_GET_SPEC,
-            track=track,
+            track_ref=lambda: build_track_ref(
+                track_index=track_index,
+                track_name=track_name,
+                selected_track=selected_track,
+                track_query=track_query,
+                track_ref=track_ref,
+            ),
         )
 
     @volume_app.command("set")
     def volume_set(
         ctx: typer.Context,
-        track: TrackArgument,
-        value: VolumeValueArgument,
+        value: Annotated[float, typer.Argument(help="Volume value in [0.0, 1.0]")],
+        track_index: TrackIndexOption = None,
+        track_name: TrackNameOption = None,
+        selected_track: SelectedTrackOption = False,
+        track_query: TrackQueryOption = None,
+        track_ref: TrackStableRefOption = None,
     ) -> None:
         run_track_value_command_spec(
             ctx,
             spec=VOLUME_SET_SPEC,
-            track=track,
+            track_ref=lambda: build_track_ref(
+                track_index=track_index,
+                track_name=track_name,
+                selected_track=selected_track,
+                track_query=track_query,
+                track_ref=track_ref,
+            ),
             value=value,
         )

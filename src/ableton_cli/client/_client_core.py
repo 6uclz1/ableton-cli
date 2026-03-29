@@ -5,6 +5,7 @@ from typing import Any
 from ..capabilities import read_only_remote_commands
 from ..config import Settings
 from ..errors import AppError, ErrorCode, ExitCode
+from ..refs import RefPayload
 from .backends import ClientBackend, LiveBackendClient, RecordingClient, ReplayClient
 
 
@@ -98,17 +99,17 @@ class _AbletonClientCore:
         self,
         command_name: str,
         *,
-        track: int,
-        device: int,
-        parameter: int,
+        track_ref: RefPayload,
+        device_ref: RefPayload,
+        parameter_ref: RefPayload,
         value: float,
     ) -> dict[str, Any]:
         return self._call(
             command_name,
             {
-                "track": track,
-                "device": device,
-                "parameter": parameter,
+                "track_ref": track_ref,
+                "device_ref": device_ref,
+                "parameter_ref": parameter_ref,
                 "value": value,
             },
         )

@@ -12,6 +12,7 @@ from .command_backend_validators import (
     _panning,
     _tempo,
     _track_index,
+    _track_ref,
     _volume,
 )
 
@@ -53,7 +54,7 @@ def _handle_session_snapshot(backend: CommandBackend, _args: dict[str, Any]) -> 
 
 
 def _handle_get_track_info(backend: CommandBackend, args: dict[str, Any]) -> dict[str, Any]:
-    track = _track_index("track", args.get("track"))
+    track = backend.resolve_track_ref(_track_ref(args.get("track_ref")))
     return backend.get_track_info(track)
 
 
@@ -72,7 +73,7 @@ def _handle_create_audio_track(backend: CommandBackend, args: dict[str, Any]) ->
 
 
 def _handle_set_track_name(backend: CommandBackend, args: dict[str, Any]) -> dict[str, Any]:
-    track = _track_index("track", args.get("track"))
+    track = backend.resolve_track_ref(_track_ref(args.get("track_ref")))
     name = _non_empty_string("name", args.get("name"))
     return backend.set_track_name(track, name)
 
@@ -131,66 +132,66 @@ def _handle_set_tempo(backend: CommandBackend, args: dict[str, Any]) -> dict[str
 
 
 def _handle_track_volume_get(backend: CommandBackend, args: dict[str, Any]) -> dict[str, Any]:
-    track = _track_index("track", args.get("track"))
+    track = backend.resolve_track_ref(_track_ref(args.get("track_ref")))
     return backend.track_volume_get(track)
 
 
 def _handle_track_volume_set(backend: CommandBackend, args: dict[str, Any]) -> dict[str, Any]:
-    track = _track_index("track", args.get("track"))
+    track = backend.resolve_track_ref(_track_ref(args.get("track_ref")))
     return backend.track_volume_set(track, _volume(args.get("value")))
 
 
 def _handle_track_mute_get(backend: CommandBackend, args: dict[str, Any]) -> dict[str, Any]:
-    track = _track_index("track", args.get("track"))
+    track = backend.resolve_track_ref(_track_ref(args.get("track_ref")))
     return backend.track_mute_get(track)
 
 
 def _handle_track_mute_set(backend: CommandBackend, args: dict[str, Any]) -> dict[str, Any]:
-    track = _track_index("track", args.get("track"))
+    track = backend.resolve_track_ref(_track_ref(args.get("track_ref")))
     value = _as_bool("value", args.get("value"))
     return backend.track_mute_set(track, value)
 
 
 def _handle_track_solo_get(backend: CommandBackend, args: dict[str, Any]) -> dict[str, Any]:
-    track = _track_index("track", args.get("track"))
+    track = backend.resolve_track_ref(_track_ref(args.get("track_ref")))
     return backend.track_solo_get(track)
 
 
 def _handle_track_solo_set(backend: CommandBackend, args: dict[str, Any]) -> dict[str, Any]:
-    track = _track_index("track", args.get("track"))
+    track = backend.resolve_track_ref(_track_ref(args.get("track_ref")))
     value = _as_bool("value", args.get("value"))
     return backend.track_solo_set(track, value)
 
 
 def _handle_track_arm_get(backend: CommandBackend, args: dict[str, Any]) -> dict[str, Any]:
-    track = _track_index("track", args.get("track"))
+    track = backend.resolve_track_ref(_track_ref(args.get("track_ref")))
     return backend.track_arm_get(track)
 
 
 def _handle_track_arm_set(backend: CommandBackend, args: dict[str, Any]) -> dict[str, Any]:
-    track = _track_index("track", args.get("track"))
+    track = backend.resolve_track_ref(_track_ref(args.get("track_ref")))
     value = _as_bool("value", args.get("value"))
     return backend.track_arm_set(track, value)
 
 
 def _handle_track_panning_get(backend: CommandBackend, args: dict[str, Any]) -> dict[str, Any]:
-    track = _track_index("track", args.get("track"))
+    track = backend.resolve_track_ref(_track_ref(args.get("track_ref")))
     return backend.track_panning_get(track)
 
 
 def _handle_track_panning_set(backend: CommandBackend, args: dict[str, Any]) -> dict[str, Any]:
-    track = _track_index("track", args.get("track"))
+    track = backend.resolve_track_ref(_track_ref(args.get("track_ref")))
     return backend.track_panning_set(track, _panning(args.get("value")))
 
 
 def _handle_track_send_get(backend: CommandBackend, args: dict[str, Any]) -> dict[str, Any]:
-    track = _track_index("track", args.get("track"))
+    track = backend.resolve_track_ref(_track_ref(args.get("track_ref")))
     send = _track_index("send", args.get("send"))
     return backend.track_send_get(track, send)
 
 
 def _handle_track_send_set(backend: CommandBackend, args: dict[str, Any]) -> dict[str, Any]:
-    track = _track_index("track", args.get("track"))
+    track = backend.resolve_track_ref(_track_ref(args.get("track_ref")))
     send = _track_index("send", args.get("send"))
     return backend.track_send_set(track, send, _volume(args.get("value")))
 
@@ -282,7 +283,7 @@ def _handle_track_routing_input_get(
     backend: CommandBackend,
     args: dict[str, Any],
 ) -> dict[str, Any]:
-    track = _track_index("track", args.get("track"))
+    track = backend.resolve_track_ref(_track_ref(args.get("track_ref")))
     return backend.track_routing_input_get(track)
 
 
@@ -290,7 +291,7 @@ def _handle_track_routing_input_set(
     backend: CommandBackend,
     args: dict[str, Any],
 ) -> dict[str, Any]:
-    track = _track_index("track", args.get("track"))
+    track = backend.resolve_track_ref(_track_ref(args.get("track_ref")))
     routing_type = _non_empty_string("routing_type", args.get("routing_type"))
     routing_channel = _non_empty_string("routing_channel", args.get("routing_channel"))
     return backend.track_routing_input_set(track, routing_type, routing_channel)
@@ -300,7 +301,7 @@ def _handle_track_routing_output_get(
     backend: CommandBackend,
     args: dict[str, Any],
 ) -> dict[str, Any]:
-    track = _track_index("track", args.get("track"))
+    track = backend.resolve_track_ref(_track_ref(args.get("track_ref")))
     return backend.track_routing_output_get(track)
 
 
@@ -308,7 +309,7 @@ def _handle_track_routing_output_set(
     backend: CommandBackend,
     args: dict[str, Any],
 ) -> dict[str, Any]:
-    track = _track_index("track", args.get("track"))
+    track = backend.resolve_track_ref(_track_ref(args.get("track_ref")))
     routing_type = _non_empty_string("routing_type", args.get("routing_type"))
     routing_channel = _non_empty_string("routing_channel", args.get("routing_channel"))
     return backend.track_routing_output_set(track, routing_type, routing_channel)

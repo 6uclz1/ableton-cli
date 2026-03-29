@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from ..refs import RefPayload
+
 
 class _AbletonClientTracksClipsMixin:
     def _call_clip_note_transform(
@@ -26,8 +28,8 @@ class _AbletonClientTracksClipsMixin:
         args.update(extra_args)
         return self._call(command_name, args)
 
-    def get_track_info(self, track: int) -> dict[str, Any]:
-        return self._call("get_track_info", {"track": track})
+    def get_track_info(self, track_ref: RefPayload) -> dict[str, Any]:
+        return self._call("get_track_info", {"track_ref": track_ref})
 
     def tracks_list(self) -> dict[str, Any]:
         return self._call("tracks_list")
@@ -38,44 +40,44 @@ class _AbletonClientTracksClipsMixin:
     def create_audio_track(self, index: int = -1) -> dict[str, Any]:
         return self._call("create_audio_track", {"index": index})
 
-    def set_track_name(self, track: int, name: str) -> dict[str, Any]:
-        return self._call("set_track_name", {"track": track, "name": name})
+    def set_track_name(self, track_ref: RefPayload, name: str) -> dict[str, Any]:
+        return self._call("set_track_name", {"track_ref": track_ref, "name": name})
 
-    def track_volume_get(self, track: int) -> dict[str, Any]:
-        return self._call("track_volume_get", {"track": track})
+    def track_volume_get(self, track_ref: RefPayload) -> dict[str, Any]:
+        return self._call("track_volume_get", {"track_ref": track_ref})
 
-    def track_volume_set(self, track: int, value: float) -> dict[str, Any]:
-        return self._call("track_volume_set", {"track": track, "value": value})
+    def track_volume_set(self, track_ref: RefPayload, value: float) -> dict[str, Any]:
+        return self._call("track_volume_set", {"track_ref": track_ref, "value": value})
 
-    def track_mute_get(self, track: int) -> dict[str, Any]:
-        return self._call("track_mute_get", {"track": track})
+    def track_mute_get(self, track_ref: RefPayload) -> dict[str, Any]:
+        return self._call("track_mute_get", {"track_ref": track_ref})
 
-    def track_mute_set(self, track: int, value: bool) -> dict[str, Any]:
-        return self._call("track_mute_set", {"track": track, "value": value})
+    def track_mute_set(self, track_ref: RefPayload, value: bool) -> dict[str, Any]:
+        return self._call("track_mute_set", {"track_ref": track_ref, "value": value})
 
-    def track_solo_get(self, track: int) -> dict[str, Any]:
-        return self._call("track_solo_get", {"track": track})
+    def track_solo_get(self, track_ref: RefPayload) -> dict[str, Any]:
+        return self._call("track_solo_get", {"track_ref": track_ref})
 
-    def track_solo_set(self, track: int, value: bool) -> dict[str, Any]:
-        return self._call("track_solo_set", {"track": track, "value": value})
+    def track_solo_set(self, track_ref: RefPayload, value: bool) -> dict[str, Any]:
+        return self._call("track_solo_set", {"track_ref": track_ref, "value": value})
 
-    def track_arm_get(self, track: int) -> dict[str, Any]:
-        return self._call("track_arm_get", {"track": track})
+    def track_arm_get(self, track_ref: RefPayload) -> dict[str, Any]:
+        return self._call("track_arm_get", {"track_ref": track_ref})
 
-    def track_arm_set(self, track: int, value: bool) -> dict[str, Any]:
-        return self._call("track_arm_set", {"track": track, "value": value})
+    def track_arm_set(self, track_ref: RefPayload, value: bool) -> dict[str, Any]:
+        return self._call("track_arm_set", {"track_ref": track_ref, "value": value})
 
-    def track_panning_get(self, track: int) -> dict[str, Any]:
-        return self._call("track_panning_get", {"track": track})
+    def track_panning_get(self, track_ref: RefPayload) -> dict[str, Any]:
+        return self._call("track_panning_get", {"track_ref": track_ref})
 
-    def track_panning_set(self, track: int, value: float) -> dict[str, Any]:
-        return self._call("track_panning_set", {"track": track, "value": value})
+    def track_panning_set(self, track_ref: RefPayload, value: float) -> dict[str, Any]:
+        return self._call("track_panning_set", {"track_ref": track_ref, "value": value})
 
-    def track_send_get(self, track: int, send: int) -> dict[str, Any]:
-        return self._call("track_send_get", {"track": track, "send": send})
+    def track_send_get(self, track_ref: RefPayload, send: int) -> dict[str, Any]:
+        return self._call("track_send_get", {"track_ref": track_ref, "send": send})
 
-    def track_send_set(self, track: int, send: int, value: float) -> dict[str, Any]:
-        return self._call("track_send_set", {"track": track, "send": send, "value": value})
+    def track_send_set(self, track_ref: RefPayload, send: int, value: float) -> dict[str, Any]:
+        return self._call("track_send_set", {"track_ref": track_ref, "send": send, "value": value})
 
     def return_tracks_list(self) -> dict[str, Any]:
         return self._call("return_tracks_list")
@@ -128,37 +130,37 @@ class _AbletonClientTracksClipsMixin:
     def mixer_cue_routing_set(self, routing: str) -> dict[str, Any]:
         return self._call("mixer_cue_routing_set", {"routing": routing})
 
-    def track_routing_input_get(self, track: int) -> dict[str, Any]:
-        return self._call("track_routing_input_get", {"track": track})
+    def track_routing_input_get(self, track_ref: RefPayload) -> dict[str, Any]:
+        return self._call("track_routing_input_get", {"track_ref": track_ref})
 
     def track_routing_input_set(
         self,
-        track: int,
+        track_ref: RefPayload,
         routing_type: str,
         routing_channel: str,
     ) -> dict[str, Any]:
         return self._call(
             "track_routing_input_set",
             {
-                "track": track,
+                "track_ref": track_ref,
                 "routing_type": routing_type,
                 "routing_channel": routing_channel,
             },
         )
 
-    def track_routing_output_get(self, track: int) -> dict[str, Any]:
-        return self._call("track_routing_output_get", {"track": track})
+    def track_routing_output_get(self, track_ref: RefPayload) -> dict[str, Any]:
+        return self._call("track_routing_output_get", {"track_ref": track_ref})
 
     def track_routing_output_set(
         self,
-        track: int,
+        track_ref: RefPayload,
         routing_type: str,
         routing_channel: str,
     ) -> dict[str, Any]:
         return self._call(
             "track_routing_output_set",
             {
-                "track": track,
+                "track_ref": track_ref,
                 "routing_type": routing_type,
                 "routing_channel": routing_channel,
             },

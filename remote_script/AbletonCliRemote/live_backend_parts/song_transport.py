@@ -125,10 +125,15 @@ class LiveBackendSongSessionMixin:
             )
 
         devices = []
-        devices = self._serialize_devices(list(target.devices))
+        devices = self._serialize_devices(
+            list(target.devices),
+            track_index=track,
+            track_stable_ref=self._track_stable_ref(target, index=track),
+        )
 
         return {
             "index": track,
+            "stable_ref": self._track_stable_ref(target, index=track),
             "name": str(target.name),
             "is_audio_track": bool(getattr(target, "has_audio_input", False)),
             "is_midi_track": bool(getattr(target, "has_midi_input", False)),
@@ -147,6 +152,7 @@ class LiveBackendSongSessionMixin:
             tracks.append(
                 {
                     "index": index,
+                    "stable_ref": self._track_stable_ref(track, index=index),
                     "name": str(track.name),
                     "mute": bool(track.mute),
                     "solo": bool(track.solo),

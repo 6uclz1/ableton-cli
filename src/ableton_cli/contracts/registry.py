@@ -27,6 +27,307 @@ class CommandContractSpec:
         }
 
 
+def _ref_schema(*, selector_fields: tuple[str, ...]) -> dict[str, Any]:
+    properties: dict[str, Any] = {"mode": {"type": "string"}}
+    for field in selector_fields:
+        properties[field] = {"type": "string" if field != "index" else "integer"}
+    return {
+        "type": "object",
+        "required": ["mode"],
+        "properties": properties,
+        "additional_properties": False,
+    }
+
+
+def _track_ref_schema() -> dict[str, Any]:
+    return _ref_schema(selector_fields=("index", "name", "query", "stable_ref"))
+
+
+def _device_ref_schema() -> dict[str, Any]:
+    return _ref_schema(selector_fields=("index", "name", "query", "stable_ref"))
+
+
+def _parameter_ref_schema() -> dict[str, Any]:
+    return _ref_schema(selector_fields=("index", "name", "query", "stable_ref", "key"))
+
+
+def _track_ref_args_schema(*, include_value: dict[str, Any] | None = None) -> dict[str, Any]:
+    properties: dict[str, Any] = {"track_ref": _track_ref_schema()}
+    required = ["track_ref"]
+    if include_value is not None:
+        for name, schema in include_value.items():
+            properties[name] = schema
+            required.append(name)
+    return {
+        "type": "object",
+        "required": required,
+        "properties": properties,
+        "additional_properties": False,
+    }
+
+
+def _track_device_args_schema(
+    *,
+    include_value: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    properties: dict[str, Any] = {
+        "track_ref": _track_ref_schema(),
+        "device_ref": _device_ref_schema(),
+    }
+    required = ["track_ref", "device_ref"]
+    if include_value is not None:
+        for name, schema in include_value.items():
+            properties[name] = schema
+            required.append(name)
+    return {
+        "type": "object",
+        "required": required,
+        "properties": properties,
+        "additional_properties": False,
+    }
+
+
+def _track_device_parameter_args_schema(
+    *,
+    include_value: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    properties: dict[str, Any] = {
+        "track_ref": _track_ref_schema(),
+        "device_ref": _device_ref_schema(),
+        "parameter_ref": _parameter_ref_schema(),
+    }
+    required = ["track_ref", "device_ref", "parameter_ref"]
+    if include_value is not None:
+        for name, schema in include_value.items():
+            properties[name] = schema
+            required.append(name)
+    return {
+        "type": "object",
+        "required": required,
+        "properties": properties,
+        "additional_properties": False,
+    }
+
+
+def _parameter_result_schema(*, include_bounds: bool = True) -> dict[str, Any]:
+    properties: dict[str, Any] = {
+        "index": {"type": "integer"},
+        "stable_ref": {"type": "string"},
+        "name": {"type": "string"},
+        "value": {"type": "number"},
+    }
+    required = ["index", "stable_ref", "name", "value"]
+    if include_bounds:
+        properties.update(
+            {
+                "min": {"type": ["number", "null"]},
+                "max": {"type": ["number", "null"]},
+                "is_enabled": {"type": "boolean"},
+                "is_quantized": {"type": "boolean"},
+            }
+        )
+        required.extend(["min", "max", "is_enabled", "is_quantized"])
+    return {
+        "type": "object",
+        "required": required,
+        "properties": properties,
+        "additional_properties": False,
+    }
+
+
+def _device_result_schema(*, include_track_stable_ref: bool) -> dict[str, Any]:
+    properties: dict[str, Any] = {
+        "index": {"type": "integer"},
+        "stable_ref": {"type": "string"},
+        "name": {"type": "string"},
+        "class_name": {"type": "string"},
+        "type": {"type": "string"},
+        "parameters": {"type": "array", "items": _parameter_result_schema(include_bounds=False)},
+    }
+    required = ["index", "stable_ref", "name", "class_name", "type", "parameters"]
+    if include_track_stable_ref:
+        properties["track_stable_ref"] = {"type": "string"}
+        required.append("track_stable_ref")
+    return {
+        "type": "object",
+        "required": required,
+        "properties": properties,
+        "additional_properties": False,
+    }
+
+
+def _track_summary_schema() -> dict[str, Any]:
+    return {
+        "type": "object",
+        "required": ["index", "stable_ref", "name", "mute", "solo", "arm", "volume"],
+        "properties": {
+            "index": {"type": "integer"},
+            "stable_ref": {"type": "string"},
+            "name": {"type": "string"},
+            "mute": {"type": "boolean"},
+            "solo": {"type": "boolean"},
+            "arm": {"type": "boolean"},
+            "volume": {"type": "number"},
+        },
+        "additional_properties": False,
+    }
+
+
+def _track_state_result_schema(*, field_name: str, field_schema: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "type": "object",
+        "required": ["track", field_name],
+        "properties": {
+            "track": {"type": "integer"},
+            field_name: field_schema,
+        },
+        "additional_properties": False,
+    }
+
+
+def _device_search_result_schema(*, type_field: str) -> dict[str, Any]:
+    return {
+        "type": "object",
+        "required": ["track", type_field, "count", "devices"],
+        "properties": {
+            "track": {"type": ["integer", "null"]},
+            type_field: {"type": ["string", "null"]},
+            "count": {"type": "integer"},
+            "devices": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "required": [
+                        "track",
+                        "device",
+                        "track_stable_ref",
+                        "stable_ref",
+                        "track_name",
+                        "device_name",
+                        "class_name",
+                        "detected_type",
+                    ],
+                    "properties": {
+                        "track": {"type": "integer"},
+                        "device": {"type": "integer"},
+                        "track_stable_ref": {"type": "string"},
+                        "stable_ref": {"type": "string"},
+                        "track_name": {"type": "string"},
+                        "device_name": {"type": "string"},
+                        "class_name": {"type": "string"},
+                        "detected_type": {"type": "string"},
+                    },
+                    "additional_properties": False,
+                },
+            },
+        },
+        "additional_properties": False,
+    }
+
+
+def _parameter_listing_result_schema(
+    *, detected_type_field: str | None = "detected_type"
+) -> dict[str, Any]:
+    properties: dict[str, Any] = {
+        "track": {"type": "integer"},
+        "device": {"type": "integer"},
+        "track_stable_ref": {"type": "string"},
+        "device_stable_ref": {"type": "string"},
+        "device_name": {"type": "string"},
+        "class_name": {"type": "string"},
+        "parameter_count": {"type": "integer"},
+        "parameters": {"type": "array", "items": _parameter_result_schema()},
+    }
+    required = [
+        "track",
+        "device",
+        "track_stable_ref",
+        "device_stable_ref",
+        "device_name",
+        "class_name",
+        "parameter_count",
+        "parameters",
+    ]
+    if detected_type_field is not None:
+        properties[detected_type_field] = {"type": "string"}
+        required.append(detected_type_field)
+    return {
+        "type": "object",
+        "required": required,
+        "properties": properties,
+        "additional_properties": False,
+    }
+
+
+def _safe_parameter_set_result_schema(
+    *, type_field: str | None = "detected_type"
+) -> dict[str, Any]:
+    properties: dict[str, Any] = {
+        "track": {"type": "integer"},
+        "device": {"type": "integer"},
+        "parameter": {"type": "integer"},
+        "track_stable_ref": {"type": "string"},
+        "device_stable_ref": {"type": "string"},
+        "parameter_stable_ref": {"type": "string"},
+        "before": {"type": "number"},
+        "after": {"type": "number"},
+        "min": {"type": "number"},
+        "max": {"type": "number"},
+        "is_enabled": {"type": "boolean"},
+        "is_quantized": {"type": "boolean"},
+    }
+    required = [
+        "track",
+        "device",
+        "parameter",
+        "track_stable_ref",
+        "device_stable_ref",
+        "parameter_stable_ref",
+        "before",
+        "after",
+        "min",
+        "max",
+        "is_enabled",
+        "is_quantized",
+    ]
+    if type_field is not None:
+        properties[type_field] = {"type": "string"}
+        required.append(type_field)
+    return {
+        "type": "object",
+        "required": required,
+        "properties": properties,
+        "additional_properties": False,
+    }
+
+
+def _standard_state_result_schema(*, type_field: str) -> dict[str, Any]:
+    return {
+        "type": "object",
+        "required": [
+            type_field,
+            "track",
+            "device",
+            "track_stable_ref",
+            "device_stable_ref",
+            "key_count",
+            "keys",
+            "state",
+        ],
+        "properties": {
+            type_field: {"type": "string"},
+            "track": {"type": "integer"},
+            "device": {"type": "integer"},
+            "track_stable_ref": {"type": "string"},
+            "device_stable_ref": {"type": "string"},
+            "key_count": {"type": "integer"},
+            "keys": {"type": "array", "items": {"type": "string"}},
+            "state": {"type": "object"},
+        },
+        "additional_properties": False,
+    }
+
+
 _DETAILED_CONTRACTS: dict[str, dict[str, dict[str, Any]]] = {
     "ping": {
         "args": {"type": "object", "additional_properties": False},
@@ -89,9 +390,9 @@ _DETAILED_CONTRACTS: dict[str, dict[str, dict[str, Any]]] = {
     "track send get": {
         "args": {
             "type": "object",
-            "required": ["track", "send"],
+            "required": ["track_ref", "send"],
             "properties": {
-                "track": {"type": "integer"},
+                "track_ref": _track_ref_schema(),
                 "send": {"type": "integer"},
             },
             "additional_properties": False,
@@ -110,9 +411,9 @@ _DETAILED_CONTRACTS: dict[str, dict[str, dict[str, Any]]] = {
     "track send set": {
         "args": {
             "type": "object",
-            "required": ["track", "send", "value"],
+            "required": ["track_ref", "send", "value"],
             "properties": {
-                "track": {"type": "integer"},
+                "track_ref": _track_ref_schema(),
                 "send": {"type": "integer"},
                 "value": {"type": "number"},
             },
@@ -369,8 +670,8 @@ _DETAILED_CONTRACTS: dict[str, dict[str, dict[str, Any]]] = {
     "track routing input get": {
         "args": {
             "type": "object",
-            "required": ["track"],
-            "properties": {"track": {"type": "integer"}},
+            "required": ["track_ref"],
+            "properties": {"track_ref": _track_ref_schema()},
             "additional_properties": False,
         },
         "result": {
@@ -387,9 +688,9 @@ _DETAILED_CONTRACTS: dict[str, dict[str, dict[str, Any]]] = {
     "track routing input set": {
         "args": {
             "type": "object",
-            "required": ["track", "routing_type", "routing_channel"],
+            "required": ["track_ref", "routing_type", "routing_channel"],
             "properties": {
-                "track": {"type": "integer"},
+                "track_ref": _track_ref_schema(),
                 "routing_type": {"type": "string"},
                 "routing_channel": {"type": "string"},
             },
@@ -409,8 +710,8 @@ _DETAILED_CONTRACTS: dict[str, dict[str, dict[str, Any]]] = {
     "track routing output get": {
         "args": {
             "type": "object",
-            "required": ["track"],
-            "properties": {"track": {"type": "integer"}},
+            "required": ["track_ref"],
+            "properties": {"track_ref": _track_ref_schema()},
             "additional_properties": False,
         },
         "result": {
@@ -427,9 +728,9 @@ _DETAILED_CONTRACTS: dict[str, dict[str, dict[str, Any]]] = {
     "track routing output set": {
         "args": {
             "type": "object",
-            "required": ["track", "routing_type", "routing_channel"],
+            "required": ["track_ref", "routing_type", "routing_channel"],
             "properties": {
-                "track": {"type": "integer"},
+                "track_ref": _track_ref_schema(),
                 "routing_type": {"type": "string"},
                 "routing_channel": {"type": "string"},
             },
@@ -468,6 +769,234 @@ _DETAILED_CONTRACTS: dict[str, dict[str, dict[str, Any]]] = {
         },
     },
 }
+
+_DETAILED_CONTRACTS.update(
+    {
+        "tracks list": {
+            "result": {
+                "type": "object",
+                "required": ["tracks"],
+                "properties": {
+                    "tracks": {"type": "array", "items": _track_summary_schema()},
+                },
+                "additional_properties": False,
+            }
+        },
+        "track info": {
+            "args": _track_ref_args_schema(),
+            "result": {
+                "type": "object",
+                "required": [
+                    "index",
+                    "stable_ref",
+                    "name",
+                    "is_audio_track",
+                    "is_midi_track",
+                    "mute",
+                    "solo",
+                    "arm",
+                    "volume",
+                    "panning",
+                    "clip_slots",
+                    "devices",
+                ],
+                "properties": {
+                    "index": {"type": "integer"},
+                    "stable_ref": {"type": "string"},
+                    "name": {"type": "string"},
+                    "is_audio_track": {"type": "boolean"},
+                    "is_midi_track": {"type": "boolean"},
+                    "mute": {"type": "boolean"},
+                    "solo": {"type": "boolean"},
+                    "arm": {"type": "boolean"},
+                    "volume": {"type": "number"},
+                    "panning": {"type": "number"},
+                    "clip_slots": {"type": "array"},
+                    "devices": {
+                        "type": "array",
+                        "items": _device_result_schema(include_track_stable_ref=True),
+                    },
+                },
+                "additional_properties": False,
+            },
+        },
+        "track volume get": {
+            "args": _track_ref_args_schema(),
+            "result": _track_state_result_schema(
+                field_name="volume", field_schema={"type": "number"}
+            ),
+        },
+        "track volume set": {
+            "args": _track_ref_args_schema(include_value={"value": {"type": "number"}}),
+            "result": _track_state_result_schema(
+                field_name="volume", field_schema={"type": "number"}
+            ),
+        },
+        "track name set": {
+            "args": _track_ref_args_schema(include_value={"name": {"type": "string"}}),
+            "result": _track_state_result_schema(
+                field_name="name", field_schema={"type": "string"}
+            ),
+        },
+        "track mute get": {
+            "args": _track_ref_args_schema(),
+            "result": _track_state_result_schema(
+                field_name="mute", field_schema={"type": "boolean"}
+            ),
+        },
+        "track mute set": {
+            "args": _track_ref_args_schema(include_value={"value": {"type": "boolean"}}),
+            "result": _track_state_result_schema(
+                field_name="mute", field_schema={"type": "boolean"}
+            ),
+        },
+        "track solo get": {
+            "args": _track_ref_args_schema(),
+            "result": _track_state_result_schema(
+                field_name="solo", field_schema={"type": "boolean"}
+            ),
+        },
+        "track solo set": {
+            "args": _track_ref_args_schema(include_value={"value": {"type": "boolean"}}),
+            "result": _track_state_result_schema(
+                field_name="solo", field_schema={"type": "boolean"}
+            ),
+        },
+        "track arm get": {
+            "args": _track_ref_args_schema(),
+            "result": _track_state_result_schema(
+                field_name="arm", field_schema={"type": "boolean"}
+            ),
+        },
+        "track arm set": {
+            "args": _track_ref_args_schema(include_value={"value": {"type": "boolean"}}),
+            "result": _track_state_result_schema(
+                field_name="arm", field_schema={"type": "boolean"}
+            ),
+        },
+        "track panning get": {
+            "args": _track_ref_args_schema(),
+            "result": _track_state_result_schema(
+                field_name="panning", field_schema={"type": "number"}
+            ),
+        },
+        "track panning set": {
+            "args": _track_ref_args_schema(include_value={"value": {"type": "number"}}),
+            "result": _track_state_result_schema(
+                field_name="panning", field_schema={"type": "number"}
+            ),
+        },
+        "device parameter set": {
+            "args": _track_device_parameter_args_schema(
+                include_value={"value": {"type": "number"}}
+            ),
+            "result": {
+                "type": "object",
+                "required": [
+                    "track",
+                    "device",
+                    "parameter",
+                    "track_stable_ref",
+                    "device_stable_ref",
+                    "parameter_stable_ref",
+                    "value",
+                ],
+                "properties": {
+                    "track": {"type": "integer"},
+                    "device": {"type": "integer"},
+                    "parameter": {"type": "integer"},
+                    "track_stable_ref": {"type": "string"},
+                    "device_stable_ref": {"type": "string"},
+                    "parameter_stable_ref": {"type": "string"},
+                    "value": {"type": "number"},
+                },
+                "additional_properties": False,
+            },
+        },
+        "synth find": {
+            "result": _device_search_result_schema(type_field="synth_type"),
+        },
+        "synth parameters list": {
+            "args": _track_device_args_schema(),
+            "result": _parameter_listing_result_schema(),
+        },
+        "synth parameter set": {
+            "args": _track_device_parameter_args_schema(
+                include_value={"value": {"type": "number"}}
+            ),
+            "result": _safe_parameter_set_result_schema(),
+        },
+        "synth observe": {
+            "args": _track_device_args_schema(),
+            "result": _parameter_listing_result_schema(),
+        },
+        "effect find": {
+            "result": _device_search_result_schema(type_field="effect_type"),
+        },
+        "effect parameters list": {
+            "args": _track_device_args_schema(),
+            "result": _parameter_listing_result_schema(),
+        },
+        "effect parameter set": {
+            "args": _track_device_parameter_args_schema(
+                include_value={"value": {"type": "number"}}
+            ),
+            "result": _safe_parameter_set_result_schema(),
+        },
+        "effect observe": {
+            "args": _track_device_args_schema(),
+            "result": _parameter_listing_result_schema(),
+        },
+    }
+)
+
+for synth_type in ("wavetable", "drift", "meld"):
+    _DETAILED_CONTRACTS[f"synth {synth_type} set"] = {
+        "args": _track_device_parameter_args_schema(include_value={"value": {"type": "number"}}),
+        "result": {
+            **_safe_parameter_set_result_schema(),
+            "required": [
+                *_safe_parameter_set_result_schema()["required"],  # type: ignore[index]
+                "synth_type",
+                "key",
+                "resolved_parameter",
+            ],
+            "properties": {
+                **_safe_parameter_set_result_schema()["properties"],  # type: ignore[index]
+                "synth_type": {"type": "string"},
+                "key": {"type": "string"},
+                "resolved_parameter": {"type": "integer"},
+            },
+        },
+    }
+    _DETAILED_CONTRACTS[f"synth {synth_type} observe"] = {
+        "args": _track_device_args_schema(),
+        "result": _standard_state_result_schema(type_field="synth_type"),
+    }
+
+for effect_type in ("eq8", "limiter", "compressor", "auto-filter", "reverb", "utility"):
+    _DETAILED_CONTRACTS[f"effect {effect_type} set"] = {
+        "args": _track_device_parameter_args_schema(include_value={"value": {"type": "number"}}),
+        "result": {
+            **_safe_parameter_set_result_schema(),
+            "required": [
+                *_safe_parameter_set_result_schema()["required"],  # type: ignore[index]
+                "effect_type",
+                "key",
+                "resolved_parameter",
+            ],
+            "properties": {
+                **_safe_parameter_set_result_schema()["properties"],  # type: ignore[index]
+                "effect_type": {"type": "string"},
+                "key": {"type": "string"},
+                "resolved_parameter": {"type": "integer"},
+            },
+        },
+    }
+    _DETAILED_CONTRACTS[f"effect {effect_type} observe"] = {
+        "args": _track_device_args_schema(),
+        "result": _standard_state_result_schema(type_field="effect_type"),
+    }
 
 _LOCAL_ONLY_COMMANDS = frozenset(
     {

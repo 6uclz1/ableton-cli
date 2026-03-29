@@ -25,7 +25,40 @@ def test_transport_position_set_rejects_negative_value(runner, cli_app) -> None:
 
 
 def test_track_volume_set_rejects_out_of_range_value(runner, cli_app) -> None:
-    result = runner.invoke(cli_app, ["--output", "json", "track", "volume", "set", "0", "1.2"])
+    result = runner.invoke(
+        cli_app,
+        ["--output", "json", "track", "volume", "set", "1.2", "--track-index", "0"],
+    )
+
+    assert result.exit_code == 2
+    payload = json.loads(result.stdout)
+    assert payload["ok"] is False
+    assert payload["error"]["code"] == "INVALID_ARGUMENT"
+
+
+def test_track_info_requires_exactly_one_track_selector(runner, cli_app) -> None:
+    result = runner.invoke(cli_app, ["--output", "json", "track", "info"])
+
+    assert result.exit_code == 2
+    payload = json.loads(result.stdout)
+    assert payload["ok"] is False
+    assert payload["error"]["code"] == "INVALID_ARGUMENT"
+
+
+def test_track_info_rejects_multiple_track_selectors(runner, cli_app) -> None:
+    result = runner.invoke(
+        cli_app,
+        [
+            "--output",
+            "json",
+            "track",
+            "info",
+            "--track-index",
+            "0",
+            "--track-name",
+            "Bass",
+        ],
+    )
 
     assert result.exit_code == 2
     payload = json.loads(result.stdout)
@@ -674,7 +707,7 @@ def test_clip_notes_filters_reject_invalid_pitch(runner, cli_app) -> None:
 def test_track_panning_set_rejects_out_of_range_value(runner, cli_app) -> None:
     result = runner.invoke(
         cli_app,
-        ["--output", "json", "track", "panning", "set", "0", "1.1"],
+        ["--output", "json", "track", "panning", "set", "1.1", "--track-index", "0"],
     )
 
     assert result.exit_code == 2
@@ -771,7 +804,20 @@ def test_synth_find_rejects_unknown_type(runner, cli_app) -> None:
 def test_synth_parameter_set_rejects_negative_parameter_index(runner, cli_app) -> None:
     result = runner.invoke(
         cli_app,
-        ["--output", "json", "synth", "parameter", "set", "0", "1", "--", "-1", "0.5"],
+        [
+            "--output",
+            "json",
+            "synth",
+            "parameter",
+            "set",
+            "0.5",
+            "--track-index",
+            "0",
+            "--device-index",
+            "1",
+            "--parameter-index",
+            "-1",
+        ],
     )
 
     assert result.exit_code == 2
@@ -783,7 +829,20 @@ def test_synth_parameter_set_rejects_negative_parameter_index(runner, cli_app) -
 def test_synth_standard_set_rejects_empty_key(runner, cli_app) -> None:
     result = runner.invoke(
         cli_app,
-        ["--output", "json", "synth", "wavetable", "set", "0", "1", "   ", "0.5"],
+        [
+            "--output",
+            "json",
+            "synth",
+            "wavetable",
+            "set",
+            "0.5",
+            "--track-index",
+            "0",
+            "--device-index",
+            "1",
+            "--parameter-key",
+            "   ",
+        ],
     )
 
     assert result.exit_code == 2
@@ -807,7 +866,20 @@ def test_effect_find_rejects_unknown_type(runner, cli_app) -> None:
 def test_effect_standard_set_rejects_empty_key(runner, cli_app) -> None:
     result = runner.invoke(
         cli_app,
-        ["--output", "json", "effect", "eq8", "set", "0", "2", "   ", "0.5"],
+        [
+            "--output",
+            "json",
+            "effect",
+            "eq8",
+            "set",
+            "0.5",
+            "--track-index",
+            "0",
+            "--device-index",
+            "2",
+            "--parameter-key",
+            "   ",
+        ],
     )
 
     assert result.exit_code == 2

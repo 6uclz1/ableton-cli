@@ -157,17 +157,21 @@ def test_client_sends_request_timeout_meta(monkeypatch) -> None:
         ),
         (
             lambda client: client.track_routing_input_set(
-                track=0,
+                track_ref={"mode": "index", "index": 0},
                 routing_type="Ext. In",
                 routing_channel="1/2",
             ),
             "track_routing_input_set",
-            {"track": 0, "routing_type": "Ext. In", "routing_channel": "1/2"},
+            {
+                "track_ref": {"mode": "index", "index": 0},
+                "routing_type": "Ext. In",
+                "routing_channel": "1/2",
+            },
         ),
         (
-            lambda client: client.track_routing_output_get(track=1),
+            lambda client: client.track_routing_output_get(track_ref={"mode": "index", "index": 1}),
             "track_routing_output_get",
-            {"track": 1},
+            {"track_ref": {"mode": "index", "index": 1}},
         ),
         (
             lambda client: client.master_info(),
@@ -195,14 +199,18 @@ def test_client_sends_request_timeout_meta(monkeypatch) -> None:
             {"return_track": 2},
         ),
         (
-            lambda client: client.track_send_get(track=1, send=2),
+            lambda client: client.track_send_get(track_ref={"mode": "index", "index": 1}, send=2),
             "track_send_get",
-            {"track": 1, "send": 2},
+            {"track_ref": {"mode": "index", "index": 1}, "send": 2},
         ),
         (
-            lambda client: client.track_send_set(track=3, send=4, value=0.75),
+            lambda client: client.track_send_set(
+                track_ref={"mode": "index", "index": 3},
+                send=4,
+                value=0.75,
+            ),
             "track_send_set",
-            {"track": 3, "send": 4, "value": 0.75},
+            {"track_ref": {"mode": "index", "index": 3}, "send": 4, "value": 0.75},
         ),
         (
             lambda client: client.get_clip_notes(
@@ -669,15 +677,20 @@ def test_client_builds_optional_arguments_deterministically(
     ("runner", "expected_command", "expected_value"),
     [
         (
-            lambda client: client.set_device_parameter(track=0, device=1, parameter=2, value=0.3),
+            lambda client: client.set_device_parameter(
+                track_ref={"mode": "index", "index": 0},
+                device_ref={"mode": "index", "index": 1},
+                parameter_ref={"mode": "index", "index": 2},
+                value=0.3,
+            ),
             "set_device_parameter",
             0.3,
         ),
         (
             lambda client: client.set_synth_parameter_safe(
-                track=0,
-                device=1,
-                parameter=2,
+                track_ref={"mode": "index", "index": 0},
+                device_ref={"mode": "index", "index": 1},
+                parameter_ref={"mode": "index", "index": 2},
                 value=0.4,
             ),
             "set_synth_parameter_safe",
@@ -685,9 +698,9 @@ def test_client_builds_optional_arguments_deterministically(
         ),
         (
             lambda client: client.set_effect_parameter_safe(
-                track=0,
-                device=1,
-                parameter=2,
+                track_ref={"mode": "index", "index": 0},
+                device_ref={"mode": "index", "index": 1},
+                parameter_ref={"mode": "index", "index": 2},
                 value=0.5,
             ),
             "set_effect_parameter_safe",
@@ -707,8 +720,8 @@ def test_client_parameter_commands_share_payload_shape(
 
     assert requests[0]["name"] == expected_command
     assert requests[0]["args"] == {
-        "track": 0,
-        "device": 1,
-        "parameter": 2,
+        "track_ref": {"mode": "index", "index": 0},
+        "device_ref": {"mode": "index", "index": 1},
+        "parameter_ref": {"mode": "index", "index": 2},
         "value": expected_value,
     }

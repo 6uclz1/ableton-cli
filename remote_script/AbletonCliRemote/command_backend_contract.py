@@ -522,4 +522,13 @@ class CommandBackend(
     _DevicesBackend,
     Protocol,
 ):
-    pass
+    def resolve_track_ref(self, track_ref: dict[str, Any]) -> int: ...
+
+    def resolve_device_ref(self, track: int, device_ref: dict[str, Any]) -> int: ...
+
+    def resolve_parameter_ref(
+        self,
+        track: int,
+        device: int,
+        parameter_ref: dict[str, Any],
+    ) -> int: ...

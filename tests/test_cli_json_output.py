@@ -404,8 +404,9 @@ def test_read_only_blocks_write_commands(runner, cli_app, tmp_path: Path) -> Non
             "track",
             "volume",
             "set",
-            "0",
             "0.5",
+            "--track-index",
+            "0",
         ],
     )
 

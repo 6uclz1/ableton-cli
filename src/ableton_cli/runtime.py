@@ -68,6 +68,7 @@ def execute_command(
     command: str,
     args: dict[str, Any],
     action: Callable[[], dict[str, Any]],
+    resolved_args: Callable[[], dict[str, Any]] | None = None,
     human_formatter: Callable[[dict[str, Any]], str] | None = None,
 ) -> None:
     runtime = get_runtime(ctx)
@@ -75,8 +76,9 @@ def execute_command(
 
     try:
         result = action()
-        validate_command_contract(command=command, args=args, result=result)
-        payload = success_payload(command=command, args=args, result=result)
+        payload_args = resolved_args() if resolved_args is not None else args
+        validate_command_contract(command=command, args=payload_args, result=result)
+        payload = success_payload(command=command, args=payload_args, result=result)
         if runtime.output_mode == OutputMode.JSON:
             if runtime.compact:
                 payload = compact_payload(payload)

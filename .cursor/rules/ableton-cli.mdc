@@ -1,0 +1,28 @@
+---
+description: ableton-cli repository conventions for Cursor agent
+alwaysApply: true
+---
+
+# ableton-cli (Cursor)
+
+This repo controls Ableton Live via a local Remote Script.
+
+## Non-negotiable principles
+- TDD: red -> green -> refactor.
+- DRY, SOLID; no fallbacks; no backward compatibility shims.
+- Fail explicitly; never silently degrade.
+
+## Authoritative references
+- Command catalog: `skills/ableton-cli/SKILL.md`
+- Stable action mappings: `docs/skills/skill-actions.md`
+- JSON output examples: `docs/skills/examples/*.json`
+
+## Command form
+- Always invoke through uv: `uv run ableton-cli <subcommand>`
+- For machine-readable output: `uv run ableton-cli --output json <subcommand>`
+
+## Validation before handoff
+- `uv run python -m ableton_cli.dev_checks`
+- `uv run ruff check .`
+- `uv run ruff format --check .`
+- `uv run pytest`

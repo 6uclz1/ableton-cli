@@ -15,6 +15,9 @@ class _PlatformPathsStub:
     def claude_home_dir(self) -> Path:
         return Path("/unused")
 
+    def cursor_home_dir(self) -> Path:
+        return Path("/unused")
+
 
 def test_install_remote_script_is_idempotent_and_backs_up(monkeypatch, tmp_path: Path) -> None:
     source_root = tmp_path / "source" / REMOTE_SCRIPT_DIR_NAME

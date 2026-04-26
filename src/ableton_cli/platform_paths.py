@@ -5,12 +5,15 @@ from pathlib import Path
 from typing import Protocol
 
 CLAUDE_HOME_DIR_NAME = ".claude"
+CURSOR_HOME_DIR_NAME = ".cursor"
 
 
 class PlatformPaths(Protocol):
     def remote_script_candidate_dirs(self) -> list[Path]: ...
 
     def claude_home_dir(self) -> Path: ...
+
+    def cursor_home_dir(self) -> Path: ...
 
 
 @dataclass(slots=True, frozen=True)
@@ -23,6 +26,9 @@ class WindowsPlatformPaths:
     def claude_home_dir(self) -> Path:
         return self.home / CLAUDE_HOME_DIR_NAME
 
+    def cursor_home_dir(self) -> Path:
+        return self.home / CURSOR_HOME_DIR_NAME
+
 
 @dataclass(slots=True, frozen=True)
 class PosixPlatformPaths:
@@ -34,3 +40,6 @@ class PosixPlatformPaths:
 
     def claude_home_dir(self) -> Path:
         return self.home / CLAUDE_HOME_DIR_NAME
+
+    def cursor_home_dir(self) -> Path:
+        return self.home / CURSOR_HOME_DIR_NAME

@@ -28,6 +28,7 @@
 - `/Users/6uclz1/ws/ableton-cli/CONTRIBUTING.md`
 - `/Users/6uclz1/ws/ableton-cli/skills/ableton-cli/SKILL.md`
 - `/Users/6uclz1/ws/ableton-cli/docs/skills/skill-actions.md`
+- `/Users/6uclz1/ws/ableton-cli/.cursor/rules/ableton-cli.mdc`
 
 ## Out of Scope for This File
 - No per-session skill availability lists.

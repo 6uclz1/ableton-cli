@@ -18,6 +18,9 @@ class _PlatformPathsStub:
     def claude_home_dir(self) -> Path:
         return Path("/unused")
 
+    def cursor_home_dir(self) -> Path:
+        return Path("/unused")
+
 
 class _ClientStub:
     def __init__(self, ping_payload: dict[str, object] | None = None) -> None:

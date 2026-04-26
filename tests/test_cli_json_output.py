@@ -146,6 +146,38 @@ def test_install_skill_outputs_json_envelope(runner, cli_app, monkeypatch) -> No
     assert payload["result"]["target"] == "/tmp/.claude/skills/ableton-cli/SKILL.md"
 
 
+def test_install_skill_cursor_target_outputs_json_envelope(runner, cli_app, monkeypatch) -> None:
+    from ableton_cli.commands import setup
+
+    monkeypatch.setattr(
+        setup,
+        "install_skill",
+        lambda yes, dry_run, platform_paths, target: {
+            "action": "install",
+            "dry_run": dry_run,
+            "target_type": target,
+            "source": "/tmp/repo/skills/ableton-cli/SKILL.md",
+            "target": "/tmp/.cursor/skills/ableton-cli/SKILL.md",
+            "home": "/tmp/.cursor",
+        },
+    )
+
+    result = runner.invoke(
+        cli_app,
+        ["--output", "json", "install-skill", "--target", "cursor", "--dry-run"],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["ok"] is True
+    assert payload["command"] == "install-skill"
+    assert payload["args"]["target"] == "cursor"
+    assert payload["result"]["dry_run"] is True
+    assert payload["result"]["target_type"] == "cursor"
+    assert payload["result"]["target"] == "/tmp/.cursor/skills/ableton-cli/SKILL.md"
+    assert payload["result"]["home"] == "/tmp/.cursor"
+
+
 def test_bootstrap_fails_for_unsupported_os(runner, cli_app, monkeypatch) -> None:
     import ableton_cli.platform_detection as platform_detection_module
 

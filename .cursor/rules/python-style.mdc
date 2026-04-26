@@ -1,0 +1,11 @@
+---
+description: Python coding standards in ableton-cli
+globs: **/*.py
+alwaysApply: false
+---
+
+- Use `from __future__ import annotations` in new modules, mirroring src/ableton_cli/*.
+- Format with ruff; do not introduce alternative tools.
+- Raise `AppError` with explicit `error_code`/`exit_code` per `src/ableton_cli/errors.py`; do not catch and ignore.
+- No fallback execution paths or compatibility shims.
+- Tests live in `tests/` mirroring source layout; follow existing fixtures in `tests/conftest.py`.

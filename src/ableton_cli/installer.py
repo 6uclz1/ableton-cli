@@ -114,21 +114,30 @@ def _resolve_claude_home(*, claude_home: Path | None, platform_paths: PlatformPa
     return platform_paths.claude_home_dir()
 
 
+def _resolve_cursor_home(*, cursor_home: Path | None, platform_paths: PlatformPaths) -> Path:
+    if cursor_home is not None:
+        return cursor_home
+    return platform_paths.cursor_home_dir()
+
+
 def _resolve_skill_home(
     *,
     platform_paths: PlatformPaths,
     target: str,
     codex_home: Path | None,
     claude_home: Path | None,
+    cursor_home: Path | None,
 ) -> Path:
     if target == "codex":
         return _resolve_codex_home(codex_home)
     if target == "claude":
         return _resolve_claude_home(claude_home=claude_home, platform_paths=platform_paths)
+    if target == "cursor":
+        return _resolve_cursor_home(cursor_home=cursor_home, platform_paths=platform_paths)
     raise AppError(
         error_code=ErrorCode.INVALID_ARGUMENT,
-        message=f"target must be one of: codex, claude (got {target!r})",
-        hint="Use --target codex or --target claude.",
+        message=f"target must be one of: codex, claude, cursor (got {target!r})",
+        hint="Use --target codex, --target claude, or --target cursor.",
         exit_code=ExitCode.INVALID_ARGUMENT,
     )
 
@@ -141,6 +150,7 @@ def install_skill(
     target: str = "codex",
     codex_home: Path | None = None,
     claude_home: Path | None = None,
+    cursor_home: Path | None = None,
 ) -> dict[str, Any]:
     del yes  # reserved for explicit confirmation flows; command stays non-interactive.
 
@@ -158,6 +168,7 @@ def install_skill(
         target=target,
         codex_home=codex_home,
         claude_home=claude_home,
+        cursor_home=cursor_home,
     )
     target_path = resolved_home / "skills" / SKILL_DIR_NAME / SKILL_FILE_NAME
     action = "update" if target_path.exists() else "install"

@@ -210,7 +210,7 @@ def _register_install_skill_command(app: typer.Typer) -> None:
             str,
             typer.Option(
                 "--target",
-                help="Skill installation target (codex or claude).",
+                help="Skill installation target (codex, claude, or cursor).",
                 case_sensitive=False,
             ),
         ] = "codex",

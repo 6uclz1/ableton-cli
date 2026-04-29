@@ -327,10 +327,18 @@ Use these steps to enable the `ableton-cli` skill for agent workflows:
 ```bash
 uv run ableton-cli install-skill --yes
 uv run ableton-cli install-skill --target claude --yes
+uv run ableton-cli install-skill --target cursor --yes
 ```
 
 3. Confirm detailed install notes in `docs/skills/install.md`.
 4. Run agent automation using `uv run ableton-cli ...` commands.
+
+Cursor users do not need any install step when working inside this repository:
+`.cursor/rules/*.mdc` and `.cursor/skills/ableton-cli/SKILL.md` are committed,
+so the agent picks up ableton-cli conventions automatically when the project is
+opened. The `install-skill --target cursor` command only mirrors the same SKILL
+file into the user-level `~/.cursor/skills/` so it is also discoverable in other
+workspaces.
 
 Skill-oriented references:
 

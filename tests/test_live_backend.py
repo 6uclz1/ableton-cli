@@ -2146,6 +2146,19 @@ def test_live_backend_track_stable_ref_survives_opaque_proxy_refresh() -> None:
     assert backend.get_track_info(0)["stable_ref"] == stable_ref
 
 
+def test_live_backend_track_stable_refs_prefer_explicit_locators_over_object_cache() -> None:
+    backend = LiveBackend(_SurfaceStub())
+
+    existing_ref = backend.tracks_list()["tracks"][0]["stable_ref"]
+    new_track = _Track(name="New Track", has_audio_input=False, has_midi_input=True)
+    backend._song().tracks.append(new_track)
+    backend._stable_ref_by_object[("track", id(new_track))] = existing_ref
+
+    refs = [track["stable_ref"] for track in backend.tracks_list()["tracks"]]
+
+    assert len(refs) == len(set(refs))
+
+
 def test_live_backend_device_stable_ref_survives_nested_proxy_identity_refresh() -> None:
     backend = LiveBackend(_NestedProxyIdentitySurfaceStub())
 

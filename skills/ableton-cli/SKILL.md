@@ -203,11 +203,18 @@ uv run ableton-cli browser item query:Synths#Operator
 uv run ableton-cli browser categories all
 uv run ableton-cli browser items drums/Kits --item-type loadable --limit 100 --offset 0
 uv run ableton-cli browser search drift --item-type loadable
+uv run ableton-cli browser search "Drum Rack" --path drums --item-type loadable --limit 10
+uv run ableton-cli browser search "Kit" --path drums --item-type loadable --limit 10
 uv run ableton-cli browser load 0 query:Synths#Operator
 uv run ableton-cli browser load 0 instruments/Drift
-uv run ableton-cli browser load-drum-kit 0 rack:drums --kit-uri kit:acoustic
-uv run ableton-cli browser load-drum-kit 0 rack:drums --kit-path drums/Kits/Acoustic Kit
+uv run ableton-cli browser load-drum-kit 0 <rack-uri-from-search> --kit-uri <kit-uri-from-search>
+uv run ableton-cli browser load-drum-kit 0 <rack-uri-from-search> --kit-path <kit-path-from-search>
 ```
+
+For composition workflows, do not hard-code Drum Rack or kit targets. First run
+`uv run ableton-cli --timeout-ms 15000 --output json wait-ready`, then use `browser search`
+to select exact `uri` or `path` values from the active Live browser catalog before calling
+`browser load-drum-kit` or `browser load`.
 
 ### Batch
 
@@ -353,6 +360,7 @@ uv run ableton-cli --output json ping
 ## Stable action names and mappings
 
 - `ping` -> `uv run ableton-cli --output json ping`
+- `wait_ready` -> `uv run ableton-cli --output json wait-ready`
 - `get_song_info` -> `uv run ableton-cli --output json song info`
 - `song_new` -> `uv run ableton-cli --output json song new`
 - `song_undo` -> `uv run ableton-cli --output json song undo`

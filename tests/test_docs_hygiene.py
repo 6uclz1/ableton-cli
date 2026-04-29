@@ -8,15 +8,43 @@ PROTOCOL_DOC = REPO_ROOT / "docs" / "protocol.md"
 QUALITY_HARNESS_TODO_DOC = REPO_ROOT / "docs" / "quality-harness-todo.md"
 GENERATED_MAN_DOC = REPO_ROOT / "docs" / "man" / "generated" / "ableton-cli.1"
 SKILL_DOC = REPO_ROOT / "skills" / "ableton-cli" / "SKILL.md"
+ENVIRONMENT_INDEPENDENT_DOC_GLOBS = (
+    "AGENTS.md",
+    "README.md",
+    "CONTRIBUTING.md",
+    "skills/ableton-cli/SKILL.md",
+    "docs/skills/**/*.md",
+    ".cursor/rules/**/*.mdc",
+    ".cursor/skills/**/*.md",
+)
+HOST_SPECIFIC_MARKERS = ("".join(("6uc", "lz1")), "/" + "Users/")
 
 
 def _read(path: Path) -> str:
     return path.read_text(encoding="utf-8")
 
 
+def _environment_independent_docs() -> tuple[Path, ...]:
+    paths: set[Path] = set()
+    for pattern in ENVIRONMENT_INDEPENDENT_DOC_GLOBS:
+        paths.update(path for path in REPO_ROOT.glob(pattern) if path.is_file())
+    return tuple(sorted(paths))
+
+
 def test_removed_docs_do_not_exist() -> None:
     assert not PROTOCOL_DOC.exists()
     assert not QUALITY_HARNESS_TODO_DOC.exists()
+
+
+def test_agent_docs_do_not_reference_host_specific_paths() -> None:
+    violations = [
+        f"{path.relative_to(REPO_ROOT)} contains {marker!r}"
+        for path in _environment_independent_docs()
+        for marker in HOST_SPECIFIC_MARKERS
+        if marker in _read(path)
+    ]
+
+    assert violations == []
 
 
 def test_readme_includes_protocol_section() -> None:

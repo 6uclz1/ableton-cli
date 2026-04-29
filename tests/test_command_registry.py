@@ -7,6 +7,20 @@ def test_transport_command_specs_validate_against_current_surfaces() -> None:
     validate_transport_command_specs()
 
 
+def test_required_remote_commands_are_derived_from_command_specs() -> None:
+    from ableton_cli.capabilities import required_remote_commands
+    from ableton_cli.command_specs import remote_command_names
+
+    assert required_remote_commands() == remote_command_names()
+
+
+def test_remote_handler_registry_matches_command_specs() -> None:
+    from ableton_cli.command_specs import remote_command_names
+    from remote_script.AbletonCliRemote.command_backend_registry import _HANDLERS
+
+    assert set(_HANDLERS) == remote_command_names()
+
+
 def test_public_contract_registry_covers_all_public_commands() -> None:
     from ableton_cli.command_specs import public_command_names
     from ableton_cli.contracts.registry import get_registered_contracts

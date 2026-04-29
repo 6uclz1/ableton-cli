@@ -36,7 +36,7 @@ class Response:
     error: dict[str, Any] | None
 
 
-REQUIRED_RESPONSE_KEYS = {"ok", "request_id", "protocol_version"}
+REQUIRED_RESPONSE_KEYS = {"ok", "request_id", "protocol_version", "result", "error"}
 
 
 def _raise_protocol_error(error_code: ErrorCode, message: str, hint: str) -> None:
@@ -46,6 +46,17 @@ def _raise_protocol_error(error_code: ErrorCode, message: str, hint: str) -> Non
         hint=hint,
         exit_code=ExitCode.PROTOCOL_MISMATCH,
     )
+
+
+def _require_response_string(payload: dict[str, Any], key: str) -> str:
+    value = payload.get(key)
+    if not isinstance(value, str) or not value:
+        _raise_protocol_error(
+            error_code=ErrorCode.PROTOCOL_INVALID_RESPONSE,
+            message=f"'{key}' must be a non-empty string",
+            hint="Update Remote Script response format.",
+        )
+    return value
 
 
 def make_request(
@@ -74,9 +85,16 @@ def parse_response(
             message=f"Invalid response payload, missing keys: {sorted(missing)}",
             hint="Ensure the Remote Script protocol implementation matches the CLI.",
         )
+    extra = set(payload).difference(REQUIRED_RESPONSE_KEYS)
+    if extra:
+        _raise_protocol_error(
+            error_code=ErrorCode.PROTOCOL_INVALID_RESPONSE,
+            message=f"Invalid response payload, unexpected keys: {sorted(extra)}",
+            hint="Return only the stable Remote Script response fields.",
+        )
 
     response_protocol = payload.get("protocol_version")
-    if not isinstance(response_protocol, int):
+    if type(response_protocol) is not int:
         _raise_protocol_error(
             error_code=ErrorCode.PROTOCOL_INVALID_RESPONSE,
             message="protocol_version must be an integer",
@@ -84,6 +102,12 @@ def parse_response(
                 "Set matching protocol versions on both sides "
                 "(--protocol-version or 'ableton-cli config set protocol_version <n>')."
             ),
+        )
+    if response_protocol < 1:
+        _raise_protocol_error(
+            error_code=ErrorCode.PROTOCOL_INVALID_RESPONSE,
+            message="protocol_version must be a positive integer",
+            hint="Use a positive protocol version on both sides.",
         )
     if response_protocol != expected_protocol:
         _raise_protocol_error(
@@ -98,6 +122,12 @@ def parse_response(
         )
 
     request_id = payload.get("request_id")
+    if not isinstance(request_id, str) or not request_id:
+        _raise_protocol_error(
+            error_code=ErrorCode.PROTOCOL_INVALID_RESPONSE,
+            message="request_id must be a non-empty string",
+            hint="Return the request_id string from the matching request.",
+        )
     if request_id != expected_request_id:
         _raise_protocol_error(
             error_code=ErrorCode.PROTOCOL_REQUEST_ID_MISMATCH,
@@ -128,13 +158,59 @@ def parse_response(
             message="'error' must be an object when provided",
             hint="Return structured error payload with code/message.",
         )
-    if isinstance(error, dict) and "details" in error and error["details"] is not None:
-        if not isinstance(error["details"], dict):
+
+    if ok:
+        if error is not None:
             _raise_protocol_error(
                 error_code=ErrorCode.PROTOCOL_INVALID_RESPONSE,
-                message="'error.details' must be an object when provided",
-                hint="Return structured error details as a JSON object.",
+                message="'error' must be null for successful responses",
+                hint="Set error to null when ok is true.",
             )
+        if result is None:
+            _raise_protocol_error(
+                error_code=ErrorCode.PROTOCOL_INVALID_RESPONSE,
+                message="'result' must be an object for successful responses",
+                hint="Return an object result payload when ok is true.",
+            )
+    else:
+        if result is not None:
+            _raise_protocol_error(
+                error_code=ErrorCode.PROTOCOL_INVALID_RESPONSE,
+                message="'result' must be null for error responses",
+                hint="Set result to null when ok is false.",
+            )
+        if error is None:
+            _raise_protocol_error(
+                error_code=ErrorCode.PROTOCOL_INVALID_RESPONSE,
+                message="'error' must be an object for error responses",
+                hint="Return structured error payload with code/message.",
+            )
+
+    if isinstance(error, dict):
+        allowed_error_keys = {"code", "message", "hint", "details"}
+        extra_error_keys = set(error).difference(allowed_error_keys)
+        if extra_error_keys:
+            _raise_protocol_error(
+                error_code=ErrorCode.PROTOCOL_INVALID_RESPONSE,
+                message=f"'error' has unexpected keys: {sorted(extra_error_keys)}",
+                hint="Return only code/message/hint/details in error payloads.",
+            )
+        _require_response_string(error, "code")
+        _require_response_string(error, "message")
+        hint = error.get("hint")
+        if hint is not None and not isinstance(hint, str):
+            _raise_protocol_error(
+                error_code=ErrorCode.PROTOCOL_INVALID_RESPONSE,
+                message="'error.hint' must be a string or null when provided",
+                hint="Return a string hint or null.",
+            )
+        if "details" in error and error["details"] is not None:
+            if not isinstance(error["details"], dict):
+                _raise_protocol_error(
+                    error_code=ErrorCode.PROTOCOL_INVALID_RESPONSE,
+                    message="'error.details' must be an object when provided",
+                    hint="Return structured error details as a JSON object.",
+                )
 
     return Response(
         ok=ok,

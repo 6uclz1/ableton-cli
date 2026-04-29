@@ -45,16 +45,80 @@ def _validate_type(expected: str | list[str], value: Any, *, path: str) -> None:
     )
 
 
+def _validate_one_of(schema: dict[str, Any], value: Any, *, path: str) -> bool:
+    raw_options = schema.get("oneOf", schema.get("one_of"))
+    if raw_options is None:
+        return False
+    if not isinstance(raw_options, list) or not raw_options:
+        raise RuntimeError("oneOf must be a non-empty list")
+
+    matched_count = 0
+    last_error: ContractValidationError | None = None
+    for option in raw_options:
+        if not isinstance(option, dict):
+            raise RuntimeError("oneOf items must be schemas")
+        try:
+            validate_value(option, value, path=path)
+        except ContractValidationError as exc:
+            last_error = exc
+            continue
+        matched_count += 1
+
+    if matched_count == 1:
+        return True
+    if matched_count == 0:
+        message = "does not match any allowed schema"
+        if last_error is not None:
+            message = f"{message}: {last_error.path} {last_error.message}"
+        raise ContractValidationError(path=path, message=message)
+    raise ContractValidationError(path=path, message="matches multiple allowed schemas")
+
+
 def validate_value(schema: dict[str, Any], value: Any, *, path: str) -> None:
+    if _validate_one_of(schema, value, path=path):
+        return
+
     expected_type = schema.get("type", "any")
     _validate_type(expected_type, value, path=path)
+
+    if "const" in schema and value != schema["const"]:
+        raise ContractValidationError(
+            path=path,
+            message=f"expected constant {schema['const']!r}",
+        )
 
     if isinstance(expected_type, list):
         is_object = "object" in expected_type and isinstance(value, dict)
         is_array = "array" in expected_type and isinstance(value, list)
+        is_string = "string" in expected_type and isinstance(value, str)
     else:
         is_object = expected_type == "object" and isinstance(value, dict)
         is_array = expected_type == "array" and isinstance(value, list)
+        is_string = expected_type == "string" and isinstance(value, str)
+
+    minimum = schema.get("minimum")
+    if isinstance(minimum, int | float) and isinstance(value, int | float):
+        if not isinstance(value, bool) and value < minimum:
+            raise ContractValidationError(
+                path=path,
+                message=f"expected >= {minimum}, got {value}",
+            )
+
+    maximum = schema.get("maximum")
+    if isinstance(maximum, int | float) and isinstance(value, int | float):
+        if not isinstance(value, bool) and value > maximum:
+            raise ContractValidationError(
+                path=path,
+                message=f"expected <= {maximum}, got {value}",
+            )
+
+    if is_string:
+        min_length = schema.get("minLength", schema.get("min_length"))
+        if isinstance(min_length, int) and len(value) < min_length:
+            raise ContractValidationError(
+                path=path,
+                message=f"expected length >= {min_length}, got {len(value)}",
+            )
 
     if is_object:
         required = schema.get("required", [])
@@ -80,7 +144,7 @@ def validate_value(schema: dict[str, Any], value: Any, *, path: str) -> None:
 
     if is_array:
         items_schema = schema.get("items")
-        min_items = schema.get("min_items")
+        min_items = schema.get("minItems", schema.get("min_items"))
         if isinstance(min_items, int) and len(value) < min_items:
             raise ContractValidationError(
                 path=path,

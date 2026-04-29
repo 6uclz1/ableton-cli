@@ -163,6 +163,14 @@ Output envelope (stable):
 - `--config <path>`
 - `--no-color`
 - `--quiet`
+- `--record <path>`
+- `--replay <path>`
+- `--read-only`
+- `--require-confirmation`
+- `--yes`
+- `--plan`
+- `--dry-run`
+- `--compact`
 - `--version`
 
 Global options must appear before the subcommand.
@@ -175,7 +183,7 @@ uv run ableton-cli --output json doctor
 uv run ableton-cli doctor --output json
 ```
 
-Installers/config commands also support:
+Installer/config commands also support command-local forms:
 
 - `--yes`
 - `--dry-run`
@@ -183,6 +191,16 @@ Installers/config commands also support:
 ## Protocol
 
 `ableton-cli` uses local TCP JSONL communication on `127.0.0.1:<port>`.
+
+## Security Model
+
+- The Remote Script listens on 127.0.0.1 only (local loopback).
+- The protocol has no authentication.
+- Do not expose the port to untrusted networks.
+- Treat write and destructive commands as equivalent to direct user operation in Ableton Live.
+- Prefer `--read-only` for inspection and agent preflight.
+- Use `--plan` or `--dry-run` to inspect the side effect and target payload before dispatch.
+- Use `--require-confirmation --yes` when automation should fail closed around destructive commands.
 
 ### Request
 

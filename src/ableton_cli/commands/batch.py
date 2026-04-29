@@ -628,6 +628,14 @@ def batch_run(
 
 @batch_app.command("stream")
 def batch_stream(ctx: typer.Context) -> None:
+    runtime = get_runtime(ctx)
+    if (
+        runtime.plan
+        or runtime.dry_run
+        or (runtime.require_confirmation and not runtime.confirm_destructive)
+    ):
+        execute_command(ctx, command="batch stream", args={}, action=lambda: {})
+
     client = get_client(ctx)
     for line_number, raw_line in enumerate(sys.stdin, start=1):
         line = raw_line.strip()

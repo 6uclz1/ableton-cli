@@ -52,7 +52,7 @@ class TcpJsonlTransport:
 
         if not raw:
             raise AppError(
-                error_code=ErrorCode.PROTOCOL_VERSION_MISMATCH,
+                error_code=ErrorCode.PROTOCOL_CONNECTION_CLOSED,
                 message="Remote endpoint closed connection without response",
                 hint="Ensure the Remote Script returns one JSON line per request.",
                 exit_code=ExitCode.PROTOCOL_MISMATCH,
@@ -62,7 +62,7 @@ class TcpJsonlTransport:
             decoded = json.loads(raw.decode("utf-8"))
         except (UnicodeDecodeError, json.JSONDecodeError) as exc:
             raise AppError(
-                error_code=ErrorCode.PROTOCOL_VERSION_MISMATCH,
+                error_code=ErrorCode.PROTOCOL_MALFORMED_JSON,
                 message="Received malformed JSON from Remote Script",
                 hint="Check protocol implementation in Remote Script.",
                 exit_code=ExitCode.PROTOCOL_MISMATCH,
@@ -70,7 +70,7 @@ class TcpJsonlTransport:
 
         if not isinstance(decoded, dict):
             raise AppError(
-                error_code=ErrorCode.PROTOCOL_VERSION_MISMATCH,
+                error_code=ErrorCode.PROTOCOL_INVALID_RESPONSE,
                 message="Response must be a JSON object",
                 hint="Return object payloads from Remote Script.",
                 exit_code=ExitCode.PROTOCOL_MISMATCH,

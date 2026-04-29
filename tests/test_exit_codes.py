@@ -26,11 +26,14 @@ def test_remote_error_to_exit_code_mapping() -> None:
     assert exit_code_from_error_code("REMOTE_SCRIPT_INCOMPATIBLE") == ExitCode.PROTOCOL_MISMATCH
     assert exit_code_from_error_code("PROTOCOL_VERSION_MISMATCH") == ExitCode.PROTOCOL_MISMATCH
     assert exit_code_from_error_code("PROTOCOL_INVALID_RESPONSE") == ExitCode.PROTOCOL_MISMATCH
+    assert exit_code_from_error_code("PROTOCOL_MALFORMED_JSON") == ExitCode.PROTOCOL_MISMATCH
+    assert exit_code_from_error_code("PROTOCOL_CONNECTION_CLOSED") == ExitCode.PROTOCOL_MISMATCH
     assert exit_code_from_error_code("PROTOCOL_REQUEST_ID_MISMATCH") == ExitCode.PROTOCOL_MISMATCH
     assert exit_code_from_error_code("TIMEOUT") == ExitCode.TIMEOUT
     assert exit_code_from_error_code("BATCH_STEP_FAILED") == ExitCode.EXECUTION_FAILED
     assert exit_code_from_error_code("REMOTE_BUSY") == ExitCode.EXECUTION_FAILED
     assert exit_code_from_error_code("READ_ONLY_VIOLATION") == ExitCode.EXECUTION_FAILED
+    assert exit_code_from_error_code("CONFIRMATION_REQUIRED") == ExitCode.EXECUTION_FAILED
     assert exit_code_from_error_code("BATCH_PREFLIGHT_FAILED") == ExitCode.EXECUTION_FAILED
     assert exit_code_from_error_code("BATCH_ASSERT_FAILED") == ExitCode.EXECUTION_FAILED
     assert exit_code_from_error_code("BATCH_RETRY_EXHAUSTED") == ExitCode.EXECUTION_FAILED
@@ -46,11 +49,14 @@ def test_error_code_enum_values_are_stable() -> None:
     assert ErrorCode.REMOTE_SCRIPT_INCOMPATIBLE.value == "REMOTE_SCRIPT_INCOMPATIBLE"
     assert ErrorCode.PROTOCOL_VERSION_MISMATCH.value == "PROTOCOL_VERSION_MISMATCH"
     assert ErrorCode.PROTOCOL_INVALID_RESPONSE.value == "PROTOCOL_INVALID_RESPONSE"
+    assert ErrorCode.PROTOCOL_MALFORMED_JSON.value == "PROTOCOL_MALFORMED_JSON"
+    assert ErrorCode.PROTOCOL_CONNECTION_CLOSED.value == "PROTOCOL_CONNECTION_CLOSED"
     assert ErrorCode.PROTOCOL_REQUEST_ID_MISMATCH.value == "PROTOCOL_REQUEST_ID_MISMATCH"
     assert ErrorCode.TIMEOUT.value == "TIMEOUT"
     assert ErrorCode.BATCH_STEP_FAILED.value == "BATCH_STEP_FAILED"
     assert ErrorCode.REMOTE_BUSY.value == "REMOTE_BUSY"
     assert ErrorCode.READ_ONLY_VIOLATION.value == "READ_ONLY_VIOLATION"
+    assert ErrorCode.CONFIRMATION_REQUIRED.value == "CONFIRMATION_REQUIRED"
     assert ErrorCode.BATCH_PREFLIGHT_FAILED.value == "BATCH_PREFLIGHT_FAILED"
     assert ErrorCode.BATCH_ASSERT_FAILED.value == "BATCH_ASSERT_FAILED"
     assert ErrorCode.BATCH_RETRY_EXHAUSTED.value == "BATCH_RETRY_EXHAUSTED"

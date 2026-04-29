@@ -90,6 +90,25 @@ def main(
         bool,
         typer.Option("--read-only", help="Reject write commands before dispatch"),
     ] = False,
+    require_confirmation: Annotated[
+        bool,
+        typer.Option(
+            "--require-confirmation",
+            help="Reject destructive commands unless --yes is also provided",
+        ),
+    ] = False,
+    yes: Annotated[
+        bool,
+        typer.Option("--yes", help="Confirm destructive commands when confirmation is required"),
+    ] = False,
+    plan: Annotated[
+        bool,
+        typer.Option("--plan", help="Emit command side-effect metadata without dispatching"),
+    ] = False,
+    dry_run: Annotated[
+        bool,
+        typer.Option("--dry-run", help="Emit the planned command payload without dispatching"),
+    ] = False,
     compact: Annotated[
         bool,
         typer.Option("--compact", help="Compact large JSON arrays into summaries"),
@@ -121,6 +140,10 @@ def main(
             record=record,
             replay=replay,
             read_only=read_only,
+            require_confirmation=require_confirmation,
+            yes=yes,
+            plan=plan,
+            dry_run=dry_run,
             compact=compact,
         )
     except AppError as exc:

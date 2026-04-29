@@ -24,6 +24,14 @@ def test_readme_includes_protocol_section() -> None:
     assert "## Protocol" in markdown
 
 
+def test_readme_documents_security_model() -> None:
+    markdown = _read(README_DOC)
+    assert "## Security Model" in markdown
+    assert "127.0.0.1 only" in markdown
+    assert "no authentication" in markdown
+    assert "--read-only" in markdown
+
+
 def test_generated_man_uses_stable_command_name() -> None:
     man_page = _read(GENERATED_MAN_DOC)
     assert "tmp." not in man_page

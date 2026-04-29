@@ -474,20 +474,36 @@ def _ref_object(name: str, value: Any, *, allowed_modes: set[str]) -> dict[str, 
             message=f"{name}.mode must be one of {', '.join(sorted(allowed_modes))}",
             hint=f"Use a supported selector mode for '{name}'.",
         )
+
+    def require_keys(expected_keys: set[str]) -> None:
+        actual_keys = set(value)
+        if actual_keys == expected_keys:
+            return
+        raise _invalid_argument(
+            message=f"{name} must include exactly {sorted(expected_keys)} for mode {mode!r}",
+            hint=f"Provide only the fields required by the '{mode}' selector mode.",
+        )
+
     if mode == "index":
+        require_keys({"mode", "index"})
         return {"mode": mode, "index": _track_index(f"{name}.index", value.get("index"))}
     if mode == "name":
+        require_keys({"mode", "name"})
         return {"mode": mode, "name": _non_empty_string(f"{name}.name", value.get("name"))}
     if mode == "selected":
+        require_keys({"mode"})
         return {"mode": mode}
     if mode == "query":
+        require_keys({"mode", "query"})
         return {"mode": mode, "query": _non_empty_string(f"{name}.query", value.get("query"))}
     if mode == "stable_ref":
+        require_keys({"mode", "stable_ref"})
         return {
             "mode": mode,
             "stable_ref": _non_empty_string(f"{name}.stable_ref", value.get("stable_ref")),
         }
     if mode == "key":
+        require_keys({"mode", "key"})
         return {"mode": mode, "key": _non_empty_string(f"{name}.key", value.get("key"))}
     raise AssertionError(f"unsupported mode: {mode}")
 

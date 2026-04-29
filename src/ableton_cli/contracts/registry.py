@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-import re
 from copy import deepcopy
 from dataclasses import dataclass
 from typing import Any
 
-from ..command_specs import public_command_names
+from ..command_specs import command_specs
 from ..errors import AppError, ErrorCode, ErrorDetailReason, ExitCode, details_with_reason
 from .schema import ContractValidationError, validate_value
 
@@ -27,28 +26,63 @@ class CommandContractSpec:
         }
 
 
-def _ref_schema(*, selector_fields: tuple[str, ...]) -> dict[str, Any]:
-    properties: dict[str, Any] = {"mode": {"type": "string"}}
-    for field in selector_fields:
-        properties[field] = {"type": "string" if field != "index" else "integer"}
+def _selector_ref_schema(
+    *, mode: str, selector_schema: dict[str, Any] | None = None
+) -> dict[str, Any]:
+    properties: dict[str, Any] = {"mode": {"type": "string", "const": mode}}
+    required = ["mode"]
+    if selector_schema is not None:
+        properties.update(selector_schema)
+        required.extend(selector_schema)
     return {
         "type": "object",
-        "required": ["mode"],
+        "required": required,
         "properties": properties,
         "additional_properties": False,
     }
 
 
+def _ref_schema(*, include_selected: bool, include_key: bool) -> dict[str, Any]:
+    selectors = [
+        _selector_ref_schema(
+            mode="index",
+            selector_schema={"index": {"type": "integer", "minimum": 0}},
+        ),
+        _selector_ref_schema(
+            mode="name",
+            selector_schema={"name": {"type": "string", "minLength": 1}},
+        ),
+        _selector_ref_schema(
+            mode="query",
+            selector_schema={"query": {"type": "string", "minLength": 1}},
+        ),
+        _selector_ref_schema(
+            mode="stable_ref",
+            selector_schema={"stable_ref": {"type": "string", "minLength": 1}},
+        ),
+    ]
+    if include_selected:
+        selectors.insert(2, _selector_ref_schema(mode="selected"))
+    if include_key:
+        selectors.append(
+            _selector_ref_schema(
+                mode="key",
+                selector_schema={"key": {"type": "string", "minLength": 1}},
+            )
+        )
+    return {"oneOf": selectors}
+
+
 def _track_ref_schema() -> dict[str, Any]:
-    return _ref_schema(selector_fields=("index", "name", "query", "stable_ref"))
+    return _ref_schema(include_selected=True, include_key=False)
 
 
 def _device_ref_schema() -> dict[str, Any]:
-    return _ref_schema(selector_fields=("index", "name", "query", "stable_ref"))
+    return _ref_schema(include_selected=True, include_key=False)
 
 
 def _parameter_ref_schema() -> dict[str, Any]:
-    return _ref_schema(selector_fields=("index", "name", "query", "stable_ref", "key"))
+    return _ref_schema(include_selected=False, include_key=True)
 
 
 def _track_ref_args_schema(*, include_value: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -998,171 +1032,25 @@ for effect_type in ("eq8", "limiter", "compressor", "auto-filter", "reverb", "ut
         "result": _standard_state_result_schema(type_field="effect_type"),
     }
 
-_LOCAL_ONLY_COMMANDS = frozenset(
-    {
-        "batch stream",
-        "clip name set-many",
-        "clip place-pattern",
-        "completion",
-        "config init",
-        "config set",
-        "config show",
-        "doctor",
-        "install-remote-script",
-        "install-skill",
-        "session diff",
-        "wait-ready",
-    }
-)
-
-_REMOTE_COMMAND_EXCEPTIONS = {
-    "arrangement from-session": "arrangement_from_session",
-    "batch run": "execute_batch",
-    "browser categories": "get_browser_categories",
-    "browser item": "get_browser_item",
-    "browser items": "get_browser_items",
-    "browser items-at-path": "get_browser_items_at_path",
-    "browser load": "load_instrument_or_effect",
-    "browser load-drum-kit": "load_drum_kit",
-    "browser search": "search_browser_items",
-    "browser tree": "get_browser_tree",
-    "clip create": "create_clip",
-    "clip duplicate-many": "clip_duplicate",
-    "clip fire": "fire_clip",
-    "clip name set": "set_clip_name",
-    "clip notes import-browser": "load_instrument_or_effect",
-    "clip stop": "stop_clip",
-    "device parameter set": "set_device_parameter",
-    "effect find": "find_effect_devices",
-    "effect observe": "observe_effect_parameters",
-    "effect parameter set": "set_effect_parameter_safe",
-    "effect parameters list": "list_effect_parameters",
-    "master devices list": "master_devices_list",
-    "master info": "master_info",
-    "master panning get": "master_panning_get",
-    "master volume get": "master_volume_get",
-    "return-track mute get": "return_track_mute_get",
-    "return-track mute set": "return_track_mute_set",
-    "return-track solo get": "return_track_solo_get",
-    "return-track solo set": "return_track_solo_set",
-    "return-track volume get": "return_track_volume_get",
-    "return-track volume set": "return_track_volume_set",
-    "return-tracks list": "return_tracks_list",
-    "session info": "get_session_info",
-    "session stop-all-clips": "stop_all_clips",
-    "synth find": "find_synth_devices",
-    "synth observe": "observe_synth_parameters",
-    "synth parameter set": "set_synth_parameter_safe",
-    "synth parameters list": "list_synth_parameters",
-    "track info": "get_track_info",
-    "tracks create audio": "create_audio_track",
-    "tracks create midi": "create_midi_track",
-}
-
-_DESTRUCTIVE_COMMANDS = frozenset(
-    {
-        "arrangement clip delete",
-        "arrangement clip notes clear",
-        "arrangement clip notes import-browser",
-        "arrangement clip notes replace",
-        "batch run",
-        "batch stream",
-        "clip cut-to-drum-rack",
-        "clip groove clear",
-        "clip notes clear",
-        "clip notes import-browser",
-        "clip notes replace",
-        "config init",
-        "config set",
-        "install-remote-script",
-        "install-skill",
-        "song new",
-        "song redo",
-        "song undo",
-        "tracks delete",
-    }
-)
-
 
 def _default_errors() -> dict[str, Any]:
     return {"codes": sorted(code.value for code in ErrorCode)}
 
 
-def _remote_command_name(command_name: str) -> str | None:
-    synth_match = re.fullmatch(r"synth (wavetable|drift|meld) (keys|set|observe)", command_name)
-    if synth_match:
-        suffix = synth_match.group(2)
-        if suffix == "keys":
-            return "list_standard_synth_keys"
-        if suffix == "set":
-            return "set_standard_synth_parameter_safe"
-        return "observe_standard_synth_state"
-
-    effect_match = re.fullmatch(
-        r"effect (eq8|limiter|compressor|auto-filter|reverb|utility) (keys|set|observe)",
-        command_name,
-    )
-    if effect_match:
-        suffix = effect_match.group(2)
-        if suffix == "keys":
-            return "list_standard_effect_keys"
-        if suffix == "set":
-            return "set_standard_effect_parameter_safe"
-        return "observe_standard_effect_state"
-
-    if command_name in _LOCAL_ONLY_COMMANDS:
-        return None
-    if command_name in _REMOTE_COMMAND_EXCEPTIONS:
-        return _REMOTE_COMMAND_EXCEPTIONS[command_name]
-    return command_name.replace(" ", "_").replace("-", "_")
-
-
-def _is_read_command(command_name: str) -> bool:
-    if command_name in {
-        "completion",
-        "config show",
-        "doctor",
-        "ping",
-        "session diff",
-        "session info",
-        "session snapshot",
-        "wait-ready",
-    }:
-        return True
-
-    read_suffixes = (" get", " info", " list", " find", " observe", " keys")
-    if command_name.endswith(read_suffixes):
-        return True
-
-    return command_name.startswith(("browser categories", "browser item", "browser items"))
-
-
-def _side_effect_metadata(command_name: str) -> dict[str, Any]:
-    if _is_read_command(command_name):
-        return {
-            "kind": "read",
-            "idempotent": True,
-            "requires_confirmation": False,
-        }
-
-    kind = "destructive" if command_name in _DESTRUCTIVE_COMMANDS else "write"
-    return {
-        "kind": kind,
-        "idempotent": False,
-        "requires_confirmation": kind == "destructive",
-    }
-
-
 def _build_contract_specs() -> dict[str, CommandContractSpec]:
     specs: dict[str, CommandContractSpec] = {}
-    for command_name in sorted(public_command_names()):
+    for command_spec in command_specs():
+        command_name = command_spec.command_name
         detailed = deepcopy(_DETAILED_CONTRACTS.get(command_name, {}))
         specs[command_name] = CommandContractSpec(
             args=detailed.get("args", {"type": "object"}),
             result=detailed.get("result", {"type": "object"}),
             errors=detailed.get("errors", _default_errors()),
-            side_effect=detailed.get("side_effect", _side_effect_metadata(command_name)),
-            remote_command=_remote_command_name(command_name),
+            side_effect=detailed.get(
+                "side_effect",
+                command_spec.side_effect.to_contract_metadata(),
+            ),
+            remote_command=command_spec.remote_command,
         )
     return specs
 

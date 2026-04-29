@@ -17,6 +17,11 @@ STABLE_ACTION_MAPPINGS: tuple[StableActionMapping, ...] = (
         capability="Check connectivity and protocol metadata.",
     ),
     StableActionMapping(
+        action="wait_ready",
+        command="uv run ableton-cli --output json wait-ready",
+        capability="Poll until Ableton Live and the Remote Script are reachable.",
+    ),
+    StableActionMapping(
         action="get_song_info",
         command="uv run ableton-cli --output json song info",
         capability="Read global song state such as tempo and transport status.",

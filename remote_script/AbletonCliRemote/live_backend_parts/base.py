@@ -240,7 +240,7 @@ class LiveBackendBaseMixin:
         token = None
         if locator is not None:
             token = self._stable_ref_by_locator.get((kind, locator))
-        if token is None:
+        else:
             token = self._stable_ref_by_object.get((kind, id(canonical_target)))
         if token is None:
             token = self._next_stable_ref(kind)

@@ -26,7 +26,7 @@ package = true
 
 [dependency-groups]
 dev = [
-  "pytest>=8.2.0,<9.0.0",
+  "pytest>=9.0.3,<10.0.0",
   "ruff>=0.6.0,<1.0.0",
   "build>=1.2.1,<2.0.0",
   "pyyaml>=6.0.2,<7.0.0",

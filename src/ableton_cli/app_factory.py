@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Annotated
 
+import click
 import typer
 
 from .bootstrap import build_runtime_context
@@ -58,7 +59,6 @@ def register_commands(app: typer.Typer) -> None:
 
 
 def main(
-    ctx: typer.Context,
     host: Annotated[str | None, typer.Option("--host", help="Remote host")] = None,
     port: Annotated[int | None, typer.Option("--port", help="Remote port")] = None,
     timeout_ms: Annotated[
@@ -126,7 +126,7 @@ def main(
     del version
 
     try:
-        ctx.obj = build_runtime_context(
+        click.get_current_context().obj = build_runtime_context(
             host=host,
             port=port,
             timeout_ms=timeout_ms,

@@ -25,7 +25,11 @@ def build_runtime_context(
     record: str | None,
     replay: str | None,
     read_only: bool,
-    compact: bool,
+    require_confirmation: bool = False,
+    yes: bool = False,
+    plan: bool = False,
+    dry_run: bool = False,
+    compact: bool = False,
 ) -> RuntimeContext:
     cli_overrides: dict[str, Any] = {
         "host": host,
@@ -48,5 +52,9 @@ def build_runtime_context(
         record_path=record,
         replay_path=replay,
         read_only=read_only,
+        require_confirmation=require_confirmation,
+        confirm_destructive=yes,
+        plan=plan,
+        dry_run=dry_run,
         compact=compact,
     )

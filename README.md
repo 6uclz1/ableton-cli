@@ -78,8 +78,10 @@ uv run ableton-cli arrangement from-session --scenes "0:24,1:48"
 uv run ableton-cli clip fire 0 0
 uv run ableton-cli scenes list
 uv run ableton-cli browser search drift --item-type loadable
+uv run ableton-cli browser search "Drum Rack" --path drums --item-type loadable --limit 10
+uv run ableton-cli browser search "Kit" --path drums --item-type loadable --limit 10
 uv run ableton-cli browser load 0 query:Synths#Operator
-uv run ableton-cli browser load-drum-kit 0 rack:drums --kit-uri kit:acoustic
+uv run ableton-cli browser load-drum-kit 0 <rack-uri-from-search> --kit-uri <kit-uri-from-search>
 uv run ableton-cli batch run --steps-file ./steps.json
 uv run ableton-cli device parameter set 0.25 --track-index 0 --device-index 0 --parameter-index 0
 uv run ableton-cli synth find --type wavetable
@@ -101,6 +103,33 @@ Complete command coverage:
 - `skills/ableton-cli/SKILL.md`
 - `docs/skills/skill-actions.md`
 - `docs/skills/examples/*.json`
+
+## Composition Workflow
+
+For agent-driven composition, run a high-timeout preflight before mutating the set:
+
+```bash
+uv run ableton-cli --timeout-ms 15000 --output json wait-ready
+uv run ableton-cli --timeout-ms 15000 --output json doctor
+uv run ableton-cli --timeout-ms 15000 --output json tracks list
+```
+
+Discover browser targets before loading instruments or kits. Browser catalogs vary by Live version,
+packs, locale, and user library state, so do not assume a fixed Drum Rack or kit URI exists:
+
+```bash
+uv run ableton-cli --timeout-ms 15000 --output json browser categories all
+uv run ableton-cli --timeout-ms 15000 --output json browser search "Drum Rack" --path drums --item-type loadable --limit 10
+uv run ableton-cli --timeout-ms 15000 --output json browser search "Kit" --path drums --item-type loadable --limit 10
+uv run ableton-cli --timeout-ms 15000 --output json browser search "Operator" --path instruments --item-type loadable --limit 10
+```
+
+Choose exact `uri` or `path` values from those results, then pass them explicitly:
+
+```bash
+uv run ableton-cli --timeout-ms 15000 --output json browser load-drum-kit 0 <rack-uri-from-search> --kit-uri <kit-uri-from-search>
+uv run ableton-cli --timeout-ms 15000 --output json browser load 1 <synth-uri-or-path-from-search>
+```
 
 ## JSON Output for Automation
 
@@ -134,6 +163,14 @@ Output envelope (stable):
 - `--config <path>`
 - `--no-color`
 - `--quiet`
+- `--record <path>`
+- `--replay <path>`
+- `--read-only`
+- `--require-confirmation`
+- `--yes`
+- `--plan`
+- `--dry-run`
+- `--compact`
 - `--version`
 
 Global options must appear before the subcommand.
@@ -146,7 +183,7 @@ uv run ableton-cli --output json doctor
 uv run ableton-cli doctor --output json
 ```
 
-Installers/config commands also support:
+Installer/config commands also support command-local forms:
 
 - `--yes`
 - `--dry-run`
@@ -154,6 +191,16 @@ Installers/config commands also support:
 ## Protocol
 
 `ableton-cli` uses local TCP JSONL communication on `127.0.0.1:<port>`.
+
+## Security Model
+
+- The Remote Script listens on 127.0.0.1 only (local loopback).
+- The protocol has no authentication.
+- Do not expose the port to untrusted networks.
+- Treat write and destructive commands as equivalent to direct user operation in Ableton Live.
+- Prefer `--read-only` for inspection and agent preflight.
+- Use `--plan` or `--dry-run` to inspect the side effect and target payload before dispatch.
+- Use `--require-confirmation --yes` when automation should fail closed around destructive commands.
 
 ### Request
 

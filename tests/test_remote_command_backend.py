@@ -4,6 +4,10 @@ import pytest
 
 from ableton_cli.capabilities import required_remote_commands
 from remote_script.AbletonCliRemote.command_backend import CommandError, dispatch_command
+from remote_script.AbletonCliRemote.command_backend_validators import (
+    _parameter_ref,
+    _track_ref,
+)
 
 
 def _track_selector(index: int) -> dict[str, object]:
@@ -23,6 +27,20 @@ def _parameter_selector(track: int, device: int, parameter: int) -> dict[str, ob
         "device_ref": {"mode": "index", "index": device},
         "parameter_ref": {"mode": "index", "index": parameter},
     }
+
+
+def test_remote_ref_validators_reject_extra_selector_fields() -> None:
+    with pytest.raises(CommandError) as exc_info:
+        _track_ref({"mode": "selected", "index": 0})
+
+    assert exc_info.value.code == "INVALID_ARGUMENT"
+
+
+def test_remote_ref_validators_reject_missing_mode_specific_field() -> None:
+    with pytest.raises(CommandError) as exc_info:
+        _parameter_ref({"mode": "key"})
+
+    assert exc_info.value.code == "INVALID_ARGUMENT"
 
 
 class _BackendStub:

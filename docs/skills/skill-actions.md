@@ -5,6 +5,7 @@ Stable action names and CLI mappings for automation wrappers.
 | Action | CLI command | Capability |
 | --- | --- | --- |
 | `ping` | `uv run ableton-cli --output json ping` | Check connectivity and protocol metadata. |
+| `wait_ready` | `uv run ableton-cli --output json wait-ready` | Poll until Ableton Live and the Remote Script are reachable. |
 | `get_song_info` | `uv run ableton-cli --output json song info` | Read global song state such as tempo and transport status. |
 | `song_new` | `uv run ableton-cli --output json song new` | Create a new Ableton Set when supported by Live API. |
 | `song_undo` | `uv run ableton-cli --output json song undo` | Undo the most recent Ableton operation when supported by Live API. |
@@ -97,7 +98,6 @@ Stable action names and CLI mappings for automation wrappers.
 - `uv run ableton-cli doctor`: Validate host, port, and Remote Script installation state.
 - `uv run ableton-cli install-remote-script --yes`: Install Remote Script files non-interactively.
 - `uv run ableton-cli completion`: Print shell completion guidance.
-- `uv run ableton-cli wait-ready`: Poll ping until Ableton Live becomes reachable.
 - `uv run ableton-cli config init`: Create or update local config defaults.
 - `uv run ableton-cli config show`: Print effective runtime configuration.
 - `uv run ableton-cli config set <key> <value>`: Update one config key (`host`, `port`, `timeout_ms`, `protocol_version`).

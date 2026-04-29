@@ -102,6 +102,71 @@ def test_parse_response_rejects_non_integer_protocol_version() -> None:
     assert exc_info.value.exit_code == ExitCode.PROTOCOL_MISMATCH
 
 
+def test_parse_response_rejects_boolean_protocol_version() -> None:
+    request = make_request(name="ping", args={}, protocol_version=2)
+    payload = {
+        "ok": True,
+        "request_id": request.request_id,
+        "protocol_version": True,
+        "result": {"pong": True},
+        "error": None,
+    }
+
+    with pytest.raises(AppError) as exc_info:
+        parse_response(payload, expected_request_id=request.request_id, expected_protocol=2)
+
+    assert exc_info.value.error_code == "PROTOCOL_INVALID_RESPONSE"
+
+
+def test_parse_response_rejects_extra_response_keys() -> None:
+    request = make_request(name="ping", args={}, protocol_version=2)
+    payload = {
+        "ok": True,
+        "request_id": request.request_id,
+        "protocol_version": 2,
+        "result": {"pong": True},
+        "error": None,
+        "extra": "not allowed",
+    }
+
+    with pytest.raises(AppError) as exc_info:
+        parse_response(payload, expected_request_id=request.request_id, expected_protocol=2)
+
+    assert exc_info.value.error_code == "PROTOCOL_INVALID_RESPONSE"
+
+
+def test_parse_response_success_rejects_error_payload() -> None:
+    request = make_request(name="ping", args={}, protocol_version=2)
+    payload = {
+        "ok": True,
+        "request_id": request.request_id,
+        "protocol_version": 2,
+        "result": {"pong": True},
+        "error": {"code": "INVALID_ARGUMENT", "message": "bad"},
+    }
+
+    with pytest.raises(AppError) as exc_info:
+        parse_response(payload, expected_request_id=request.request_id, expected_protocol=2)
+
+    assert exc_info.value.error_code == "PROTOCOL_INVALID_RESPONSE"
+
+
+def test_parse_response_error_requires_code_and_message() -> None:
+    request = make_request(name="ping", args={}, protocol_version=2)
+    payload = {
+        "ok": False,
+        "request_id": request.request_id,
+        "protocol_version": 2,
+        "result": None,
+        "error": {"code": "INVALID_ARGUMENT"},
+    }
+
+    with pytest.raises(AppError) as exc_info:
+        parse_response(payload, expected_request_id=request.request_id, expected_protocol=2)
+
+    assert exc_info.value.error_code == "PROTOCOL_INVALID_RESPONSE"
+
+
 def test_parse_response_rejects_non_object_error_details() -> None:
     request = make_request(name="ping", args={}, protocol_version=2)
     payload = {

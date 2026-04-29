@@ -8,6 +8,7 @@ from typing import Any
 import typer
 
 from .client.ableton_client import AbletonClient
+from .command_specs import CommandSpec, command_spec_map
 from .compact import compact_payload
 from .config import Settings
 from .contracts import validate_command_contract
@@ -33,6 +34,10 @@ class RuntimeContext:
     record_path: str | None = None
     replay_path: str | None = None
     read_only: bool = False
+    require_confirmation: bool = False
+    confirm_destructive: bool = False
+    plan: bool = False
+    dry_run: bool = False
     compact: bool = False
     _client: AbletonClient | None = None
 
@@ -48,6 +53,51 @@ class RuntimeContext:
                     read_only=self.read_only,
                 )
         return self._client
+
+
+def _command_spec(command: str) -> CommandSpec:
+    return command_spec_map()[command]
+
+
+def build_command_plan(command: str, args: dict[str, Any], *, dry_run: bool) -> dict[str, Any]:
+    spec = _command_spec(command)
+    return {
+        "command": command,
+        "remote_command": spec.remote_command,
+        "args": args,
+        "side_effect": spec.side_effect.to_contract_metadata(),
+        "requires_confirmation": spec.side_effect.requires_confirmation,
+        "dry_run": dry_run,
+        "will_dispatch": False,
+    }
+
+
+def enforce_destructive_confirmation(
+    runtime: RuntimeContext, command: str, args: dict[str, Any]
+) -> None:
+    if (
+        not runtime.require_confirmation
+        or runtime.confirm_destructive
+        or args.get("yes") is True
+        or args.get("dry_run") is True
+    ):
+        return
+
+    spec = _command_spec(command)
+    if not spec.side_effect.requires_confirmation:
+        return
+
+    raise AppError(
+        error_code=ErrorCode.CONFIRMATION_REQUIRED,
+        message=f"Command '{command}' requires confirmation",
+        hint="Pass --yes together with --require-confirmation to execute this command.",
+        exit_code=ExitCode.EXECUTION_FAILED,
+        details={
+            "command": command,
+            "remote_command": spec.remote_command,
+            "side_effect": spec.side_effect.to_contract_metadata(),
+        },
+    )
 
 
 def get_runtime(ctx: typer.Context) -> RuntimeContext:
@@ -75,8 +125,18 @@ def execute_command(
     logger = logging.getLogger("ableton_cli")
 
     try:
-        result = action()
         payload_args = resolved_args() if resolved_args is not None else args
+        if runtime.plan or runtime.dry_run:
+            result = build_command_plan(command, payload_args, dry_run=runtime.dry_run)
+            payload = success_payload(command=command, args=payload_args, result=result)
+            if runtime.output_mode == OutputMode.JSON:
+                emit_json(payload)
+            else:
+                emit_human_result(command, result, runtime.quiet)
+            raise typer.Exit(ExitCode.SUCCESS.value)
+
+        enforce_destructive_confirmation(runtime, command, payload_args)
+        result = action()
         validate_command_contract(command=command, args=payload_args, result=result)
         payload = success_payload(command=command, args=payload_args, result=result)
         if runtime.output_mode == OutputMode.JSON:

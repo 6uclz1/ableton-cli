@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Annotated
 
+import click
 import typer
 
 from .bootstrap import build_runtime_context
@@ -58,7 +59,6 @@ def register_commands(app: typer.Typer) -> None:
 
 
 def main(
-    ctx: typer.Context,
     host: Annotated[str | None, typer.Option("--host", help="Remote host")] = None,
     port: Annotated[int | None, typer.Option("--port", help="Remote port")] = None,
     timeout_ms: Annotated[
@@ -90,6 +90,25 @@ def main(
         bool,
         typer.Option("--read-only", help="Reject write commands before dispatch"),
     ] = False,
+    require_confirmation: Annotated[
+        bool,
+        typer.Option(
+            "--require-confirmation",
+            help="Reject destructive commands unless --yes is also provided",
+        ),
+    ] = False,
+    yes: Annotated[
+        bool,
+        typer.Option("--yes", help="Confirm destructive commands when confirmation is required"),
+    ] = False,
+    plan: Annotated[
+        bool,
+        typer.Option("--plan", help="Emit command side-effect metadata without dispatching"),
+    ] = False,
+    dry_run: Annotated[
+        bool,
+        typer.Option("--dry-run", help="Emit the planned command payload without dispatching"),
+    ] = False,
     compact: Annotated[
         bool,
         typer.Option("--compact", help="Compact large JSON arrays into summaries"),
@@ -107,7 +126,7 @@ def main(
     del version
 
     try:
-        ctx.obj = build_runtime_context(
+        click.get_current_context().obj = build_runtime_context(
             host=host,
             port=port,
             timeout_ms=timeout_ms,
@@ -121,6 +140,10 @@ def main(
             record=record,
             replay=replay,
             read_only=read_only,
+            require_confirmation=require_confirmation,
+            yes=yes,
+            plan=plan,
+            dry_run=dry_run,
             compact=compact,
         )
     except AppError as exc:

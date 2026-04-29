@@ -61,9 +61,11 @@ Browser/device operations:
   ableton-cli browser tree all
   ableton-cli browser items-at-path drums/Kits
   ableton-cli browser search drift --item-type loadable
+  ableton-cli browser search "Drum Rack" --path drums --item-type loadable --limit 10
+  ableton-cli browser search "Kit" --path drums --item-type loadable --limit 10
   ableton-cli browser item query:Synths#Operator
   ableton-cli browser load 0 query:Synths#Operator
-  ableton-cli browser load-drum-kit 0 rack:drums --kit-uri kit:acoustic
+  ableton-cli browser load-drum-kit 0 <rack-uri-from-search> --kit-uri <kit-uri-from-search>
   ableton-cli batch run --steps-file ./steps.json
   ableton-cli batch run --steps-json '{"steps":[{"command":"song_info","args":{}}}'
   echo '{"steps":[{"command":"song_info","args":{}}]}' | ableton-cli batch run --steps-stdin

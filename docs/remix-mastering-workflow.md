@@ -2,6 +2,10 @@
 
 Use this flow after a remix arrangement has been rendered.
 
+Offline mastering analysis depends on `ffmpeg` and `ffprobe` when the `ffmpeg`
+engine is selected. Install both tools before running `remix mastering analyze`;
+otherwise the analysis command fails explicitly with `CONFIG_INVALID`.
+
 ```bash
 uv run ableton-cli --output json remix mastering profile list
 uv run ableton-cli --output json remix mastering target set --project ./proj/remix_project.json --profile anime-club-demo --true-peak-dbtp-max -1.0

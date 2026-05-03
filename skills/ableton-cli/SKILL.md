@@ -155,6 +155,9 @@ uv run ableton-cli remix export-plan --project ./proj/remix_project.json --targe
 Remix commands are manifest-first. Use `remix plan` and `remix apply --dry-run` before writing to Live. Store only cleared, private-test, or original material in remix manifests.
 
 Mastering workflow is measurement-first:
+- Ensure `ffmpeg` and `ffprobe` are installed before running `audio loudness analyze`,
+  `audio reference compare`, or `remix mastering analyze`; missing binaries fail
+  explicitly with `CONFIG_INVALID`.
 - Run `audio loudness analyze` and `audio spectrum analyze` after every render.
 - Run `audio reference compare` when a reference track is registered.
 - Do not chase LUFS by increasing limiter pressure when true peak is close to ceiling.

@@ -24,7 +24,20 @@ def _write_sine(path: Path, *, amp: float = 0.35) -> None:
         wav.writeframes(bytes(frames))
 
 
-def test_remix_mastering_cli_flow_outputs_json(runner, cli_app, tmp_path: Path) -> None:
+def _allow_ffmpeg_engine(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "ableton_cli.audio_analysis.loudness.require_ffmpeg_engine",
+        lambda engine: engine.strip().lower(),
+    )
+
+
+def test_remix_mastering_cli_flow_outputs_json(
+    runner,
+    cli_app,
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    _allow_ffmpeg_engine(monkeypatch)
     source = tmp_path / "source.wav"
     render = tmp_path / "render.wav"
     reference = tmp_path / "reference.wav"

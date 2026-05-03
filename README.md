@@ -101,6 +101,10 @@ uv run ableton-cli effect eq8 keys
 uv run ableton-cli effect eq8 set 0.6 --track-query Bass --device-query EQ --parameter-key band1_freq
 ```
 
+Offline mastering analysis with the `ffmpeg` engine requires both `ffmpeg` and
+`ffprobe` on `PATH`. Without them, `audio loudness analyze`, `audio reference
+compare`, and `remix mastering analyze` fail explicitly with `CONFIG_INVALID`.
+
 Ref-aware track, device, and parameter commands now use mutually exclusive selector flags instead of positional indexes.
 Track selectors: `--track-index`, `--track-name`, `--selected-track`, `--track-query`, `--track-ref`.
 Device selectors: `--device-index`, `--device-name`, `--selected-device`, `--device-query`, `--device-ref`.

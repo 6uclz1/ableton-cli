@@ -3,6 +3,13 @@
 The mastering surface is split into offline analysis, master-track primitives, and remix
 workflow commands.
 
+## Requirements
+
+Offline mastering analysis with the `ffmpeg` engine requires both `ffmpeg` and
+`ffprobe` on `PATH`. Without them, loudness analysis, reference comparison, and
+remix mastering analysis fail explicitly with `CONFIG_INVALID`; the CLI does not
+silently skip metrics or use a fallback analyzer.
+
 ## Offline analysis
 
 ```bash
@@ -12,8 +19,7 @@ uv run ableton-cli --output json audio reference compare --candidate ./renders/r
 ```
 
 `audio loudness analyze` reports integrated LUFS, true peak, sample peak, RMS, crest
-factor, clipping count, and DC offset. The initial engine is `ffmpeg`; if `ffmpeg` or
-`ffprobe` is unavailable the command fails explicitly with configuration guidance.
+factor, clipping count, and DC offset.
 
 Spectrum profiles are diagnostic presets, not platform specifications. `broadcast-r128`
 uses the EBU R128 programme loudness target of -23.0 LUFS and is separate from music

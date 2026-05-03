@@ -20,6 +20,13 @@ def _write_sine(path: Path, *, amp: float = 0.35, seconds: float = 0.5) -> None:
         wav.writeframes(bytes(frames))
 
 
+def _allow_ffmpeg_engine(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "ableton_cli.audio_analysis.loudness.require_ffmpeg_engine",
+        lambda engine: engine.strip().lower(),
+    )
+
+
 def test_manifest_schema_v1_migrates_to_mastering_v2(tmp_path: Path) -> None:
     from ableton_cli.remix.manifest import init_manifest, load_manifest
 
@@ -41,7 +48,8 @@ def test_manifest_schema_v1_migrates_to_mastering_v2(tmp_path: Path) -> None:
     assert migrated["master_chain_plan"] is None
 
 
-def test_remix_mastering_target_reference_plan_and_qa(tmp_path: Path) -> None:
+def test_remix_mastering_target_reference_plan_and_qa(tmp_path: Path, monkeypatch) -> None:
+    _allow_ffmpeg_engine(monkeypatch)
     from ableton_cli.remix.manifest import init_manifest, load_manifest
     from ableton_cli.remix.mastering import (
         add_reference,

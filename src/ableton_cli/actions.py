@@ -543,7 +543,10 @@ STABLE_ACTION_MAPPINGS: tuple[StableActionMapping, ...] = (
     StableActionMapping(
         action="audio_loudness_analyze",
         command="uv run ableton-cli --output json audio loudness analyze --path <wav>",
-        capability="Analyze an offline render for LUFS, peak, RMS, crest, clipping, and DC offset.",
+        capability=(
+            "Analyze an offline render for LUFS, peak, RMS, crest, clipping, "
+            "and DC offset; requires ffmpeg and ffprobe."
+        ),
     ),
     StableActionMapping(
         action="remix_mastering_plan",

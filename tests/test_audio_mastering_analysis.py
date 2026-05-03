@@ -25,11 +25,20 @@ def _payload(stdout: str) -> dict[str, object]:
     return json.loads(stdout)
 
 
+def _allow_ffmpeg_engine(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "ableton_cli.audio_analysis.loudness.require_ffmpeg_engine",
+        lambda engine: engine.strip().lower(),
+    )
+
+
 def test_audio_loudness_analyze_reports_peak_rms_and_crest(
     runner,
     cli_app,
     tmp_path: Path,
+    monkeypatch,
 ) -> None:
+    _allow_ffmpeg_engine(monkeypatch)
     audio_path = tmp_path / "tone.wav"
     report_path = tmp_path / "loudness.json"
     _write_sine(audio_path, amp=0.5)
@@ -62,6 +71,38 @@ def test_audio_loudness_analyze_reports_peak_rms_and_crest(
     assert math.isclose(float(analysis["rms_dbfs"]), -9.03, abs_tol=0.2)  # type: ignore[index]
     assert math.isclose(float(analysis["crest_db"]), 3.01, abs_tol=0.25)  # type: ignore[index]
     assert json.loads(report_path.read_text(encoding="utf-8"))["path"] == str(audio_path)
+
+
+def test_audio_loudness_analyze_requires_ffmpeg_engine(
+    runner,
+    cli_app,
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    audio_path = tmp_path / "tone.wav"
+    _write_sine(audio_path, amp=0.5)
+    monkeypatch.setattr("ableton_cli.audio_analysis.io.shutil.which", lambda _name: None)
+
+    result = runner.invoke(
+        cli_app,
+        [
+            "--output",
+            "json",
+            "audio",
+            "loudness",
+            "analyze",
+            "--path",
+            str(audio_path),
+            "--engine",
+            "ffmpeg",
+        ],
+    )
+
+    assert result.exit_code == 3, result.stdout
+    payload = _payload(result.stdout)
+    error = payload["error"]
+    assert error["code"] == "CONFIG_INVALID"  # type: ignore[index]
+    assert "ffmpeg engine is not available" in error["message"]  # type: ignore[index]
 
 
 def test_audio_spectrum_analyze_reports_bands_and_stereo(
@@ -98,7 +139,9 @@ def test_audio_reference_compare_reports_metric_deltas(
     runner,
     cli_app,
     tmp_path: Path,
+    monkeypatch,
 ) -> None:
+    _allow_ffmpeg_engine(monkeypatch)
     candidate = tmp_path / "candidate.wav"
     reference = tmp_path / "reference.wav"
     _write_sine(candidate, freq=80.0, amp=0.25)

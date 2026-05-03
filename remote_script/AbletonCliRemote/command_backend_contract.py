@@ -274,6 +274,51 @@ class _TracksClipsBackend(Protocol):
 
     def clip_active_set(self, track: int, clip: int, value: bool) -> dict[str, Any]: ...
 
+    def clip_props_get(self, track: int, clip: int) -> dict[str, Any]: ...
+
+    def clip_loop_set(
+        self,
+        track: int,
+        clip: int,
+        start: float,
+        end: float,
+        enabled: bool,
+    ) -> dict[str, Any]: ...
+
+    def clip_marker_set(
+        self,
+        track: int,
+        clip: int,
+        start_marker: float,
+        end_marker: float,
+    ) -> dict[str, Any]: ...
+
+    def clip_warp_get(self, track: int, clip: int) -> dict[str, Any]: ...
+
+    def clip_warp_set(
+        self,
+        track: int,
+        clip: int,
+        enabled: bool,
+        mode: str | None,
+    ) -> dict[str, Any]: ...
+
+    def clip_warp_marker_list(self, track: int, clip: int) -> dict[str, Any]: ...
+
+    def clip_warp_marker_add(
+        self,
+        track: int,
+        clip: int,
+        sample_time: float,
+        beat_time: float,
+    ) -> dict[str, Any]: ...
+
+    def clip_gain_set(self, track: int, clip: int, db: float) -> dict[str, Any]: ...
+
+    def clip_transpose_set(self, track: int, clip: int, semitones: int) -> dict[str, Any]: ...
+
+    def clip_file_replace(self, track: int, clip: int, audio_path: str) -> dict[str, Any]: ...
+
     def clip_duplicate(
         self,
         track: int,
@@ -376,6 +421,51 @@ class _TracksClipsBackend(Protocol):
         start: float | None,
         end: float | None,
         delete_all: bool,
+    ) -> dict[str, Any]: ...
+
+    def arrangement_clip_props_get(self, track: int, index: int) -> dict[str, Any]: ...
+
+    def arrangement_clip_loop_set(
+        self,
+        track: int,
+        index: int,
+        start: float,
+        end: float,
+        enabled: bool,
+    ) -> dict[str, Any]: ...
+
+    def arrangement_clip_marker_set(
+        self,
+        track: int,
+        index: int,
+        start_marker: float,
+        end_marker: float,
+    ) -> dict[str, Any]: ...
+
+    def arrangement_clip_warp_get(self, track: int, index: int) -> dict[str, Any]: ...
+
+    def arrangement_clip_warp_set(
+        self,
+        track: int,
+        index: int,
+        enabled: bool,
+        mode: str | None,
+    ) -> dict[str, Any]: ...
+
+    def arrangement_clip_gain_set(self, track: int, index: int, db: float) -> dict[str, Any]: ...
+
+    def arrangement_clip_transpose_set(
+        self,
+        track: int,
+        index: int,
+        semitones: int,
+    ) -> dict[str, Any]: ...
+
+    def arrangement_clip_file_replace(
+        self,
+        track: int,
+        index: int,
+        audio_path: str,
     ) -> dict[str, Any]: ...
 
     def arrangement_from_session(self, scenes: list[dict[str, Any]]) -> dict[str, Any]: ...

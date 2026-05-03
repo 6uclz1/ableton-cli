@@ -258,6 +258,81 @@ class _AbletonClientBrowserScenesMixin:
         self._add_if_not_none(args, "end", end)
         return self._call("arrangement_clip_delete", args)
 
+    def arrangement_clip_props_get(self, track: int, index: int) -> dict[str, Any]:
+        return self._call("arrangement_clip_props_get", {"track": track, "index": index})
+
+    def arrangement_clip_loop_set(
+        self,
+        track: int,
+        index: int,
+        start: float,
+        end: float,
+        enabled: bool,
+    ) -> dict[str, Any]:
+        return self._call(
+            "arrangement_clip_loop_set",
+            {"track": track, "index": index, "start": start, "end": end, "enabled": enabled},
+        )
+
+    def arrangement_clip_marker_set(
+        self,
+        track: int,
+        index: int,
+        start_marker: float,
+        end_marker: float,
+    ) -> dict[str, Any]:
+        return self._call(
+            "arrangement_clip_marker_set",
+            {
+                "track": track,
+                "index": index,
+                "start_marker": start_marker,
+                "end_marker": end_marker,
+            },
+        )
+
+    def arrangement_clip_warp_get(self, track: int, index: int) -> dict[str, Any]:
+        return self._call("arrangement_clip_warp_get", {"track": track, "index": index})
+
+    def arrangement_clip_warp_set(
+        self,
+        track: int,
+        index: int,
+        enabled: bool,
+        mode: str | None,
+    ) -> dict[str, Any]:
+        args: dict[str, Any] = {"track": track, "index": index, "enabled": enabled}
+        self._add_if_not_none(args, "mode", mode)
+        return self._call("arrangement_clip_warp_set", args)
+
+    def arrangement_clip_gain_set(self, track: int, index: int, db: float) -> dict[str, Any]:
+        return self._call(
+            "arrangement_clip_gain_set",
+            {"track": track, "index": index, "db": db},
+        )
+
+    def arrangement_clip_transpose_set(
+        self,
+        track: int,
+        index: int,
+        semitones: int,
+    ) -> dict[str, Any]:
+        return self._call(
+            "arrangement_clip_transpose_set",
+            {"track": track, "index": index, "semitones": semitones},
+        )
+
+    def arrangement_clip_file_replace(
+        self,
+        track: int,
+        index: int,
+        audio_path: str,
+    ) -> dict[str, Any]:
+        return self._call(
+            "arrangement_clip_file_replace",
+            {"track": track, "index": index, "audio_path": audio_path},
+        )
+
     def arrangement_from_session(self, scenes: list[dict[str, float]]) -> dict[str, Any]:
         return self._call("arrangement_from_session", {"scenes": scenes})
 

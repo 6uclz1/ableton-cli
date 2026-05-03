@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 from collections.abc import Callable
 from typing import Any
 
@@ -14,6 +15,18 @@ from .base import _invalid_argument, _not_supported_by_live_api
 
 
 class LiveBackendTracksClipsMixin:
+    _WARP_MODE_VALUES = {
+        "beats": 0,
+        "tones": 1,
+        "texture": 2,
+        "re-pitch": 3,
+        "repitch": 3,
+        "complex": 4,
+        "rex": 5,
+        "complex-pro": 6,
+        "complex_pro": 6,
+    }
+
     def _clip_note_matches_filter(
         self,
         note: dict[str, Any],
@@ -627,6 +640,203 @@ class LiveBackendTracksClipsMixin:
             "clip": clip,
             "active": not bool(clip_obj.muted),
         }
+
+    def _require_session_clip(self, track: int, clip: int, *, action: str) -> Any:
+        slot = self._clip_slot_at(track, clip)
+        if not slot.has_clip:
+            raise _invalid_argument(
+                message="No clip in slot",
+                hint=f"Create a clip in the target slot before {action}.",
+            )
+        clip_obj = slot.clip
+        assert clip_obj is not None
+        return clip_obj
+
+    def _clip_props_payload(
+        self,
+        *,
+        clip_obj: Any,
+        track: int,
+        clip: int | None,
+        index: int | None,
+    ) -> dict[str, Any]:
+        payload: dict[str, Any] = {
+            "track": track,
+            "name": str(self._safe_clip_attr(clip_obj, "name", "")),
+            "length": self._safe_float(self._safe_clip_attr(clip_obj, "length")),
+            "is_audio_clip": bool(self._safe_clip_attr(clip_obj, "is_audio_clip", False)),
+            "is_midi_clip": bool(self._safe_clip_attr(clip_obj, "is_midi_clip", False)),
+            "loop_start": self._safe_float(self._safe_clip_attr(clip_obj, "loop_start")),
+            "loop_end": self._safe_float(self._safe_clip_attr(clip_obj, "loop_end")),
+            "looping": bool(self._safe_clip_attr(clip_obj, "looping", False)),
+            "start_marker": self._safe_float(self._safe_clip_attr(clip_obj, "start_marker")),
+            "end_marker": self._safe_float(self._safe_clip_attr(clip_obj, "end_marker")),
+            "warping": bool(self._safe_clip_attr(clip_obj, "warping", False)),
+            "warp_mode": self._safe_clip_attr(clip_obj, "warp_mode"),
+            "gain_db": self._safe_clip_attr(clip_obj, "_ableton_cli_gain_db"),
+            "pitch_coarse": self._safe_clip_attr(clip_obj, "pitch_coarse"),
+        }
+        if clip is not None:
+            payload["clip"] = clip
+        if index is not None:
+            payload["index"] = index
+            payload["start_time"] = self._safe_float(self._safe_clip_attr(clip_obj, "start_time"))
+        return payload
+
+    @staticmethod
+    def _set_required_clip_attr(clip_obj: Any, attr: str, value: Any, *, api_name: str) -> None:
+        if not hasattr(clip_obj, attr):
+            raise _not_supported_by_live_api(
+                message=f"Clip {api_name} API is not available in Live API",
+                hint=f"Use a Live version exposing clip.{attr}.",
+            )
+        setattr(clip_obj, attr, value)
+
+    @staticmethod
+    def _safe_clip_attr(clip_obj: Any, attr: str, default: Any = None) -> Any:
+        try:
+            return getattr(clip_obj, attr)
+        except Exception:  # noqa: BLE001
+            return default
+
+    @classmethod
+    def _warp_mode_value(cls, mode: str | int) -> int:
+        if isinstance(mode, int):
+            return mode
+        normalized = str(mode).strip().lower()
+        if normalized.isdecimal():
+            return int(normalized)
+        value = cls._WARP_MODE_VALUES.get(normalized)
+        if value is None:
+            raise _invalid_argument(
+                message=f"unsupported warp mode: {mode}",
+                hint="Use beats, tones, texture, re-pitch, complex, rex, or complex-pro.",
+            )
+        return value
+
+    def clip_props_get(self, track: int, clip: int) -> dict[str, Any]:
+        clip_obj = self._require_session_clip(track, clip, action="reading clip properties")
+        return self._clip_props_payload(clip_obj=clip_obj, track=track, clip=clip, index=None)
+
+    def clip_loop_set(
+        self,
+        track: int,
+        clip: int,
+        start: float,
+        end: float,
+        enabled: bool,
+    ) -> dict[str, Any]:
+        clip_obj = self._require_session_clip(track, clip, action="updating clip loop")
+        self._set_required_clip_attr(clip_obj, "loop_start", float(start), api_name="loop start")
+        self._set_required_clip_attr(clip_obj, "loop_end", float(end), api_name="loop end")
+        self._set_required_clip_attr(clip_obj, "looping", bool(enabled), api_name="loop")
+        return self.clip_props_get(track, clip)
+
+    def clip_marker_set(
+        self,
+        track: int,
+        clip: int,
+        start_marker: float,
+        end_marker: float,
+    ) -> dict[str, Any]:
+        clip_obj = self._require_session_clip(track, clip, action="updating clip markers")
+        self._set_required_clip_attr(
+            clip_obj,
+            "start_marker",
+            float(start_marker),
+            api_name="start marker",
+        )
+        self._set_required_clip_attr(
+            clip_obj, "end_marker", float(end_marker), api_name="end marker"
+        )
+        return self.clip_props_get(track, clip)
+
+    def clip_warp_get(self, track: int, clip: int) -> dict[str, Any]:
+        clip_obj = self._require_session_clip(track, clip, action="reading warp state")
+        return {
+            "track": track,
+            "clip": clip,
+            "warping": bool(getattr(clip_obj, "warping", False)),
+            "warp_mode": getattr(clip_obj, "warp_mode", None),
+        }
+
+    def clip_warp_set(
+        self,
+        track: int,
+        clip: int,
+        enabled: bool,
+        mode: str | None,
+    ) -> dict[str, Any]:
+        clip_obj = self._require_session_clip(track, clip, action="updating warp state")
+        self._set_required_clip_attr(clip_obj, "warping", bool(enabled), api_name="warp")
+        if mode is not None:
+            self._set_required_clip_attr(
+                clip_obj,
+                "warp_mode",
+                self._warp_mode_value(mode),
+                api_name="warp mode",
+            )
+        return self.clip_warp_get(track, clip)
+
+    def clip_warp_marker_list(self, track: int, clip: int) -> dict[str, Any]:
+        clip_obj = self._require_session_clip(track, clip, action="reading warp markers")
+        markers = getattr(clip_obj, "warp_markers", None)
+        if markers is None:
+            raise _not_supported_by_live_api(
+                message="Clip warp marker list API is not available in Live API",
+                hint="Use a Live version exposing clip.warp_markers.",
+            )
+        return {"track": track, "clip": clip, "warp_markers": list(markers)}
+
+    def clip_warp_marker_add(
+        self,
+        track: int,
+        clip: int,
+        sample_time: float,
+        beat_time: float,
+    ) -> dict[str, Any]:
+        clip_obj = self._require_session_clip(track, clip, action="adding a warp marker")
+        create_warp_marker = getattr(clip_obj, "create_warp_marker", None)
+        if not callable(create_warp_marker):
+            raise _not_supported_by_live_api(
+                message="Clip warp marker write API is not available in Live API",
+                hint="Use a Live version exposing clip.create_warp_marker.",
+            )
+        create_warp_marker(float(sample_time), float(beat_time))
+        return {
+            "track": track,
+            "clip": clip,
+            "sample_time": float(sample_time),
+            "beat_time": float(beat_time),
+            "created": True,
+        }
+
+    def clip_gain_set(self, track: int, clip: int, db: float) -> dict[str, Any]:
+        clip_obj = self._require_session_clip(track, clip, action="updating clip gain")
+        if not hasattr(clip_obj, "gain"):
+            raise _not_supported_by_live_api(
+                message="Clip gain API is not available in Live API",
+                hint="Use a Live version exposing clip.gain.",
+            )
+        clip_obj.gain = math.pow(10.0, float(db) / 20.0)
+        clip_obj._ableton_cli_gain_db = float(db)  # noqa: SLF001
+        return {"track": track, "clip": clip, "gain_db": float(db), "gain": float(clip_obj.gain)}
+
+    def clip_transpose_set(self, track: int, clip: int, semitones: int) -> dict[str, Any]:
+        clip_obj = self._require_session_clip(track, clip, action="updating clip transpose")
+        self._set_required_clip_attr(clip_obj, "pitch_coarse", int(semitones), api_name="transpose")
+        return {"track": track, "clip": clip, "pitch_coarse": int(clip_obj.pitch_coarse)}
+
+    def clip_file_replace(self, track: int, clip: int, audio_path: str) -> dict[str, Any]:
+        clip_obj = self._require_session_clip(track, clip, action="replacing clip audio file")
+        replace_file = getattr(clip_obj, "replace_file", None)
+        if not callable(replace_file):
+            raise _not_supported_by_live_api(
+                message="Clip file replacement API is not available in Live API",
+                hint="Use manual replacement in Ableton Live for this Live version.",
+            )
+        replace_file(audio_path)
+        return {"track": track, "clip": clip, "audio_path": audio_path, "replaced": True}
 
     def _duplicate_clip_to_destination(
         self,

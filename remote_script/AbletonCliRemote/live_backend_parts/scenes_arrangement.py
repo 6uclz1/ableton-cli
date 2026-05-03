@@ -259,17 +259,35 @@ class LiveBackendScenesArrangementMixin:
                     hint="Retry arrangement clip creation.",
                 )
             created_clip = clips[before_count]
+            length_set = False
+            end_marker_set = False
             if hasattr(created_clip, "length"):
-                created_clip.length = normalized_length
-            return {
+                try:
+                    created_clip.length = normalized_length
+                    length_set = True
+                except Exception:  # noqa: BLE001
+                    if hasattr(created_clip, "end_marker"):
+                        created_clip.end_marker = normalized_length
+                        end_marker_set = True
+            actual_length = self._safe_float(getattr(created_clip, "length", None))
+            result = {
                 "track": track,
                 "start_time": normalized_start_time,
-                "length": normalized_length,
+                "length": actual_length if actual_length is not None else normalized_length,
                 "kind": "audio",
                 "audio_path": normalized_audio_path,
                 "arrangement_view_focused": True,
                 "created": True,
             }
+            if not length_set:
+                result.update(
+                    {
+                        "requested_length": normalized_length,
+                        "length_set": length_set,
+                        "end_marker_set": end_marker_set,
+                    }
+                )
+            return result
 
         raise _invalid_argument(
             message=(
@@ -570,6 +588,99 @@ class LiveBackendScenesArrangementMixin:
             "deleted_count": len(deleted_indexes),
             "deleted_indexes": deleted_indexes,
         }
+
+    def arrangement_clip_props_get(self, track: int, index: int) -> dict[str, Any]:
+        clip = self._arrangement_clip_at(track, index)
+        return self._clip_props_payload(clip_obj=clip, track=track, clip=None, index=index)
+
+    def arrangement_clip_loop_set(
+        self,
+        track: int,
+        index: int,
+        start: float,
+        end: float,
+        enabled: bool,
+    ) -> dict[str, Any]:
+        clip = self._arrangement_clip_at(track, index)
+        self._set_required_clip_attr(clip, "loop_start", float(start), api_name="loop start")
+        self._set_required_clip_attr(clip, "loop_end", float(end), api_name="loop end")
+        self._set_required_clip_attr(clip, "looping", bool(enabled), api_name="loop")
+        return self.arrangement_clip_props_get(track, index)
+
+    def arrangement_clip_marker_set(
+        self,
+        track: int,
+        index: int,
+        start_marker: float,
+        end_marker: float,
+    ) -> dict[str, Any]:
+        clip = self._arrangement_clip_at(track, index)
+        self._set_required_clip_attr(
+            clip, "start_marker", float(start_marker), api_name="start marker"
+        )
+        self._set_required_clip_attr(clip, "end_marker", float(end_marker), api_name="end marker")
+        return self.arrangement_clip_props_get(track, index)
+
+    def arrangement_clip_warp_get(self, track: int, index: int) -> dict[str, Any]:
+        clip = self._arrangement_clip_at(track, index)
+        return {
+            "track": track,
+            "index": index,
+            "warping": bool(getattr(clip, "warping", False)),
+            "warp_mode": getattr(clip, "warp_mode", None),
+        }
+
+    def arrangement_clip_warp_set(
+        self,
+        track: int,
+        index: int,
+        enabled: bool,
+        mode: str | None,
+    ) -> dict[str, Any]:
+        clip = self._arrangement_clip_at(track, index)
+        self._set_required_clip_attr(clip, "warping", bool(enabled), api_name="warp")
+        if mode is not None:
+            self._set_required_clip_attr(
+                clip,
+                "warp_mode",
+                self._warp_mode_value(mode),
+                api_name="warp mode",
+            )
+        return self.arrangement_clip_warp_get(track, index)
+
+    def arrangement_clip_gain_set(self, track: int, index: int, db: float) -> dict[str, Any]:
+        clip = self._arrangement_clip_at(track, index)
+        if not hasattr(clip, "gain"):
+            raise _not_supported_by_live_api(
+                message="Arrangement clip gain API is not available in Live API",
+                hint="Use a Live version exposing clip.gain.",
+            )
+        clip.gain = math.pow(10.0, float(db) / 20.0)
+        clip._ableton_cli_gain_db = float(db)  # noqa: SLF001
+        return {"track": track, "index": index, "gain_db": float(db), "gain": float(clip.gain)}
+
+    def arrangement_clip_transpose_set(
+        self,
+        track: int,
+        index: int,
+        semitones: int,
+    ) -> dict[str, Any]:
+        clip = self._arrangement_clip_at(track, index)
+        self._set_required_clip_attr(clip, "pitch_coarse", int(semitones), api_name="transpose")
+        return {"track": track, "index": index, "pitch_coarse": int(clip.pitch_coarse)}
+
+    def arrangement_clip_file_replace(
+        self, track: int, index: int, audio_path: str
+    ) -> dict[str, Any]:
+        clip = self._arrangement_clip_at(track, index)
+        replace_file = getattr(clip, "replace_file", None)
+        if not callable(replace_file):
+            raise _not_supported_by_live_api(
+                message="Arrangement clip file replacement API is not available in Live API",
+                hint="Use manual replacement in Ableton Live for this Live version.",
+            )
+        replace_file(audio_path)
+        return {"track": track, "index": index, "audio_path": audio_path, "replaced": True}
 
     @staticmethod
     def _scene_from_session_spec(scene_spec: dict[str, Any]) -> tuple[int, float]:

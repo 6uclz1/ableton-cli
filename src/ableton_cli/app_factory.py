@@ -9,6 +9,7 @@ import typer
 from .bootstrap import build_runtime_context
 from .commands import (
     arrangement,
+    audio,
     batch,
     browser,
     clip,
@@ -16,6 +17,7 @@ from .commands import (
     effect,
     master,
     mixer,
+    remix,
     return_track,
     return_tracks,
     scenes,
@@ -33,6 +35,8 @@ from .version import version_callback
 
 _COMMAND_MODULES = (
     setup,
+    remix,
+    audio,
     batch,
     song,
     arrangement,

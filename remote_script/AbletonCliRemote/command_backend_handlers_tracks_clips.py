@@ -137,6 +137,88 @@ def _handle_clip_groove_clear(backend: CommandBackend, args: dict[str, Any]) -> 
     return backend.clip_groove_clear(track, clip)
 
 
+def _handle_clip_props_get(backend: CommandBackend, args: dict[str, Any]) -> dict[str, Any]:
+    track = _track_index("track", args.get("track"))
+    clip = _track_index("clip", args.get("clip"))
+    return backend.clip_props_get(track, clip)
+
+
+def _handle_clip_loop_set(backend: CommandBackend, args: dict[str, Any]) -> dict[str, Any]:
+    track = _track_index("track", args.get("track"))
+    clip = _track_index("clip", args.get("clip"))
+    start = _non_negative_float("start", args.get("start"))
+    end = _non_negative_float("end", args.get("end"))
+    if end <= start:
+        raise _invalid_argument(
+            message=f"end must be greater than start (start={start}, end={end})",
+            hint="Use a valid loop range.",
+        )
+    enabled = _as_bool("enabled", args.get("enabled"))
+    return backend.clip_loop_set(track, clip, start, end, enabled)
+
+
+def _handle_clip_marker_set(backend: CommandBackend, args: dict[str, Any]) -> dict[str, Any]:
+    track = _track_index("track", args.get("track"))
+    clip = _track_index("clip", args.get("clip"))
+    start_marker = _non_negative_float("start_marker", args.get("start_marker"))
+    end_marker = _non_negative_float("end_marker", args.get("end_marker"))
+    return backend.clip_marker_set(track, clip, start_marker, end_marker)
+
+
+def _handle_clip_warp_get(backend: CommandBackend, args: dict[str, Any]) -> dict[str, Any]:
+    track = _track_index("track", args.get("track"))
+    clip = _track_index("clip", args.get("clip"))
+    return backend.clip_warp_get(track, clip)
+
+
+def _handle_clip_warp_set(backend: CommandBackend, args: dict[str, Any]) -> dict[str, Any]:
+    track = _track_index("track", args.get("track"))
+    clip = _track_index("clip", args.get("clip"))
+    enabled = _as_bool("enabled", args.get("enabled"))
+    mode = args.get("mode")
+    parsed_mode = _non_empty_string("mode", mode) if mode is not None else None
+    return backend.clip_warp_set(track, clip, enabled, parsed_mode)
+
+
+def _handle_clip_warp_marker_list(backend: CommandBackend, args: dict[str, Any]) -> dict[str, Any]:
+    track = _track_index("track", args.get("track"))
+    clip = _track_index("clip", args.get("clip"))
+    return backend.clip_warp_marker_list(track, clip)
+
+
+def _handle_clip_warp_marker_add(backend: CommandBackend, args: dict[str, Any]) -> dict[str, Any]:
+    track = _track_index("track", args.get("track"))
+    clip = _track_index("clip", args.get("clip"))
+    sample_time = _non_negative_float("sample_time", args.get("sample_time"))
+    beat_time = _non_negative_float("beat_time", args.get("beat_time"))
+    return backend.clip_warp_marker_add(track, clip, sample_time, beat_time)
+
+
+def _handle_clip_gain_set(backend: CommandBackend, args: dict[str, Any]) -> dict[str, Any]:
+    track = _track_index("track", args.get("track"))
+    clip = _track_index("clip", args.get("clip"))
+    db = float(args.get("db"))
+    return backend.clip_gain_set(track, clip, db)
+
+
+def _handle_clip_transpose_set(backend: CommandBackend, args: dict[str, Any]) -> dict[str, Any]:
+    track = _track_index("track", args.get("track"))
+    clip = _track_index("clip", args.get("clip"))
+    semitones = _as_int("semitones", args.get("semitones"))
+    return backend.clip_transpose_set(track, clip, semitones)
+
+
+def _handle_clip_file_replace(backend: CommandBackend, args: dict[str, Any]) -> dict[str, Any]:
+    track = _track_index("track", args.get("track"))
+    clip = _track_index("clip", args.get("clip"))
+    audio_path = _absolute_path_or_none("audio_path", args.get("audio_path"))
+    if audio_path is None:
+        raise _invalid_argument(
+            message="audio_path is required", hint="Pass an absolute audio_path."
+        )
+    return backend.clip_file_replace(track, clip, audio_path)
+
+
 def _handle_set_clip_name(backend: CommandBackend, args: dict[str, Any]) -> dict[str, Any]:
     track = _track_index("track", args.get("track"))
     clip = _track_index("clip", args.get("clip"))
@@ -470,6 +552,98 @@ def _handle_arrangement_clip_delete(
     return backend.arrangement_clip_delete(track, index, start, end, delete_all)
 
 
+def _handle_arrangement_clip_props_get(
+    backend: CommandBackend,
+    args: dict[str, Any],
+) -> dict[str, Any]:
+    track = _track_index("track", args.get("track"))
+    index = _track_index("index", args.get("index"))
+    return backend.arrangement_clip_props_get(track, index)
+
+
+def _handle_arrangement_clip_loop_set(
+    backend: CommandBackend,
+    args: dict[str, Any],
+) -> dict[str, Any]:
+    track = _track_index("track", args.get("track"))
+    index = _track_index("index", args.get("index"))
+    start = _non_negative_float("start", args.get("start"))
+    end = _non_negative_float("end", args.get("end"))
+    if end <= start:
+        raise _invalid_argument(
+            message=f"end must be greater than start (start={start}, end={end})",
+            hint="Use a valid loop range.",
+        )
+    enabled = _as_bool("enabled", args.get("enabled"))
+    return backend.arrangement_clip_loop_set(track, index, start, end, enabled)
+
+
+def _handle_arrangement_clip_marker_set(
+    backend: CommandBackend,
+    args: dict[str, Any],
+) -> dict[str, Any]:
+    track = _track_index("track", args.get("track"))
+    index = _track_index("index", args.get("index"))
+    start_marker = _non_negative_float("start_marker", args.get("start_marker"))
+    end_marker = _non_negative_float("end_marker", args.get("end_marker"))
+    return backend.arrangement_clip_marker_set(track, index, start_marker, end_marker)
+
+
+def _handle_arrangement_clip_warp_get(
+    backend: CommandBackend,
+    args: dict[str, Any],
+) -> dict[str, Any]:
+    track = _track_index("track", args.get("track"))
+    index = _track_index("index", args.get("index"))
+    return backend.arrangement_clip_warp_get(track, index)
+
+
+def _handle_arrangement_clip_warp_set(
+    backend: CommandBackend,
+    args: dict[str, Any],
+) -> dict[str, Any]:
+    track = _track_index("track", args.get("track"))
+    index = _track_index("index", args.get("index"))
+    enabled = _as_bool("enabled", args.get("enabled"))
+    mode = args.get("mode")
+    parsed_mode = _non_empty_string("mode", mode) if mode is not None else None
+    return backend.arrangement_clip_warp_set(track, index, enabled, parsed_mode)
+
+
+def _handle_arrangement_clip_gain_set(
+    backend: CommandBackend,
+    args: dict[str, Any],
+) -> dict[str, Any]:
+    track = _track_index("track", args.get("track"))
+    index = _track_index("index", args.get("index"))
+    db = float(args.get("db"))
+    return backend.arrangement_clip_gain_set(track, index, db)
+
+
+def _handle_arrangement_clip_transpose_set(
+    backend: CommandBackend,
+    args: dict[str, Any],
+) -> dict[str, Any]:
+    track = _track_index("track", args.get("track"))
+    index = _track_index("index", args.get("index"))
+    semitones = _as_int("semitones", args.get("semitones"))
+    return backend.arrangement_clip_transpose_set(track, index, semitones)
+
+
+def _handle_arrangement_clip_file_replace(
+    backend: CommandBackend,
+    args: dict[str, Any],
+) -> dict[str, Any]:
+    track = _track_index("track", args.get("track"))
+    index = _track_index("index", args.get("index"))
+    audio_path = _absolute_path_or_none("audio_path", args.get("audio_path"))
+    if audio_path is None:
+        raise _invalid_argument(
+            message="audio_path is required", hint="Pass an absolute audio_path."
+        )
+    return backend.arrangement_clip_file_replace(track, index, audio_path)
+
+
 def _arrangement_scene_specs(value: Any) -> list[dict[str, Any]]:
     if not isinstance(value, list) or not value:
         raise _invalid_argument(
@@ -524,6 +698,16 @@ TRACKS_CLIPS_HANDLERS: dict[str, Handler] = {
     "clip_groove_set": _handle_clip_groove_set,
     "clip_groove_amount_set": _handle_clip_groove_amount_set,
     "clip_groove_clear": _handle_clip_groove_clear,
+    "clip_props_get": _handle_clip_props_get,
+    "clip_loop_set": _handle_clip_loop_set,
+    "clip_marker_set": _handle_clip_marker_set,
+    "clip_warp_get": _handle_clip_warp_get,
+    "clip_warp_set": _handle_clip_warp_set,
+    "clip_warp_marker_list": _handle_clip_warp_marker_list,
+    "clip_warp_marker_add": _handle_clip_warp_marker_add,
+    "clip_gain_set": _handle_clip_gain_set,
+    "clip_transpose_set": _handle_clip_transpose_set,
+    "clip_file_replace": _handle_clip_file_replace,
     "set_clip_name": _handle_set_clip_name,
     "fire_clip": _handle_fire_clip,
     "stop_clip": _handle_stop_clip,
@@ -547,6 +731,14 @@ TRACKS_CLIPS_HANDLERS: dict[str, Handler] = {
     "arrangement_clip_notes_replace": _handle_arrangement_clip_notes_replace,
     "arrangement_clip_notes_import_browser": _handle_arrangement_clip_notes_import_browser,
     "arrangement_clip_delete": _handle_arrangement_clip_delete,
+    "arrangement_clip_props_get": _handle_arrangement_clip_props_get,
+    "arrangement_clip_loop_set": _handle_arrangement_clip_loop_set,
+    "arrangement_clip_marker_set": _handle_arrangement_clip_marker_set,
+    "arrangement_clip_warp_get": _handle_arrangement_clip_warp_get,
+    "arrangement_clip_warp_set": _handle_arrangement_clip_warp_set,
+    "arrangement_clip_gain_set": _handle_arrangement_clip_gain_set,
+    "arrangement_clip_transpose_set": _handle_arrangement_clip_transpose_set,
+    "arrangement_clip_file_replace": _handle_arrangement_clip_file_replace,
     "arrangement_from_session": _handle_arrangement_from_session,
     "tracks_delete": _handle_tracks_delete,
 }

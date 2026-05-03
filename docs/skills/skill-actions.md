@@ -117,6 +117,15 @@ Stable action names and CLI mappings for automation wrappers.
 - `uv run ableton-cli clip groove amount set <track> <clip> <0.0-1.0>`: Set groove amount on a clip.
 - `uv run ableton-cli clip groove clear <track> <clip>`: Clear groove assignment from a clip.
 - `uv run ableton-cli clip cut-to-drum-rack (--source-track <track> --source-clip <clip> | --source <uri-or-path>) (--grid <fraction-or-beats> | --slice-count <n>) [--target-track <track>] [--start-pad <pad>] [--create-trigger-clip --trigger-clip-slot <clip>]`: Slice audio source and map slices into Drum Rack pads.
+- `uv run ableton-cli remix init --source <abs-wav> --project <dir-or-json>`: Create a remix manifest.
+- `uv run ableton-cli audio asset add --project <remix_project.json> --role <role> --path <abs-audio>`: Register a remix asset.
+- `uv run ableton-cli audio sections import --project <remix_project.json> --sections "intro:1-8,chorus:33-48"`: Import a manual section map.
+- `uv run ableton-cli remix plan --project <remix_project.json> --style anime-club`: Generate an arrangement plan in the manifest.
+- `uv run ableton-cli remix apply --project <remix_project.json> --dry-run`: Print planned batch steps without writing to Live.
+- `uv run ableton-cli remix qa --project <remix_project.json>`: Validate remix manifest paths and planning metadata.
+- `uv run ableton-cli remix setup-sound --project <remix_project.json> --kit <query> --bass <query> --lead <query>`: Plan Browser-search-based sound setup.
+- `uv run ableton-cli remix mix-macro --project <remix_project.json> --preset anime-club-basic`: Plan bus, return, and macro setup.
+- `uv run ableton-cli remix device-chain apply --project <remix_project.json> --chain <name>`: Plan Browser-search-based device chain application.
 
 Operational note: after `install-remote-script --yes`, reload Ableton's Control Surface assignment (`None` -> `AbletonCliRemote`) or restart Ableton Live to apply updated Remote Script code.
 

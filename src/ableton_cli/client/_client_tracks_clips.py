@@ -352,6 +352,88 @@ class _AbletonClientTracksClipsMixin:
             {"track": track, "clip": clip, "value": value},
         )
 
+    def clip_props_get(self, track: int, clip: int) -> dict[str, Any]:
+        return self._call("clip_props_get", {"track": track, "clip": clip})
+
+    def clip_loop_set(
+        self,
+        track: int,
+        clip: int,
+        start: float,
+        end: float,
+        enabled: bool,
+    ) -> dict[str, Any]:
+        return self._call(
+            "clip_loop_set",
+            {"track": track, "clip": clip, "start": start, "end": end, "enabled": enabled},
+        )
+
+    def clip_marker_set(
+        self,
+        track: int,
+        clip: int,
+        start_marker: float,
+        end_marker: float,
+    ) -> dict[str, Any]:
+        return self._call(
+            "clip_marker_set",
+            {
+                "track": track,
+                "clip": clip,
+                "start_marker": start_marker,
+                "end_marker": end_marker,
+            },
+        )
+
+    def clip_warp_get(self, track: int, clip: int) -> dict[str, Any]:
+        return self._call("clip_warp_get", {"track": track, "clip": clip})
+
+    def clip_warp_set(
+        self,
+        track: int,
+        clip: int,
+        enabled: bool,
+        mode: str | None,
+    ) -> dict[str, Any]:
+        args: dict[str, Any] = {"track": track, "clip": clip, "enabled": enabled}
+        self._add_if_not_none(args, "mode", mode)
+        return self._call("clip_warp_set", args)
+
+    def clip_warp_marker_list(self, track: int, clip: int) -> dict[str, Any]:
+        return self._call("clip_warp_marker_list", {"track": track, "clip": clip})
+
+    def clip_warp_marker_add(
+        self,
+        track: int,
+        clip: int,
+        sample_time: float,
+        beat_time: float,
+    ) -> dict[str, Any]:
+        return self._call(
+            "clip_warp_marker_add",
+            {
+                "track": track,
+                "clip": clip,
+                "sample_time": sample_time,
+                "beat_time": beat_time,
+            },
+        )
+
+    def clip_gain_set(self, track: int, clip: int, db: float) -> dict[str, Any]:
+        return self._call("clip_gain_set", {"track": track, "clip": clip, "db": db})
+
+    def clip_transpose_set(self, track: int, clip: int, semitones: int) -> dict[str, Any]:
+        return self._call(
+            "clip_transpose_set",
+            {"track": track, "clip": clip, "semitones": semitones},
+        )
+
+    def clip_file_replace(self, track: int, clip: int, audio_path: str) -> dict[str, Any]:
+        return self._call(
+            "clip_file_replace",
+            {"track": track, "clip": clip, "audio_path": audio_path},
+        )
+
     def clip_duplicate(
         self,
         track: int,

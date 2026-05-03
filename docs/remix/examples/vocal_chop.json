@@ -1,0 +1,19 @@
+{
+  "args": {
+    "create_trigger_clip": true,
+    "grid": "1/8",
+    "source_path": "/abs/stems/vocal.wav",
+    "start_pad": 0,
+    "trigger_clip_slot": 0
+  },
+  "command": "clip_cut_to_drum_rack",
+  "create_trigger": true,
+  "section": {
+    "end_bar": 48,
+    "name": "chorus",
+    "start_bar": 33
+  },
+  "slice": "1/8",
+  "source": "vocal",
+  "target_track": "Vocal Chop Rack"
+}

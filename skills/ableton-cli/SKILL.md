@@ -117,6 +117,9 @@ uv run ableton-cli audio asset remove --project ./proj/remix_project.json --role
 uv run ableton-cli audio sections import --project ./proj/remix_project.json --sections "intro:1-8,verse:9-24,pre:25-32,chorus:33-48"
 uv run ableton-cli audio beatgrid import --project ./proj/remix_project.json --downbeats "0.0,1.395,2.790"
 uv run ableton-cli audio analyze --project ./proj/remix_project.json --detect bpm,key --manual-bpm 172 --manual-key "A minor"
+uv run ableton-cli audio loudness analyze --path ./renders/remix.wav --engine ffmpeg --report-out ./proj/reports/loudness.json
+uv run ableton-cli audio spectrum analyze --path ./renders/remix.wav --profile anime-club --report-out ./proj/reports/spectrum.json
+uv run ableton-cli audio reference compare --candidate ./renders/remix.wav --reference ./refs/reference.wav --metrics loudness,spectrum,stereo
 uv run ableton-cli remix set-target --project ./proj/remix_project.json --bpm 174 --key "F minor"
 uv run ableton-cli remix plan --project ./proj/remix_project.json --style anime-club
 uv run ableton-cli remix arrange --project ./proj/remix_project.json --form anime-dnb
@@ -133,13 +136,35 @@ uv run ableton-cli remix setup-mix --project ./proj/remix_project.json
 uv run ableton-cli remix setup-returns --project ./proj/remix_project.json
 uv run ableton-cli remix setup-sidechain --project ./proj/remix_project.json
 uv run ableton-cli remix device-chain apply --project ./proj/remix_project.json --chain drop-filter
+uv run ableton-cli remix mastering profile list
+uv run ableton-cli remix mastering target set --project ./proj/remix_project.json --profile anime-club-demo --true-peak-dbtp-max -1.0
+uv run ableton-cli remix mastering reference add --project ./proj/remix_project.json --path ./refs/reference.wav --role commercial-reference --id ref-main
+uv run ableton-cli remix mastering reference list --project ./proj/remix_project.json
+uv run ableton-cli remix mastering reference remove --project ./proj/remix_project.json --id ref-main
+uv run ableton-cli remix mastering analyze --project ./proj/remix_project.json --render ./renders/remix.wav --reference ref-main
+uv run ableton-cli remix mastering plan --project ./proj/remix_project.json --target anime-club-demo --chain utility,eq8,compressor,limiter
+uv run ableton-cli remix mastering apply --project ./proj/remix_project.json --dry-run
+uv run ableton-cli remix mastering apply --project ./proj/remix_project.json --yes
+uv run ableton-cli remix mastering qa --project ./proj/remix_project.json --render ./renders/remix.wav --strict
 uv run ableton-cli audio stems list --project ./proj/remix_project.json
 uv run ableton-cli audio stems split --project ./proj/remix_project.json --provider manual --out /abs/stems
-uv run ableton-cli remix qa --project ./proj/remix_project.json
+uv run ableton-cli remix qa --project ./proj/remix_project.json --include-mastering --render ./renders/remix.wav
 uv run ableton-cli remix export-plan --project ./proj/remix_project.json --target /abs/out/remix.wav
 ```
 
 Remix commands are manifest-first. Use `remix plan` and `remix apply --dry-run` before writing to Live. Store only cleared, private-test, or original material in remix manifests.
+
+Mastering workflow is measurement-first:
+- Ensure `ffmpeg` and `ffprobe` are installed before running `audio loudness analyze`,
+  `audio reference compare`, or `remix mastering analyze`; missing binaries fail
+  explicitly with `CONFIG_INVALID`.
+- Run `audio loudness analyze` and `audio spectrum analyze` after every render.
+- Run `audio reference compare` when a reference track is registered.
+- Do not chase LUFS by increasing limiter pressure when true peak is close to ceiling.
+- Treat large spectrum deltas as mix/stem issues before using master EQ compensation.
+- Run `remix mastering apply --dry-run` before `--yes`.
+- Pick device/preset targets from `browser search`; do not assume fixed URI availability.
+- If a standard effect wrapper fails on locale/device-variant parameter names, switch to generic parameter list/set commands.
 
 ### Track
 
@@ -187,8 +212,27 @@ uv run ableton-cli return-track solo set 0 false
 ```bash
 uv run ableton-cli master info
 uv run ableton-cli master volume get
+uv run ableton-cli master volume set 0.85
 uv run ableton-cli master panning get
+uv run ableton-cli master panning set -- 0.0
 uv run ableton-cli master devices list
+uv run ableton-cli master device load query:Audio\ Effects#Utility --position end
+uv run ableton-cli master device move --device-index 2 --to-index 0
+uv run ableton-cli master device delete --device-index 3 --yes
+uv run ableton-cli master device parameters list --device-index 0
+uv run ableton-cli master device parameter set --device-index 0 --parameter-key gain -- -1.5
+uv run ableton-cli master effect eq8 keys
+uv run ableton-cli master effect eq8 set 0.42 --device-query "EQ Eight" --parameter-key band1_gain
+uv run ableton-cli master effect eq8 observe --device-query "EQ Eight"
+uv run ableton-cli master effect limiter keys
+uv run ableton-cli master effect limiter set 0.4 --device-query "Limiter" --parameter-key ceiling
+uv run ableton-cli master effect limiter observe --device-query "Limiter"
+uv run ableton-cli master effect compressor keys
+uv run ableton-cli master effect compressor set 0.3 --device-query "Compressor" --parameter-key ratio
+uv run ableton-cli master effect compressor observe --device-query "Compressor"
+uv run ableton-cli master effect utility keys
+uv run ableton-cli master effect utility set 0.5 --device-query "Utility" --parameter-key gain
+uv run ableton-cli master effect utility observe --device-query "Utility"
 uv run ableton-cli mixer crossfader get
 uv run ableton-cli mixer crossfader set -- -0.2
 uv run ableton-cli mixer cue-volume get
@@ -354,6 +398,7 @@ uv run ableton-cli --show-completion
   - Example: `uv run ableton-cli effect parameter set -- -2.0 --track-index 0 --device-index 0 --parameter-index 7`
 - For low-latency repeated automation operations, prefer `uv run ableton-cli batch stream`.
 - Capability and compatibility checks are explicit through `uv run ableton-cli ping` and `uv run ableton-cli doctor`.
+- Destructive master device deletion requires `--yes`. Live API unsupported operations fail explicitly with `not_supported_by_live_api`.
 - Standard wrapper commands (`synth <type> ...`, `effect <type> ...`) are strict and intentionally fail if required parameter names are missing.
   - If you get `Missing required standard ... keys`, use generic commands instead:
     - `uv run ableton-cli --output json effect parameters list --track-index <track> --device-index <device>`
@@ -501,6 +546,9 @@ uv run ableton-cli --output json ping
 - `list_standard_effect_keys` -> `uv run ableton-cli --output json effect <eq8|limiter|compressor|auto-filter|reverb|utility> keys`
 - `set_standard_effect_parameter_safe` -> `uv run ableton-cli --output json effect <eq8|limiter|compressor|auto-filter|reverb|utility> set <value> --track-index <track> --device-index <device> --parameter-key <key>`
 - `observe_standard_effect_state` -> `uv run ableton-cli --output json effect <eq8|limiter|compressor|auto-filter|reverb|utility> observe --track-index <track> --device-index <device>`
+- `audio_loudness_analyze` -> `uv run ableton-cli --output json audio loudness analyze --path <wav>`
+- `remix_mastering_plan` -> `uv run ableton-cli --output json remix mastering plan --project <remix_project.json>`
+- `remix_mastering_qa` -> `uv run ableton-cli --output json remix mastering qa --project <remix_project.json> --render <wav>`
 - `execute_batch` -> `uv run ableton-cli --output json batch run (--steps-file <path> | --steps-json '<json>' | --steps-stdin)`
 
 ## Examples
@@ -511,3 +559,6 @@ uv run ableton-cli --output json ping
 - `tracks list`: `docs/skills/examples/list-tracks.json`
 - `track volume set`: `docs/skills/examples/set-track-volume.json`
 - `browser search`: `docs/skills/examples/browser-search.json`
+- `audio loudness analyze`: `docs/skills/examples/audio-loudness-analyze.json`
+- `remix mastering plan`: `docs/skills/examples/remix-mastering-plan.json`
+- `remix mastering qa`: `docs/skills/examples/remix-mastering-qa.json`

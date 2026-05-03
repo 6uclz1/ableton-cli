@@ -246,8 +246,16 @@ def _handle_master_volume_get(backend: CommandBackend, _args: dict[str, Any]) ->
     return backend.master_volume_get()
 
 
+def _handle_master_volume_set(backend: CommandBackend, args: dict[str, Any]) -> dict[str, Any]:
+    return backend.master_volume_set(_volume(args.get("value")))
+
+
 def _handle_master_panning_get(backend: CommandBackend, _args: dict[str, Any]) -> dict[str, Any]:
     return backend.master_panning_get()
+
+
+def _handle_master_panning_set(backend: CommandBackend, args: dict[str, Any]) -> dict[str, Any]:
+    return backend.master_panning_set(_panning(args.get("value")))
 
 
 def _handle_master_devices_list(backend: CommandBackend, _args: dict[str, Any]) -> dict[str, Any]:
@@ -361,7 +369,9 @@ SONG_TRANSPORT_HANDLERS: dict[str, Handler] = {
     "return_track_solo_set": _handle_return_track_solo_set,
     "master_info": _handle_master_info,
     "master_volume_get": _handle_master_volume_get,
+    "master_volume_set": _handle_master_volume_set,
     "master_panning_get": _handle_master_panning_get,
+    "master_panning_set": _handle_master_panning_set,
     "master_devices_list": _handle_master_devices_list,
     "mixer_crossfader_get": _handle_mixer_crossfader_get,
     "mixer_crossfader_set": _handle_mixer_crossfader_set,

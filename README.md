@@ -65,6 +65,15 @@ uv run ableton-cli return-tracks list
 uv run ableton-cli return-track volume set 0 0.5
 uv run ableton-cli master info
 uv run ableton-cli master devices list
+uv run ableton-cli master device load query:Audio\ Effects#Utility --position end
+uv run ableton-cli master device parameter set --device-index 0 --parameter-key gain -- -1.5
+uv run ableton-cli audio loudness analyze --path ./renders/remix.wav --engine ffmpeg
+uv run ableton-cli audio spectrum analyze --path ./renders/remix.wav --profile anime-club
+uv run ableton-cli remix mastering target set --project ./proj/remix_project.json --profile anime-club-demo
+uv run ableton-cli remix mastering analyze --project ./proj/remix_project.json --render ./renders/remix.wav
+uv run ableton-cli remix mastering plan --project ./proj/remix_project.json
+uv run ableton-cli remix mastering apply --project ./proj/remix_project.json --dry-run
+uv run ableton-cli remix mastering qa --project ./proj/remix_project.json --render ./renders/remix.wav
 uv run ableton-cli mixer crossfader set -- -0.2
 uv run ableton-cli mixer cue-routing get
 uv run ableton-cli clip create 0 0 --length 4
@@ -91,6 +100,10 @@ uv run ableton-cli effect find --type eq8
 uv run ableton-cli effect eq8 keys
 uv run ableton-cli effect eq8 set 0.6 --track-query Bass --device-query EQ --parameter-key band1_freq
 ```
+
+Offline mastering analysis with the `ffmpeg` engine requires both `ffmpeg` and
+`ffprobe` on `PATH`. Without them, `audio loudness analyze`, `audio reference
+compare`, and `remix mastering analyze` fail explicitly with `CONFIG_INVALID`.
 
 Ref-aware track, device, and parameter commands now use mutually exclusive selector flags instead of positional indexes.
 Track selectors: `--track-index`, `--track-name`, `--selected-track`, `--track-query`, `--track-ref`.

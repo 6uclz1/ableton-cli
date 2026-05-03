@@ -113,7 +113,10 @@ _LOCAL_ONLY_COMMANDS = frozenset(
         "audio asset list",
         "audio asset remove",
         "audio beatgrid import",
+        "audio loudness analyze",
+        "audio reference compare",
         "audio sections import",
+        "audio spectrum analyze",
         "audio stems list",
         "audio stems split",
         "clip name set-many",
@@ -136,6 +139,15 @@ _LOCAL_ONLY_COMMANDS = frozenset(
         "remix init",
         "remix inspect",
         "remix mix-macro",
+        "remix mastering analyze",
+        "remix mastering apply",
+        "remix mastering plan",
+        "remix mastering profile list",
+        "remix mastering qa",
+        "remix mastering reference add",
+        "remix mastering reference list",
+        "remix mastering reference remove",
+        "remix mastering target set",
         "remix plan",
         "remix qa",
         "remix set-target",
@@ -201,6 +213,10 @@ _REMOTE_COMMAND_EXCEPTIONS = {
 }
 _REMOTE_COMMAND_ALIASES = frozenset(
     {
+        "master_effect_compressor_set",
+        "master_effect_eq8_set",
+        "master_effect_limiter_set",
+        "master_effect_utility_set",
         "set_tempo",
         "start_playback",
         "stop_playback",
@@ -225,6 +241,7 @@ _DESTRUCTIVE_COMMANDS = frozenset(
         "config set",
         "install-remote-script",
         "install-skill",
+        "master device delete",
         "song new",
         "song redo",
         "song undo",
@@ -250,6 +267,10 @@ def public_command_names() -> set[str]:
         commands.add(f"effect {effect_type} keys")
         commands.add(f"effect {effect_type} set")
         commands.add(f"effect {effect_type} observe")
+    for effect_type in ("eq8", "limiter", "compressor", "utility"):
+        commands.add(f"master effect {effect_type} keys")
+        commands.add(f"master effect {effect_type} set")
+        commands.add(f"master effect {effect_type} observe")
     return commands
 
 
@@ -274,6 +295,18 @@ def _remote_command_name(command_name: str) -> str | None:
         if suffix == "set":
             return "set_standard_effect_parameter_safe"
         return "observe_standard_effect_state"
+
+    master_effect_match = re.fullmatch(
+        r"master effect (eq8|limiter|compressor|utility) (keys|set|observe)",
+        command_name,
+    )
+    if master_effect_match:
+        suffix = master_effect_match.group(2)
+        if suffix == "keys":
+            return "master_effect_keys"
+        if suffix == "set":
+            return "master_effect_set"
+        return "master_effect_observe"
 
     if command_name in _LOCAL_ONLY_COMMANDS:
         return None

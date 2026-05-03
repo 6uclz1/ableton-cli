@@ -541,6 +541,29 @@ STABLE_ACTION_MAPPINGS: tuple[StableActionMapping, ...] = (
         capability="Capture one-shot wrapper state snapshot keyed by stable effect keys.",
     ),
     StableActionMapping(
+        action="audio_loudness_analyze",
+        command="uv run ableton-cli --output json audio loudness analyze --path <wav>",
+        capability=(
+            "Analyze an offline render for LUFS, peak, RMS, crest, clipping, "
+            "and DC offset; requires ffmpeg and ffprobe."
+        ),
+    ),
+    StableActionMapping(
+        action="remix_mastering_plan",
+        command=(
+            "uv run ableton-cli --output json remix mastering plan --project <remix_project.json>"
+        ),
+        capability="Generate a non-destructive master chain plan in the remix manifest.",
+    ),
+    StableActionMapping(
+        action="remix_mastering_qa",
+        command=(
+            "uv run ableton-cli --output json remix mastering qa --project <remix_project.json> "
+            "--render <wav>"
+        ),
+        capability="Validate offline render analysis and master-chain readiness against targets.",
+    ),
+    StableActionMapping(
         action="execute_batch",
         command=(
             "uv run ableton-cli --output json batch run (--steps-file <path> | --steps-"

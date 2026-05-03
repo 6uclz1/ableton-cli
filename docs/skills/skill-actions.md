@@ -91,6 +91,9 @@ Stable action names and CLI mappings for automation wrappers.
 | `list_standard_effect_keys` | `uv run ableton-cli --output json effect <eq8|limiter|compressor|auto-filter|reverb|utility> keys` | List stable wrapper keys for a standard effect type. |
 | `set_standard_effect_parameter_safe` | `uv run ableton-cli --output json effect <eq8|limiter|compressor|auto-filter|reverb|utility> set <value> --track-index <track> --device-index <device> --parameter-key <key>` | Safely set a standard effect key resolved to native parameter index. |
 | `observe_standard_effect_state` | `uv run ableton-cli --output json effect <eq8|limiter|compressor|auto-filter|reverb|utility> observe --track-index <track> --device-index <device>` | Capture one-shot wrapper state snapshot keyed by stable effect keys. |
+| `audio_loudness_analyze` | `uv run ableton-cli --output json audio loudness analyze --path <wav>` | Analyze an offline render for LUFS, peak, RMS, crest, clipping, and DC offset; requires ffmpeg and ffprobe. |
+| `remix_mastering_plan` | `uv run ableton-cli --output json remix mastering plan --project <remix_project.json>` | Generate a non-destructive master chain plan in the remix manifest. |
+| `remix_mastering_qa` | `uv run ableton-cli --output json remix mastering qa --project <remix_project.json> --render <wav>` | Validate offline render analysis and master-chain readiness against targets. |
 | `execute_batch` | `uv run ableton-cli --output json batch run (--steps-file <path> | --steps-json '<json>' | --steps-stdin)` | Execute multiple remote commands atomically from JSON input. |
 
 ## CLI-only commands (not stable actions)

@@ -1,0 +1,30 @@
+{
+  "ok": true,
+  "command": "audio loudness analyze",
+  "args": {
+    "path": "./renders/remix.wav",
+    "engine": "ffmpeg",
+    "report_out": "./proj/reports/loudness.json"
+  },
+  "result": {
+    "path": "./renders/remix.wav",
+    "engine": "ffmpeg",
+    "duration_sec": 184.21,
+    "sample_rate": 48000,
+    "channels": 2,
+    "integrated_lufs": -13.8,
+    "short_term_lufs_max": -8.9,
+    "momentary_lufs_max": -6.7,
+    "lra_lu": 5.1,
+    "true_peak_dbtp": -0.9,
+    "sample_peak_dbfs": -1.4,
+    "rms_dbfs": -12.2,
+    "crest_db": 10.8,
+    "clipping_sample_count": 0,
+    "dc_offset": {
+      "left": 0.0001,
+      "right": -0.0002
+    }
+  },
+  "error": null
+}

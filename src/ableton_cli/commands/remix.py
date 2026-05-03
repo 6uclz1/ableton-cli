@@ -13,6 +13,18 @@ from ..remix.manifest import (
     resolve_manifest_path,
     set_target,
 )
+from ..remix.mastering import (
+    add_reference,
+    analyze_render,
+    apply_chain_plan,
+    list_references,
+    mark_chain_applied,
+    plan_chain,
+    profiles_list,
+    remove_reference,
+    run_mastering_qa,
+    set_targets,
+)
 from ..remix.mix import (
     device_chain_apply,
     mix_macro,
@@ -29,6 +41,10 @@ from ..runtime import get_client as _runtime_get_client
 remix_app = typer.Typer(help="Remix project workflow commands", no_args_is_help=True)
 generate_app = typer.Typer(help="Pattern generation commands", no_args_is_help=True)
 device_chain_app = typer.Typer(help="Remix device chain commands", no_args_is_help=True)
+mastering_app = typer.Typer(help="Remix mastering workflow commands", no_args_is_help=True)
+mastering_profile_app = typer.Typer(help="Mastering profile commands", no_args_is_help=True)
+mastering_target_app = typer.Typer(help="Mastering target commands", no_args_is_help=True)
+mastering_reference_app = typer.Typer(help="Mastering reference commands", no_args_is_help=True)
 
 
 def get_client(ctx: typer.Context):  # noqa: ANN201
@@ -216,12 +232,35 @@ def remix_vocal_chop(
 def remix_qa(
     ctx: typer.Context,
     project: Annotated[Path, typer.Option("--project", help="Manifest path")],
+    include_mastering: Annotated[
+        bool,
+        typer.Option("--include-mastering", help="Include mastering QA checks"),
+    ] = False,
+    render: Annotated[
+        Path | None,
+        typer.Option("--render", help="Rendered audio path for mastering QA"),
+    ] = None,
 ) -> None:
+    def _action() -> dict[str, object]:
+        qa = run_qa(project)
+        if not include_mastering:
+            return qa
+        mastering_qa = run_mastering_qa(project, render=render, strict=False)
+        return {
+            **qa,
+            "ok": bool(qa["ok"] and mastering_qa["ok"]),
+            "mastering": mastering_qa,
+        }
+
     execute_command(
         ctx,
         command="remix qa",
-        args={"project": str(project)},
-        action=lambda: run_qa(project),
+        args={
+            "project": str(project),
+            "include_mastering": include_mastering,
+            "render": None if render is None else str(render),
+        },
+        action=_action,
     )
 
 
@@ -389,8 +428,248 @@ def remix_device_chain_apply(
     )
 
 
+@mastering_profile_app.command("list")
+def remix_mastering_profile_list(ctx: typer.Context) -> None:
+    execute_command(
+        ctx,
+        command="remix mastering profile list",
+        args={},
+        action=profiles_list,
+    )
+
+
+@mastering_target_app.command("set")
+def remix_mastering_target_set(
+    ctx: typer.Context,
+    project: Annotated[Path, typer.Option("--project", help="Manifest path")],
+    profile: Annotated[str, typer.Option("--profile", help="Mastering target profile")],
+    integrated_lufs: Annotated[
+        float | None,
+        typer.Option("--integrated-lufs", help="Integrated LUFS target"),
+    ] = None,
+    true_peak_dbtp_max: Annotated[
+        float | None,
+        typer.Option("--true-peak-dbtp-max", help="Maximum true peak in dBTP"),
+    ] = None,
+    lra_lu_min: Annotated[float | None, typer.Option("--lra-lu-min")] = None,
+    lra_lu_max: Annotated[float | None, typer.Option("--lra-lu-max")] = None,
+    crest_db_min: Annotated[
+        float | None,
+        typer.Option("--crest-db-min", help="Minimum crest factor"),
+    ] = None,
+    spectrum_profile: Annotated[
+        str | None,
+        typer.Option("--spectrum-profile", help="Spectrum diagnostic profile"),
+    ] = None,
+    notes: Annotated[str | None, typer.Option("--notes", help="Target notes")] = None,
+) -> None:
+    execute_command(
+        ctx,
+        command="remix mastering target set",
+        args={
+            "project": str(project),
+            "profile": profile,
+            "integrated_lufs": integrated_lufs,
+            "true_peak_dbtp_max": true_peak_dbtp_max,
+            "lra_lu_min": lra_lu_min,
+            "lra_lu_max": lra_lu_max,
+            "crest_db_min": crest_db_min,
+            "spectrum_profile": spectrum_profile,
+            "notes": notes,
+        },
+        action=lambda: set_targets(
+            project,
+            profile=profile,
+            integrated_lufs=integrated_lufs,
+            true_peak_dbtp_max=true_peak_dbtp_max,
+            lra_lu_min=lra_lu_min,
+            lra_lu_max=lra_lu_max,
+            crest_db_min=crest_db_min,
+            spectrum_profile=spectrum_profile,
+            notes=notes,
+        ),
+    )
+
+
+@mastering_reference_app.command("add")
+def remix_mastering_reference_add(
+    ctx: typer.Context,
+    project: Annotated[Path, typer.Option("--project", help="Manifest path")],
+    path: Annotated[Path, typer.Option("--path", help="Reference audio path")],
+    role: Annotated[str, typer.Option("--role", help="Reference role")],
+    reference_id: Annotated[str, typer.Option("--id", help="Reference id")],
+    notes: Annotated[str, typer.Option("--notes", help="Reference notes")] = "",
+    analyze: Annotated[bool, typer.Option("--analyze", help="Analyze reference on add")] = False,
+    report_dir: Annotated[
+        Path | None,
+        typer.Option("--report-dir", help="Analysis report directory"),
+    ] = None,
+) -> None:
+    execute_command(
+        ctx,
+        command="remix mastering reference add",
+        args={
+            "project": str(project),
+            "path": str(path),
+            "role": role,
+            "id": reference_id,
+            "notes": notes,
+            "analyze": analyze,
+            "report_dir": None if report_dir is None else str(report_dir),
+        },
+        action=lambda: add_reference(
+            project,
+            path=path,
+            role=role,
+            reference_id=reference_id,
+            notes=notes,
+            analyze=analyze,
+            report_dir=report_dir,
+        ),
+    )
+
+
+@mastering_reference_app.command("list")
+def remix_mastering_reference_list(
+    ctx: typer.Context,
+    project: Annotated[Path, typer.Option("--project", help="Manifest path")],
+) -> None:
+    execute_command(
+        ctx,
+        command="remix mastering reference list",
+        args={"project": str(project)},
+        action=lambda: list_references(project),
+    )
+
+
+@mastering_reference_app.command("remove")
+def remix_mastering_reference_remove(
+    ctx: typer.Context,
+    project: Annotated[Path, typer.Option("--project", help="Manifest path")],
+    reference_id: Annotated[str, typer.Option("--id", help="Reference id")],
+) -> None:
+    execute_command(
+        ctx,
+        command="remix mastering reference remove",
+        args={"project": str(project), "id": reference_id},
+        action=lambda: remove_reference(project, reference_id=reference_id),
+    )
+
+
+@mastering_app.command("analyze")
+def remix_mastering_analyze(
+    ctx: typer.Context,
+    project: Annotated[Path, typer.Option("--project", help="Manifest path")],
+    render: Annotated[Path, typer.Option("--render", help="Rendered audio path")],
+    reference: Annotated[
+        str | None,
+        typer.Option("--reference", help="Registered reference id"),
+    ] = None,
+    report_dir: Annotated[
+        Path | None,
+        typer.Option("--report-dir", help="Analysis report directory"),
+    ] = None,
+) -> None:
+    execute_command(
+        ctx,
+        command="remix mastering analyze",
+        args={
+            "project": str(project),
+            "render": str(render),
+            "reference": reference,
+            "report_dir": None if report_dir is None else str(report_dir),
+        },
+        action=lambda: analyze_render(
+            project,
+            render=render,
+            reference_id=reference,
+            report_dir=report_dir,
+        ),
+    )
+
+
+@mastering_app.command("plan")
+def remix_mastering_plan(
+    ctx: typer.Context,
+    project: Annotated[Path, typer.Option("--project", help="Manifest path")],
+    target: Annotated[
+        str | None,
+        typer.Option("--target", help="Mastering target profile"),
+    ] = None,
+    chain: Annotated[
+        str,
+        typer.Option("--chain", help="Comma-separated master chain"),
+    ] = "utility,eq8,compressor,limiter",
+) -> None:
+    execute_command(
+        ctx,
+        command="remix mastering plan",
+        args={"project": str(project), "target": target, "chain": chain},
+        action=lambda: plan_chain(project, target_profile=target, chain=chain),
+    )
+
+
+@mastering_app.command("apply")
+def remix_mastering_apply(
+    ctx: typer.Context,
+    project: Annotated[Path, typer.Option("--project", help="Manifest path")],
+    dry_run: Annotated[
+        bool, typer.Option("--dry-run", help="Return planned batch steps only")
+    ] = False,
+    yes: Annotated[bool, typer.Option("--yes", help="Confirm applying plan")] = False,
+) -> None:
+    def _action() -> dict[str, object]:
+        manifest = load_manifest(resolve_manifest_path(project))
+        planned = apply_chain_plan(manifest, dry_run=dry_run)
+        if dry_run:
+            return planned
+        if not yes:
+            return {**planned, "applied": False, "reason": "Pass --yes to execute the batch plan."}
+        batch_result = get_client(ctx).execute_batch(planned["steps"])  # type: ignore[arg-type]
+        applied_plan = mark_chain_applied(project, batch_result)
+        return {
+            **planned,
+            "applied": True,
+            "batch": batch_result,
+            "master_chain_plan": applied_plan,
+        }
+
+    execute_command(
+        ctx,
+        command="remix mastering apply",
+        args={"project": str(project), "dry_run": dry_run, "yes": yes},
+        action=_action,
+    )
+
+
+@mastering_app.command("qa")
+def remix_mastering_qa(
+    ctx: typer.Context,
+    project: Annotated[Path, typer.Option("--project", help="Manifest path")],
+    render: Annotated[
+        Path | None,
+        typer.Option("--render", help="Rendered audio path"),
+    ] = None,
+    strict: Annotated[bool, typer.Option("--strict", help="Treat unapplied plan as error")] = False,
+) -> None:
+    execute_command(
+        ctx,
+        command="remix mastering qa",
+        args={
+            "project": str(project),
+            "render": None if render is None else str(render),
+            "strict": strict,
+        },
+        action=lambda: run_mastering_qa(project, render=render, strict=strict),
+    )
+
+
 remix_app.add_typer(generate_app, name="generate")
 remix_app.add_typer(device_chain_app, name="device-chain")
+mastering_app.add_typer(mastering_profile_app, name="profile")
+mastering_app.add_typer(mastering_target_app, name="target")
+mastering_app.add_typer(mastering_reference_app, name="reference")
+remix_app.add_typer(mastering_app, name="mastering")
 
 
 def register(app: typer.Typer) -> None:

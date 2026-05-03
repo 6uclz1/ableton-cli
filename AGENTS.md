@@ -16,6 +16,9 @@
 - Keep changes minimal and coherent.
 - Fail explicitly; do not silently degrade behavior.
 - Do not add compatibility shims, deprecated aliases, or dual-path logic.
+- Offline audio analysis commands that use the `ffmpeg` engine require both `ffmpeg`
+  and `ffprobe` to be installed. If they are missing, keep the explicit
+  `CONFIG_INVALID` failure; do not add fallback analyzers or silently skip metrics.
 
 ## Validation Before Handoff
 - `uv run python -m ableton_cli.dev_checks`

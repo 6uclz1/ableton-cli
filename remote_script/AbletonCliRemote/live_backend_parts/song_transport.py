@@ -493,8 +493,18 @@ class LiveBackendTransportMixerMixin:
         target = self._song().master_track
         return {"volume": float(target.mixer_device.volume.value)}
 
+    def master_volume_set(self, value: float) -> dict[str, Any]:
+        target = self._song().master_track
+        target.mixer_device.volume.value = float(value)
+        return {"volume": float(target.mixer_device.volume.value)}
+
     def master_panning_get(self) -> dict[str, Any]:
         target = self._song().master_track
+        return {"panning": float(target.mixer_device.panning.value)}
+
+    def master_panning_set(self, value: float) -> dict[str, Any]:
+        target = self._song().master_track
+        target.mixer_device.panning.value = float(value)
         return {"panning": float(target.mixer_device.panning.value)}
 
     def master_devices_list(self) -> dict[str, Any]:

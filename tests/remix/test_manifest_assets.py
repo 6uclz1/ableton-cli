@@ -19,7 +19,7 @@ def test_remix_manifest_init_and_asset_registry_normalize_paths(tmp_path: Path) 
     )
     manifest = load_manifest(manifest_path)
 
-    assert manifest["schema_version"] == 1
+    assert manifest["schema_version"] == 2
     assert manifest["source_audio_path"] == str(source.resolve())
     assert manifest["rights_status"] == "private_test"
     assert manifest["sections"] == []

@@ -6,13 +6,153 @@ from typing import Any
 from ..effect_specs import (
     SUPPORTED_EFFECT_TYPES,
     canonicalize_effect_type,
+    resolve_standard_effect_key_indexes,
     standard_effect_keys,
 )
 from ..synth_specs import SUPPORTED_SYNTH_TYPES, canonicalize_synth_type, standard_synth_keys
-from .base import _invalid_argument
+from .base import _invalid_argument, _not_supported_by_live_api
 
 
 class LiveBackendDeviceSharedMixin:
+    def _master_track(self) -> Any:
+        master = getattr(self._song(), "master_track", None)
+        if master is None:
+            raise _not_supported_by_live_api(
+                message="Master track API is not available in Live API",
+                hint="Use a Live version exposing song.master_track.",
+            )
+        return master
+
+    def _master_device_at(self, device: int) -> Any:
+        devices = list(getattr(self._master_track(), "devices", []))
+        if device < 0 or device >= len(devices):
+            raise _invalid_argument(
+                message=f"master device out of range: {device}",
+                hint="Use a valid device index from 'master devices list'.",
+            )
+        return devices[device]
+
+    def _master_parameter_at(self, device: int, parameter: int) -> Any:
+        target_device = self._master_device_at(device)
+        parameters = list(getattr(target_device, "parameters", []))
+        if parameter < 0 or parameter >= len(parameters):
+            raise _invalid_argument(
+                message=f"master parameter out of range: {parameter}",
+                hint="Use a valid parameter index from parameter listing commands.",
+            )
+        return parameters[parameter]
+
+    def _resolve_master_device_ref(self, device_ref: dict[str, Any]) -> int:
+        devices = list(getattr(self._master_track(), "devices", []))
+        mode = str(device_ref["mode"])
+        if mode == "index":
+            index = int(device_ref["index"])
+            self._master_device_at(index)
+            return index
+        if mode in {"name", "query"}:
+            return self._resolve_by_name_or_query(
+                kind="master device",
+                candidates=[
+                    (index, str(getattr(device, "name", "")))
+                    for index, device in enumerate(devices)
+                ],
+                ref=device_ref,
+            )
+        if mode == "stable_ref":
+            return self._resolve_stable_ref(
+                kind="device",
+                stable_ref=str(device_ref["stable_ref"]),
+                candidates=[(index, device) for index, device in enumerate(devices)],
+                locator_matcher=self._master_device_index_from_locator,
+            )
+        raise AssertionError(f"unsupported master device mode: {mode}")
+
+    def _resolve_master_parameter_ref(
+        self,
+        device: int,
+        parameter_ref: dict[str, Any],
+    ) -> int:
+        target_device = self._master_device_at(device)
+        parameters = list(getattr(target_device, "parameters", []))
+        mode = str(parameter_ref["mode"])
+        if mode == "index":
+            index = int(parameter_ref["index"])
+            self._master_parameter_at(device, index)
+            return index
+        if mode in {"name", "query"}:
+            return self._resolve_by_name_or_query(
+                kind="master parameter",
+                candidates=[
+                    (index, str(getattr(parameter, "name", "")))
+                    for index, parameter in enumerate(parameters)
+                ],
+                ref=parameter_ref,
+            )
+        if mode == "stable_ref":
+            return self._resolve_stable_ref(
+                kind="parameter",
+                stable_ref=str(parameter_ref["stable_ref"]),
+                candidates=[(index, parameter) for index, parameter in enumerate(parameters)],
+                locator_matcher=lambda locator: self._master_parameter_index_from_locator(
+                    device,
+                    locator,
+                ),
+            )
+        if mode == "key":
+            key_indexes, _ = self._resolved_master_standard_effect_key_indexes(
+                effect_type=str(self._effect_type_for_device(target_device)),
+                device=device,
+            )
+            key = str(parameter_ref["key"])
+            if key in key_indexes:
+                return key_indexes[key]
+            raise _invalid_argument(
+                message=f"Unsupported parameter key for master device: {key}",
+                hint="Use a supported effect parameter key for the selected master device.",
+            )
+        raise AssertionError(f"unsupported master parameter mode: {mode}")
+
+    def _master_device_index_from_locator(self, locator: tuple[Any, ...]) -> int | None:
+        if len(locator) != 2 or locator[0] != "master":
+            return None
+        index = int(locator[1])
+        devices = list(getattr(self._master_track(), "devices", []))
+        if index < 0 or index >= len(devices):
+            return None
+        return index
+
+    def _master_parameter_index_from_locator(
+        self,
+        device: int,
+        locator: tuple[Any, ...],
+    ) -> int | None:
+        if len(locator) != 3 or locator[0] != "master":
+            return None
+        locator_device = int(locator[1])
+        locator_parameter = int(locator[2])
+        if locator_device != device:
+            return None
+        parameters = list(getattr(self._master_device_at(device), "parameters", []))
+        if locator_parameter < 0 or locator_parameter >= len(parameters):
+            return None
+        return locator_parameter
+
+    def _master_device_stable_ref(self, device: Any, *, device_index: int | None = None) -> str:
+        locator = None if device_index is None else ("master", device_index)
+        return self._stable_ref("device", device, locator=locator)
+
+    def _master_parameter_stable_ref(
+        self,
+        parameter: Any,
+        *,
+        device_index: int | None = None,
+        parameter_index: int | None = None,
+    ) -> str:
+        locator = None
+        if device_index is not None and parameter_index is not None:
+            locator = ("master", device_index, parameter_index)
+        return self._stable_ref("parameter", parameter, locator=locator)
+
     def _resolve_track_indexes(self, track: int | None) -> Iterable[int]:
         if track is None:
             return range(len(list(self._song().tracks)))
@@ -158,6 +298,275 @@ class LiveBackendDeviceSharedMixin:
             ),
             "value": float(target_param.value),
         }
+
+    def master_device_load(self, target: str, position: str) -> dict[str, Any]:
+        uri, path = self._master_load_target(target)
+        if uri is not None:
+            item = self._find_browser_item_by_uri(uri)
+            if item is None:
+                raise _invalid_argument(
+                    message=f"Browser item with URI '{uri}' not found",
+                    hint="Inspect browser search results and choose a valid URI.",
+                )
+            serialized = self._serialize_browser_item(item, path=self._item_path_by_uri(uri))
+        else:
+            assert path is not None
+            item = self._resolve_browser_path(path)
+            serialized = self._serialize_browser_item(item, path=path)
+            if not serialized["is_loadable"]:
+                raise _invalid_argument(
+                    message=f"Browser item at path '{path}' is not loadable",
+                    hint="Use browser search/items to select a loadable item.",
+                )
+        master = self._master_track()
+        before = len(list(getattr(master, "devices", [])))
+        self._select_track_for_load(song=self._song(), target_track=master)
+        self._browser().load_item(item)
+        after_devices = list(getattr(master, "devices", []))
+        loaded_index = max(0, len(after_devices) - 1)
+        target_index = self._master_insert_index(position, len(after_devices))
+        if after_devices and target_index != loaded_index:
+            self.master_device_move(loaded_index, target_index)
+            loaded_index = target_index
+        return {
+            "target": target,
+            "uri": uri if uri is not None else serialized["uri"],
+            "path": path,
+            "position": position,
+            "device": loaded_index,
+            "device_count_before": before,
+            "device_count_after": len(list(getattr(master, "devices", []))),
+        }
+
+    def master_device_move(self, device_index: int, to_index: int) -> dict[str, Any]:
+        master = self._master_track()
+        devices = list(getattr(master, "devices", []))
+        self._master_device_at(device_index)
+        if to_index < 0 or to_index >= len(devices):
+            raise _invalid_argument(
+                message=f"destination master device out of range: {to_index}",
+                hint="Use a valid destination index from 'master devices list'.",
+            )
+        move_device = getattr(master, "move_device", None)
+        if not callable(move_device):
+            raise _not_supported_by_live_api(
+                message="Master device move API is not available in Live API",
+                hint=(
+                    "Move the master device manually or use a Live version exposing "
+                    "track.move_device."
+                ),
+            )
+        move_device(device_index, to_index)
+        return {"device": device_index, "to_index": to_index}
+
+    def master_device_delete(self, device_index: int) -> dict[str, Any]:
+        master = self._master_track()
+        self._master_device_at(device_index)
+        delete_device = getattr(master, "delete_device", None)
+        if not callable(delete_device):
+            raise _not_supported_by_live_api(
+                message="Master device delete API is not available in Live API",
+                hint=(
+                    "Delete the master device manually or use a Live version exposing "
+                    "track.delete_device."
+                ),
+            )
+        delete_device(device_index)
+        return {
+            "device": device_index,
+            "deleted": True,
+            "device_count": len(list(getattr(master, "devices", []))),
+        }
+
+    def master_device_parameters_list(self, device_ref: dict[str, Any]) -> dict[str, Any]:
+        device = self._resolve_master_device_ref(device_ref)
+        target_device = self._master_device_at(device)
+        parameters = [
+            self._serialize_master_parameter(parameter, device, index)
+            for index, parameter in enumerate(list(getattr(target_device, "parameters", [])))
+        ]
+        return {
+            "device": device,
+            "device_stable_ref": self._master_device_stable_ref(
+                target_device,
+                device_index=device,
+            ),
+            "device_name": str(getattr(target_device, "name", "")),
+            "class_name": str(getattr(target_device, "class_name", "")),
+            "parameter_count": len(parameters),
+            "parameters": parameters,
+        }
+
+    def master_device_parameter_set(
+        self,
+        device_ref: dict[str, Any],
+        parameter_ref: dict[str, Any],
+        value: float,
+    ) -> dict[str, Any]:
+        device = self._resolve_master_device_ref(device_ref)
+        parameter = self._resolve_master_parameter_ref(device, parameter_ref)
+        target_parameter = self._master_parameter_at(device, parameter)
+        target_parameter.value = float(value)
+        return {
+            "device": device,
+            "parameter": parameter,
+            "device_stable_ref": self._master_device_stable_ref(
+                self._master_device_at(device),
+                device_index=device,
+            ),
+            "parameter_stable_ref": self._master_parameter_stable_ref(
+                target_parameter,
+                device_index=device,
+                parameter_index=parameter,
+            ),
+            "value": float(target_parameter.value),
+        }
+
+    def master_effect_keys(self, effect_type: str) -> dict[str, Any]:
+        parsed_type = canonicalize_effect_type(effect_type)
+        keys = standard_effect_keys(parsed_type)
+        return {"effect_type": parsed_type, "key_count": len(keys), "keys": keys}
+
+    def master_effect_set(
+        self,
+        effect_type: str,
+        device_ref: dict[str, Any],
+        parameter_ref: dict[str, Any],
+        value: float,
+    ) -> dict[str, Any]:
+        device = self._resolve_master_device_ref(device_ref)
+        key = parameter_ref.get("key")
+        if isinstance(key, str):
+            parameter_ref = {
+                "mode": "index",
+                "index": self._master_effect_key_index(effect_type, device, key),
+            }
+        result = self.master_device_parameter_set(device_ref, parameter_ref, value)
+        return {**result, "effect_type": canonicalize_effect_type(effect_type)}
+
+    def master_effect_observe(
+        self,
+        effect_type: str,
+        device_ref: dict[str, Any],
+    ) -> dict[str, Any]:
+        device = self._resolve_master_device_ref(device_ref)
+        key_indexes, parsed_type = self._resolved_master_standard_effect_key_indexes(
+            effect_type=effect_type,
+            device=device,
+        )
+        observed = self.master_device_parameters_list(device_ref)
+        parameters = observed["parameters"]
+        state = {key: float(parameters[index]["value"]) for key, index in key_indexes.items()}
+        return {
+            "effect_type": parsed_type,
+            "device": device,
+            "device_stable_ref": observed["device_stable_ref"],
+            "key_count": len(state),
+            "keys": standard_effect_keys(parsed_type),
+            "state": state,
+        }
+
+    def _master_load_target(self, target: str) -> tuple[str | None, str | None]:
+        first_colon = target.find(":")
+        first_slash = target.find("/")
+        if first_colon >= 0 and (first_slash < 0 or first_colon < first_slash):
+            return target, None
+        if "/" in target:
+            return None, target
+        if ":" in target:
+            return target, None
+        raise _invalid_argument(
+            message=f"target must include '/' (path) or ':' (uri), got {target!r}",
+            hint="Use a browser path or URI from browser search results.",
+        )
+
+    def _master_insert_index(self, position: str, device_count: int) -> int:
+        normalized = position.strip().lower()
+        if normalized == "end":
+            return max(0, device_count - 1)
+        if normalized == "start":
+            return 0
+        try:
+            index = int(normalized)
+        except ValueError as exc:
+            raise _invalid_argument(
+                message=f"Unsupported master device position: {position}",
+                hint="Use start, end, or a non-negative device index.",
+            ) from exc
+        if index < 0 or index >= device_count:
+            raise _invalid_argument(
+                message=f"master device position out of range: {index}",
+                hint="Use a valid insertion index.",
+            )
+        return index
+
+    def _serialize_master_parameter(
+        self,
+        parameter: Any,
+        device_index: int,
+        parameter_index: int,
+    ) -> dict[str, Any]:
+        return {
+            "index": parameter_index,
+            "stable_ref": self._master_parameter_stable_ref(
+                parameter,
+                device_index=device_index,
+                parameter_index=parameter_index,
+            ),
+            "name": str(getattr(parameter, "name", f"Parameter {parameter_index}")),
+            "value": float(getattr(parameter, "value", 0.0)),
+            "min": self._safe_float(getattr(parameter, "min", None)),
+            "max": self._safe_float(getattr(parameter, "max", None)),
+            "is_enabled": bool(getattr(parameter, "is_enabled", True)),
+            "is_quantized": bool(getattr(parameter, "is_quantized", False)),
+        }
+
+    def _master_effect_key_index(self, effect_type: str, device: int, key: str) -> int:
+        key_indexes, parsed_type = self._resolved_master_standard_effect_key_indexes(
+            effect_type=effect_type,
+            device=device,
+        )
+        if key not in key_indexes:
+            raise _invalid_argument(
+                message=f"Unsupported key for {parsed_type}: {key}",
+                hint=f"Use one of: {', '.join(standard_effect_keys(parsed_type))}.",
+            )
+        return key_indexes[key]
+
+    def _resolved_master_standard_effect_key_indexes(
+        self,
+        *,
+        effect_type: str,
+        device: int,
+    ) -> tuple[dict[str, int], str]:
+        parsed_type = canonicalize_effect_type(effect_type)
+        target_device = self._master_device_at(device)
+        detected_type = self._effect_type_for_device(target_device)
+        if detected_type != parsed_type:
+            raise _invalid_argument(
+                message=(
+                    f"Master device effect type mismatch: requested={parsed_type}, "
+                    f"detected={detected_type}"
+                ),
+                hint="Select a master device that matches the requested effect type.",
+            )
+        parameter_names = [
+            str(getattr(parameter, "name", ""))
+            for parameter in list(getattr(target_device, "parameters", []))
+        ]
+        key_indexes, missing_keys = resolve_standard_effect_key_indexes(
+            parameter_names,
+            parsed_type,
+        )
+        if missing_keys:
+            raise _invalid_argument(
+                message=(
+                    f"Missing required standard effect keys for {parsed_type}: "
+                    f"{', '.join(missing_keys)}"
+                ),
+                hint="Use generic master device parameter commands for this device variant.",
+            )
+        return key_indexes, parsed_type
 
 
 class LiveBackendSynthDevicesMixin:

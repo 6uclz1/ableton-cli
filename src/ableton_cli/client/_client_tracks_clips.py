@@ -106,11 +106,73 @@ class _AbletonClientTracksClipsMixin:
     def master_volume_get(self) -> dict[str, Any]:
         return self._call("master_volume_get")
 
+    def master_volume_set(self, value: float) -> dict[str, Any]:
+        return self._call("master_volume_set", {"value": value})
+
     def master_panning_get(self) -> dict[str, Any]:
         return self._call("master_panning_get")
 
+    def master_panning_set(self, value: float) -> dict[str, Any]:
+        return self._call("master_panning_set", {"value": value})
+
     def master_devices_list(self) -> dict[str, Any]:
         return self._call("master_devices_list")
+
+    def master_device_load(self, target: str, position: str) -> dict[str, Any]:
+        return self._call("master_device_load", {"target": target, "position": position})
+
+    def master_device_move(self, device_index: int, to_index: int) -> dict[str, Any]:
+        return self._call(
+            "master_device_move",
+            {"device_index": device_index, "to_index": to_index},
+        )
+
+    def master_device_delete(self, device_index: int) -> dict[str, Any]:
+        return self._call("master_device_delete", {"device_index": device_index})
+
+    def master_device_parameters_list(self, device_ref: dict[str, Any]) -> dict[str, Any]:
+        return self._call("master_device_parameters_list", {"device_ref": device_ref})
+
+    def master_device_parameter_set(
+        self,
+        device_ref: dict[str, Any],
+        parameter_ref: dict[str, Any],
+        value: float,
+    ) -> dict[str, Any]:
+        return self._call(
+            "master_device_parameter_set",
+            {"device_ref": device_ref, "parameter_ref": parameter_ref, "value": value},
+        )
+
+    def master_effect_keys(self, effect_type: str) -> dict[str, Any]:
+        return self._call("master_effect_keys", {"effect_type": effect_type})
+
+    def master_effect_set(
+        self,
+        effect_type: str,
+        device_ref: dict[str, Any],
+        parameter_ref: dict[str, Any],
+        value: float,
+    ) -> dict[str, Any]:
+        return self._call(
+            "master_effect_set",
+            {
+                "effect_type": effect_type,
+                "device_ref": device_ref,
+                "parameter_ref": parameter_ref,
+                "value": value,
+            },
+        )
+
+    def master_effect_observe(
+        self,
+        effect_type: str,
+        device_ref: dict[str, Any],
+    ) -> dict[str, Any]:
+        return self._call(
+            "master_effect_observe",
+            {"effect_type": effect_type, "device_ref": device_ref},
+        )
 
     def mixer_crossfader_get(self) -> dict[str, Any]:
         return self._call("mixer_crossfader_get")

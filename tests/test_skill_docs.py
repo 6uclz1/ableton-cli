@@ -79,9 +79,9 @@ def test_skill_doc_frontmatter_is_minimal() -> None:
 
 def test_stable_action_names_are_complete_and_unique() -> None:
     names = stable_action_names()
-    assert len(STABLE_ACTION_MAPPINGS) == 88
-    assert len(names) == 88
-    assert len(set(names)) == 88
+    assert len(STABLE_ACTION_MAPPINGS) == 91
+    assert len(names) == 91
+    assert len(set(names)) == 91
 
 
 def test_action_mappings_are_consistent_between_docs() -> None:

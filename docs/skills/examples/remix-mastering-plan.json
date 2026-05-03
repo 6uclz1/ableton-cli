@@ -1,0 +1,55 @@
+{
+  "ok": true,
+  "command": "remix mastering plan",
+  "args": {
+    "project": "./proj/remix_project.json",
+    "target": "anime-club-demo",
+    "chain": "utility,eq8,compressor,limiter"
+  },
+  "result": {
+    "project": "./proj/remix_project.json",
+    "master_chain_plan": {
+      "status": "planned",
+      "target_profile": "anime-club-demo",
+      "devices": [
+        {
+          "type": "utility",
+          "purpose": "input_gain_and_width",
+          "parameters": {
+            "gain": 0.0,
+            "width": 1.0
+          }
+        },
+        {
+          "type": "eq8",
+          "purpose": "broad_tonal_balance",
+          "parameters": []
+        },
+        {
+          "type": "compressor",
+          "purpose": "gentle_bus_control",
+          "parameters": {}
+        },
+        {
+          "type": "limiter",
+          "purpose": "ceiling",
+          "parameters": {
+            "ceiling": 0.971429
+          }
+        }
+      ],
+      "warnings": []
+    },
+    "steps": [
+      {
+        "name": "master_device_load",
+        "args": {
+          "device_type": "utility",
+          "uri": "query:Audio Effects#Utility",
+          "position": "end"
+        }
+      }
+    ]
+  },
+  "error": null
+}

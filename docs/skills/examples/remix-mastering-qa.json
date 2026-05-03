@@ -1,0 +1,17 @@
+{
+  "ok": true,
+  "command": "remix mastering qa",
+  "args": {
+    "project": "./proj/remix_project.json",
+    "render": "./renders/remix.wav",
+    "strict": true
+  },
+  "result": {
+    "project": "./proj/remix_project.json",
+    "strict": true,
+    "ok": true,
+    "errors": [],
+    "warnings": []
+  },
+  "error": null
+}

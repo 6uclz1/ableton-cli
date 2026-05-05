@@ -322,10 +322,11 @@ def clip_cut_to_drum_rack(
                     message="--transient is mutually exclusive with --grid/--slice-count",
                     hint="Transient slicing derives slice ranges from detected onsets.",
                 )
+            valid_source_file = _validate_transient_source_file(source_file)
             valid_max_slices = _validate_transient_max_slices(max_slices)
             valid_bpm = _resolve_transient_bpm(client, bpm)
             analysis = analyze_transients(
-                source_file,
+                valid_source_file,
                 bpm=valid_bpm,
                 max_slices=valid_max_slices,
             )
@@ -441,6 +442,27 @@ def _validate_transient_bpm(value: float) -> float:
             hint="Use a realistic tempo between 20.0 and 999.0 BPM.",
         )
     return float(value)
+
+
+def _validate_transient_source_file(value: Path) -> Path:
+    audio_path = value.expanduser()
+    if not audio_path.exists():
+        raise invalid_argument(
+            message=f"audio file not found: {audio_path}",
+            hint="Pass an existing PCM WAV file.",
+        )
+    if not audio_path.is_file():
+        raise invalid_argument(
+            message=f"audio path is not a file: {audio_path}",
+            hint="Pass an existing PCM WAV file.",
+        )
+    audio_path = audio_path.resolve(strict=True)
+    if audio_path.suffix.lower() != ".wav":
+        raise invalid_argument(
+            message=f"transient analysis requires a PCM WAV file, got {audio_path}",
+            hint="Use a .wav file encoded as PCM.",
+        )
+    return audio_path
 
 
 def _validate_transient_max_slices(value: int) -> int:

@@ -652,6 +652,15 @@ class LiveBackendTracksClipsMixin:
         assert clip_obj is not None
         return clip_obj
 
+    def _require_session_audio_clip(self, track: int, clip: int, *, action: str) -> Any:
+        clip_obj = self._require_session_clip(track, clip, action=action)
+        if not bool(getattr(clip_obj, "is_audio_clip", False)):
+            raise _invalid_argument(
+                message="clip must be an audio clip",
+                hint=f"Use an audio clip before {action}.",
+            )
+        return clip_obj
+
     def _clip_props_payload(
         self,
         *,
@@ -752,12 +761,13 @@ class LiveBackendTracksClipsMixin:
         return self.clip_props_get(track, clip)
 
     def clip_warp_get(self, track: int, clip: int) -> dict[str, Any]:
-        clip_obj = self._require_session_clip(track, clip, action="reading warp state")
+        clip_obj = self._require_session_audio_clip(track, clip, action="reading warp state")
         return {
             "track": track,
             "clip": clip,
             "warping": bool(getattr(clip_obj, "warping", False)),
             "warp_mode": getattr(clip_obj, "warp_mode", None),
+            "available_warp_modes": list(getattr(clip_obj, "available_warp_modes", [])),
         }
 
     def clip_warp_set(
@@ -767,7 +777,7 @@ class LiveBackendTracksClipsMixin:
         enabled: bool,
         mode: str | None,
     ) -> dict[str, Any]:
-        clip_obj = self._require_session_clip(track, clip, action="updating warp state")
+        clip_obj = self._require_session_audio_clip(track, clip, action="updating warp state")
         self._set_required_clip_attr(clip_obj, "warping", bool(enabled), api_name="warp")
         if mode is not None:
             self._set_required_clip_attr(
@@ -779,7 +789,7 @@ class LiveBackendTracksClipsMixin:
         return self.clip_warp_get(track, clip)
 
     def clip_warp_marker_list(self, track: int, clip: int) -> dict[str, Any]:
-        clip_obj = self._require_session_clip(track, clip, action="reading warp markers")
+        clip_obj = self._require_session_audio_clip(track, clip, action="reading warp markers")
         markers = getattr(clip_obj, "warp_markers", None)
         if markers is None:
             raise _not_supported_by_live_api(
@@ -792,23 +802,70 @@ class LiveBackendTracksClipsMixin:
         self,
         track: int,
         clip: int,
-        sample_time: float,
         beat_time: float,
+        sample_time: float | None,
     ) -> dict[str, Any]:
-        clip_obj = self._require_session_clip(track, clip, action="adding a warp marker")
-        create_warp_marker = getattr(clip_obj, "create_warp_marker", None)
-        if not callable(create_warp_marker):
+        clip_obj = self._require_session_audio_clip(track, clip, action="adding a warp marker")
+        add_warp_marker = getattr(clip_obj, "add_warp_marker", None)
+        if not callable(add_warp_marker):
             raise _not_supported_by_live_api(
                 message="Clip warp marker write API is not available in Live API",
-                hint="Use a Live version exposing clip.create_warp_marker.",
+                hint="Use a Live version exposing clip.add_warp_marker.",
             )
-        create_warp_marker(float(sample_time), float(beat_time))
+        marker = {"beat_time": float(beat_time)}
+        if sample_time is not None:
+            marker["sample_time"] = float(sample_time)
+        add_warp_marker(marker)
         return {
             "track": track,
             "clip": clip,
-            "sample_time": float(sample_time),
             "beat_time": float(beat_time),
+            "sample_time": float(sample_time) if sample_time is not None else None,
             "created": True,
+        }
+
+    def clip_warp_marker_move(
+        self,
+        track: int,
+        clip: int,
+        beat_time: float,
+        distance: float,
+    ) -> dict[str, Any]:
+        clip_obj = self._require_session_audio_clip(track, clip, action="moving a warp marker")
+        move_warp_marker = getattr(clip_obj, "move_warp_marker", None)
+        if not callable(move_warp_marker):
+            raise _not_supported_by_live_api(
+                message="Clip warp marker move API is not available in Live API",
+                hint="Use a Live version exposing clip.move_warp_marker.",
+            )
+        move_warp_marker(float(beat_time), float(distance))
+        return {
+            "track": track,
+            "clip": clip,
+            "beat_time": float(beat_time),
+            "distance": float(distance),
+            "moved": True,
+        }
+
+    def clip_warp_marker_remove(
+        self,
+        track: int,
+        clip: int,
+        beat_time: float,
+    ) -> dict[str, Any]:
+        clip_obj = self._require_session_audio_clip(track, clip, action="removing a warp marker")
+        remove_warp_marker = getattr(clip_obj, "remove_warp_marker", None)
+        if not callable(remove_warp_marker):
+            raise _not_supported_by_live_api(
+                message="Clip warp marker remove API is not available in Live API",
+                hint="Use a Live version exposing clip.remove_warp_marker.",
+            )
+        remove_warp_marker(float(beat_time))
+        return {
+            "track": track,
+            "clip": clip,
+            "beat_time": float(beat_time),
+            "removed": True,
         }
 
     def clip_gain_set(self, track: int, clip: int, db: float) -> dict[str, Any]:

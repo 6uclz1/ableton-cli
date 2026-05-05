@@ -9,7 +9,7 @@ This matrix defines the remix workflow boundary. `ableton-cli` keeps Ableton Liv
 | Loop start/end | Added | Added | Added | Added | Uses clip `loop_start`, `loop_end`, `looping` when Live exposes them. |
 | Markers | Added | Added | Added | Added | Uses clip `start_marker` and `end_marker`. |
 | Warp mode | N/A | Added | N/A | Added | Uses clip `warping` and `warp_mode`; otherwise explicit failure. |
-| Warp markers | N/A | Added | N/A | Deferred | Destructive; session command requires Live warp marker write API. |
+| Warp markers | N/A | Added | N/A | Deferred | Session add/move/remove use Live warp marker write APIs. |
 | Transpose | Added | Added | Added | Added | Uses clip `pitch_coarse` when available. |
 | Gain | N/A | Added | N/A | Added | Converts dB to clip `gain` when available. |
 | File replace | N/A | Added | N/A | Added | Destructive; requires a Live file replacement API. |

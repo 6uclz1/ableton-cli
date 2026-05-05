@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Annotated
 
 import typer
 
+from ...audio_analysis.transient import analyze_transients
 from .._validation import invalid_argument, require_non_negative, require_positive_float
 from ._parsers import (
     parse_cut_to_drum_rack_slice_spec,
@@ -230,6 +232,10 @@ def clip_cut_to_drum_rack(
         str | None,
         typer.Option("--source", help="Source browser target (URI or path)"),
     ] = None,
+    source_file: Annotated[
+        Path | None,
+        typer.Option("--source-file", help="Local PCM WAV file for transient slicing"),
+    ] = None,
     target_track: Annotated[
         int | None,
         typer.Option("--target-track", help="Destination track index (0-based)"),
@@ -242,6 +248,18 @@ def clip_cut_to_drum_rack(
         int | None,
         typer.Option("--slice-count", help="Number of equal slices"),
     ] = None,
+    transient: Annotated[
+        bool,
+        typer.Option("--transient", help="Analyze --source-file transients and slice by onsets"),
+    ] = False,
+    bpm: Annotated[
+        float | None,
+        typer.Option("--bpm", help="Source tempo for transient analysis"),
+    ] = None,
+    max_slices: Annotated[
+        int,
+        typer.Option("--max-slices", help="Maximum transient slices"),
+    ] = 32,
     start_pad: Annotated[
         int,
         typer.Option("--start-pad", help="Destination start pad index (0-based)"),
@@ -256,20 +274,7 @@ def clip_cut_to_drum_rack(
     ] = None,
 ) -> None:
     def _run() -> dict[str, object]:
-        (
-            valid_source_track,
-            valid_source_clip,
-            source_uri,
-            source_path,
-        ) = parse_cut_to_drum_rack_source(
-            source_track=source_track,
-            source_clip=source_clip,
-            source=source,
-        )
-        valid_grid, valid_slice_count = parse_cut_to_drum_rack_slice_spec(
-            grid=grid,
-            slice_count=slice_count,
-        )
+        client = resolve_client(ctx)
         valid_target_track = (
             require_non_negative(
                 "target_track",
@@ -301,7 +306,88 @@ def clip_cut_to_drum_rack(
         if create_trigger_clip and valid_trigger_clip_slot is None:
             valid_trigger_clip_slot = 0
 
-        return resolve_client(ctx).clip_cut_to_drum_rack(
+        if transient:
+            if source_file is None:
+                raise invalid_argument(
+                    message="--transient requires --source-file",
+                    hint="Use --source-file with --transient slicing.",
+                )
+            if source is not None or source_track is not None or source_clip is not None:
+                raise invalid_argument(
+                    message="--source-file is mutually exclusive with session/browser sources",
+                    hint="Use only --source-file for transient slicing.",
+                )
+            if grid is not None or slice_count is not None:
+                raise invalid_argument(
+                    message="--transient is mutually exclusive with --grid/--slice-count",
+                    hint="Transient slicing derives slice ranges from detected onsets.",
+                )
+            valid_source_file = _validate_transient_source_file(source_file)
+            valid_max_slices = _validate_transient_max_slices(max_slices)
+            valid_bpm = _resolve_transient_bpm(client, bpm)
+            analysis = analyze_transients(
+                valid_source_file,
+                bpm=valid_bpm,
+                max_slices=valid_max_slices,
+            )
+            source_file_path = str(analysis["path"])
+            slice_ranges = [
+                {
+                    "slice_start": float(item["slice_start"]),
+                    "slice_end": float(item["slice_end"]),
+                }
+                for item in analysis["slice_ranges"]  # type: ignore[union-attr]
+            ]
+            remote_result = client.clip_cut_to_drum_rack(
+                source_track=None,
+                source_clip=None,
+                source_uri=None,
+                source_path=None,
+                target_track=valid_target_track,
+                grid=None,
+                slice_count=None,
+                start_pad=valid_start_pad,
+                create_trigger_clip=create_trigger_clip,
+                trigger_clip_slot=valid_trigger_clip_slot,
+                source_file=source_file_path,
+                source_file_duration_beats=float(analysis["duration_beats"]),
+                slice_ranges=slice_ranges,
+            )
+            return {
+                **remote_result,
+                "source_mode": remote_result.get("source_mode", "file"),
+                "source_file": source_file_path,
+                "bpm": valid_bpm,
+                "duration_beats": analysis["duration_beats"],
+                "slice_count": remote_result.get("slice_count", len(slice_ranges)),
+                "transient_analysis": {
+                    "analysis_version": analysis["analysis_version"],
+                    "confidence": analysis["confidence"],
+                    "warnings": analysis["warnings"],
+                },
+            }
+
+        if source_file is not None:
+            raise invalid_argument(
+                message="--source-file requires --transient",
+                hint="Use --source-file with --transient slicing.",
+            )
+        (
+            valid_source_track,
+            valid_source_clip,
+            source_uri,
+            source_path,
+        ) = parse_cut_to_drum_rack_source(
+            source_track=source_track,
+            source_clip=source_clip,
+            source=source,
+        )
+        valid_grid, valid_slice_count = parse_cut_to_drum_rack_slice_spec(
+            grid=grid,
+            slice_count=slice_count,
+        )
+
+        return client.clip_cut_to_drum_rack(
             source_track=valid_source_track,
             source_clip=valid_source_clip,
             source_uri=source_uri,
@@ -321,12 +407,68 @@ def clip_cut_to_drum_rack(
             "source_track": source_track,
             "source_clip": source_clip,
             "source": source,
+            "source_file": str(source_file) if source_file is not None else None,
             "target_track": target_track,
             "grid": grid,
             "slice_count": slice_count,
+            "transient": transient,
+            "bpm": bpm,
+            "max_slices": max_slices,
             "start_pad": start_pad,
             "create_trigger_clip": create_trigger_clip,
             "trigger_clip_slot": trigger_clip_slot,
         },
         action=_run,
     )
+
+
+def _resolve_transient_bpm(client: object, bpm: float | None) -> float:
+    if bpm is not None:
+        return _validate_transient_bpm(bpm)
+    song_info = client.song_info()  # type: ignore[attr-defined]
+    tempo = song_info.get("tempo") if isinstance(song_info, dict) else None
+    if not isinstance(tempo, (int, float)):
+        raise invalid_argument(
+            message="song_info did not return a numeric tempo",
+            hint="Pass --bpm explicitly for transient slicing.",
+        )
+    return _validate_transient_bpm(float(tempo))
+
+
+def _validate_transient_bpm(value: float) -> float:
+    if value < 20.0 or value > 999.0:
+        raise invalid_argument(
+            message=f"bpm must be between 20.0 and 999.0, got {value}",
+            hint="Use a realistic tempo between 20.0 and 999.0 BPM.",
+        )
+    return float(value)
+
+
+def _validate_transient_source_file(value: Path) -> Path:
+    audio_path = value.expanduser()
+    if not audio_path.exists():
+        raise invalid_argument(
+            message=f"audio file not found: {audio_path}",
+            hint="Pass an existing PCM WAV file.",
+        )
+    if not audio_path.is_file():
+        raise invalid_argument(
+            message=f"audio path is not a file: {audio_path}",
+            hint="Pass an existing PCM WAV file.",
+        )
+    audio_path = audio_path.resolve(strict=True)
+    if audio_path.suffix.lower() != ".wav":
+        raise invalid_argument(
+            message=f"transient analysis requires a PCM WAV file, got {audio_path}",
+            hint="Use a .wav file encoded as PCM.",
+        )
+    return audio_path
+
+
+def _validate_transient_max_slices(value: int) -> int:
+    if value <= 0:
+        raise invalid_argument(
+            message=f"max_slices must be > 0, got {value}",
+            hint="Use a positive --max-slices value.",
+        )
+    return value

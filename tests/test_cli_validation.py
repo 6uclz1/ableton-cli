@@ -522,6 +522,106 @@ def test_clip_cut_to_drum_rack_rejects_ambiguous_source_options(runner, cli_app)
     assert json.loads(result.stdout)["error"]["code"] == "INVALID_ARGUMENT"
 
 
+def test_clip_cut_to_drum_rack_rejects_source_file_with_browser_source(
+    runner,
+    cli_app,
+    tmp_path,
+) -> None:
+    audio_path = tmp_path / "source.wav"
+    audio_path.write_bytes(b"not a wav")
+
+    result = runner.invoke(
+        cli_app,
+        [
+            "--output",
+            "json",
+            "clip",
+            "cut-to-drum-rack",
+            "--source-file",
+            str(audio_path),
+            "--source",
+            "sounds/Bass Loop.wav",
+            "--transient",
+        ],
+    )
+
+    assert result.exit_code == 2
+    assert json.loads(result.stdout)["error"]["code"] == "INVALID_ARGUMENT"
+
+
+def test_clip_cut_to_drum_rack_rejects_source_file_with_session_source(
+    runner,
+    cli_app,
+    tmp_path,
+) -> None:
+    audio_path = tmp_path / "source.wav"
+    audio_path.write_bytes(b"not a wav")
+
+    result = runner.invoke(
+        cli_app,
+        [
+            "--output",
+            "json",
+            "clip",
+            "cut-to-drum-rack",
+            "--source-file",
+            str(audio_path),
+            "--source-track",
+            "0",
+            "--source-clip",
+            "1",
+            "--transient",
+        ],
+    )
+
+    assert result.exit_code == 2
+    assert json.loads(result.stdout)["error"]["code"] == "INVALID_ARGUMENT"
+
+
+def test_clip_cut_to_drum_rack_rejects_transient_without_source_file(runner, cli_app) -> None:
+    result = runner.invoke(
+        cli_app,
+        [
+            "--output",
+            "json",
+            "clip",
+            "cut-to-drum-rack",
+            "--source",
+            "sounds/Bass Loop.wav",
+            "--transient",
+        ],
+    )
+
+    assert result.exit_code == 2
+    assert json.loads(result.stdout)["error"]["code"] == "INVALID_ARGUMENT"
+
+
+def test_clip_cut_to_drum_rack_rejects_source_file_without_transient(
+    runner,
+    cli_app,
+    tmp_path,
+) -> None:
+    audio_path = tmp_path / "source.wav"
+    audio_path.write_bytes(b"not a wav")
+
+    result = runner.invoke(
+        cli_app,
+        [
+            "--output",
+            "json",
+            "clip",
+            "cut-to-drum-rack",
+            "--source-file",
+            str(audio_path),
+            "--slice-count",
+            "8",
+        ],
+    )
+
+    assert result.exit_code == 2
+    assert json.loads(result.stdout)["error"]["code"] == "INVALID_ARGUMENT"
+
+
 def test_clip_cut_to_drum_rack_rejects_incomplete_session_source(runner, cli_app) -> None:
     result = runner.invoke(
         cli_app,
@@ -581,6 +681,113 @@ def test_clip_cut_to_drum_rack_rejects_mutually_exclusive_slice_modes(runner, cl
 
     assert result.exit_code == 2
     assert json.loads(result.stdout)["error"]["code"] == "INVALID_ARGUMENT"
+
+
+def test_clip_cut_to_drum_rack_rejects_transient_with_grid(runner, cli_app, tmp_path) -> None:
+    audio_path = tmp_path / "source.wav"
+    audio_path.write_bytes(b"not a wav")
+
+    result = runner.invoke(
+        cli_app,
+        [
+            "--output",
+            "json",
+            "clip",
+            "cut-to-drum-rack",
+            "--source-file",
+            str(audio_path),
+            "--transient",
+            "--grid",
+            "1/16",
+        ],
+    )
+
+    assert result.exit_code == 2
+    assert json.loads(result.stdout)["error"]["code"] == "INVALID_ARGUMENT"
+
+
+def test_clip_cut_to_drum_rack_rejects_transient_with_slice_count(
+    runner,
+    cli_app,
+    tmp_path,
+) -> None:
+    audio_path = tmp_path / "source.wav"
+    audio_path.write_bytes(b"not a wav")
+
+    result = runner.invoke(
+        cli_app,
+        [
+            "--output",
+            "json",
+            "clip",
+            "cut-to-drum-rack",
+            "--source-file",
+            str(audio_path),
+            "--transient",
+            "--slice-count",
+            "8",
+        ],
+    )
+
+    assert result.exit_code == 2
+    assert json.loads(result.stdout)["error"]["code"] == "INVALID_ARGUMENT"
+
+
+def test_clip_cut_to_drum_rack_rejects_invalid_transient_options(
+    runner,
+    cli_app,
+    tmp_path,
+) -> None:
+    audio_path = tmp_path / "source.txt"
+    audio_path.write_bytes(b"not a wav")
+
+    bad_max_slices = runner.invoke(
+        cli_app,
+        [
+            "--output",
+            "json",
+            "clip",
+            "cut-to-drum-rack",
+            "--source-file",
+            str(audio_path),
+            "--transient",
+            "--max-slices",
+            "0",
+        ],
+    )
+    bad_bpm = runner.invoke(
+        cli_app,
+        [
+            "--output",
+            "json",
+            "clip",
+            "cut-to-drum-rack",
+            "--source-file",
+            str(audio_path),
+            "--transient",
+            "--bpm",
+            "1000",
+        ],
+    )
+    bad_path = runner.invoke(
+        cli_app,
+        [
+            "--output",
+            "json",
+            "clip",
+            "cut-to-drum-rack",
+            "--source-file",
+            str(audio_path),
+            "--transient",
+        ],
+    )
+
+    assert bad_max_slices.exit_code == 2
+    assert bad_bpm.exit_code == 2
+    assert bad_path.exit_code == 2
+    assert json.loads(bad_max_slices.stdout)["error"]["code"] == "INVALID_ARGUMENT"
+    assert json.loads(bad_bpm.stdout)["error"]["code"] == "INVALID_ARGUMENT"
+    assert json.loads(bad_path.stdout)["error"]["code"] == "INVALID_ARGUMENT"
 
 
 def test_clip_cut_to_drum_rack_rejects_trigger_slot_without_trigger_flag(runner, cli_app) -> None:

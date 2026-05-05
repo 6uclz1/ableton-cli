@@ -2646,9 +2646,12 @@ def test_live_backend_clip_cut_to_drum_rack_creates_target_track_and_loads_slice
         source_clip=0,
         source_uri=None,
         source_path=None,
+        source_file=None,
+        source_file_duration_beats=None,
         target_track=None,
         grid=None,
         slice_count=8,
+        slice_ranges=None,
         start_pad=0,
         create_trigger_clip=False,
         trigger_clip_slot=None,
@@ -2674,9 +2677,12 @@ def test_live_backend_clip_cut_to_drum_rack_supports_browser_source_and_trigger_
         source_clip=None,
         source_uri=None,
         source_path="sounds/Bass Loop.wav",
+        source_file=None,
+        source_file_duration_beats=None,
         target_track=0,
         grid=1.0,
         slice_count=None,
+        slice_ranges=None,
         start_pad=2,
         create_trigger_clip=True,
         trigger_clip_slot=1,
@@ -2693,6 +2699,67 @@ def test_live_backend_clip_cut_to_drum_rack_supports_browser_source_and_trigger_
         pitch=None,
     )
     assert trigger_notes["note_count"] == 4
+
+
+def test_live_backend_clip_cut_to_drum_rack_uses_file_slice_ranges_for_slices_and_trigger() -> None:
+    surface = _SurfaceStub()
+    backend = LiveBackend(surface)
+
+    result = backend.clip_cut_to_drum_rack(
+        source_track=None,
+        source_clip=None,
+        source_uri=None,
+        source_path=None,
+        source_file="/tmp/source.wav",
+        source_file_duration_beats=8.0,
+        target_track=0,
+        grid=None,
+        slice_count=None,
+        slice_ranges=[
+            {"slice_start": 1.0, "slice_end": 2.25},
+            {"slice_start": 3.0, "slice_end": 5.0},
+        ],
+        start_pad=2,
+        create_trigger_clip=True,
+        trigger_clip_slot=1,
+    )
+
+    assert result["source_mode"] == "file"
+    assert result["source_file"] == "/tmp/source.wav"
+    assert result["source_file_duration_beats"] == 8.0
+    assert result["range_start"] == 1.0
+    assert result["range_end"] == 5.0
+    target_track = surface.song().tracks[0]
+    drum_rack = target_track.devices[-1]
+    assert drum_rack.drum_pads[2].loaded_slices == [
+        {"source_ref": "/tmp/source.wav", "start_beat": 1.0, "end_beat": 2.25}
+    ]
+    assert drum_rack.drum_pads[3].loaded_slices == [
+        {"source_ref": "/tmp/source.wav", "start_beat": 3.0, "end_beat": 5.0}
+    ]
+    trigger_notes = backend.get_clip_notes(
+        track=0,
+        clip=1,
+        start_time=None,
+        end_time=None,
+        pitch=None,
+    )
+    assert trigger_notes["notes"] == [
+        {
+            "duration": 1.25,
+            "mute": False,
+            "pitch": 38,
+            "start_time": 0.0,
+            "velocity": 100,
+        },
+        {
+            "duration": 2.0,
+            "mute": False,
+            "pitch": 39,
+            "start_time": 2.0,
+            "velocity": 100,
+        },
+    ]
 
 
 def test_live_backend_clip_cut_to_drum_rack_rejects_pad_overflow() -> None:
@@ -2712,9 +2779,12 @@ def test_live_backend_clip_cut_to_drum_rack_rejects_pad_overflow() -> None:
             source_clip=0,
             source_uri=None,
             source_path=None,
+            source_file=None,
+            source_file_duration_beats=None,
             target_track=0,
             grid=None,
             slice_count=200,
+            slice_ranges=None,
             start_pad=0,
             create_trigger_clip=False,
             trigger_clip_slot=None,
@@ -2732,9 +2802,12 @@ def test_live_backend_clip_cut_to_drum_rack_rejects_unsupported_audio_format() -
             source_clip=None,
             source_uri=None,
             source_path="sounds/Unsupported.mp3",
+            source_file=None,
+            source_file_duration_beats=None,
             target_track=0,
             grid=None,
             slice_count=8,
+            slice_ranges=None,
             start_pad=0,
             create_trigger_clip=False,
             trigger_clip_slot=None,
@@ -2753,9 +2826,12 @@ def test_live_backend_clip_cut_to_drum_rack_rejects_midi_clip_source() -> None:
             source_clip=0,
             source_uri=None,
             source_path=None,
+            source_file=None,
+            source_file_duration_beats=None,
             target_track=0,
             grid=None,
             slice_count=8,
+            slice_ranges=None,
             start_pad=0,
             create_trigger_clip=False,
             trigger_clip_slot=None,
@@ -3053,6 +3129,83 @@ def test_live_backend_arrangement_clip_create_midi_accepts_notes_payload() -> No
 
     assert created["notes_added"] == 1
     assert notes["note_count"] == 1
+
+
+def test_live_backend_clip_warp_marker_add_uses_live_dict_api_with_optional_sample_time() -> None:
+    surface = _SurfaceStub()
+    song = surface.song()
+    _set_audio_source_clip(song, track=1, clip=0, length=64.0, file_path="/tmp/source.wav")
+    clip = song.tracks[1].clip_slots[0].clip
+    assert clip is not None
+    clip.warping = True
+    calls: list[dict[str, float]] = []
+
+    def _add_warp_marker(marker: dict[str, float]) -> None:
+        calls.append(dict(marker))
+
+    clip.add_warp_marker = _add_warp_marker  # type: ignore[attr-defined]
+
+    backend = LiveBackend(surface)
+    result = backend.clip_warp_marker_add(track=1, clip=0, beat_time=32.0, sample_time=None)
+
+    assert calls == [{"beat_time": 32.0}]
+    assert result == {
+        "track": 1,
+        "clip": 0,
+        "beat_time": 32.0,
+        "sample_time": None,
+        "created": True,
+    }
+
+
+def test_live_backend_clip_warp_marker_add_passes_sample_time_when_provided() -> None:
+    surface = _SurfaceStub()
+    song = surface.song()
+    _set_audio_source_clip(song, track=1, clip=0, length=64.0, file_path="/tmp/source.wav")
+    clip = song.tracks[1].clip_slots[0].clip
+    assert clip is not None
+    clip.warping = True
+    calls: list[dict[str, float]] = []
+
+    def _add_warp_marker(marker: dict[str, float]) -> None:
+        calls.append(dict(marker))
+
+    clip.add_warp_marker = _add_warp_marker  # type: ignore[attr-defined]
+
+    backend = LiveBackend(surface)
+    result = backend.clip_warp_marker_add(track=1, clip=0, beat_time=32.0, sample_time=18.392)
+
+    assert calls == [{"beat_time": 32.0, "sample_time": 18.392}]
+    assert result["sample_time"] == 18.392
+
+
+def test_live_backend_clip_warp_marker_move_and_remove_call_live_api() -> None:
+    surface = _SurfaceStub()
+    song = surface.song()
+    _set_audio_source_clip(song, track=1, clip=0, length=64.0, file_path="/tmp/source.wav")
+    clip = song.tracks[1].clip_slots[0].clip
+    assert clip is not None
+    clip.warping = True
+    moves: list[tuple[float, float]] = []
+    removes: list[float] = []
+
+    def _move_warp_marker(beat_time: float, distance: float) -> None:
+        moves.append((beat_time, distance))
+
+    def _remove_warp_marker(beat_time: float) -> None:
+        removes.append(beat_time)
+
+    clip.move_warp_marker = _move_warp_marker  # type: ignore[attr-defined]
+    clip.remove_warp_marker = _remove_warp_marker  # type: ignore[attr-defined]
+
+    backend = LiveBackend(surface)
+    moved = backend.clip_warp_marker_move(track=1, clip=0, beat_time=32.0, distance=-0.5)
+    removed = backend.clip_warp_marker_remove(track=1, clip=0, beat_time=32.0)
+
+    assert moves == [(32.0, -0.5)]
+    assert removes == [32.0]
+    assert moved == {"track": 1, "clip": 0, "beat_time": 32.0, "distance": -0.5, "moved": True}
+    assert removed == {"track": 1, "clip": 0, "beat_time": 32.0, "removed": True}
 
 
 def test_live_backend_arrangement_clip_create_accepts_tuple_container() -> None:

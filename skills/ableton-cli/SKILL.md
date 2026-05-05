@@ -268,14 +268,20 @@ uv run ableton-cli clip active set 0 0 false
 uv run ableton-cli clip duplicate 0 0 1
 uv run ableton-cli clip duplicate-many 0 0 --to 2,4,5,6
 uv run ableton-cli clip place-pattern 0 --clip 0 --scenes Intro,Drop,Peak
+uv run ableton-cli audio transient analyze --path ./loops/drum-break.wav --bpm 174 --max-slices 16
+uv run ableton-cli clip cut-to-drum-rack --source-file ./loops/drum-break.wav --transient --bpm 174 --max-slices 16 --create-trigger-clip --trigger-clip-slot 1
 uv run ableton-cli clip cut-to-drum-rack --source-track 1 --source-clip 0 --slice-count 8 --create-trigger-clip --trigger-clip-slot 1
 uv run ableton-cli clip props get 0 0
 uv run ableton-cli clip loop set 0 0 --start 0 --end 16 --enabled true
 uv run ableton-cli clip marker set 0 0 --start-marker 0 --end-marker 16
 uv run ableton-cli clip warp get 0 0
 uv run ableton-cli clip warp set 0 0 --enabled true --mode complex-pro
+uv run ableton-cli clip warp conform 0 0 --source-bpm 174 --target-bpm 168 --profile full-mix --verify
 uv run ableton-cli clip warp-marker list 0 0
-uv run ableton-cli clip warp-marker add 0 0 --sample-time 12.345 --beat-time 33.0
+uv run ableton-cli clip warp-marker add 0 0 --beat-time 33.0
+uv run ableton-cli clip warp-marker add 0 0 --beat-time 33.0 --sample-time 12.345
+uv run ableton-cli clip warp-marker move 0 0 --beat-time 33.0 --distance -0.5
+uv run ableton-cli clip warp-marker remove 0 0 --beat-time 33.0
 uv run ableton-cli clip gain set 0 0 --db -3.0
 uv run ableton-cli clip transpose set 0 0 --semitones 2
 uv run ableton-cli clip file replace 0 0 --audio-path /tmp/replacement.wav

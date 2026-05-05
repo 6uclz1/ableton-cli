@@ -60,8 +60,12 @@ uv run ableton-cli clip loop set 0 0 --start 0 --end 16 --enabled true
 uv run ableton-cli clip marker set 0 0 --start-marker 0 --end-marker 16
 uv run ableton-cli clip warp get 0 0
 uv run ableton-cli clip warp set 0 0 --enabled true --mode complex-pro
+uv run ableton-cli clip warp conform 0 0 --source-bpm 174 --target-bpm 168 --profile full-mix --verify
 uv run ableton-cli clip warp-marker list 0 0
-uv run ableton-cli clip warp-marker add 0 0 --sample-time 12.345 --beat-time 33.0
+uv run ableton-cli clip warp-marker add 0 0 --beat-time 33.0
+uv run ableton-cli clip warp-marker add 0 0 --beat-time 33.0 --sample-time 12.345
+uv run ableton-cli clip warp-marker move 0 0 --beat-time 33.0 --distance -0.5
+uv run ableton-cli clip warp-marker remove 0 0 --beat-time 33.0
 uv run ableton-cli clip gain set 0 0 --db -3.0
 uv run ableton-cli clip transpose set 0 0 --semitones 2
 uv run ableton-cli clip file replace 0 0 --audio-path /abs/replacement.wav

@@ -435,6 +435,37 @@ def test_client_sends_request_timeout_meta(monkeypatch) -> None:
             },
         ),
         (
+            lambda client: client.clip_cut_to_drum_rack(
+                source_track=None,
+                source_clip=None,
+                source_uri=None,
+                source_path=None,
+                target_track=None,
+                grid=None,
+                slice_count=None,
+                start_pad=0,
+                create_trigger_clip=False,
+                trigger_clip_slot=None,
+                source_file="/tmp/source.wav",
+                source_file_duration_beats=8.0,
+                slice_ranges=[
+                    {"slice_start": 0.0, "slice_end": 1.5},
+                    {"slice_start": 1.5, "slice_end": 2.0},
+                ],
+            ),
+            "clip_cut_to_drum_rack",
+            {
+                "source_file": "/tmp/source.wav",
+                "source_file_duration_beats": 8.0,
+                "slice_ranges": [
+                    {"slice_start": 0.0, "slice_end": 1.5},
+                    {"slice_start": 1.5, "slice_end": 2.0},
+                ],
+                "start_pad": 0,
+                "create_trigger_clip": False,
+            },
+        ),
+        (
             lambda client: client.transport_position_get(),
             "transport_position_get",
             {},

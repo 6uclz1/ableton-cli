@@ -26,6 +26,14 @@ WARP_MARKER_ADD_SPEC = CommandSpec(
     command_name="clip warp-marker add",
     client_method="clip_warp_marker_add",
 )
+WARP_MARKER_MOVE_SPEC = CommandSpec(
+    command_name="clip warp-marker move",
+    client_method="clip_warp_marker_move",
+)
+WARP_MARKER_REMOVE_SPEC = CommandSpec(
+    command_name="clip warp-marker remove",
+    client_method="clip_warp_marker_remove",
+)
 GAIN_SET_SPEC = CommandSpec(command_name="clip gain set", client_method="clip_gain_set")
 TRANSPOSE_SET_SPEC = CommandSpec(
     command_name="clip transpose set",
@@ -202,8 +210,8 @@ def _register_warp_marker_add(
         ctx: typer.Context,
         track: Annotated[int, typer.Argument(help="Track index")],
         clip: Annotated[int, typer.Argument(help="Clip slot index")],
-        sample_time: Annotated[float, typer.Option("--sample-time")],
         beat_time: Annotated[float, typer.Option("--beat-time")],
+        sample_time: Annotated[float | None, typer.Option("--sample-time")] = None,
     ) -> None:
         run_client_command_spec(
             ctx,
@@ -212,11 +220,71 @@ def _register_warp_marker_add(
             method_kwargs=lambda: {
                 "track": require_track_index(track),
                 "clip": _clip_index(clip),
-                "sample_time": require_non_negative_float(
-                    "sample_time",
-                    sample_time,
-                    hint="Use a non-negative --sample-time.",
+                "beat_time": require_non_negative_float(
+                    "beat_time",
+                    beat_time,
+                    hint="Use a non-negative --beat-time.",
                 ),
+                "sample_time": (
+                    require_non_negative_float(
+                        "sample_time",
+                        sample_time,
+                        hint="Use a non-negative --sample-time.",
+                    )
+                    if sample_time is not None
+                    else None
+                ),
+            },
+        )
+
+
+def _register_warp_marker_move(
+    warp_marker_app: typer.Typer,
+    run_client_command_spec: CommandRunner,
+) -> None:
+    @warp_marker_app.command("move")
+    def clip_warp_marker_move(
+        ctx: typer.Context,
+        track: Annotated[int, typer.Argument(help="Track index")],
+        clip: Annotated[int, typer.Argument(help="Clip slot index")],
+        beat_time: Annotated[float, typer.Option("--beat-time")],
+        distance: Annotated[float, typer.Option("--distance")],
+    ) -> None:
+        run_client_command_spec(
+            ctx,
+            spec=WARP_MARKER_MOVE_SPEC,
+            args={"track": track, "clip": clip, "beat_time": beat_time, "distance": distance},
+            method_kwargs=lambda: {
+                "track": require_track_index(track),
+                "clip": _clip_index(clip),
+                "beat_time": require_non_negative_float(
+                    "beat_time",
+                    beat_time,
+                    hint="Use a non-negative --beat-time.",
+                ),
+                "distance": distance,
+            },
+        )
+
+
+def _register_warp_marker_remove(
+    warp_marker_app: typer.Typer,
+    run_client_command_spec: CommandRunner,
+) -> None:
+    @warp_marker_app.command("remove")
+    def clip_warp_marker_remove(
+        ctx: typer.Context,
+        track: Annotated[int, typer.Argument(help="Track index")],
+        clip: Annotated[int, typer.Argument(help="Clip slot index")],
+        beat_time: Annotated[float, typer.Option("--beat-time")],
+    ) -> None:
+        run_client_command_spec(
+            ctx,
+            spec=WARP_MARKER_REMOVE_SPEC,
+            args={"track": track, "clip": clip, "beat_time": beat_time},
+            method_kwargs=lambda: {
+                "track": require_track_index(track),
+                "clip": _clip_index(clip),
                 "beat_time": require_non_negative_float(
                     "beat_time",
                     beat_time,
@@ -312,6 +380,8 @@ def register_prop_commands(
     _register_warp_set(warp_app, run_client_command_spec)
     _register_warp_marker_list(warp_marker_app, run_client_command_spec)
     _register_warp_marker_add(warp_marker_app, run_client_command_spec)
+    _register_warp_marker_move(warp_marker_app, run_client_command_spec)
+    _register_warp_marker_remove(warp_marker_app, run_client_command_spec)
     _register_gain_set(gain_app, run_client_command_spec)
     _register_transpose_set(transpose_app, run_client_command_spec)
     _register_file_replace(file_app, run_client_command_spec)

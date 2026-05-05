@@ -21,3 +21,11 @@ def test_function_args_threshold_allows_cli_entry_points() -> None:
     function_args_threshold = config.thresholds.function["args"]
     assert function_args_threshold.warn == 8
     assert function_args_threshold.fail == 20
+
+
+def test_class_args_threshold_allows_remote_contract_surfaces() -> None:
+    config = load_config(QUALITY_HARNESS_CONFIG)
+
+    class_args_threshold = config.thresholds.class_["args"]
+    assert class_args_threshold.warn == 8
+    assert class_args_threshold.fail == 14

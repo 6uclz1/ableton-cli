@@ -1170,6 +1170,45 @@
         "requires_confirmation": false
       }
     },
+    "audio transient analyze": {
+      "args": {
+        "type": "object"
+      },
+      "errors": {
+        "codes": [
+          "ABLETON_NOT_REACHABLE",
+          "BATCH_ASSERT_FAILED",
+          "BATCH_PREFLIGHT_FAILED",
+          "BATCH_RETRY_EXHAUSTED",
+          "BATCH_STEP_FAILED",
+          "CONFIG_INVALID",
+          "CONFIRMATION_REQUIRED",
+          "INSTALL_TARGET_NOT_FOUND",
+          "INTERNAL_ERROR",
+          "INVALID_ARGUMENT",
+          "PROTOCOL_CONNECTION_CLOSED",
+          "PROTOCOL_INVALID_RESPONSE",
+          "PROTOCOL_MALFORMED_JSON",
+          "PROTOCOL_REQUEST_ID_MISMATCH",
+          "PROTOCOL_VERSION_MISMATCH",
+          "READ_ONLY_VIOLATION",
+          "REMOTE_BUSY",
+          "REMOTE_SCRIPT_INCOMPATIBLE",
+          "REMOTE_SCRIPT_NOT_INSTALLED",
+          "SKILL_SOURCE_NOT_FOUND",
+          "TIMEOUT",
+          "UNSUPPORTED_OS"
+        ]
+      },
+      "result": {
+        "type": "object"
+      },
+      "side_effect": {
+        "idempotent": false,
+        "kind": "write",
+        "requires_confirmation": false
+      }
+    },
     "batch run": {
       "args": {
         "type": "object"
@@ -2730,6 +2769,45 @@
         "requires_confirmation": false
       }
     },
+    "clip warp conform": {
+      "args": {
+        "type": "object"
+      },
+      "errors": {
+        "codes": [
+          "ABLETON_NOT_REACHABLE",
+          "BATCH_ASSERT_FAILED",
+          "BATCH_PREFLIGHT_FAILED",
+          "BATCH_RETRY_EXHAUSTED",
+          "BATCH_STEP_FAILED",
+          "CONFIG_INVALID",
+          "CONFIRMATION_REQUIRED",
+          "INSTALL_TARGET_NOT_FOUND",
+          "INTERNAL_ERROR",
+          "INVALID_ARGUMENT",
+          "PROTOCOL_CONNECTION_CLOSED",
+          "PROTOCOL_INVALID_RESPONSE",
+          "PROTOCOL_MALFORMED_JSON",
+          "PROTOCOL_REQUEST_ID_MISMATCH",
+          "PROTOCOL_VERSION_MISMATCH",
+          "READ_ONLY_VIOLATION",
+          "REMOTE_BUSY",
+          "REMOTE_SCRIPT_INCOMPATIBLE",
+          "REMOTE_SCRIPT_NOT_INSTALLED",
+          "SKILL_SOURCE_NOT_FOUND",
+          "TIMEOUT",
+          "UNSUPPORTED_OS"
+        ]
+      },
+      "result": {
+        "type": "object"
+      },
+      "side_effect": {
+        "idempotent": false,
+        "kind": "write",
+        "requires_confirmation": false
+      }
+    },
     "clip warp get": {
       "args": {
         "type": "object"
@@ -2884,6 +2962,84 @@
         "idempotent": true,
         "kind": "read",
         "requires_confirmation": false
+      }
+    },
+    "clip warp-marker move": {
+      "args": {
+        "type": "object"
+      },
+      "errors": {
+        "codes": [
+          "ABLETON_NOT_REACHABLE",
+          "BATCH_ASSERT_FAILED",
+          "BATCH_PREFLIGHT_FAILED",
+          "BATCH_RETRY_EXHAUSTED",
+          "BATCH_STEP_FAILED",
+          "CONFIG_INVALID",
+          "CONFIRMATION_REQUIRED",
+          "INSTALL_TARGET_NOT_FOUND",
+          "INTERNAL_ERROR",
+          "INVALID_ARGUMENT",
+          "PROTOCOL_CONNECTION_CLOSED",
+          "PROTOCOL_INVALID_RESPONSE",
+          "PROTOCOL_MALFORMED_JSON",
+          "PROTOCOL_REQUEST_ID_MISMATCH",
+          "PROTOCOL_VERSION_MISMATCH",
+          "READ_ONLY_VIOLATION",
+          "REMOTE_BUSY",
+          "REMOTE_SCRIPT_INCOMPATIBLE",
+          "REMOTE_SCRIPT_NOT_INSTALLED",
+          "SKILL_SOURCE_NOT_FOUND",
+          "TIMEOUT",
+          "UNSUPPORTED_OS"
+        ]
+      },
+      "result": {
+        "type": "object"
+      },
+      "side_effect": {
+        "idempotent": false,
+        "kind": "destructive",
+        "requires_confirmation": true
+      }
+    },
+    "clip warp-marker remove": {
+      "args": {
+        "type": "object"
+      },
+      "errors": {
+        "codes": [
+          "ABLETON_NOT_REACHABLE",
+          "BATCH_ASSERT_FAILED",
+          "BATCH_PREFLIGHT_FAILED",
+          "BATCH_RETRY_EXHAUSTED",
+          "BATCH_STEP_FAILED",
+          "CONFIG_INVALID",
+          "CONFIRMATION_REQUIRED",
+          "INSTALL_TARGET_NOT_FOUND",
+          "INTERNAL_ERROR",
+          "INVALID_ARGUMENT",
+          "PROTOCOL_CONNECTION_CLOSED",
+          "PROTOCOL_INVALID_RESPONSE",
+          "PROTOCOL_MALFORMED_JSON",
+          "PROTOCOL_REQUEST_ID_MISMATCH",
+          "PROTOCOL_VERSION_MISMATCH",
+          "READ_ONLY_VIOLATION",
+          "REMOTE_BUSY",
+          "REMOTE_SCRIPT_INCOMPATIBLE",
+          "REMOTE_SCRIPT_NOT_INSTALLED",
+          "SKILL_SOURCE_NOT_FOUND",
+          "TIMEOUT",
+          "UNSUPPORTED_OS"
+        ]
+      },
+      "result": {
+        "type": "object"
+      },
+      "side_effect": {
+        "idempotent": false,
+        "kind": "destructive",
+        "requires_confirmation": true
       }
     },
     "completion": {

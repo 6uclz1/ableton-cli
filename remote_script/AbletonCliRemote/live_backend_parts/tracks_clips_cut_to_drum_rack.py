@@ -10,6 +10,8 @@ from .base import _invalid_argument, _not_supported_by_live_api
 class LiveBackendTracksCutToDrumRackMixin:
     _SUPPORTED_AUDIO_EXTENSIONS = (".wav", ".aif", ".aiff")
     _DEFAULT_DRUM_RACK_URI = "rack:drums"
+    _SLICE_RANGE_END_TOLERANCE_BEATS = 1e-6
+    _TRIGGER_PITCH_BASE = 36
 
     def _require_supported_audio_source(self, *, source_ref: str, source_label: str) -> None:
         normalized = source_ref.strip().lower()
@@ -74,6 +76,8 @@ class LiveBackendTracksCutToDrumRackMixin:
             "source_clip": source_clip,
             "source_uri": None,
             "source_path": None,
+            "source_file": None,
+            "source_file_duration_beats": None,
         }
 
     def _resolve_browser_audio_source(
@@ -139,6 +143,41 @@ class LiveBackendTracksCutToDrumRackMixin:
             "source_clip": None,
             "source_uri": source_uri,
             "source_path": resolved_source_path,
+            "source_file": None,
+            "source_file_duration_beats": None,
+        }
+
+    def _resolve_file_audio_source(
+        self,
+        *,
+        source_file: str,
+        source_file_duration_beats: float,
+    ) -> dict[str, Any]:
+        if not source_file.strip():
+            raise _invalid_argument(
+                message="source_file must not be empty",
+                hint="Use a non-empty source file path.",
+            )
+        if source_file_duration_beats <= 0:
+            raise _invalid_argument(
+                message="source_file_duration_beats must be > 0",
+                hint="Pass a positive source file duration in beats.",
+            )
+        self._require_supported_audio_source(
+            source_ref=source_file,
+            source_label="source_file",
+        )
+        return {
+            "source_mode": "file",
+            "source_ref": source_file,
+            "range_start": 0.0,
+            "range_end": float(source_file_duration_beats),
+            "source_track": None,
+            "source_clip": None,
+            "source_uri": None,
+            "source_path": None,
+            "source_file": source_file,
+            "source_file_duration_beats": float(source_file_duration_beats),
         }
 
     @staticmethod
@@ -201,16 +240,25 @@ class LiveBackendTracksCutToDrumRackMixin:
         range_end: float,
         grid: float | None,
         slice_count: int | None,
+        slice_ranges: list[dict[str, float]] | None,
     ) -> list[tuple[float, float]]:
-        if grid is None and slice_count is None:
+        selector_count = (
+            int(grid is not None) + int(slice_count is not None) + int(slice_ranges is not None)
+        )
+        if selector_count == 0:
             raise _invalid_argument(
-                message="Either grid or slice_count must be provided",
+                message="Either grid, slice_count, or slice_ranges must be provided",
                 hint="Choose one slicing mode.",
             )
-        if grid is not None and slice_count is not None:
+        if selector_count > 1:
             raise _invalid_argument(
-                message="grid and slice_count are mutually exclusive",
-                hint="Use either grid or slice_count.",
+                message="grid, slice_count, and slice_ranges are mutually exclusive",
+                hint="Use exactly one slicing mode.",
+            )
+        if slice_ranges is not None:
+            return self._normalize_explicit_slice_ranges(
+                slice_ranges=slice_ranges,
+                source_duration_beats=range_end,
             )
         if slice_count is not None:
             return self._slice_ranges_by_count(
@@ -224,6 +272,66 @@ class LiveBackendTracksCutToDrumRackMixin:
             range_end=range_end,
             grid=grid,
         )
+
+    def _normalize_explicit_slice_ranges(
+        self,
+        *,
+        slice_ranges: list[dict[str, float]],
+        source_duration_beats: float,
+    ) -> list[tuple[float, float]]:
+        if not isinstance(slice_ranges, list):
+            raise _invalid_argument(
+                message="slice_ranges must be a list",
+                hint="Pass a non-empty list of {slice_start, slice_end} objects.",
+            )
+        if not slice_ranges:
+            raise _invalid_argument(
+                message="slice_ranges must not be empty",
+                hint="Pass at least one slice range.",
+            )
+        parsed: list[tuple[float, float]] = []
+        previous_end: float | None = None
+        for index, item in enumerate(slice_ranges):
+            if not isinstance(item, dict):
+                raise _invalid_argument(
+                    message=f"slice_ranges[{index}] must be an object",
+                    hint="Use objects with numeric slice_start and slice_end fields.",
+                )
+            start_raw = item.get("slice_start")
+            end_raw = item.get("slice_end")
+            if (
+                isinstance(start_raw, bool)
+                or isinstance(end_raw, bool)
+                or not isinstance(start_raw, (int, float))
+                or not isinstance(end_raw, (int, float))
+            ):
+                raise _invalid_argument(
+                    message=f"slice_ranges[{index}].slice_start/slice_end must be numbers",
+                    hint="Use numeric beat positions for slice ranges.",
+                )
+            start = float(start_raw)
+            end = float(end_raw)
+            if start < 0 or end <= start:
+                raise _invalid_argument(
+                    message=f"slice_ranges[{index}] must satisfy 0 <= start < end",
+                    hint="Use positive, non-empty slice ranges.",
+                )
+            if previous_end is not None and start < previous_end:
+                raise _invalid_argument(
+                    message=f"slice_ranges[{index}] overlaps or is out of order",
+                    hint="Sort slice_ranges by start and avoid overlaps.",
+                )
+            if end > source_duration_beats + self._SLICE_RANGE_END_TOLERANCE_BEATS:
+                raise _invalid_argument(
+                    message=(
+                        f"slice_ranges[{index}].end exceeds source_file_duration_beats "
+                        f"({end} > {source_duration_beats})"
+                    ),
+                    hint="Keep slice ranges inside the source file duration.",
+                )
+            parsed.append((start, end))
+            previous_end = end
+        return parsed
 
     def _resolve_target_track_for_cut(
         self,
@@ -340,6 +448,7 @@ class LiveBackendTracksCutToDrumRackMixin:
         target_track: int,
         trigger_clip_slot: int,
         assignments: list[dict[str, Any]],
+        range_start: float,
         source_length: float,
     ) -> dict[str, Any]:
         slot = self._clip_slot_at(target_track, trigger_clip_slot)
@@ -370,20 +479,21 @@ class LiveBackendTracksCutToDrumRackMixin:
                 hint="Use a Live version exposing clip.set_notes.",
             )
 
-        step = max(source_length / float(len(assignments)), 0.000001)
         notes: list[tuple[int, float, float, int, bool]] = []
-        for index, assignment in enumerate(assignments):
-            pitch = 36 + int(assignment["pad"])
+        for assignment in assignments:
+            pitch = self._TRIGGER_PITCH_BASE + int(assignment["pad"])
             if pitch > NOTE_PITCH_MAX:
                 raise _invalid_argument(
                     message=f"Trigger note pitch out of MIDI range: {pitch}",
                     hint="Use a lower start_pad for trigger clip creation.",
                 )
+            slice_start = float(assignment["slice_start"])
+            slice_end = float(assignment["slice_end"])
             notes.append(
                 (
                     pitch,
-                    round(step * float(index), 6),
-                    round(step, 6),
+                    round(slice_start - range_start, 6),
+                    round(slice_end - slice_start, 6),
                     100,
                     False,
                 )
@@ -401,14 +511,39 @@ class LiveBackendTracksCutToDrumRackMixin:
         source_clip: int | None,
         source_uri: str | None,
         source_path: str | None,
+        source_file: str | None,
+        source_file_duration_beats: float | None,
         target_track: int | None,
         grid: float | None,
         slice_count: int | None,
+        slice_ranges: list[dict[str, float]] | None,
         start_pad: int,
         create_trigger_clip: bool,
         trigger_clip_slot: int | None,
     ) -> dict[str, Any]:
-        if source_track is not None or source_clip is not None:
+        has_session_source = source_track is not None or source_clip is not None
+        has_browser_source = source_uri is not None or source_path is not None
+        has_file_source = source_file is not None
+        source_selector_count = (
+            int(has_session_source) + int(has_browser_source) + int(has_file_source)
+        )
+        if source_selector_count > 1:
+            raise _invalid_argument(
+                message="session, browser, and file sources are mutually exclusive",
+                hint="Use exactly one source selector.",
+            )
+        if source_selector_count == 0:
+            raise _invalid_argument(
+                message="Either session, browser, or file source must be provided",
+                hint="Use source_track/source_clip, source_uri/source_path, or source_file.",
+            )
+        if source_file_duration_beats is not None and not has_file_source:
+            raise _invalid_argument(
+                message="source_file_duration_beats requires source_file",
+                hint="Use source_file when passing source_file_duration_beats.",
+            )
+
+        if has_session_source:
             if source_track is None or source_clip is None:
                 raise _invalid_argument(
                     message="source_track and source_clip must be provided together",
@@ -418,20 +553,35 @@ class LiveBackendTracksCutToDrumRackMixin:
                 source_track=source_track,
                 source_clip=source_clip,
             )
-        else:
+        elif has_browser_source:
             source_info = self._resolve_browser_audio_source(
                 source_uri=source_uri,
                 source_path=source_path,
             )
+        else:
+            if source_file_duration_beats is None:
+                raise _invalid_argument(
+                    message="source_file_duration_beats is required with source_file",
+                    hint="Pass the source file duration in beats.",
+                )
+            assert source_file is not None
+            source_info = self._resolve_file_audio_source(
+                source_file=source_file,
+                source_file_duration_beats=source_file_duration_beats,
+            )
 
         range_start = float(source_info["range_start"])
         range_end = float(source_info["range_end"])
-        slice_ranges = self._resolve_cut_slice_ranges(
+        resolved_slice_ranges = self._resolve_cut_slice_ranges(
             range_start=range_start,
             range_end=range_end,
             grid=grid,
             slice_count=slice_count,
+            slice_ranges=slice_ranges,
         )
+        if slice_ranges is not None:
+            range_start = resolved_slice_ranges[0][0]
+            range_end = resolved_slice_ranges[-1][1]
         resolved_target_track, track_obj, created_target_track = self._resolve_target_track_for_cut(
             target_track=target_track,
         )
@@ -442,7 +592,7 @@ class LiveBackendTracksCutToDrumRackMixin:
         assignments = self._assign_cut_slices_to_drum_rack(
             drum_rack=drum_rack,
             source_ref=str(source_info["source_ref"]),
-            slice_ranges=slice_ranges,
+            slice_ranges=resolved_slice_ranges,
             start_pad=start_pad,
         )
 
@@ -461,6 +611,7 @@ class LiveBackendTracksCutToDrumRackMixin:
                 target_track=resolved_target_track,
                 trigger_clip_slot=trigger_clip_slot,
                 assignments=assignments,
+                range_start=range_start,
                 source_length=max(range_end - range_start, 0.000001),
             )
 
@@ -470,6 +621,8 @@ class LiveBackendTracksCutToDrumRackMixin:
             "source_clip": source_info["source_clip"],
             "source_uri": source_info["source_uri"],
             "source_path": source_info["source_path"],
+            "source_file": source_info["source_file"],
+            "source_file_duration_beats": source_info["source_file_duration_beats"],
             "source_ref": source_info["source_ref"],
             "range_start": range_start,
             "range_end": range_end,
@@ -478,7 +631,7 @@ class LiveBackendTracksCutToDrumRackMixin:
             "drum_rack_device": drum_rack_index,
             "created_drum_rack": created_drum_rack,
             "grid": grid,
-            "slice_count": len(slice_ranges),
+            "slice_count": len(resolved_slice_ranges),
             "start_pad": start_pad,
             "assigned_count": len(assignments),
             "assignments": assignments,

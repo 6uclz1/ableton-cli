@@ -12,6 +12,12 @@ def _load_ci_workflow() -> dict[str, object]:
     return yaml.safe_load(CI_WORKFLOW_PATH.read_text(encoding="utf-8"))
 
 
+def test_ci_workflow_limits_default_token_permissions() -> None:
+    workflow = _load_ci_workflow()
+
+    assert workflow["permissions"] == {"contents": "read"}
+
+
 def test_ci_workflow_configures_dev_checks_reports() -> None:
     workflow = _load_ci_workflow()
     jobs = workflow["jobs"]

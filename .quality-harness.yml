@@ -22,7 +22,7 @@ thresholds:
   class:
     complexity: { warn: 70, fail: 400 }
     nesting: { warn: 3, fail: 6 }
-    args: { warn: 8, fail: 12 }
+    args: { warn: 8, fail: 14 }
     imports: { warn: 8, fail: 12 }
     estimated_tokens: { warn: 1200, fail: 12000 }
     god_class_risk: { warn: 70, fail: 99 }

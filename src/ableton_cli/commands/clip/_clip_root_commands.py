@@ -322,8 +322,13 @@ def clip_cut_to_drum_rack(
                     message="--transient is mutually exclusive with --grid/--slice-count",
                     hint="Transient slicing derives slice ranges from detected onsets.",
                 )
+            valid_max_slices = _validate_transient_max_slices(max_slices)
             valid_bpm = _resolve_transient_bpm(client, bpm)
-            analysis = analyze_transients(source_file, bpm=valid_bpm, max_slices=max_slices)
+            analysis = analyze_transients(
+                source_file,
+                bpm=valid_bpm,
+                max_slices=valid_max_slices,
+            )
             source_file_path = str(analysis["path"])
             slice_ranges = [
                 {
@@ -436,3 +441,12 @@ def _validate_transient_bpm(value: float) -> float:
             hint="Use a realistic tempo between 20.0 and 999.0 BPM.",
         )
     return float(value)
+
+
+def _validate_transient_max_slices(value: int) -> int:
+    if value <= 0:
+        raise invalid_argument(
+            message=f"max_slices must be > 0, got {value}",
+            hint="Use a positive --max-slices value.",
+        )
+    return value

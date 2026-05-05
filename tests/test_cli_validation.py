@@ -785,6 +785,8 @@ def test_clip_cut_to_drum_rack_rejects_invalid_transient_options(
     assert bad_max_slices.exit_code == 2
     assert bad_bpm.exit_code == 2
     assert bad_path.exit_code == 2
+    assert json.loads(bad_max_slices.stdout)["error"]["code"] == "INVALID_ARGUMENT"
+    assert json.loads(bad_bpm.stdout)["error"]["code"] == "INVALID_ARGUMENT"
     assert json.loads(bad_path.stdout)["error"]["code"] == "INVALID_ARGUMENT"
 
 

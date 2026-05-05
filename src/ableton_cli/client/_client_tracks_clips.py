@@ -468,17 +468,34 @@ class _AbletonClientTracksClipsMixin:
         self,
         track: int,
         clip: int,
-        sample_time: float,
         beat_time: float,
+        sample_time: float | None = None,
+    ) -> dict[str, Any]:
+        args: dict[str, Any] = {"track": track, "clip": clip, "beat_time": beat_time}
+        self._add_if_not_none(args, "sample_time", sample_time)
+        return self._call("clip_warp_marker_add", args)
+
+    def clip_warp_marker_move(
+        self,
+        track: int,
+        clip: int,
+        beat_time: float,
+        distance: float,
     ) -> dict[str, Any]:
         return self._call(
-            "clip_warp_marker_add",
+            "clip_warp_marker_move",
             {
                 "track": track,
                 "clip": clip,
-                "sample_time": sample_time,
                 "beat_time": beat_time,
+                "distance": distance,
             },
+        )
+
+    def clip_warp_marker_remove(self, track: int, clip: int, beat_time: float) -> dict[str, Any]:
+        return self._call(
+            "clip_warp_marker_remove",
+            {"track": track, "clip": clip, "beat_time": beat_time},
         )
 
     def clip_gain_set(self, track: int, clip: int, db: float) -> dict[str, Any]:
@@ -521,6 +538,9 @@ class _AbletonClientTracksClipsMixin:
         start_pad: int,
         create_trigger_clip: bool,
         trigger_clip_slot: int | None,
+        source_file: str | None = None,
+        source_file_duration_beats: float | None = None,
+        slice_ranges: list[dict[str, float]] | None = None,
     ) -> dict[str, Any]:
         args: dict[str, Any] = {
             "start_pad": start_pad,
@@ -530,9 +550,12 @@ class _AbletonClientTracksClipsMixin:
         self._add_if_not_none(args, "source_clip", source_clip)
         self._add_if_not_none(args, "source_uri", source_uri)
         self._add_if_not_none(args, "source_path", source_path)
+        self._add_if_not_none(args, "source_file", source_file)
+        self._add_if_not_none(args, "source_file_duration_beats", source_file_duration_beats)
         self._add_if_not_none(args, "target_track", target_track)
         self._add_if_not_none(args, "grid", grid)
         self._add_if_not_none(args, "slice_count", slice_count)
+        self._add_if_not_none(args, "slice_ranges", slice_ranges)
         self._add_if_not_none(args, "trigger_clip_slot", trigger_clip_slot)
         return self._call("clip_cut_to_drum_rack", args)
 

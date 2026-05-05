@@ -119,9 +119,11 @@ Stable action names and CLI mappings for automation wrappers.
 - `uv run ableton-cli clip groove set <track> <clip> <target>`: Assign a `.agr` groove by browser path or URI.
 - `uv run ableton-cli clip groove amount set <track> <clip> <0.0-1.0>`: Set groove amount on a clip.
 - `uv run ableton-cli clip groove clear <track> <clip>`: Clear groove assignment from a clip.
-- `uv run ableton-cli clip cut-to-drum-rack (--source-track <track> --source-clip <clip> | --source <uri-or-path>) (--grid <fraction-or-beats> | --slice-count <n>) [--target-track <track>] [--start-pad <pad>] [--create-trigger-clip --trigger-clip-slot <clip>]`: Slice audio source and map slices into Drum Rack pads.
+- `uv run ableton-cli clip cut-to-drum-rack (--source-track <track> --source-clip <clip> | --source <uri-or-path>) (--grid <fraction-or-beats> | --slice-count <n>) [--target-track <track>] [--start-pad <pad>] [--create-trigger-clip --trigger-clip-slot <clip>]`: Slice session/browser audio source and map slices into Drum Rack pads.
+- `uv run ableton-cli clip cut-to-drum-rack --source-file <path> --transient [--bpm <bpm>] [--max-slices <n>] [--target-track <track>] [--start-pad <pad>] [--create-trigger-clip --trigger-clip-slot <clip>]`: Analyze a local PCM WAV file, slice detected transients, and map slices into Drum Rack pads.
 - `uv run ableton-cli remix init --source <abs-wav> --project <dir-or-json>`: Create a remix manifest.
 - `uv run ableton-cli audio asset add --project <remix_project.json> --role <role> --path <abs-audio>`: Register a remix asset.
+- `uv run ableton-cli audio transient analyze --path <audio-file> --bpm <bpm> [--max-slices <n>]`: Detect transient slice points for audio-to-Drum-Rack workflows.
 - `uv run ableton-cli audio sections import --project <remix_project.json> --sections "intro:1-8,chorus:33-48"`: Import a manual section map.
 - `uv run ableton-cli remix plan --project <remix_project.json> --style anime-club`: Generate an arrangement plan in the manifest.
 - `uv run ableton-cli remix apply --project <remix_project.json> --dry-run`: Print planned batch steps without writing to Live.

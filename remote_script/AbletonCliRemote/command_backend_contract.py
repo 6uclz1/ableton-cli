@@ -344,7 +344,22 @@ class _TracksClipsBackend(Protocol):
         self,
         track: int,
         clip: int,
-        sample_time: float,
+        beat_time: float,
+        sample_time: float | None,
+    ) -> dict[str, Any]: ...
+
+    def clip_warp_marker_move(
+        self,
+        track: int,
+        clip: int,
+        beat_time: float,
+        distance: float,
+    ) -> dict[str, Any]: ...
+
+    def clip_warp_marker_remove(
+        self,
+        track: int,
+        clip: int,
         beat_time: float,
     ) -> dict[str, Any]: ...
 
@@ -368,9 +383,12 @@ class _TracksClipsBackend(Protocol):
         source_clip: int | None,
         source_uri: str | None,
         source_path: str | None,
+        source_file: str | None,
+        source_file_duration_beats: float | None,
         target_track: int | None,
         grid: float | None,
         slice_count: int | None,
+        slice_ranges: list[dict[str, float]] | None,
         start_pad: int,
         create_trigger_clip: bool,
         trigger_clip_slot: int | None,

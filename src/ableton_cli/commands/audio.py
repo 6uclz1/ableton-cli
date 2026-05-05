@@ -10,7 +10,12 @@ from ..remix.assets import add_asset, list_assets, remove_asset
 from ..remix.manifest import resolve_manifest_path
 from ..remix.stems import list_stems, split_stems
 from ..runtime import execute_command
-from . import _audio_loudness_commands, _audio_reference_commands, _audio_spectrum_commands
+from . import (
+    _audio_loudness_commands,
+    _audio_reference_commands,
+    _audio_spectrum_commands,
+    _audio_transient_commands,
+)
 
 audio_app = typer.Typer(help="Audio asset and analysis commands", no_args_is_help=True)
 asset_app = typer.Typer(help="Audio asset registry commands", no_args_is_help=True)
@@ -20,6 +25,7 @@ stems_app = typer.Typer(help="Audio stem commands", no_args_is_help=True)
 loudness_app = typer.Typer(help="Offline loudness analysis commands", no_args_is_help=True)
 spectrum_app = typer.Typer(help="Offline spectrum analysis commands", no_args_is_help=True)
 reference_app = typer.Typer(help="Reference comparison commands", no_args_is_help=True)
+transient_app = typer.Typer(help="Offline transient analysis commands", no_args_is_help=True)
 
 
 @asset_app.command("add")
@@ -173,9 +179,11 @@ audio_app.add_typer(stems_app, name="stems")
 _audio_loudness_commands.register(loudness_app)
 _audio_spectrum_commands.register(spectrum_app)
 _audio_reference_commands.register(reference_app)
+_audio_transient_commands.register(transient_app)
 audio_app.add_typer(loudness_app, name="loudness")
 audio_app.add_typer(spectrum_app, name="spectrum")
 audio_app.add_typer(reference_app, name="reference")
+audio_app.add_typer(transient_app, name="transient")
 
 
 def register(app: typer.Typer) -> None:

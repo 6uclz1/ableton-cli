@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+from typing import Annotated
+
 import typer
 
 from ...runtime import execute_command
 from ...runtime import get_client as _runtime_get_client
+from ...warp_conform import conform_session_clip_warp
 from .._client_command_runner import run_client_command_spec as run_client_command_spec_shared
 from ._active_commands import register_active_commands
 from ._clip_root_commands import register_clip_root_commands
@@ -57,6 +60,54 @@ register_prop_commands(
     file_app=file_app,
     run_client_command_spec=run_client_command_spec,
 )
+
+
+@warp_app.command("conform")
+def clip_warp_conform(
+    ctx: typer.Context,
+    track: Annotated[int, typer.Argument(help="Track index")],
+    clip: Annotated[int, typer.Argument(help="Clip slot index")],
+    source_bpm: Annotated[float, typer.Option("--source-bpm", help="Source BPM")],
+    target_bpm: Annotated[float, typer.Option("--target-bpm", help="Target BPM")],
+    profile: Annotated[str, typer.Option("--profile", help="Warp profile")] = "full-mix",
+    markers: Annotated[str, typer.Option("--markers", help="Marker strategy")] = "two-point",
+    verify: Annotated[
+        bool, typer.Option("--verify", help="Verify readback after conforming")
+    ] = False,
+    force_large_stretch: Annotated[
+        bool,
+        typer.Option(
+            "--force-large-stretch",
+            help="Allow stretch ratios below 0.80 or above 1.25",
+        ),
+    ] = False,
+) -> None:
+    execute_command(
+        ctx,
+        command="clip warp conform",
+        args={
+            "track": track,
+            "clip": clip,
+            "source_bpm": source_bpm,
+            "target_bpm": target_bpm,
+            "profile": profile,
+            "markers": markers,
+            "verify": verify,
+            "force_large_stretch": force_large_stretch,
+        },
+        action=lambda: conform_session_clip_warp(
+            get_client(ctx),
+            track=track,
+            clip=clip,
+            source_bpm=source_bpm,
+            target_bpm=target_bpm,
+            profile=profile,
+            markers=markers,
+            verify=verify,
+            force_large_stretch=force_large_stretch,
+        ),
+    )
+
 
 clip_app.add_typer(notes_app, name="notes")
 clip_app.add_typer(name_app, name="name")

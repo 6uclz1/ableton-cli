@@ -69,6 +69,7 @@ uv run ableton-cli master device load query:Audio\ Effects#Utility --position en
 uv run ableton-cli master device parameter set --device-index 0 --parameter-key gain -- -1.5
 uv run ableton-cli audio loudness analyze --path ./renders/remix.wav --engine ffmpeg
 uv run ableton-cli audio spectrum analyze --path ./renders/remix.wav --profile anime-club
+uv run ableton-cli audio transient analyze --path ./loops/drum-break.wav --bpm 174 --max-slices 16
 uv run ableton-cli remix mastering target set --project ./proj/remix_project.json --profile anime-club-demo
 uv run ableton-cli remix mastering analyze --project ./proj/remix_project.json --render ./renders/remix.wav
 uv run ableton-cli remix mastering plan --project ./proj/remix_project.json
@@ -78,6 +79,7 @@ uv run ableton-cli mixer crossfader set -- -0.2
 uv run ableton-cli mixer cue-routing get
 uv run ableton-cli clip create 0 0 --length 4
 uv run ableton-cli clip notes add 0 0 --notes-json '[{"pitch":60,"start_time":0.0,"duration":0.5,"velocity":100,"mute":false}]'
+uv run ableton-cli clip cut-to-drum-rack --source-file ./loops/drum-break.wav --transient --bpm 174 --max-slices 16 --create-trigger-clip --trigger-clip-slot 1
 uv run ableton-cli clip cut-to-drum-rack --source-track 1 --source-clip 0 --slice-count 8 --create-trigger-clip --trigger-clip-slot 1
 uv run ableton-cli arrangement clip create 0 --start 8 --length 4 --notes-json '[{"pitch":60,"start_time":0.0,"duration":0.5,"velocity":100,"mute":false}]'
 uv run ableton-cli arrangement clip notes get 0 0 --start-time 0.0 --end-time 4.0 --pitch 60

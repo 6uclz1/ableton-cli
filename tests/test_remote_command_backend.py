@@ -244,9 +244,12 @@ class _BackendStub:
         source_clip: int | None,
         source_uri: str | None,
         source_path: str | None,
+        source_file: str | None,
+        source_file_duration_beats: float | None,
         target_track: int | None,
         grid: float | None,
         slice_count: int | None,
+        slice_ranges: list[dict[str, float]] | None,
         start_pad: int,
         create_trigger_clip: bool,
         trigger_clip_slot: int | None,
@@ -256,9 +259,12 @@ class _BackendStub:
             "source_clip": source_clip,
             "source_uri": source_uri,
             "source_path": source_path,
+            "source_file": source_file,
+            "source_file_duration_beats": source_file_duration_beats,
             "target_track": target_track,
             "grid": grid,
             "slice_count": slice_count,
+            "slice_ranges": slice_ranges,
             "start_pad": start_pad,
             "create_trigger_clip": create_trigger_clip,
             "trigger_clip_slot": trigger_clip_slot,
@@ -1429,9 +1435,53 @@ def test_dispatch_calls_backend_for_clip_cut_to_drum_rack() -> None:
         "source_clip": 1,
         "source_uri": None,
         "source_path": None,
+        "source_file": None,
+        "source_file_duration_beats": None,
         "target_track": 2,
         "grid": 0.25,
         "slice_count": None,
+        "slice_ranges": None,
+        "start_pad": 4,
+        "create_trigger_clip": True,
+        "trigger_clip_slot": 3,
+        "loaded": True,
+    }
+
+
+def test_dispatch_calls_backend_for_clip_cut_to_drum_rack_file_slice_ranges() -> None:
+    backend = _BackendStub()
+
+    result = dispatch_command(
+        backend,
+        "clip_cut_to_drum_rack",
+        {
+            "source_file": "/tmp/source.wav",
+            "source_file_duration_beats": 8.0,
+            "target_track": 2,
+            "slice_ranges": [
+                {"slice_start": 0.0, "slice_end": 1.5},
+                {"slice_start": 2.0, "slice_end": 4.0},
+            ],
+            "start_pad": 4,
+            "create_trigger_clip": True,
+            "trigger_clip_slot": 3,
+        },
+    )
+
+    assert result == {
+        "source_track": None,
+        "source_clip": None,
+        "source_uri": None,
+        "source_path": None,
+        "source_file": "/tmp/source.wav",
+        "source_file_duration_beats": 8.0,
+        "target_track": 2,
+        "grid": None,
+        "slice_count": None,
+        "slice_ranges": [
+            {"slice_start": 0.0, "slice_end": 1.5},
+            {"slice_start": 2.0, "slice_end": 4.0},
+        ],
         "start_pad": 4,
         "create_trigger_clip": True,
         "trigger_clip_slot": 3,
@@ -2332,6 +2382,114 @@ def test_dispatch_rejects_clip_cut_to_drum_rack_ambiguous_source() -> None:
                 "source_clip": 1,
                 "source_path": "sounds/Bass Loop.wav",
                 "slice_count": 8,
+            },
+        )
+
+    assert exc_info.value.code == "INVALID_ARGUMENT"
+
+
+def test_dispatch_rejects_clip_cut_to_drum_rack_file_mixed_with_other_source() -> None:
+    backend = _BackendStub()
+    with pytest.raises(CommandError) as exc_info:
+        dispatch_command(
+            backend,
+            "clip_cut_to_drum_rack",
+            {
+                "source_track": 0,
+                "source_clip": 1,
+                "source_file": "/tmp/source.wav",
+                "source_file_duration_beats": 8.0,
+                "slice_count": 8,
+            },
+        )
+
+    assert exc_info.value.code == "INVALID_ARGUMENT"
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {
+            "source_file": "/tmp/source.wav",
+            "source_file_duration_beats": 8.0,
+            "grid": "1/16",
+            "slice_ranges": [{"slice_start": 0.0, "slice_end": 1.0}],
+        },
+        {
+            "source_file": "/tmp/source.wav",
+            "source_file_duration_beats": 8.0,
+            "slice_count": 8,
+            "slice_ranges": [{"slice_start": 0.0, "slice_end": 1.0}],
+        },
+        {
+            "source_file": "/tmp/source.wav",
+            "source_file_duration_beats": 8.0,
+        },
+    ],
+)
+def test_dispatch_rejects_clip_cut_to_drum_rack_invalid_slice_selector(
+    payload: dict[str, object],
+) -> None:
+    backend = _BackendStub()
+    with pytest.raises(CommandError) as exc_info:
+        dispatch_command(backend, "clip_cut_to_drum_rack", payload)
+
+    assert exc_info.value.code == "INVALID_ARGUMENT"
+
+
+@pytest.mark.parametrize(
+    "slice_ranges",
+    [
+        {"slice_start": 0.0, "slice_end": 1.0},
+        [],
+        [1],
+        [{"slice_start": 1.0, "slice_end": 1.0}],
+        [{"slice_start": -0.1, "slice_end": 1.0}],
+        [{"slice_start": 2.0, "slice_end": 3.0}, {"slice_start": 1.0, "slice_end": 1.5}],
+        [{"slice_start": 0.0, "slice_end": 2.0}, {"slice_start": 1.5, "slice_end": 3.0}],
+        [{"slice_start": 0.0, "slice_end": 8.001}],
+        [{"slice_start": 0.0, "slice_end": "x"}],
+    ],
+)
+def test_dispatch_rejects_clip_cut_to_drum_rack_invalid_slice_ranges(
+    slice_ranges: object,
+) -> None:
+    backend = _BackendStub()
+    with pytest.raises(CommandError) as exc_info:
+        dispatch_command(
+            backend,
+            "clip_cut_to_drum_rack",
+            {
+                "source_file": "/tmp/source.wav",
+                "source_file_duration_beats": 8.0,
+                "slice_ranges": slice_ranges,
+            },
+        )
+
+    assert exc_info.value.code == "INVALID_ARGUMENT"
+
+
+@pytest.mark.parametrize(
+    ("start_pad", "slice_ranges"),
+    [
+        (127, [{"slice_start": 0.0, "slice_end": 1.0}, {"slice_start": 1.0, "slice_end": 2.0}]),
+        (92, [{"slice_start": 0.0, "slice_end": 1.0}]),
+    ],
+)
+def test_dispatch_rejects_clip_cut_to_drum_rack_slice_ranges_pad_and_pitch_overflow(
+    start_pad: int,
+    slice_ranges: list[dict[str, float]],
+) -> None:
+    backend = _BackendStub()
+    with pytest.raises(CommandError) as exc_info:
+        dispatch_command(
+            backend,
+            "clip_cut_to_drum_rack",
+            {
+                "source_file": "/tmp/source.wav",
+                "source_file_duration_beats": 8.0,
+                "slice_ranges": slice_ranges,
+                "start_pad": start_pad,
             },
         )
 

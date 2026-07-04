@@ -158,22 +158,29 @@ class _CommandTCPServer(socketserver.ThreadingTCPServer):
 
 class _Handler(socketserver.StreamRequestHandler):
     def handle(self) -> None:
-        raw = self.rfile.readline()
-        if not raw:
-            return
+        while True:
+            raw = self.rfile.readline()
+            if not raw:
+                return
 
+            keep_open, response = self._handle_line(raw)
+            self._write_response(response)
+            if not keep_open:
+                return
+
+    def _handle_line(self, raw: bytes) -> tuple[bool, dict[str, Any]]:
         try:
             payload = json.loads(raw.decode("utf-8"))
         except (UnicodeDecodeError, json.JSONDecodeError):
-            self._write_response(
-                _error(
-                    request_id="unknown",
-                    code=RemoteErrorCode.INVALID_ARGUMENT.value,
-                    message="Request line is not valid JSON",
-                    hint="Send one JSON object per line.",
-                )
+            # The line could not be decoded, so framing may be corrupt for
+            # the rest of the stream; close the connection rather than keep
+            # reading lines that may no longer align to request boundaries.
+            return False, _error(
+                request_id="unknown",
+                code=RemoteErrorCode.INVALID_ARGUMENT.value,
+                message="Request line is not valid JSON",
+                hint="Send one JSON object per line.",
             )
-            return
 
         request_id = _request_id_from_payload(payload)
 
@@ -202,7 +209,7 @@ class _Handler(socketserver.StreamRequestHandler):
                 hint="Check Remote Script logs.",
             )
 
-        self._write_response(response)
+        return True, response
 
     def _write_response(self, payload: dict[str, Any]) -> None:
         self.wfile.write((json.dumps(payload) + "\n").encode("utf-8"))

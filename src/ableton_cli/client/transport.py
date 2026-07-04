@@ -11,23 +11,23 @@ from ..errors import AppError, ErrorCode, ExitCode
 class JsonTransport(Protocol):
     def send(self, payload: dict[str, Any]) -> dict[str, Any]: ...
 
+    def close(self) -> None: ...
+
 
 class TcpJsonlTransport:
     def __init__(self, host: str, port: int, timeout_ms: int) -> None:
         self.host = host
         self.port = port
         self.timeout_s = timeout_ms / 1000
+        self._sock: socket.socket | None = None
+        self._file: Any | None = None
 
-    def send(self, payload: dict[str, Any]) -> dict[str, Any]:
-        serialized = json.dumps(payload, separators=(",", ":")) + "\n"
+    def _ensure_connection(self) -> None:
+        if self._sock is not None:
+            return
 
         try:
-            with socket.create_connection((self.host, self.port), timeout=self.timeout_s) as sock:
-                sock.settimeout(self.timeout_s)
-                with sock.makefile("rwb") as file_obj:
-                    file_obj.write(serialized.encode("utf-8"))
-                    file_obj.flush()
-                    raw = file_obj.readline()
+            sock = socket.create_connection((self.host, self.port), timeout=self.timeout_s)
         except TimeoutError as exc:
             raise AppError(
                 error_code=ErrorCode.TIMEOUT,
@@ -50,7 +50,53 @@ class TcpJsonlTransport:
                 exit_code=ExitCode.ABLETON_NOT_CONNECTED,
             ) from exc
 
+        sock.settimeout(self.timeout_s)
+        self._sock = sock
+        self._file = sock.makefile("rwb")
+
+    def close(self) -> None:
+        if self._file is not None:
+            try:
+                self._file.close()
+            finally:
+                self._file = None
+        if self._sock is not None:
+            try:
+                self._sock.close()
+            finally:
+                self._sock = None
+
+    def send(self, payload: dict[str, Any]) -> dict[str, Any]:
+        serialized = json.dumps(payload, separators=(",", ":")) + "\n"
+
+        self._ensure_connection()
+        file_obj = self._file
+        if file_obj is None:
+            raise RuntimeError("Transport connection was not established")
+
+        try:
+            file_obj.write(serialized.encode("utf-8"))
+            file_obj.flush()
+            raw = file_obj.readline()
+        except TimeoutError as exc:
+            self.close()
+            raise AppError(
+                error_code=ErrorCode.TIMEOUT,
+                message=f"Timed out while communicating with {self.host}:{self.port}",
+                hint="Increase --timeout-ms or verify Ableton Remote Script responsiveness.",
+                exit_code=ExitCode.TIMEOUT,
+            ) from exc
+        except OSError as exc:
+            self.close()
+            raise AppError(
+                error_code=ErrorCode.ABLETON_NOT_REACHABLE,
+                message=f"Network error while communicating with {self.host}:{self.port}",
+                hint="Check host/port and confirm the Remote Script is running.",
+                exit_code=ExitCode.ABLETON_NOT_CONNECTED,
+            ) from exc
+
         if not raw:
+            self.close()
             raise AppError(
                 error_code=ErrorCode.PROTOCOL_CONNECTION_CLOSED,
                 message="Remote endpoint closed connection without response",
@@ -83,6 +129,9 @@ class RecordingTransport:
     def __init__(self, *, inner: JsonTransport, path: str) -> None:
         self.inner = inner
         self.path = Path(path)
+
+    def close(self) -> None:
+        self.inner.close()
 
     def _append_entry(self, payload: dict[str, Any]) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)
@@ -160,6 +209,9 @@ class ReplayTransport:
                 )
             key = self._request_key(request)
             self._entries_by_key.setdefault(key, []).append(entry)
+
+    def close(self) -> None:
+        return None
 
     @staticmethod
     def _request_key(request: dict[str, Any]) -> str:

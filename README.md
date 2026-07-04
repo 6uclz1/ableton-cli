@@ -207,6 +207,12 @@ Installer/config commands also support command-local forms:
 
 `ableton-cli` uses local TCP JSONL communication on `127.0.0.1:<port>`.
 
+The connection can be persistent: one line is one request, and a client may
+send multiple requests over the same connection. Responses are returned in
+request order. A malformed request line closes the connection; well-formed
+requests that fail validation or execution return a structured error and
+keep the connection open.
+
 ## Security Model
 
 - The Remote Script listens on 127.0.0.1 only (local loopback).

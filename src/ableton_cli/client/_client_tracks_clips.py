@@ -247,6 +247,22 @@ class _AbletonClientTracksClipsMixin:
         )
         return self._call("add_notes_to_clip", args)
 
+    def update_clip_notes(
+        self,
+        track: int,
+        clip: int,
+        notes: list[dict[str, Any]],
+    ) -> dict[str, Any]:
+        args = self._build_clip_note_args(
+            track=track,
+            clip=clip,
+            notes=notes,
+            start_time=None,
+            end_time=None,
+            pitch=None,
+        )
+        return self._call("update_clip_notes", args)
+
     def get_clip_notes(
         self,
         track: int,

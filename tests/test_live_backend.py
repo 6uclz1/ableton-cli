@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import threading
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from gzip import compress as gzip_compress
 from pathlib import Path
 from typing import Any
@@ -11,6 +11,9 @@ import pytest
 
 from remote_script.AbletonCliRemote.command_backend import CommandError
 from remote_script.AbletonCliRemote.live_backend import LiveBackend
+from remote_script.AbletonCliRemote.live_backend_parts import (
+    clip_notes as clip_notes_module,
+)
 from remote_script.AbletonCliRemote.live_backend_parts import (
     song_transport as song_transport_module,
 )
@@ -78,20 +81,30 @@ class _MidiNote:
     duration: float
     velocity: int
     mute: bool
+    probability: float = 1.0
+    velocity_deviation: float = 0.0
+    release_velocity: int = 64
 
 
 @dataclass(slots=True)
-class _ArrangementClip:
-    name: str
+class _FakeNoteSpec:
+    """Stands in for ``Live.Clip.MidiNoteSpecification`` in tests."""
+
+    pitch: int
     start_time: float
-    length: float
-    is_audio_clip: bool
-    is_midi_clip: bool
-    file_path: str | None = None
-    groove: str | None = None
-    groove_amount: float = 0.5
-    _notes: list[_MidiNote] = field(default_factory=list)
-    _next_note_id: int = 1
+    duration: float
+    velocity: int
+    mute: bool = False
+    probability: float = 1.0
+    velocity_deviation: float = 0.0
+    release_velocity: int = 64
+
+
+class _ExtendedNoteMixin:
+    """Shared Live 11+ note-API fake behavior for session/arrangement clips."""
+
+    _notes: list[_MidiNote]
+    _next_note_id: int
 
     def set_notes(self, notes: tuple[tuple[int, float, float, int, bool], ...]) -> None:
         for pitch, start_time, duration, velocity, mute in notes:
@@ -106,6 +119,41 @@ class _ArrangementClip:
                 )
             )
             self._next_note_id += 1
+
+    def add_new_notes(self, specs: tuple[Any, ...]) -> None:
+        for spec in specs:
+            self._notes.append(
+                _MidiNote(
+                    note_id=self._next_note_id,
+                    pitch=int(spec.pitch),
+                    start_time=float(spec.start_time),
+                    duration=float(spec.duration),
+                    velocity=int(spec.velocity),
+                    mute=bool(spec.mute),
+                    probability=float(spec.probability),
+                    velocity_deviation=float(spec.velocity_deviation),
+                    release_velocity=int(spec.release_velocity),
+                )
+            )
+            self._next_note_id += 1
+
+    def apply_note_modifications(self, notes: tuple[Any, ...]) -> None:
+        by_id = {note.note_id: index for index, note in enumerate(self._notes)}
+        for updated in notes:
+            index = by_id.get(int(updated.note_id))
+            if index is None:
+                continue
+            self._notes[index] = _MidiNote(
+                note_id=int(updated.note_id),
+                pitch=int(updated.pitch),
+                start_time=float(updated.start_time),
+                duration=float(updated.duration),
+                velocity=int(updated.velocity),
+                mute=bool(updated.mute),
+                probability=float(updated.probability),
+                velocity_deviation=float(updated.velocity_deviation),
+                release_velocity=int(updated.release_velocity),
+            )
 
     def get_notes_extended(
         self,
@@ -126,7 +174,10 @@ class _ArrangementClip:
                 continue
             if to_time is not None and start_time >= to_time:
                 continue
-            notes.append(note)
+            # Return a copy: real Live note objects are only committed back
+            # to the clip via apply_note_modifications, not by mutating the
+            # objects returned from get_notes_extended in place.
+            notes.append(replace(note))
         return notes
 
     def remove_notes_by_id(self, note_ids: list[int]) -> None:
@@ -134,7 +185,21 @@ class _ArrangementClip:
         self._notes = [note for note in self._notes if int(note.note_id) not in remove_set]
 
 
-class _Clip:
+@dataclass(slots=True)
+class _ArrangementClip(_ExtendedNoteMixin):
+    name: str
+    start_time: float
+    length: float
+    is_audio_clip: bool
+    is_midi_clip: bool
+    file_path: str | None = None
+    groove: str | None = None
+    groove_amount: float = 0.5
+    _notes: list[_MidiNote] = field(default_factory=list)
+    _next_note_id: int = 1
+
+
+class _Clip(_ExtendedNoteMixin):
     def __init__(
         self,
         length: float,
@@ -173,47 +238,6 @@ class _Clip:
             )
             for note in self._notes
         )
-
-    def set_notes(self, notes: tuple[tuple[int, float, float, int, bool], ...]) -> None:
-        for note in notes:
-            pitch, start_time, duration, velocity, mute = note
-            self._notes.append(
-                _MidiNote(
-                    note_id=self._next_note_id,
-                    pitch=int(pitch),
-                    start_time=float(start_time),
-                    duration=float(duration),
-                    velocity=int(velocity),
-                    mute=bool(mute),
-                )
-            )
-            self._next_note_id += 1
-
-    def get_notes_extended(
-        self,
-        from_pitch: int = 0,
-        pitch_span: int = 128,
-        from_time: float = 0.0,
-        time_span: float | None = None,
-    ) -> list[_MidiNote]:
-        to_pitch = from_pitch + pitch_span
-        to_time = None if time_span is None else from_time + time_span
-        payload: list[_MidiNote] = []
-        for note in self._notes:
-            pitch = int(note.pitch)
-            start_time = float(note.start_time)
-            if pitch < from_pitch or pitch >= to_pitch:
-                continue
-            if start_time < from_time:
-                continue
-            if to_time is not None and start_time >= to_time:
-                continue
-            payload.append(note)
-        return payload
-
-    def remove_notes_by_id(self, note_ids: list[int]) -> None:
-        remove_set = {int(value) for value in note_ids}
-        self._notes = [note for note in self._notes if int(note.note_id) not in remove_set]
 
 
 class _ClipSlot:
@@ -847,6 +871,23 @@ class _ProxyIdentityDeleteGuardSurfaceStub(_SurfaceStub):
     def __init__(self) -> None:
         self._song_obj = _ProxyIdentityDeleteGuardSong()
         self._app = _Application(self._song_obj)
+
+
+@pytest.fixture(autouse=True)
+def _fake_note_spec_factory(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Live is not importable outside Ableton; inject a fake note spec factory.
+
+    ``_note_specification`` falls back to ``midi_note_specification_class()``
+    when a backend has no ``_note_spec_factory`` set. Patching the name here
+    (rather than setting an attribute on every backend instance) keeps every
+    test in this module working with the extended note API without having to
+    touch each of the many ``LiveBackend(...)`` construction sites.
+    """
+    monkeypatch.setattr(
+        clip_notes_module,
+        "midi_note_specification_class",
+        lambda: _FakeNoteSpec,
+    )
 
 
 def _append_imported_source_track(song: Any, *, pitch: int, length: float = 2.0) -> None:
@@ -2746,18 +2787,26 @@ def test_live_backend_clip_cut_to_drum_rack_uses_file_slice_ranges_for_slices_an
     )
     assert trigger_notes["notes"] == [
         {
+            "note_id": 1,
             "duration": 1.25,
             "mute": False,
             "pitch": 38,
             "start_time": 0.0,
             "velocity": 100,
+            "probability": 1.0,
+            "velocity_deviation": 0.0,
+            "release_velocity": 64,
         },
         {
+            "note_id": 2,
             "duration": 2.0,
             "mute": False,
             "pitch": 39,
             "start_time": 2.0,
             "velocity": 100,
+            "probability": 1.0,
+            "velocity_deviation": 0.0,
+            "release_velocity": 64,
         },
     ]
 
@@ -2901,6 +2950,154 @@ def test_live_backend_clip_duplicate_many() -> None:
     duplicated_notes_2 = backend.get_clip_notes(0, 2, None, None, None)
     assert duplicated_notes_1["note_count"] == 1
     assert duplicated_notes_2["note_count"] == 1
+
+
+def test_live_backend_add_notes_to_clip_accepts_extended_fields_and_applies_defaults() -> None:
+    backend = LiveBackend(_SurfaceStub())
+    backend.create_clip(0, 0, 4.0)
+
+    backend.add_notes_to_clip(
+        0,
+        0,
+        [
+            {
+                "pitch": 60,
+                "start_time": 0.0,
+                "duration": 0.5,
+                "velocity": 100,
+                "mute": False,
+                "probability": 0.5,
+                "velocity_deviation": -10.0,
+                "release_velocity": 40,
+            },
+            {
+                "pitch": 62,
+                "start_time": 1.0,
+                "duration": 0.5,
+                "velocity": 90,
+                "mute": False,
+            },
+        ],
+    )
+
+    notes = backend.get_clip_notes(0, 0, None, None, None)["notes"]
+    by_pitch = {note["pitch"]: note for note in notes}
+
+    with_extended = by_pitch[60]
+    assert with_extended["note_id"] > 0
+    assert with_extended["probability"] == 0.5
+    assert with_extended["velocity_deviation"] == -10.0
+    assert with_extended["release_velocity"] == 40
+
+    with_defaults = by_pitch[62]
+    assert with_defaults["note_id"] > 0
+    assert with_defaults["probability"] == 1.0
+    assert with_defaults["velocity_deviation"] == 0.0
+    assert with_defaults["release_velocity"] == 64
+
+
+def test_live_backend_add_notes_to_clip_not_supported_by_live_api() -> None:
+    backend = LiveBackend(_SurfaceStub())
+    backend.create_clip(0, 0, 4.0)
+    clip_obj = backend._clip_slot_at(0, 0).clip  # noqa: SLF001
+    clip_obj.add_new_notes = None
+
+    with pytest.raises(CommandError) as exc_info:
+        backend.add_notes_to_clip(0, 0, [_note()])
+
+    assert exc_info.value.code == "INVALID_ARGUMENT"
+    assert exc_info.value.details == {"reason": "not_supported_by_live_api"}
+
+
+def test_live_backend_update_clip_notes_partial_update() -> None:
+    backend = LiveBackend(_SurfaceStub())
+    backend.create_clip(0, 0, 4.0)
+    backend.add_notes_to_clip(
+        0,
+        0,
+        [
+            {
+                "pitch": 60,
+                "start_time": 0.0,
+                "duration": 0.5,
+                "velocity": 100,
+                "mute": False,
+                "probability": 0.9,
+            }
+        ],
+    )
+    note_id = backend.get_clip_notes(0, 0, None, None, None)["notes"][0]["note_id"]
+
+    result = backend.update_clip_notes(0, 0, [{"note_id": note_id, "velocity": 55}])
+    assert result == {"track": 0, "clip": 0, "updated_count": 1}
+
+    updated = backend.get_clip_notes(0, 0, None, None, None)["notes"][0]
+    assert updated["velocity"] == 55
+    # Untouched fields, including probability, must be preserved.
+    assert updated["pitch"] == 60
+    assert updated["probability"] == 0.9
+
+
+def test_live_backend_update_clip_notes_rejects_unknown_note_id() -> None:
+    backend = LiveBackend(_SurfaceStub())
+    backend.create_clip(0, 0, 4.0)
+    backend.add_notes_to_clip(0, 0, [_note()])
+
+    with pytest.raises(CommandError) as exc_info:
+        backend.update_clip_notes(0, 0, [{"note_id": 999, "velocity": 55}])
+
+    assert exc_info.value.code == "INVALID_ARGUMENT"
+    assert exc_info.value.details == {"missing_note_ids": [999]}
+
+
+def test_live_backend_update_clip_notes_not_supported_by_live_api() -> None:
+    backend = LiveBackend(_SurfaceStub())
+    backend.create_clip(0, 0, 4.0)
+    backend.add_notes_to_clip(0, 0, [_note()])
+    clip_obj = backend._clip_slot_at(0, 0).clip  # noqa: SLF001
+    clip_obj.apply_note_modifications = None
+
+    with pytest.raises(CommandError) as exc_info:
+        backend.update_clip_notes(0, 0, [{"note_id": 1, "velocity": 55}])
+
+    assert exc_info.value.code == "INVALID_ARGUMENT"
+    assert exc_info.value.details == {"reason": "not_supported_by_live_api"}
+
+
+def test_live_backend_clip_notes_transform_preserves_note_id_and_probability() -> None:
+    backend = LiveBackend(_SurfaceStub())
+    backend.create_clip(0, 0, 4.0)
+    backend.add_notes_to_clip(
+        0,
+        0,
+        [
+            {
+                "pitch": 60,
+                "start_time": 0.12,
+                "duration": 0.5,
+                "velocity": 100,
+                "mute": False,
+                "probability": 0.4,
+            }
+        ],
+    )
+    before = backend.get_clip_notes(0, 0, None, None, None)["notes"][0]
+
+    quantized = backend.clip_notes_quantize(
+        0,
+        0,
+        grid=0.5,
+        strength=1.0,
+        start_time=None,
+        end_time=None,
+        pitch=None,
+    )
+    assert quantized["changed_count"] == 1
+
+    after = backend.get_clip_notes(0, 0, None, None, None)["notes"][0]
+    assert after["note_id"] == before["note_id"]
+    assert after["probability"] == 0.4
+    assert after["start_time"] == 0.0
 
 
 def test_live_backend_tracks_delete_and_not_supported_error() -> None:
@@ -3129,6 +3326,19 @@ def test_live_backend_arrangement_clip_create_midi_accepts_notes_payload() -> No
 
     assert created["notes_added"] == 1
     assert notes["note_count"] == 1
+
+
+def test_live_backend_arrangement_clip_notes_add_not_supported_by_live_api() -> None:
+    backend = LiveBackend(_SurfaceStub())
+    backend.arrangement_clip_create(track=0, start_time=0.0, length=4.0, audio_path=None)
+    clip = backend._arrangement_clips(0)[0]  # noqa: SLF001
+    clip.add_new_notes = None
+
+    with pytest.raises(CommandError) as exc_info:
+        backend.arrangement_clip_notes_add(track=0, index=0, notes=[_note()])
+
+    assert exc_info.value.code == "INVALID_ARGUMENT"
+    assert exc_info.value.details == {"reason": "not_supported_by_live_api"}
 
 
 def test_live_backend_clip_warp_marker_add_uses_live_dict_api_with_optional_sample_time() -> None:

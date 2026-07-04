@@ -182,6 +182,7 @@ _REMOTE_COMMAND_EXCEPTIONS = {
     "clip notes get": "get_clip_notes",
     "clip notes import-browser": "load_instrument_or_effect",
     "clip notes replace": "replace_clip_notes",
+    "clip notes update": "update_clip_notes",
     "clip stop": "stop_clip",
     "device parameter set": "set_device_parameter",
     "effect find": "find_effect_devices",

@@ -265,6 +265,17 @@ STABLE_ACTION_MAPPINGS: tuple[StableActionMapping, ...] = (
         capability="Clear matching notes then add replacement notes.",
     ),
     StableActionMapping(
+        action="update_clip_notes",
+        command=(
+            "uv run ableton-cli --output json clip notes update <track> <clip> (--notes"
+            "-json '<json-array>' | --notes-file <path>)"
+        ),
+        capability=(
+            "Edit existing notes in place by note_id without disturbing unrelated notes "
+            "(requires Live 11+ extended note API)."
+        ),
+    ),
+    StableActionMapping(
         action="arrangement_clip_notes_add",
         command=(
             "uv run ableton-cli --output json arrangement clip notes add <track> <index"

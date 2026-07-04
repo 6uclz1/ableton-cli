@@ -225,6 +225,13 @@ class _TracksClipsBackend(Protocol):
         notes: list[dict[str, Any]],
     ) -> dict[str, Any]: ...
 
+    def update_clip_notes(
+        self,
+        track: int,
+        clip: int,
+        notes: list[dict[str, Any]],
+    ) -> dict[str, Any]: ...
+
     def get_clip_notes(
         self,
         track: int,

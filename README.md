@@ -79,6 +79,7 @@ uv run ableton-cli mixer crossfader set -- -0.2
 uv run ableton-cli mixer cue-routing get
 uv run ableton-cli clip create 0 0 --length 4
 uv run ableton-cli clip notes add 0 0 --notes-json '[{"pitch":60,"start_time":0.0,"duration":0.5,"velocity":100,"mute":false}]'
+uv run ableton-cli clip notes update 0 0 --notes-json '[{"note_id":3,"velocity":90,"probability":0.75}]'
 uv run ableton-cli clip cut-to-drum-rack --source-file ./loops/drum-break.wav --transient --bpm 174 --max-slices 16 --create-trigger-clip --trigger-clip-slot 1
 uv run ableton-cli clip cut-to-drum-rack --source-track 1 --source-clip 0 --slice-count 8 --create-trigger-clip --trigger-clip-slot 1
 uv run ableton-cli arrangement clip create 0 --start 8 --length 4 --notes-json '[{"pitch":60,"start_time":0.0,"duration":0.5,"velocity":100,"mute":false}]'
@@ -338,6 +339,14 @@ If a command is exposed by CLI/Remote but Live API cannot perform it, the comman
 - `error.details.reason=not_supported_by_live_api`
 
 This currently applies to API-limited operations such as `song new/undo/redo/save/export`, `arrangement record start|stop`, `scenes move`, and `tracks delete` when the running Live API lacks the required primitive.
+
+Clip and arrangement note write/edit commands (`clip notes add`, `clip notes update`,
+`clip notes quantize|humanize|velocity-scale|transpose`, `arrangement clip notes add`, and
+`clip cut-to-drum-rack` trigger clip creation) require the Live 11+ extended note API
+(`Clip.add_new_notes` / `Clip.apply_note_modifications`, plus the `note_id`, `probability`,
+`velocity_deviation`, and `release_velocity` note fields). On older Live versions these commands
+fail with the `not_supported_by_live_api` reason above instead of falling back to the legacy
+note API.
 
 ## Completion
 

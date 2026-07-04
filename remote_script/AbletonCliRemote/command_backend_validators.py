@@ -463,6 +463,47 @@ def _validate_note_keys(*, index: int, note: dict[str, Any]) -> None:
         )
 
 
+def _validate_partial_note_keys(*, index: int, note: dict[str, Any]) -> None:
+    keys = set(note.keys())
+    if "note_id" not in keys:
+        raise _invalid_argument(
+            message=f"notes[{index}] must include note_id",
+            hint="Provide note_id from 'clip notes get' for each note to update.",
+        )
+    editable_keys = keys - {"note_id"}
+    unknown = editable_keys - _NOTE_ALL_KEYS
+    if unknown:
+        raise _invalid_argument(
+            message=f"notes[{index}] has unsupported fields: {sorted(unknown)}",
+            hint=f"Use only note_id and fields from {sorted(_NOTE_ALL_KEYS)}.",
+        )
+    if not editable_keys:
+        raise _invalid_argument(
+            message=f"notes[{index}] must include at least one editable field besides note_id",
+            hint=f"Provide one or more fields from {sorted(_NOTE_ALL_KEYS)}.",
+        )
+
+
+def _parse_partial_note(*, index: int, note: Any) -> dict[str, Any]:
+    mapping = _require_note_mapping(index=index, note=note)
+    _validate_partial_note_keys(index=index, note=mapping)
+    note_id = _non_negative_int("note_id", mapping["note_id"])
+    parsed: dict[str, Any] = {"note_id": note_id}
+    for spec in NOTE_FIELD_SPECS:
+        if spec.name in mapping:
+            parsed[spec.name] = _parsed_note_field(spec=spec, mapping=mapping)
+    return parsed
+
+
+def _partial_notes(value: Any) -> list[dict[str, Any]]:
+    if not isinstance(value, list):
+        raise _invalid_argument(
+            message="notes must be an array",
+            hint="Pass notes as a JSON array of {note_id, ...} objects.",
+        )
+    return [_parse_partial_note(index=index, note=note) for index, note in enumerate(value)]
+
+
 def _bounded_int(
     *,
     name: str,

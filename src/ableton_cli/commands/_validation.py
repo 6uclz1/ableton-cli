@@ -403,6 +403,76 @@ def parse_notes_json(notes_json: str) -> list[dict[str, Any]]:
     return sanitized
 
 
+def _validate_partial_note_keys(*, index: int, item: dict[str, Any]) -> None:
+    keys = set(item.keys())
+    if "note_id" not in keys:
+        raise invalid_argument(
+            message=f"notes[{index}] must include note_id",
+            hint="Provide note_id from 'clip notes get' for each note to update.",
+        )
+    editable_keys = keys - {"note_id"}
+    unknown = editable_keys - _ALL_NOTE_KEYS
+    if unknown:
+        raise invalid_argument(
+            message=f"notes[{index}] has unsupported fields: {sorted(unknown)}",
+            hint=f"Use only note_id and fields from {sorted(_ALL_NOTE_KEYS)}.",
+        )
+    if not editable_keys:
+        raise invalid_argument(
+            message=f"notes[{index}] must include at least one editable field besides note_id",
+            hint=f"Provide one or more fields from {sorted(_ALL_NOTE_KEYS)}.",
+        )
+
+
+def _parsed_note_id(*, index: int, item: dict[str, Any]) -> int:
+    value = item["note_id"]
+    if not isinstance(value, int) or isinstance(value, bool):
+        raise invalid_argument(
+            message=f"notes[{index}].note_id must be an integer",
+            hint="Use an integer note_id from 'clip notes get'.",
+        )
+    if value < 0:
+        raise invalid_argument(
+            message=f"notes[{index}].note_id must be >= 0",
+            hint="Use a non-negative note_id.",
+        )
+    return value
+
+
+def parse_partial_notes_json(notes_json: str) -> list[dict[str, Any]]:
+    try:
+        payload = json.loads(notes_json)
+    except json.JSONDecodeError as exc:
+        raise invalid_argument(
+            message=f"notes_json must be valid JSON: {exc.msg}",
+            hint='Pass a JSON array like \'[{"note_id":3,"velocity":90}]\'.',
+        ) from exc
+
+    if not isinstance(payload, list):
+        raise invalid_argument(
+            message="notes_json must decode to an array",
+            hint="Pass a JSON array of note update objects.",
+        )
+
+    sanitized: list[dict[str, Any]] = []
+    for index, item in enumerate(payload):
+        if not isinstance(item, dict):
+            raise invalid_argument(
+                message=f"notes[{index}] must be an object",
+                hint="Each note update must include note_id and at least one editable field.",
+            )
+
+        _validate_partial_note_keys(index=index, item=item)
+
+        parsed_note: dict[str, Any] = {"note_id": _parsed_note_id(index=index, item=item)}
+        for spec in NOTE_FIELD_SPECS:
+            if spec.name in item:
+                parsed_note[spec.name] = _parsed_note_field(index=index, spec=spec, item=item)
+        sanitized.append(parsed_note)
+
+    return sanitized
+
+
 def parse_notes_input(
     notes_json: str | None,
     notes_file: str | None,

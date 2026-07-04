@@ -207,6 +207,14 @@ class _BackendStub:
             "added_count": len(notes),
         }
 
+    def update_clip_notes(  # noqa: ANN201
+        self,
+        track: int,
+        clip: int,
+        notes: list[dict[str, object]],
+    ):
+        return {"track": track, "clip": clip, "updated_count": len(notes)}
+
     def set_clip_name(self, track: int, clip: int, name: str):  # noqa: ANN201
         return {"track": track, "clip": clip, "name": name}
 
@@ -1393,6 +1401,44 @@ def test_dispatch_calls_backend_for_clip_notes_get_clear_replace() -> None:
     assert got["note_count"] == 0
     assert cleared["cleared_count"] == 1
     assert replaced["added_count"] == 1
+
+
+def test_dispatch_calls_backend_for_update_clip_notes() -> None:
+    backend = _BackendStub()
+
+    result = dispatch_command(
+        backend,
+        "update_clip_notes",
+        {"track": 0, "clip": 1, "notes": [{"note_id": 3, "velocity": 90}]},
+    )
+
+    assert result == {"track": 0, "clip": 1, "updated_count": 1}
+
+
+def test_dispatch_rejects_update_clip_notes_without_note_id() -> None:
+    backend = _BackendStub()
+
+    with pytest.raises(CommandError) as exc_info:
+        dispatch_command(
+            backend,
+            "update_clip_notes",
+            {"track": 0, "clip": 1, "notes": [{"velocity": 90}]},
+        )
+
+    assert exc_info.value.code == "INVALID_ARGUMENT"
+
+
+def test_dispatch_rejects_update_clip_notes_with_only_note_id() -> None:
+    backend = _BackendStub()
+
+    with pytest.raises(CommandError) as exc_info:
+        dispatch_command(
+            backend,
+            "update_clip_notes",
+            {"track": 0, "clip": 1, "notes": [{"note_id": 3}]},
+        )
+
+    assert exc_info.value.code == "INVALID_ARGUMENT"
 
 
 def test_dispatch_calls_backend_for_clip_active_get_set() -> None:

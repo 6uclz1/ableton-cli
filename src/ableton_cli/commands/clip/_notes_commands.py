@@ -7,6 +7,7 @@ import typer
 from .._validation import (
     invalid_argument,
     parse_notes_input,
+    parse_partial_notes_json,
     require_non_empty_string,
     require_non_negative_float,
     resolve_uri_or_path_target,
@@ -26,6 +27,7 @@ def register_notes_commands(notes_app: typer.Typer) -> None:
     notes_app.command("get")(clip_notes_get)
     notes_app.command("clear")(clip_notes_clear)
     notes_app.command("replace")(clip_notes_replace)
+    notes_app.command("update")(clip_notes_update)
     notes_app.command("import-browser")(clip_notes_import_browser)
     notes_app.command("quantize")(clip_notes_quantize)
     notes_app.command("humanize")(clip_notes_humanize)
@@ -206,6 +208,39 @@ def clip_notes_replace(
             "end_time": end_time,
             "pitch": pitch,
         },
+        action=_run,
+    )
+
+
+def clip_notes_update(
+    ctx: typer.Context,
+    track: Annotated[int, typer.Argument(help="Track index (0-based)")],
+    clip: Annotated[int, typer.Argument(help="Clip slot index (0-based)")],
+    notes_json: Annotated[
+        str | None,
+        typer.Option(
+            "--notes-json",
+            help="JSON array of partial note updates, each requiring note_id",
+        ),
+    ] = None,
+    notes_file: Annotated[
+        str | None,
+        typer.Option("--notes-file", help="Path to JSON file containing partial note updates"),
+    ] = None,
+) -> None:
+    def _run() -> dict[str, object]:
+        valid_track, valid_clip = validate_track_and_clip(track=track, clip=clip)
+        notes = parse_notes_input(
+            notes_json=notes_json,
+            notes_file=notes_file,
+            parser=parse_partial_notes_json,
+        )
+        return resolve_client(ctx).update_clip_notes(valid_track, valid_clip, notes)
+
+    execute_clip_command(
+        ctx,
+        command="clip notes update",
+        args={"track": track, "clip": clip},
         action=_run,
     )
 

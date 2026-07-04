@@ -70,11 +70,15 @@ class LiveBackendScenesArrangementMixin:
     ) -> dict[str, Any]:
         payload_notes = [
             {
+                "note_id": int(note["note_id"]),
                 "pitch": int(note["pitch"]),
                 "start_time": float(note["start_time"]),
                 "duration": float(note["duration"]),
                 "velocity": int(note["velocity"]),
                 "mute": bool(note["mute"]),
+                "probability": float(note["probability"]),
+                "velocity_deviation": float(note["velocity_deviation"]),
+                "release_velocity": int(note["release_velocity"]),
             }
             for note in notes
         ]
@@ -206,16 +210,20 @@ class LiveBackendScenesArrangementMixin:
                         hint="Retry arrangement clip creation before adding notes.",
                     )
                 created_clip = clips[before_count]
-                set_notes = getattr(created_clip, "set_notes", None)
-                if not callable(set_notes):
+                add_new_notes = getattr(created_clip, "add_new_notes", None)
+                if not callable(add_new_notes):
                     raise _not_supported_by_live_api(
-                        message="Arrangement clip note write API is not available in Live API",
-                        hint="Use a Live version exposing clip.set_notes for arrangement clips.",
+                        message="Arrangement clip extended note write API is not available "
+                        "in Live API",
+                        hint=(
+                            "Use a Live version exposing clip.add_new_notes for arrangement "
+                            "clips (Live 11+)."
+                        ),
                     )
-                note_payload = self._clip_note_tuples(notes)
-                if note_payload:
-                    set_notes(note_payload)
-                notes_added = len(note_payload)
+                specs = tuple(self._note_specification(note) for note in notes)
+                if specs:
+                    add_new_notes(specs)
+                notes_added = len(specs)
             result = {
                 "track": track,
                 "start_time": normalized_start_time,
@@ -338,16 +346,19 @@ class LiveBackendScenesArrangementMixin:
             index,
             hint="Choose a MIDI arrangement clip from 'arrangement clip list'.",
         )
-        set_notes = getattr(clip, "set_notes", None)
-        if not callable(set_notes):
+        add_new_notes = getattr(clip, "add_new_notes", None)
+        if not callable(add_new_notes):
             raise _not_supported_by_live_api(
-                message="Arrangement clip note write API is not available in Live API",
-                hint="Use a Live version exposing clip.set_notes for arrangement clips.",
+                message="Arrangement clip extended note write API is not available in Live API",
+                hint=(
+                    "Use a Live version exposing clip.add_new_notes for arrangement "
+                    "clips (Live 11+)."
+                ),
             )
-        note_payload = self._clip_note_tuples(notes)
-        if note_payload:
-            set_notes(note_payload)
-        return {"track": track, "index": index, "note_count": len(note_payload)}
+        specs = tuple(self._note_specification(note) for note in notes)
+        if specs:
+            add_new_notes(specs)
+        return {"track": track, "index": index, "note_count": len(specs)}
 
     def arrangement_clip_notes_get(
         self,

@@ -21,6 +21,7 @@ NOTE_KEYS = frozenset({"pitch", "start_time", "duration", "velocity", "mute"})
 
 class RemoteErrorCode(str, Enum):
     INVALID_ARGUMENT = "INVALID_ARGUMENT"
+    UNAUTHORIZED = "UNAUTHORIZED"
     PROTOCOL_VERSION_MISMATCH = "PROTOCOL_VERSION_MISMATCH"
     TIMEOUT = "TIMEOUT"
     REMOTE_BUSY = "REMOTE_BUSY"

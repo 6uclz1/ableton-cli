@@ -172,6 +172,7 @@ Output envelope (stable):
 - `--port`
 - `--timeout-ms`
 - `--protocol-version`
+- `--auth-token`
 - `--output [human|json]`
 - `--verbose`
 - `--log-file`
@@ -205,7 +206,8 @@ Installer/config commands also support command-local forms:
 
 ## Protocol
 
-`ableton-cli` uses local TCP JSONL communication on `127.0.0.1:<port>`.
+`ableton-cli` uses local TCP JSONL communication on `<host>:<port>` (`127.0.0.1:8765` by
+default; see [Security Model](#security-model) for overriding host/port/auth_token).
 
 The connection can be persistent: one line is one request, and a client may
 send multiple requests over the same connection. Responses are returned in
@@ -215,9 +217,37 @@ keep the connection open.
 
 ## Security Model
 
-- The Remote Script listens on 127.0.0.1 only (local loopback).
-- The protocol has no authentication.
-- Do not expose the port to untrusted networks.
+- By default the Remote Script listens on 127.0.0.1 only (local loopback), port 8765, with
+  no authentication: any process on the same machine can issue commands.
+- Do not expose, forward, or bind the port to untrusted networks.
+- Host, port, and an optional `auth_token` can be overridden via
+  `remote_script/AbletonCliRemote/remote_config.json` (copied alongside the Remote Script on
+  install) or environment variables read by the Remote Script process:
+  `ABLETON_CLI_REMOTE_HOST`, `ABLETON_CLI_REMOTE_PORT`, `ABLETON_CLI_REMOTE_AUTH_TOKEN`.
+  Invalid values (empty host, out-of-range port, non-string token) fail explicitly instead of
+  falling back to defaults.
+
+  ```json
+  {
+    "host": "127.0.0.1",
+    "port": 8765,
+    "auth_token": "replace-with-a-shared-secret"
+  }
+  ```
+
+- Running multiple Ableton Live instances requires giving each Remote Script a distinct port.
+- On the CLI side, set the matching token via `--auth-token`, the `ABLETON_CLI_AUTH_TOKEN`
+  environment variable, or `ableton-cli config set auth_token <token>`. `config show` and
+  `config set` always report `auth_token` as `***` (or `null` when unset); the raw value is
+  only used on the wire and when writing the local config file.
+- `auth_token` is a plain shared-secret check, not encrypted or transport-secured
+  authentication. It is a deterrent against other local processes, not a security boundary
+  against a hostile user on the same machine.
+- `install-remote-script` copies the Remote Script directory with `copytree`; a
+  `remote_config.json` already present in the installed source tree is preserved, but
+  reinstalling/updating overwrites the installed `AbletonCliRemote` directory (a timestamped
+  backup is kept), so re-apply `remote_config.json` after updates if it lives only at the
+  install target.
 - Treat write and destructive commands as equivalent to direct user operation in Ableton Live.
 - Prefer `--read-only` for inspection and agent preflight.
 - Use `--plan` or `--dry-run` to inspect the side effect and target payload before dispatch.

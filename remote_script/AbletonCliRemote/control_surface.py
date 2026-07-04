@@ -6,8 +6,9 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
-from .command_backend import CommandError, dispatch_command
+from .command_backend import CommandError, RemoteErrorCode, dispatch_command
 from .live_backend import LiveBackend
+from .remote_config import load_remote_config
 from .server import AbletonCommandServer, CommandExecutionError
 
 try:
@@ -50,9 +51,11 @@ class AbletonCliRemoteSurface(_ControlSurface):
         self._queue: queue.Queue[_CommandRequest] = queue.Queue()
         self._drain_lock = threading.Lock()
         self._drain_scheduled = False
+        remote_config = load_remote_config()
+        self._auth_token = remote_config.auth_token
         self._command_server = AbletonCommandServer(
-            host="127.0.0.1",
-            port=8765,
+            host=remote_config.host,
+            port=remote_config.port,
             command_executor=self._execute_command_from_server_thread,
         )
         self._command_server.start()
@@ -78,6 +81,15 @@ class AbletonCliRemoteSurface(_ControlSurface):
     def _execute_command_from_server_thread(
         self, name: str, args: dict[str, Any], meta: dict[str, Any]
     ) -> dict[str, Any]:
+        if self._auth_token is not None and meta.get("auth_token") != self._auth_token:
+            raise CommandExecutionError(
+                code=RemoteErrorCode.UNAUTHORIZED.value,
+                message="Missing or invalid auth token",
+                hint=(
+                    "Set the same auth_token in the CLI config and in "
+                    "AbletonCliRemote/remote_config.json."
+                ),
+            )
         if self._queue.qsize() >= self.MAX_PENDING_COMMANDS:
             raise CommandExecutionError(
                 code="REMOTE_BUSY",

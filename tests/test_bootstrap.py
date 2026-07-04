@@ -50,6 +50,7 @@ def test_build_runtime_context_resolves_dependencies_and_configures_logging(
         port=8765,
         timeout_ms=15000,
         protocol_version=11,
+        auth_token="cli-secret",
         output=OutputMode.JSON,
         verbose=True,
         log_file="/tmp/cli-override.log",
@@ -78,6 +79,7 @@ def test_build_runtime_context_resolves_dependencies_and_configures_logging(
         "timeout_ms": 15000,
         "log_file": "/tmp/cli-override.log",
         "protocol_version": 11,
+        "auth_token": "cli-secret",
     }
     assert seen["verbose"] is True
     assert seen["quiet"] is False

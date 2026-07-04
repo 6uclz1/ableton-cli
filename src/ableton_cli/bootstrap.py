@@ -16,6 +16,7 @@ def build_runtime_context(
     port: int | None,
     timeout_ms: int | None,
     protocol_version: int | None,
+    auth_token: str | None = None,
     output: OutputMode,
     verbose: bool,
     log_file: str | None,
@@ -37,6 +38,7 @@ def build_runtime_context(
         "timeout_ms": timeout_ms,
         "log_file": log_file,
         "protocol_version": protocol_version,
+        "auth_token": auth_token,
     }
 
     settings = resolve_settings(cli_overrides=cli_overrides, config_path=config)

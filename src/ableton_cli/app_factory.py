@@ -73,6 +73,10 @@ def main(
         int | None,
         typer.Option("--protocol-version", help="Protocol version for CLI/Remote handshake"),
     ] = None,
+    auth_token: Annotated[
+        str | None,
+        typer.Option("--auth-token", help="Shared secret sent to the Remote Script"),
+    ] = None,
     output: Annotated[
         OutputMode,
         typer.Option("--output", help="Output mode", case_sensitive=False),
@@ -135,6 +139,7 @@ def main(
             port=port,
             timeout_ms=timeout_ms,
             protocol_version=protocol_version,
+            auth_token=auth_token,
             output=output,
             verbose=verbose,
             log_file=log_file,

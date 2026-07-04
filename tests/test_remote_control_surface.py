@@ -8,6 +8,7 @@ from typing import Any
 import pytest
 
 import remote_script.AbletonCliRemote.control_surface as control_surface_module
+from remote_script.AbletonCliRemote.remote_config import RemoteConfig
 from remote_script.AbletonCliRemote.server import CommandExecutionError
 
 
@@ -33,9 +34,89 @@ class _CommandServerStub:
 
 def _make_surface(
     monkeypatch: pytest.MonkeyPatch,
+    *,
+    remote_config: RemoteConfig | None = None,
 ) -> control_surface_module.AbletonCliRemoteSurface:
     monkeypatch.setattr(control_surface_module, "AbletonCommandServer", _CommandServerStub)
+    monkeypatch.setattr(
+        control_surface_module,
+        "load_remote_config",
+        lambda: remote_config or RemoteConfig(),
+    )
     return control_surface_module.AbletonCliRemoteSurface(object())
+
+
+def test_surface_starts_command_server_with_configured_host_and_port(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    surface = _make_surface(
+        monkeypatch,
+        remote_config=RemoteConfig(host="0.0.0.0", port=9999, auth_token=None),
+    )
+
+    try:
+        assert surface._command_server.host == "0.0.0.0"
+        assert surface._command_server.port == 9999
+    finally:
+        surface.disconnect()
+
+
+def test_surface_rejects_command_with_missing_or_wrong_auth_token(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        control_surface_module,
+        "dispatch_command",
+        lambda _backend, name, args: {"handled": name, "args": args},
+    )
+    surface = _make_surface(
+        monkeypatch,
+        remote_config=RemoteConfig(host="127.0.0.1", port=8765, auth_token="expected-token"),
+    )
+
+    try:
+        with pytest.raises(CommandExecutionError) as missing_token:
+            surface._execute_command_from_server_thread(
+                "song_info",
+                {},
+                {"request_timeout_ms": 100},
+            )
+        assert missing_token.value.code == "UNAUTHORIZED"
+
+        with pytest.raises(CommandExecutionError) as wrong_token:
+            surface._execute_command_from_server_thread(
+                "song_info",
+                {},
+                {"request_timeout_ms": 100, "auth_token": "wrong-token"},
+            )
+        assert wrong_token.value.code == "UNAUTHORIZED"
+    finally:
+        surface.disconnect()
+
+
+def test_surface_allows_command_with_matching_auth_token(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        control_surface_module,
+        "dispatch_command",
+        lambda _backend, name, args: {"handled": name, "args": args},
+    )
+    surface = _make_surface(
+        monkeypatch,
+        remote_config=RemoteConfig(host="127.0.0.1", port=8765, auth_token="expected-token"),
+    )
+
+    try:
+        result = surface._execute_command_from_server_thread(
+            "song_info",
+            {},
+            {"request_timeout_ms": 100, "auth_token": "expected-token"},
+        )
+    finally:
+        surface.disconnect()
+
+    assert result == {"handled": "song_info", "args": {}}
 
 
 def test_surface_processes_commands_without_update_display(monkeypatch: pytest.MonkeyPatch) -> None:

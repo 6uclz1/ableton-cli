@@ -1,8 +1,17 @@
 from __future__ import annotations
 
+import json
+import socket
+from collections.abc import Callable
+from typing import Any
+
 import pytest
 
-from remote_script.AbletonCliRemote.server import CommandExecutionError, _parse_command_request
+from remote_script.AbletonCliRemote.server import (
+    AbletonCommandServer,
+    CommandExecutionError,
+    _parse_command_request,
+)
 
 
 def test_parse_command_request_accepts_strict_protocol_shape() -> None:
@@ -64,3 +73,31 @@ def test_parse_command_request_rejects_invalid_protocol_shape(payload: object) -
         _parse_command_request(payload)
 
     assert exc_info.value.code == "INVALID_ARGUMENT"
+
+
+def _start_server(
+    executor: Callable[[str, dict[str, Any], dict[str, Any]], dict[str, Any]],
+) -> tuple[AbletonCommandServer, int]:
+    server = AbletonCommandServer(host="127.0.0.1", port=0, command_executor=executor)
+    server.start()
+    port = server._server.server_address[1]  # noqa: SLF001
+    return server, port
+
+
+def test_handle_returns_invalid_argument_for_malformed_json() -> None:
+    def _executor(name: str, args: dict[str, Any], meta: dict[str, Any]) -> dict[str, Any]:
+        raise AssertionError("command_executor must not run for malformed JSON")
+
+    server, port = _start_server(_executor)
+    try:
+        with socket.create_connection(("127.0.0.1", port), timeout=2.0) as sock:
+            sock.sendall(b"not json\n")
+            with sock.makefile("rb") as file_obj:
+                raw = file_obj.readline()
+    finally:
+        server.stop()
+
+    response = json.loads(raw.decode("utf-8"))
+
+    assert response["ok"] is False
+    assert response["error"]["code"] == "INVALID_ARGUMENT"

@@ -168,8 +168,8 @@ class _Handler(socketserver.StreamRequestHandler):
             self._write_response(
                 _error(
                     request_id="unknown",
-                    code=RemoteErrorCode.PROTOCOL_VERSION_MISMATCH.value,
-                    message="Invalid JSON payload",
+                    code=RemoteErrorCode.INVALID_ARGUMENT.value,
+                    message="Request line is not valid JSON",
                     hint="Send one JSON object per line.",
                 )
             )

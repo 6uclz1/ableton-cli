@@ -29,6 +29,10 @@ uv run python tools/update_public_contract_snapshot.py
 
 Internal modules (for example, `src/ableton_cli/commands/_*.py` and quality harness internals) can be refactored freely as long as public contracts and tests stay green.
 
+## Single-Source Argument Shape Pattern
+
+When an argument shape (for example MIDI note fields) is validated on both the CLI and the Remote Script, define it once as a data table of field specs rather than duplicating per-field checks. The CLI and the Remote Script run in separate Python runtimes and cannot share an import (the Remote Script cannot import `ableton_cli`), so each side keeps its own copy of the spec table (see `src/ableton_cli/note_fields.py` and `remote_script/AbletonCliRemote/note_fields.py`). A drift test (see `tests/test_note_field_specs.py`) asserts the two copies stay identical, so the pair behaves as a single source of truth even though the code is physically duplicated. Prefer this pattern over hand-writing the same field-by-field validation twice.
+
 ## Commit Hook (Ruff)
 
 Enable repository-managed git hooks to run Ruff on every commit:

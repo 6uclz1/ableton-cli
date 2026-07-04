@@ -10,15 +10,28 @@ from .command_backend_contract import (
     MIN_BPM,
     MIN_PANNING,
     MIN_VOLUME,
-    NOTE_KEYS,
     NOTE_PITCH_MAX,
     NOTE_PITCH_MIN,
     NOTE_VELOCITY_MAX,
-    NOTE_VELOCITY_MIN,
     CommandError,
 )
 from .effect_specs import SUPPORTED_EFFECT_TYPES
+from .note_fields import NOTE_FIELD_SPECS, NoteFieldSpec
 from .synth_specs import SUPPORTED_SYNTH_TYPES
+
+_NOTE_REQUIRED_KEYS = frozenset(spec.name for spec in NOTE_FIELD_SPECS if spec.required)
+_NOTE_OPTIONAL_KEYS = frozenset(spec.name for spec in NOTE_FIELD_SPECS if not spec.required)
+_NOTE_ALL_KEYS = _NOTE_REQUIRED_KEYS | _NOTE_OPTIONAL_KEYS
+_NOTE_FIELD_HINTS: dict[str, str] = {
+    "pitch": "Use a valid MIDI pitch.",
+    "start_time": "Use a non-negative note start time.",
+    "duration": "Use a positive note duration.",
+    "velocity": "Use a valid MIDI velocity.",
+    "mute": "Set mute to true or false.",
+    "probability": "Use a probability in [0.0, 1.0].",
+    "velocity_deviation": "Use a velocity deviation in [-127, 127].",
+    "release_velocity": "Use a valid MIDI release velocity.",
+}
 
 
 def _invalid_argument(message: str, hint: str) -> CommandError:
@@ -354,53 +367,70 @@ def _notes(value: Any) -> list[dict[str, Any]]:
     return [_parse_note(index=index, note=note) for index, note in enumerate(value)]
 
 
+def _note_field_hint(name: str) -> str:
+    return _NOTE_FIELD_HINTS.get(name, f"Pass a valid value for '{name}'.")
+
+
+def _format_note_bound(value: float) -> str:
+    if float(value).is_integer():
+        return str(int(value))
+    return str(value)
+
+
+def _validate_note_field_bounds(*, spec: NoteFieldSpec, value: float) -> None:
+    name = spec.name
+    hint = _note_field_hint(name)
+    if spec.minimum is not None and spec.maximum is not None:
+        if value < spec.minimum or value > spec.maximum:
+            raise _invalid_argument(
+                message=(
+                    f"{name} must be between "
+                    f"{_format_note_bound(spec.minimum)} and {_format_note_bound(spec.maximum)}"
+                ),
+                hint=hint,
+            )
+        return
+    if spec.minimum is not None:
+        if spec.exclusive_minimum:
+            if value <= spec.minimum:
+                raise _invalid_argument(
+                    message=f"{name} must be > {_format_note_bound(spec.minimum)}",
+                    hint=hint,
+                )
+        elif value < spec.minimum:
+            raise _invalid_argument(
+                message=f"{name} must be >= {_format_note_bound(spec.minimum)}",
+                hint=hint,
+            )
+
+
+def _parsed_note_field(*, spec: NoteFieldSpec, mapping: dict[str, Any]) -> Any:
+    name = spec.name
+    if spec.kind == "bool":
+        value = mapping[name]
+        if not isinstance(value, bool):
+            raise _invalid_argument(
+                message=f"{name} must be a boolean",
+                hint=_note_field_hint(name),
+            )
+        return value
+    if spec.kind == "int":
+        value = _as_int(name, mapping[name])
+    else:
+        value = _as_float(name, mapping[name])
+    _validate_note_field_bounds(spec=spec, value=value)
+    return value
+
+
 def _parse_note(*, index: int, note: Any) -> dict[str, Any]:
     mapping = _require_note_mapping(index=index, note=note)
     _validate_note_keys(index=index, note=mapping)
-
-    pitch = _bounded_int(
-        name="pitch",
-        value=mapping["pitch"],
-        minimum=NOTE_PITCH_MIN,
-        maximum=NOTE_PITCH_MAX,
-        hint="Use a valid MIDI pitch.",
-    )
-    velocity = _bounded_int(
-        name="velocity",
-        value=mapping["velocity"],
-        minimum=NOTE_VELOCITY_MIN,
-        maximum=NOTE_VELOCITY_MAX,
-        hint="Use a valid MIDI velocity.",
-    )
-
-    start_time = _as_float("start_time", mapping["start_time"])
-    if start_time < 0:
-        raise _invalid_argument(
-            message="start_time must be >= 0",
-            hint="Use a non-negative note start time.",
-        )
-
-    duration = _as_float("duration", mapping["duration"])
-    if duration <= 0:
-        raise _invalid_argument(
-            message="duration must be > 0",
-            hint="Use a positive note duration.",
-        )
-
-    mute = mapping["mute"]
-    if not isinstance(mute, bool):
-        raise _invalid_argument(
-            message="mute must be a boolean",
-            hint="Set mute to true or false.",
-        )
-
-    return {
-        "pitch": pitch,
-        "start_time": start_time,
-        "duration": duration,
-        "velocity": velocity,
-        "mute": mute,
-    }
+    parsed: dict[str, Any] = {}
+    for spec in NOTE_FIELD_SPECS:
+        if spec.name not in mapping:
+            continue
+        parsed[spec.name] = _parsed_note_field(spec=spec, mapping=mapping)
+    return parsed
 
 
 def _require_note_mapping(*, index: int, note: Any) -> dict[str, Any]:
@@ -414,10 +444,22 @@ def _require_note_mapping(*, index: int, note: Any) -> dict[str, Any]:
 
 def _validate_note_keys(*, index: int, note: dict[str, Any]) -> None:
     keys = set(note.keys())
-    if keys != NOTE_KEYS:
+    if not _NOTE_OPTIONAL_KEYS:
+        if keys != _NOTE_REQUIRED_KEYS:
+            raise _invalid_argument(
+                message=f"notes[{index}] must include exactly {sorted(_NOTE_REQUIRED_KEYS)}",
+                hint="Provide all required note fields and no extra keys.",
+            )
+        return
+    missing = _NOTE_REQUIRED_KEYS - keys
+    unknown = keys - _NOTE_ALL_KEYS
+    if missing or unknown:
         raise _invalid_argument(
-            message=f"notes[{index}] must include exactly {sorted(NOTE_KEYS)}",
-            hint="Provide all required note fields and no extra keys.",
+            message=(
+                f"notes[{index}] must include {sorted(_NOTE_REQUIRED_KEYS)} "
+                f"and may only add optional fields from {sorted(_NOTE_OPTIONAL_KEYS)}"
+            ),
+            hint="Provide all required note fields; only supported optional fields are allowed.",
         )
 
 

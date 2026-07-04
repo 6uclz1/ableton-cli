@@ -4,6 +4,8 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Protocol
 
+from .note_fields import NOTE_FIELD_SPECS
+
 PROTOCOL_VERSION = 2
 REMOTE_SCRIPT_VERSION = "0.4.0"
 MIN_BPM = 20.0
@@ -12,11 +14,13 @@ MIN_VOLUME = 0.0
 MAX_VOLUME = 1.0
 MIN_PANNING = -1.0
 MAX_PANNING = 1.0
-NOTE_PITCH_MIN = 0
-NOTE_PITCH_MAX = 127
-NOTE_VELOCITY_MIN = 1
-NOTE_VELOCITY_MAX = 127
-NOTE_KEYS = frozenset({"pitch", "start_time", "duration", "velocity", "mute"})
+
+_NOTE_SPECS_BY_NAME = {spec.name: spec for spec in NOTE_FIELD_SPECS}
+NOTE_PITCH_MIN = int(_NOTE_SPECS_BY_NAME["pitch"].minimum)  # type: ignore[arg-type]
+NOTE_PITCH_MAX = int(_NOTE_SPECS_BY_NAME["pitch"].maximum)  # type: ignore[arg-type]
+NOTE_VELOCITY_MIN = int(_NOTE_SPECS_BY_NAME["velocity"].minimum)  # type: ignore[arg-type]
+NOTE_VELOCITY_MAX = int(_NOTE_SPECS_BY_NAME["velocity"].maximum)  # type: ignore[arg-type]
+NOTE_KEYS = frozenset(spec.name for spec in NOTE_FIELD_SPECS if spec.required)
 
 
 class RemoteErrorCode(str, Enum):

@@ -156,9 +156,16 @@ def test_handle_closes_connection_after_malformed_json_line() -> None:
                 file_obj.flush()
                 first = json.loads(file_obj.readline().decode("utf-8"))
 
-                file_obj.write(_request_line("request-2", "ping"))
-                file_obj.flush()
-                trailing = file_obj.readline()
+                # After the server closes the connection, reading yields a
+                # clean EOF on POSIX but may raise ConnectionAbortedError or
+                # ConnectionResetError on Windows once the follow-up write
+                # has triggered an RST. Both signal the same server behavior.
+                try:
+                    file_obj.write(_request_line("request-2", "ping"))
+                    file_obj.flush()
+                    trailing = file_obj.readline()
+                except ConnectionError:
+                    trailing = b""
     finally:
         server.stop()
 

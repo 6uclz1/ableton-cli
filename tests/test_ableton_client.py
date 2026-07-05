@@ -258,6 +258,19 @@ def test_client_sends_request_timeout_meta(monkeypatch) -> None:
             },
         ),
         (
+            lambda client: client.update_clip_notes(
+                track=5,
+                clip=6,
+                notes=[{"note_id": 3, "velocity": 90, "probability": 0.5}],
+            ),
+            "update_clip_notes",
+            {
+                "track": 5,
+                "clip": 6,
+                "notes": [{"note_id": 3, "velocity": 90, "probability": 0.5}],
+            },
+        ),
+        (
             lambda client: client.search_browser_items(
                 query="drift",
                 path=None,

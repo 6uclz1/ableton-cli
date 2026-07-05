@@ -25,8 +25,18 @@ from ..synth_specs import (
 )
 
 
-def _invalid_argument(message: str, hint: str) -> CommandError:
-    return CommandError(code=RemoteErrorCode.INVALID_ARGUMENT, message=message, hint=hint)
+def _invalid_argument(
+    message: str,
+    hint: str,
+    *,
+    details: dict[str, Any] | None = None,
+) -> CommandError:
+    return CommandError(
+        code=RemoteErrorCode.INVALID_ARGUMENT,
+        message=message,
+        hint=hint,
+        details=details,
+    )
 
 
 def _not_supported_by_live_api(message: str, hint: str) -> CommandError:

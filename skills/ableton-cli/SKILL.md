@@ -250,6 +250,7 @@ uv run ableton-cli clip notes add 0 0 --notes-file ./notes.json
 uv run ableton-cli clip notes get 0 0 --start-time 0.0 --end-time 4.0 --pitch 60
 uv run ableton-cli clip notes clear 0 0 --start-time 0.0 --end-time 1.0
 uv run ableton-cli clip notes replace 0 0 --notes-json '[{"pitch":65,"start_time":0.25,"duration":0.5,"velocity":100,"mute":false}]' --start-time 0.0 --end-time 1.0
+uv run ableton-cli clip notes update 0 0 --notes-json '[{"note_id":3,"velocity":90,"probability":0.75}]'
 uv run ableton-cli clip notes import-browser 0 1 sounds/Bass\ Loop.alc --mode replace --import-length --import-groove
 uv run ableton-cli clip notes quantize 0 0 --grid 1/16 --strength 0.8 --start-time 0.0 --end-time 4.0
 uv run ableton-cli clip notes humanize 0 0 --timing 0.05 --velocity 5
@@ -512,6 +513,7 @@ uv run ableton-cli --output json ping
 - `get_clip_notes` -> `uv run ableton-cli --output json clip notes get <track> <clip> [--start-time <beats>] [--end-time <beats>] [--pitch <midi>]`
 - `clear_clip_notes` -> `uv run ableton-cli --output json clip notes clear <track> <clip> [--start-time <beats>] [--end-time <beats>] [--pitch <midi>]`
 - `replace_clip_notes` -> `uv run ableton-cli --output json clip notes replace <track> <clip> (--notes-json '<json-array>' | --notes-file <path>) [--start-time <beats>] [--end-time <beats>] [--pitch <midi>]`
+- `update_clip_notes` -> `uv run ableton-cli --output json clip notes update <track> <clip> (--notes-json '<json-array>' | --notes-file <path>)`
 - `arrangement_clip_notes_add` -> `uv run ableton-cli --output json arrangement clip notes add <track> <index> (--notes-json '<json-array>' | --notes-file <path>)`
 - `arrangement_clip_notes_get` -> `uv run ableton-cli --output json arrangement clip notes get <track> <index> [--start-time <beats>] [--end-time <beats>] [--pitch <midi>]`
 - `arrangement_clip_notes_clear` -> `uv run ableton-cli --output json arrangement clip notes clear <track> <index> [--start-time <beats>] [--end-time <beats>] [--pitch <midi>]`

@@ -21,6 +21,7 @@ from .command_backend_validators import (
     _notes,
     _optional_track_index,
     _parse_exclusive_string_args,
+    _partial_notes,
     _positive_int,
     _track_index,
     _unit_interval,
@@ -45,6 +46,13 @@ def _handle_add_notes_to_clip(backend: CommandBackend, args: dict[str, Any]) -> 
     clip = _track_index("clip", args.get("clip"))
     notes = _notes(args.get("notes"))
     return backend.add_notes_to_clip(track, clip, notes)
+
+
+def _handle_update_clip_notes(backend: CommandBackend, args: dict[str, Any]) -> dict[str, Any]:
+    track = _track_index("track", args.get("track"))
+    clip = _track_index("clip", args.get("clip"))
+    notes = _partial_notes(args.get("notes"))
+    return backend.update_clip_notes(track, clip, notes)
 
 
 def _handle_get_clip_notes(backend: CommandBackend, args: dict[str, Any]) -> dict[str, Any]:
@@ -836,6 +844,7 @@ def _handle_tracks_delete(backend: CommandBackend, args: dict[str, Any]) -> dict
 TRACKS_CLIPS_HANDLERS: dict[str, Handler] = {
     "create_clip": _handle_create_clip,
     "add_notes_to_clip": _handle_add_notes_to_clip,
+    "update_clip_notes": _handle_update_clip_notes,
     "get_clip_notes": _handle_get_clip_notes,
     "clear_clip_notes": _handle_clear_clip_notes,
     "replace_clip_notes": _handle_replace_clip_notes,

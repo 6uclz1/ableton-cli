@@ -472,14 +472,14 @@ class LiveBackendTracksCutToDrumRackMixin:
             )
         clip_obj = slot.clip
         assert clip_obj is not None
-        set_notes = getattr(clip_obj, "set_notes", None)
-        if not callable(set_notes):
+        add_new_notes = getattr(clip_obj, "add_new_notes", None)
+        if not callable(add_new_notes):
             raise _not_supported_by_live_api(
-                message="Clip note write API is not available in Live API",
-                hint="Use a Live version exposing clip.set_notes.",
+                message="Clip extended note write API is not available in Live API",
+                hint="Use a Live version exposing clip.add_new_notes (Live 11+).",
             )
 
-        notes: list[tuple[int, float, float, int, bool]] = []
+        notes: list[dict[str, Any]] = []
         for assignment in assignments:
             pitch = self._TRIGGER_PITCH_BASE + int(assignment["pad"])
             if pitch > NOTE_PITCH_MAX:
@@ -490,15 +490,16 @@ class LiveBackendTracksCutToDrumRackMixin:
             slice_start = float(assignment["slice_start"])
             slice_end = float(assignment["slice_end"])
             notes.append(
-                (
-                    pitch,
-                    round(slice_start - range_start, 6),
-                    round(slice_end - slice_start, 6),
-                    100,
-                    False,
-                )
+                {
+                    "pitch": pitch,
+                    "start_time": round(slice_start - range_start, 6),
+                    "duration": round(slice_end - slice_start, 6),
+                    "velocity": 100,
+                    "mute": False,
+                }
             )
-        set_notes(tuple(notes))
+        specs = tuple(self._note_specification(note) for note in notes)
+        add_new_notes(specs)
         return {
             "trigger_clip_created": True,
             "trigger_clip_slot": trigger_clip_slot,

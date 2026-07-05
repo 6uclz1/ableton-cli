@@ -29,6 +29,7 @@ def test_remote_error_to_exit_code_mapping() -> None:
     assert exit_code_from_error_code("PROTOCOL_MALFORMED_JSON") == ExitCode.PROTOCOL_MISMATCH
     assert exit_code_from_error_code("PROTOCOL_CONNECTION_CLOSED") == ExitCode.PROTOCOL_MISMATCH
     assert exit_code_from_error_code("PROTOCOL_REQUEST_ID_MISMATCH") == ExitCode.PROTOCOL_MISMATCH
+    assert exit_code_from_error_code("UNAUTHORIZED") == ExitCode.EXECUTION_FAILED
     assert exit_code_from_error_code("TIMEOUT") == ExitCode.TIMEOUT
     assert exit_code_from_error_code("BATCH_STEP_FAILED") == ExitCode.EXECUTION_FAILED
     assert exit_code_from_error_code("REMOTE_BUSY") == ExitCode.EXECUTION_FAILED
@@ -52,6 +53,7 @@ def test_error_code_enum_values_are_stable() -> None:
     assert ErrorCode.PROTOCOL_MALFORMED_JSON.value == "PROTOCOL_MALFORMED_JSON"
     assert ErrorCode.PROTOCOL_CONNECTION_CLOSED.value == "PROTOCOL_CONNECTION_CLOSED"
     assert ErrorCode.PROTOCOL_REQUEST_ID_MISMATCH.value == "PROTOCOL_REQUEST_ID_MISMATCH"
+    assert ErrorCode.UNAUTHORIZED.value == "UNAUTHORIZED"
     assert ErrorCode.TIMEOUT.value == "TIMEOUT"
     assert ErrorCode.BATCH_STEP_FAILED.value == "BATCH_STEP_FAILED"
     assert ErrorCode.REMOTE_BUSY.value == "REMOTE_BUSY"

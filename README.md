@@ -79,6 +79,7 @@ uv run ableton-cli mixer crossfader set -- -0.2
 uv run ableton-cli mixer cue-routing get
 uv run ableton-cli clip create 0 0 --length 4
 uv run ableton-cli clip notes add 0 0 --notes-json '[{"pitch":60,"start_time":0.0,"duration":0.5,"velocity":100,"mute":false}]'
+uv run ableton-cli clip notes update 0 0 --notes-json '[{"note_id":3,"velocity":90,"probability":0.75}]'
 uv run ableton-cli clip cut-to-drum-rack --source-file ./loops/drum-break.wav --transient --bpm 174 --max-slices 16 --create-trigger-clip --trigger-clip-slot 1
 uv run ableton-cli clip cut-to-drum-rack --source-track 1 --source-clip 0 --slice-count 8 --create-trigger-clip --trigger-clip-slot 1
 uv run ableton-cli arrangement clip create 0 --start 8 --length 4 --notes-json '[{"pitch":60,"start_time":0.0,"duration":0.5,"velocity":100,"mute":false}]'
@@ -172,6 +173,7 @@ Output envelope (stable):
 - `--port`
 - `--timeout-ms`
 - `--protocol-version`
+- `--auth-token`
 - `--output [human|json]`
 - `--verbose`
 - `--log-file`
@@ -205,13 +207,48 @@ Installer/config commands also support command-local forms:
 
 ## Protocol
 
-`ableton-cli` uses local TCP JSONL communication on `127.0.0.1:<port>`.
+`ableton-cli` uses local TCP JSONL communication on `<host>:<port>` (`127.0.0.1:8765` by
+default; see [Security Model](#security-model) for overriding host/port/auth_token).
+
+The connection can be persistent: one line is one request, and a client may
+send multiple requests over the same connection. Responses are returned in
+request order. A malformed request line closes the connection; well-formed
+requests that fail validation or execution return a structured error and
+keep the connection open.
 
 ## Security Model
 
-- The Remote Script listens on 127.0.0.1 only (local loopback).
-- The protocol has no authentication.
-- Do not expose the port to untrusted networks.
+- By default the Remote Script listens on 127.0.0.1 only (local loopback), port 8765, with
+  no authentication: any process on the same machine can issue commands.
+- Do not expose, forward, or bind the port to untrusted networks.
+- Host, port, and an optional `auth_token` can be overridden via
+  `remote_script/AbletonCliRemote/remote_config.json` (copied alongside the Remote Script on
+  install) or environment variables read by the Remote Script process:
+  `ABLETON_CLI_REMOTE_HOST`, `ABLETON_CLI_REMOTE_PORT`, `ABLETON_CLI_REMOTE_AUTH_TOKEN`.
+  Invalid values (empty host, out-of-range port, non-string token) fail explicitly instead of
+  falling back to defaults.
+
+  ```json
+  {
+    "host": "127.0.0.1",
+    "port": 8765,
+    "auth_token": "replace-with-a-shared-secret"
+  }
+  ```
+
+- Running multiple Ableton Live instances requires giving each Remote Script a distinct port.
+- On the CLI side, set the matching token via `--auth-token`, the `ABLETON_CLI_AUTH_TOKEN`
+  environment variable, or `ableton-cli config set auth_token <token>`. `config show` and
+  `config set` always report `auth_token` as `***` (or `null` when unset); the raw value is
+  only used on the wire and when writing the local config file.
+- `auth_token` is a plain shared-secret check, not encrypted or transport-secured
+  authentication. It is a deterrent against other local processes, not a security boundary
+  against a hostile user on the same machine.
+- `install-remote-script` copies the Remote Script directory with `copytree`; a
+  `remote_config.json` already present in the installed source tree is preserved, but
+  reinstalling/updating overwrites the installed `AbletonCliRemote` directory (a timestamped
+  backup is kept), so re-apply `remote_config.json` after updates if it lives only at the
+  install target.
 - Treat write and destructive commands as equivalent to direct user operation in Ableton Live.
 - Prefer `--read-only` for inspection and agent preflight.
 - Use `--plan` or `--dry-run` to inspect the side effect and target payload before dispatch.
@@ -302,6 +339,14 @@ If a command is exposed by CLI/Remote but Live API cannot perform it, the comman
 - `error.details.reason=not_supported_by_live_api`
 
 This currently applies to API-limited operations such as `song new/undo/redo/save/export`, `arrangement record start|stop`, `scenes move`, and `tracks delete` when the running Live API lacks the required primitive.
+
+Clip and arrangement note write/edit commands (`clip notes add`, `clip notes update`,
+`clip notes quantize|humanize|velocity-scale|transpose`, `arrangement clip notes add`, and
+`clip cut-to-drum-rack` trigger clip creation) require the Live 11+ extended note API
+(`Clip.add_new_notes` / `Clip.apply_note_modifications`, plus the `note_id`, `probability`,
+`velocity_deviation`, and `release_velocity` note fields). On older Live versions these commands
+fail with the `not_supported_by_live_api` reason above instead of falling back to the legacy
+note API.
 
 ## Completion
 

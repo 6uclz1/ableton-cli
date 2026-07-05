@@ -307,6 +307,126 @@ def test_config_set_rejects_invalid_key_or_value(runner, cli_app, tmp_path) -> N
     assert invalid_value_payload["error"]["code"] == "INVALID_ARGUMENT"
 
 
+def test_config_set_auth_token_writes_raw_value_and_masks_output(runner, cli_app, tmp_path) -> None:
+    config_path = tmp_path / "config.toml"
+    config_path.write_text('host = "127.0.0.1"\nport = 8765\n', encoding="utf-8")
+
+    result = runner.invoke(
+        cli_app,
+        [
+            "--config",
+            str(config_path),
+            "--output",
+            "json",
+            "config",
+            "set",
+            "auth_token",
+            "super-secret",
+        ],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["ok"] is True
+    assert payload["result"]["key"] == "auth_token"
+    assert payload["result"]["value"] == "***"
+    assert 'auth_token = "super-secret"' in config_path.read_text(encoding="utf-8")
+
+
+def test_config_show_masks_configured_auth_token(runner, cli_app, tmp_path) -> None:
+    config_path = tmp_path / "config.toml"
+    config_path.write_text(
+        'host = "127.0.0.1"\nport = 8765\nauth_token = "super-secret"\n',
+        encoding="utf-8",
+    )
+
+    result = runner.invoke(
+        cli_app,
+        [
+            "--config",
+            str(config_path),
+            "--output",
+            "json",
+            "config",
+            "show",
+        ],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["result"]["auth_token"] == "***"
+
+
+def test_config_show_reports_none_auth_token_when_unset(runner, cli_app, tmp_path) -> None:
+    config_path = tmp_path / "config.toml"
+    config_path.write_text('host = "127.0.0.1"\nport = 8765\n', encoding="utf-8")
+
+    result = runner.invoke(
+        cli_app,
+        [
+            "--config",
+            str(config_path),
+            "--output",
+            "json",
+            "config",
+            "show",
+        ],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["result"]["auth_token"] is None
+
+
+def test_auth_token_global_option_is_used_for_dispatch_meta(
+    runner, cli_app, tmp_path, monkeypatch
+) -> None:
+    import ableton_cli.client.backends as backends_module
+
+    captured: dict[str, object] = {}
+    original_dispatch = backends_module._TransportBackend.dispatch
+
+    def _capture_dispatch(self, name, args):  # noqa: ANN001, ANN202
+        request_meta: dict[str, object] = {}
+
+        def _fake_send(payload):  # noqa: ANN001, ANN202
+            request_meta.update(payload["meta"])
+            return {
+                "ok": True,
+                "request_id": payload["request_id"],
+                "protocol_version": payload["protocol_version"],
+                "result": {},
+                "error": None,
+            }
+
+        monkeypatch.setattr(self.transport, "send", _fake_send)
+        result = original_dispatch(self, name, args)
+        captured["meta"] = request_meta
+        return result
+
+    monkeypatch.setattr(backends_module._TransportBackend, "dispatch", _capture_dispatch)
+
+    config_path = tmp_path / "config.toml"
+    config_path.write_text('host = "127.0.0.1"\nport = 8765\n', encoding="utf-8")
+
+    result = runner.invoke(
+        cli_app,
+        [
+            "--config",
+            str(config_path),
+            "--auth-token",
+            "cli-secret",
+            "--output",
+            "json",
+            "song",
+            "info",
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert captured["meta"]["auth_token"] == "cli-secret"
+
+
 def test_protocol_version_global_option_overrides_config(runner, cli_app, tmp_path) -> None:
     config_path = tmp_path / "config.toml"
     config_path.write_text("protocol_version = 2\n", encoding="utf-8")

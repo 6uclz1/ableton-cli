@@ -156,6 +156,146 @@ def test_clip_notes_replace_requires_notes_input(runner, cli_app) -> None:
     assert payload["error"]["code"] == "INVALID_ARGUMENT"
 
 
+def test_clip_notes_update_requires_notes_input(runner, cli_app) -> None:
+    result = runner.invoke(
+        cli_app,
+        ["--output", "json", "clip", "notes", "update", "0", "0"],
+    )
+
+    assert result.exit_code == 2
+    payload = json.loads(result.stdout)
+    assert payload["ok"] is False
+    assert payload["error"]["code"] == "INVALID_ARGUMENT"
+
+
+def test_clip_notes_update_rejects_note_without_note_id(runner, cli_app) -> None:
+    result = runner.invoke(
+        cli_app,
+        [
+            "--output",
+            "json",
+            "clip",
+            "notes",
+            "update",
+            "0",
+            "0",
+            "--notes-json",
+            '[{"velocity":90}]',
+        ],
+    )
+
+    assert result.exit_code == 2
+    payload = json.loads(result.stdout)
+    assert payload["ok"] is False
+    assert payload["error"]["code"] == "INVALID_ARGUMENT"
+
+
+def test_clip_notes_update_rejects_note_with_only_note_id(runner, cli_app) -> None:
+    result = runner.invoke(
+        cli_app,
+        [
+            "--output",
+            "json",
+            "clip",
+            "notes",
+            "update",
+            "0",
+            "0",
+            "--notes-json",
+            '[{"note_id":3}]',
+        ],
+    )
+
+    assert result.exit_code == 2
+    payload = json.loads(result.stdout)
+    assert payload["ok"] is False
+    assert payload["error"]["code"] == "INVALID_ARGUMENT"
+
+
+def test_clip_notes_update_rejects_unsupported_field(runner, cli_app) -> None:
+    result = runner.invoke(
+        cli_app,
+        [
+            "--output",
+            "json",
+            "clip",
+            "notes",
+            "update",
+            "0",
+            "0",
+            "--notes-json",
+            '[{"note_id":3,"bogus_field":1}]',
+        ],
+    )
+
+    assert result.exit_code == 2
+    payload = json.loads(result.stdout)
+    assert payload["ok"] is False
+    assert payload["error"]["code"] == "INVALID_ARGUMENT"
+
+
+def test_clip_notes_update_rejects_out_of_range_probability(runner, cli_app) -> None:
+    result = runner.invoke(
+        cli_app,
+        [
+            "--output",
+            "json",
+            "clip",
+            "notes",
+            "update",
+            "0",
+            "0",
+            "--notes-json",
+            '[{"note_id":3,"probability":1.5}]',
+        ],
+    )
+
+    assert result.exit_code == 2
+    payload = json.loads(result.stdout)
+    assert payload["ok"] is False
+    assert payload["error"]["code"] == "INVALID_ARGUMENT"
+
+
+def test_clip_notes_add_accepts_optional_extended_fields() -> None:
+    from ableton_cli.commands._validation import parse_notes_json
+
+    notes = parse_notes_json(
+        '[{"pitch":60,"start_time":0.0,"duration":0.5,"velocity":100,"mute":false,'
+        '"probability":0.5,"velocity_deviation":-10.0,"release_velocity":40}]'
+    )
+
+    assert notes == [
+        {
+            "pitch": 60,
+            "start_time": 0.0,
+            "duration": 0.5,
+            "velocity": 100,
+            "mute": False,
+            "probability": 0.5,
+            "velocity_deviation": -10.0,
+            "release_velocity": 40,
+        }
+    ]
+
+
+def test_clip_notes_add_omits_extended_fields_when_not_provided() -> None:
+    from ableton_cli.commands._validation import parse_notes_json
+
+    notes = parse_notes_json(
+        '[{"pitch":60,"start_time":0.0,"duration":0.5,"velocity":100,"mute":false}]'
+    )
+
+    assert notes == [
+        {
+            "pitch": 60,
+            "start_time": 0.0,
+            "duration": 0.5,
+            "velocity": 100,
+            "mute": False,
+        }
+    ]
+
+
 def test_clip_notes_add_rejects_invalid_notes_file_json(runner, cli_app, tmp_path) -> None:
     notes_path = tmp_path / "broken-notes.json"
     notes_path.write_text("not-json", encoding="utf-8")

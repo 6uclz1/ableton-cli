@@ -81,7 +81,9 @@ def config_show(ctx: typer.Context) -> None:
 @config_app.command("set")
 def config_set(
     ctx: typer.Context,
-    key: Annotated[str, typer.Argument(help="Config key: host|port|timeout_ms|protocol_version")],
+    key: Annotated[
+        str, typer.Argument(help="Config key: host|port|timeout_ms|protocol_version|auth_token")
+    ],
     value: Annotated[str, typer.Argument(help="Value to set")],
 ) -> None:
     def _parse_value(raw_key: str, raw_value: str) -> tuple[str, object]:
@@ -92,7 +94,7 @@ def config_set(
             hint="Pass a non-empty value.",
         )
 
-        if normalized_key == "host":
+        if normalized_key in {"host", "auth_token"}:
             return normalized_key, parsed_value
         if normalized_key in {"port", "timeout_ms", "protocol_version"}:
             try:
@@ -104,7 +106,7 @@ def config_set(
                 ) from exc
         raise invalid_argument(
             message=f"unsupported config key: {raw_key}",
-            hint="Use one of: host, port, timeout_ms, protocol_version.",
+            hint="Use one of: host, port, timeout_ms, protocol_version, auth_token.",
         )
 
     def _run() -> dict[str, object]:

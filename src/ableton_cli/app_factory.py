@@ -8,11 +8,13 @@ import typer
 from .bootstrap import build_runtime_context
 from .commands import (
     arrangement,
+    audio,
     batch,
     browser,
     clip,
     device,
     effect,
+    remix,
     scenes,
     session,
     setup,
@@ -28,8 +30,10 @@ from .version import version_callback
 
 _COMMAND_MODULES = (
     setup,
+    audio,
     batch,
     song,
+    remix,
     arrangement,
     session,
     scenes,

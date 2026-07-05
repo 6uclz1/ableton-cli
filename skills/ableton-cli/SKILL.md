@@ -36,6 +36,22 @@ To verify that the latest Remote Script is active, run `uv run ableton-cli --out
 - `result.remote_script_version` is the expected version
 - `result.supported_commands` includes the newly added command names
 
+### Audio / Remix Manifest
+
+```bash
+uv run ableton-cli audio analyze --project ./proj/remix_project.json
+uv run ableton-cli audio asset add --project ./proj/remix_project.json --role drums --path /abs/stems/drums.wav
+uv run ableton-cli audio sections import --project ./proj/remix_project.json --sections "intro:1-8,bridge:49-64,final_drop:65-96"
+uv run ableton-cli remix init --source /abs/source/private_test.wav --project ./proj --rights-status private_test
+uv run ableton-cli remix set-target --project ./proj/remix_project.json --bpm 174 --key "F minor"
+uv run ableton-cli remix plan --project ./proj/remix_project.json --style anime-dnb --dynamics section-profiles
+uv run ableton-cli remix apply --project ./proj/remix_project.json --dry-run
+uv run ableton-cli remix apply --project ./proj/remix_project.json --yes
+uv run ableton-cli remix qa --project ./proj/remix_project.json
+```
+
+Use `remix plan --dynamics section-profiles` when section energy and drum policy should be inferred from the style and section names. Inspect dry-run steps before applying; drum-off sections such as bridge, interlude, breakdown, and intro_pad should not include `role: drums` steps.
+
 ### Song / Session
 
 ```bash

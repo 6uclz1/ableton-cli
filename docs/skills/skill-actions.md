@@ -105,6 +105,15 @@ Stable action names and CLI mappings for automation wrappers.
 - `uv run ableton-cli clip groove amount set <track> <clip> <0.0-1.0>`: Set groove amount on a clip.
 - `uv run ableton-cli clip groove clear <track> <clip>`: Clear groove assignment from a clip.
 - `uv run ableton-cli clip cut-to-drum-rack (--source-track <track> --source-clip <clip> | --source <uri-or-path>) (--grid <fraction-or-beats> | --slice-count <n>) [--target-track <track>] [--start-pad <pad>] [--create-trigger-clip --trigger-clip-slot <clip>]`: Slice audio source and map slices into Drum Rack pads.
+- `uv run ableton-cli audio analyze --project <remix_project.json>`: Record an analysis placeholder in the remix manifest for manual BPM/key/chord notes.
+- `uv run ableton-cli audio asset add --project <remix_project.json> --role <role> --path <abs-audio>`: Register a remix source or stem asset by role.
+- `uv run ableton-cli audio sections import --project <remix_project.json> --sections "intro:1-8,bridge:49-64"`: Import a bar-based section map and infer section dynamics.
+- `uv run ableton-cli remix init --source <abs-audio> --project <dir> --rights-status private_test`: Create a manifest-first remix project.
+- `uv run ableton-cli remix set-target --project <remix_project.json> --bpm <bpm> --key <key>`: Store target tempo and key in the remix manifest.
+- `uv run ableton-cli remix plan --project <remix_project.json> --style <style> --dynamics section-profiles`: Generate a layer-aware arrangement plan with section energy and drum policy.
+- `uv run ableton-cli remix apply --project <remix_project.json> --dry-run`: Inspect planned remix arrangement steps before applying.
+- `uv run ableton-cli remix apply --project <remix_project.json> --yes`: Confirm application of the planned remix steps.
+- `uv run ableton-cli remix qa --project <remix_project.json>`: Check manifest completeness and arrangement dynamics violations.
 
 Operational note: after `install-remote-script --yes`, reload Ableton's Control Surface assignment (`None` -> `AbletonCliRemote`) or restart Ableton Live to apply updated Remote Script code.
 

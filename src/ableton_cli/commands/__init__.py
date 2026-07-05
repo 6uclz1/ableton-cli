@@ -2,11 +2,13 @@ from __future__ import annotations
 
 from . import (
     arrangement,
+    audio,
     batch,
     browser,
     clip,
     device,
     effect,
+    remix,
     scenes,
     session,
     setup,
@@ -18,12 +20,14 @@ from . import (
 )
 
 __all__ = [
+    "audio",
     "arrangement",
     "batch",
     "browser",
     "clip",
     "device",
     "effect",
+    "remix",
     "scenes",
     "session",
     "setup",

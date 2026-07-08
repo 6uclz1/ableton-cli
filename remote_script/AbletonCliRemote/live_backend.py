@@ -5,6 +5,7 @@ from typing import Any
 from .live_backend_parts import (
     LiveBackendBaseMixin,
     LiveBackendBrowserCatalogMixin,
+    LiveBackendBrowserLoadMixin,
     LiveBackendBrowserPathLookupMixin,
     LiveBackendBrowserReadMixin,
     LiveBackendBrowserSearchIndexMixin,
@@ -30,6 +31,7 @@ class LiveBackend(
     LiveBackendDeviceSharedMixin,
     LiveBackendBrowserSearchMixin,
     LiveBackendBrowserReadMixin,
+    LiveBackendBrowserLoadMixin,
     LiveBackendBrowserSearchIndexMixin,
     LiveBackendBrowserPathLookupMixin,
     LiveBackendBrowserCatalogMixin,

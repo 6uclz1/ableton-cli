@@ -24,11 +24,10 @@ _NOTE_UPDATABLE_FIELD_NAMES = (
 
 
 class LiveBackendClipNotesMixin:
-    """Session clip note read/write/transform commands.
-
-    Split out of ``LiveBackendTracksClipsMixin`` to keep both classes well
-    under the quality harness god-class-risk threshold (see
-    ``docs/quality-harness-phase2.md``). Note-related helpers used by
+    """Session clip note read/write/transform commands: the MIDI note domain
+    (get/add/update/clear/replace plus quantize/humanize/velocity-scale/
+    transpose), split out of ``LiveBackendTracksClipsMixin`` by domain from
+    general clip-slot/track-mixer concerns. Note-related helpers used by
     arrangement clips (``scenes_arrangement.py``) and by drum-rack cutting
     (``tracks_clips_cut_to_drum_rack.py``) also live here and are shared via
     the ``LiveBackend`` mixin composition.

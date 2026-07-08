@@ -3,6 +3,7 @@ from __future__ import annotations
 from .base import LiveBackendBaseMixin
 from .browser import (
     LiveBackendBrowserCatalogMixin,
+    LiveBackendBrowserLoadMixin,
     LiveBackendBrowserPathLookupMixin,
     LiveBackendBrowserReadMixin,
     LiveBackendBrowserSearchIndexMixin,
@@ -33,6 +34,7 @@ __all__ = [
     "LiveBackendBrowserPathLookupMixin",
     "LiveBackendBrowserSearchIndexMixin",
     "LiveBackendBrowserReadMixin",
+    "LiveBackendBrowserLoadMixin",
     "LiveBackendBrowserSearchMixin",
     "LiveBackendDeviceSharedMixin",
     "LiveBackendDeviceRacksMixin",

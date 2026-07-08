@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from .browser_catalog import LiveBackendBrowserCatalogMixin
+from .browser_load import LiveBackendBrowserLoadMixin
 from .browser_path_lookup import LiveBackendBrowserPathLookupMixin
 from .browser_read import LiveBackendBrowserReadMixin
 from .browser_search import LiveBackendBrowserSearchMixin
@@ -8,6 +9,7 @@ from .browser_search_index import LiveBackendBrowserSearchIndexMixin
 
 __all__ = [
     "LiveBackendBrowserCatalogMixin",
+    "LiveBackendBrowserLoadMixin",
     "LiveBackendBrowserPathLookupMixin",
     "LiveBackendBrowserSearchIndexMixin",
     "LiveBackendBrowserReadMixin",

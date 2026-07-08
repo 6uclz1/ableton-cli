@@ -5,6 +5,7 @@ from collections.abc import Callable
 from typing import Any
 
 from .command_backend_contract import CommandBackend, CommandError, RemoteErrorCode
+from .command_backend_handlers_arrangement import ARRANGEMENT_HANDLERS
 from .command_backend_handlers_batch import make_execute_batch_handler
 from .command_backend_handlers_browser import BROWSER_HANDLERS
 from .command_backend_handlers_device_racks import DEVICE_RACKS_HANDLERS
@@ -40,6 +41,7 @@ def _build_handlers() -> dict[str, Handler]:
     }
     handlers.update(SONG_TRANSPORT_HANDLERS)
     handlers.update(TRACKS_CLIPS_HANDLERS)
+    handlers.update(ARRANGEMENT_HANDLERS)
     handlers.update(BROWSER_HANDLERS)
     handlers.update(DEVICE_HANDLERS)
     handlers.update(DEVICE_RACKS_HANDLERS)

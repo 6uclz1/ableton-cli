@@ -379,39 +379,3 @@ def read_only_remote_command_names() -> set[str]:
         for spec in command_specs()
         if spec.remote_command is not None and spec.side_effect.kind == "read"
     }
-
-
-def validate_transport_command_specs() -> None:
-    from .actions import stable_action_capability_map, stable_action_command_map
-    from .capabilities import required_remote_commands
-    from .commands import transport
-    from .contracts.registry import get_registered_contracts
-
-    contracts = get_registered_contracts()
-    action_commands = stable_action_command_map()
-    action_capabilities = stable_action_capability_map()
-    required = required_remote_commands()
-    public_commands = public_command_names()
-    module_specs = {
-        item.command_name: item.client_method
-        for item in (
-            transport.TRANSPORT_PLAY_SPEC,
-            transport.TRANSPORT_STOP_SPEC,
-            transport.TRANSPORT_TOGGLE_SPEC,
-            transport.TRANSPORT_TEMPO_GET_SPEC,
-            transport.TRANSPORT_TEMPO_SET_SPEC,
-            transport.TRANSPORT_POSITION_GET_SPEC,
-            transport.TRANSPORT_POSITION_SET_SPEC,
-            transport.TRANSPORT_REWIND_SPEC,
-        )
-    }
-
-    for spec in TRANSPORT_COMMAND_SPECS:
-        assert spec.command_name in public_commands
-        assert module_specs[spec.command_name] == spec.client_method
-        assert spec.remote_command in required
-        assert spec.command_name in contracts
-        if spec.action_name is None:
-            continue
-        assert action_commands[spec.action_name] == spec.action_command
-        assert action_capabilities[spec.action_name] == spec.capability

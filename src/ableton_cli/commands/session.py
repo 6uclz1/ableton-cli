@@ -3,11 +3,13 @@ from __future__ import annotations
 import json
 from collections.abc import Callable
 from pathlib import Path
+from typing import Annotated
 
 import typer
 
-from ..runtime import execute_command, get_client
+from ..runtime import execute_command, get_client, get_runtime
 from ..session_diff import compute_session_diff
+from ..watch import WATCH_SCOPES, run_watch_loop
 from ._client_command_runner import CommandSpec
 from ._client_command_runner import run_client_command as run_client_command_shared
 from ._client_command_runner import run_client_command_spec as run_client_command_spec_shared
@@ -132,6 +134,84 @@ def session_diff(
         args={"from": from_path, "to": to_path},
         fn=lambda _client: _session_diff_result(from_path=from_path, to_path=to_path),
     )
+
+
+def _validate_watch_interval(interval_ms: int) -> None:
+    if interval_ms < 50:
+        raise invalid_argument(
+            message=f"interval_ms must be >= 50, got {interval_ms}",
+            hint="Use --interval-ms >= 50.",
+        )
+
+
+def _validate_watch_scope(scope: str) -> None:
+    if scope not in WATCH_SCOPES:
+        raise invalid_argument(
+            message=f"scope must be one of {sorted(WATCH_SCOPES)}, got {scope!r}",
+            hint="Use --scope song|tracks|transport|all.",
+        )
+
+
+@session_app.command("watch")
+def session_watch(
+    ctx: typer.Context,
+    interval_ms: Annotated[
+        int, typer.Option("--interval-ms", help="Poll interval in milliseconds (min 50)")
+    ] = 500,
+    scope: Annotated[str, typer.Option("--scope", help="song|tracks|transport|all")] = "all",
+    count: Annotated[
+        int | None,
+        typer.Option("--count", help="Stop after N emitted diffs (unlimited if omitted)"),
+    ] = None,
+    include_position: Annotated[
+        bool,
+        typer.Option(
+            "--include-position/--no-include-position",
+            help="Include volatile playback position fields in diffs",
+        ),
+    ] = False,
+) -> None:
+    args = {
+        "interval_ms": interval_ms,
+        "scope": scope,
+        "count": count,
+        "include_position": include_position,
+    }
+
+    def _validate() -> dict[str, object]:
+        _validate_watch_interval(interval_ms)
+        _validate_watch_scope(scope)
+        return {}
+
+    if interval_ms < 50 or scope not in WATCH_SCOPES:
+        execute_command(ctx, command="session watch", args=args, action=_validate)
+        return
+
+    runtime = get_runtime(ctx)
+    if (
+        runtime.plan
+        or runtime.dry_run
+        or (runtime.require_confirmation and not runtime.confirm_destructive)
+    ):
+        execute_command(ctx, command="session watch", args=args, action=lambda: {})
+        return
+
+    client = get_client(ctx)
+
+    def _emit(payload: dict[str, object]) -> None:
+        typer.echo(json.dumps(payload))
+
+    try:
+        run_watch_loop(
+            client,
+            scope=scope,
+            interval_seconds=interval_ms / 1000.0,
+            count=count,
+            include_position=include_position,
+            emit=_emit,
+        )
+    except KeyboardInterrupt:
+        raise typer.Exit(code=0) from None
 
 
 @session_app.command("stop-all-clips")

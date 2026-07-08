@@ -167,6 +167,7 @@ _LOCAL_ONLY_COMMANDS = frozenset(
         "remix setup-sound",
         "remix vocal-chop",
         "session diff",
+        "session watch",
         "wait-ready",
     }
 )
@@ -339,6 +340,7 @@ def _is_read_command(command_name: str) -> bool:
         "session diff",
         "session info",
         "session snapshot",
+        "session watch",
         "wait-ready",
     }:
         return True

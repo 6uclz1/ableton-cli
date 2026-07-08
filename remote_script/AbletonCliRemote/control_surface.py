@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hmac
 import queue
 import threading
 from collections.abc import Callable
@@ -96,7 +97,11 @@ class AbletonCliRemoteSurface(_ControlSurface):
     def _execute_command_from_server_thread(
         self, name: str, args: dict[str, Any], meta: dict[str, Any]
     ) -> dict[str, Any]:
-        if self._auth_token is not None and meta.get("auth_token") != self._auth_token:
+        provided_auth_token = meta.get("auth_token")
+        if self._auth_token is not None and (
+            not isinstance(provided_auth_token, str)
+            or not hmac.compare_digest(provided_auth_token, self._auth_token)
+        ):
             raise CommandExecutionError(
                 code=RemoteErrorCode.UNAUTHORIZED.value,
                 message="Missing or invalid auth token",

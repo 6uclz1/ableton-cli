@@ -94,6 +94,31 @@ def test_surface_rejects_command_with_missing_or_wrong_auth_token(
         surface.disconnect()
 
 
+def test_surface_rejects_non_string_auth_token_without_raising_type_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        control_surface_module,
+        "dispatch_command",
+        lambda _backend, name, args: {"handled": name, "args": args},
+    )
+    surface = _make_surface(
+        monkeypatch,
+        remote_config=RemoteConfig(host="127.0.0.1", port=8765, auth_token="expected-token"),
+    )
+
+    try:
+        with pytest.raises(CommandExecutionError) as non_string_token:
+            surface._execute_command_from_server_thread(
+                "song_info",
+                {},
+                {"request_timeout_ms": 100, "auth_token": 123},
+            )
+        assert non_string_token.value.code == "UNAUTHORIZED"
+    finally:
+        surface.disconnect()
+
+
 def test_surface_allows_command_with_matching_auth_token(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

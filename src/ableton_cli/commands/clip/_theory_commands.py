@@ -1,10 +1,13 @@
 from __future__ import annotations
 
-from typing import Annotated
+import json
+from pathlib import Path
+from typing import Annotated, Any
 
 import typer
 
 from ...errors import AppError, ErrorCode, ExitCode
+from ...groove_apply import apply_groove
 from ...music_theory import (
     ARPEGGIATE_MODES,
     SCALE_INTERVALS,
@@ -34,6 +37,7 @@ def register_theory_commands(notes_app: typer.Typer) -> None:
     notes_app.command("euclidean")(clip_notes_euclidean)
     notes_app.command("ratchet")(clip_notes_ratchet)
     notes_app.command("retrograde")(clip_notes_retrograde)
+    notes_app.command("apply-groove")(clip_notes_apply_groove)
 
 
 def _music_theory_error(exc: MusicTheoryError, *, hint: str) -> AppError:
@@ -425,6 +429,123 @@ def clip_notes_retrograde(
             "track": track,
             "clip": clip,
             "loop_length": loop_length,
+            "start_time": start_time,
+            "end_time": end_time,
+            "pitch": pitch,
+        },
+        action=_run,
+    )
+
+
+def _load_groove_profile(groove_file: Path) -> dict[str, Any]:
+    try:
+        payload = json.loads(groove_file.read_text(encoding="utf-8"))
+    except OSError as exc:
+        raise invalid_argument(
+            message=f"groove_file could not be read: {groove_file}",
+            hint="Pass a path produced by 'audio groove extract --out'.",
+        ) from exc
+    except json.JSONDecodeError as exc:
+        raise invalid_argument(
+            message=f"groove_file must be valid JSON: {exc.msg}",
+            hint="Pass a path produced by 'audio groove extract --out'.",
+        ) from exc
+
+    if (
+        not isinstance(payload, dict)
+        or not isinstance(payload.get("grid"), str)
+        or not isinstance(payload.get("slots"), list)
+    ):
+        raise invalid_argument(
+            message="groove_file must contain a {grid, slots} groove profile object",
+            hint="Pass a path produced by 'audio groove extract --out'.",
+        )
+    return payload
+
+
+def clip_notes_apply_groove(
+    ctx: typer.Context,
+    track: Annotated[int, typer.Argument(help="Track index (0-based)")],
+    clip: Annotated[int, typer.Argument(help="Clip slot index (0-based)")],
+    groove_file: Annotated[
+        Path, typer.Option("--groove-file", help="Groove profile JSON from 'audio groove extract'")
+    ],
+    timing_amount: Annotated[
+        float, typer.Option("--timing-amount", help="Timing shift strength in [0.0, 1.0]")
+    ] = 1.0,
+    velocity_amount: Annotated[
+        float, typer.Option("--velocity-amount", help="Velocity scaling strength in [0.0, 1.0]")
+    ] = 0.0,
+    start_time: Annotated[
+        float | None,
+        typer.Option("--start-time", help="Inclusive start time filter in beats"),
+    ] = None,
+    end_time: Annotated[
+        float | None,
+        typer.Option("--end-time", help="Exclusive end time filter in beats"),
+    ] = None,
+    pitch: Annotated[
+        int | None,
+        typer.Option("--pitch", help="Exact MIDI pitch filter"),
+    ] = None,
+) -> None:
+    def _run() -> dict[str, object]:
+        filters = validated_transform_filters(
+            track=track, clip=clip, start_time=start_time, end_time=end_time, pitch=pitch
+        )
+        valid_timing_amount = require_float_in_range(
+            name="timing_amount",
+            value=timing_amount,
+            minimum=0.0,
+            maximum=1.0,
+            hint="Use --timing-amount in [0.0, 1.0].",
+        )
+        valid_velocity_amount = require_float_in_range(
+            name="velocity_amount",
+            value=velocity_amount,
+            minimum=0.0,
+            maximum=1.0,
+            hint="Use --velocity-amount in [0.0, 1.0].",
+        )
+        profile = _load_groove_profile(groove_file)
+        client = resolve_client(ctx)
+        existing = client.get_clip_notes(
+            track=track,
+            clip=clip,
+            start_time=filters["start_time"],
+            end_time=filters["end_time"],
+            pitch=filters["pitch"],
+        )
+        try:
+            transformed = apply_groove(
+                existing["notes"],
+                profile,
+                timing_amount=valid_timing_amount,
+                velocity_amount=valid_velocity_amount,
+            )
+        except ValueError as exc:
+            raise invalid_argument(
+                message=str(exc),
+                hint="Use a groove profile produced by 'audio groove extract'.",
+            ) from exc
+        return client.replace_clip_notes(
+            track=track,
+            clip=clip,
+            notes=transformed,
+            start_time=filters["start_time"],
+            end_time=filters["end_time"],
+            pitch=filters["pitch"],
+        )
+
+    execute_clip_command(
+        ctx,
+        command="clip notes apply-groove",
+        args={
+            "track": track,
+            "clip": clip,
+            "groove_file": str(groove_file),
+            "timing_amount": timing_amount,
+            "velocity_amount": velocity_amount,
             "start_time": start_time,
             "end_time": end_time,
             "pitch": pitch,

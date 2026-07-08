@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 from typing import Any
 
 
@@ -325,6 +326,115 @@ def test_retrograde_rejects_non_positive_loop_length(runner, cli_app, monkeypatc
             "0",
             "--loop-length",
             "0",
+        ],
+    )
+
+    assert result.exit_code != 0
+    payload = json.loads(result.stdout)
+    assert payload["ok"] is False
+    assert payload["error"]["code"] == "INVALID_ARGUMENT"
+
+
+def _write_groove_profile(path: Path, *, delta: float = 0.03) -> None:
+    slots = [
+        {
+            "position": index * 0.25,
+            "timing_offset": delta if index % 2 == 1 else 0.0,
+            "velocity_scale": 1.0,
+        }
+        for index in range(16)
+    ]
+    path.write_text(json.dumps({"grid": "1/16", "slots": slots}), encoding="utf-8")
+
+
+def test_apply_groove_shifts_notes_per_profile(
+    runner, cli_app, monkeypatch, tmp_path: Path
+) -> None:
+    from ableton_cli.commands import clip
+
+    fake = _FakeClient([_note(60, 0.0, duration=0.25), _note(64, 0.25, duration=0.25)])
+    monkeypatch.setattr(clip, "get_client", lambda ctx: fake)
+    groove_path = tmp_path / "groove.json"
+    _write_groove_profile(groove_path, delta=0.03)
+
+    result = runner.invoke(
+        cli_app,
+        [
+            "--output",
+            "json",
+            "clip",
+            "notes",
+            "apply-groove",
+            "0",
+            "0",
+            "--groove-file",
+            str(groove_path),
+            "--timing-amount",
+            "1.0",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    sent_notes = fake.replace_calls[0]["notes"]
+    starts = sorted(n["start_time"] for n in sent_notes)
+    assert starts == [0.0, 0.28]
+
+
+def test_apply_groove_rejects_malformed_groove_file(
+    runner, cli_app, monkeypatch, tmp_path: Path
+) -> None:
+    from ableton_cli.commands import clip
+
+    fake = _FakeClient([_note(60, 0.0)])
+    monkeypatch.setattr(clip, "get_client", lambda ctx: fake)
+    groove_path = tmp_path / "groove.json"
+    groove_path.write_text("not json", encoding="utf-8")
+
+    result = runner.invoke(
+        cli_app,
+        [
+            "--output",
+            "json",
+            "clip",
+            "notes",
+            "apply-groove",
+            "0",
+            "0",
+            "--groove-file",
+            str(groove_path),
+        ],
+    )
+
+    assert result.exit_code != 0
+    payload = json.loads(result.stdout)
+    assert payload["ok"] is False
+    assert payload["error"]["code"] == "INVALID_ARGUMENT"
+
+
+def test_apply_groove_rejects_out_of_range_velocity_amount(
+    runner, cli_app, monkeypatch, tmp_path: Path
+) -> None:
+    from ableton_cli.commands import clip
+
+    fake = _FakeClient([_note(60, 0.0)])
+    monkeypatch.setattr(clip, "get_client", lambda ctx: fake)
+    groove_path = tmp_path / "groove.json"
+    _write_groove_profile(groove_path)
+
+    result = runner.invoke(
+        cli_app,
+        [
+            "--output",
+            "json",
+            "clip",
+            "notes",
+            "apply-groove",
+            "0",
+            "0",
+            "--groove-file",
+            str(groove_path),
+            "--velocity-amount",
+            "1.5",
         ],
     )
 

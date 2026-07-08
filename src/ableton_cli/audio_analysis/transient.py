@@ -58,6 +58,7 @@ def analyze_transients(
     )
 
     onset_points = [round(candidate.beat, config.round_beats) for candidate in filtered]
+    onset_strengths = _normalized_strengths(filtered)
     slice_points = _slice_points(
         onset_points=onset_points,
         duration_beats=duration_beats,
@@ -83,11 +84,21 @@ def analyze_transients(
         "duration_beats": round(duration_beats, config.round_beats),
         "analysis_version": ANALYSIS_VERSION,
         "onset_points_beats": onset_points,
+        "onset_strengths": onset_strengths,
         "slice_points_beats": slice_points,
         "slice_ranges": slice_ranges,
         "confidence": _confidence(filtered, flux, warnings),
         "warnings": warnings,
     }
+
+
+def _normalized_strengths(candidates: list[_Candidate]) -> list[float]:
+    if not candidates:
+        return []
+    peak = max(candidate.strength for candidate in candidates)
+    if peak <= 0.0:
+        return [0.0 for _ in candidates]
+    return [round(candidate.strength / peak, 6) for candidate in candidates]
 
 
 def _validate_bpm(bpm: float) -> float:

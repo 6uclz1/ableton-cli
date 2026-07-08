@@ -261,6 +261,7 @@ uv run ableton-cli clip notes arpeggiate 0 0 --mode up --rate 1/16 --gate 0.9
 uv run ableton-cli clip notes euclidean 0 0 --pitch 36 --steps 16 --pulses 5 --length 4 --mode replace
 uv run ableton-cli clip notes ratchet 0 0 --division 2 --probability 1.0
 uv run ableton-cli clip notes retrograde 0 0 --loop-length 4
+uv run ableton-cli clip notes apply-groove 0 0 --groove-file groove.json --timing-amount 1.0 --velocity-amount 0.5
 uv run ableton-cli clip envelope set 0 0 --points-json '[{"time":0.0,"value":0.1},{"time":4.0,"value":0.9}]' --device-index 0 --parameter-key filter_cutoff
 uv run ableton-cli clip envelope shape 0 0 --device-index 0 --parameter-key filter_cutoff --shape ramp --from 0.1 --to 0.9 --start 0 --length 4 --resolution 16
 uv run ableton-cli clip envelope clear 0 0 --device-index 0 --parameter-key filter_cutoff
@@ -279,6 +280,7 @@ uv run ableton-cli clip duplicate 0 0 1
 uv run ableton-cli clip duplicate-many 0 0 --to 2,4,5,6
 uv run ableton-cli clip place-pattern 0 --clip 0 --scenes Intro,Drop,Peak
 uv run ableton-cli audio transient analyze --path ./loops/drum-break.wav --bpm 174 --max-slices 16
+uv run ableton-cli audio groove extract --path ./loops/drum-break.wav --bpm 174 --grid 1/16 --out groove.json
 uv run ableton-cli clip cut-to-drum-rack --source-file ./loops/drum-break.wav --transient --bpm 174 --max-slices 16 --create-trigger-clip --trigger-clip-slot 1
 uv run ableton-cli clip cut-to-drum-rack --source-track 1 --source-clip 0 --slice-count 8 --create-trigger-clip --trigger-clip-slot 1
 uv run ableton-cli clip props get 0 0

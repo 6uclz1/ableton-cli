@@ -11,6 +11,7 @@ from ..remix.manifest import resolve_manifest_path
 from ..remix.stems import list_stems, split_stems
 from ..runtime import execute_command
 from . import (
+    _audio_groove_commands,
     _audio_loudness_commands,
     _audio_reference_commands,
     _audio_spectrum_commands,
@@ -26,6 +27,7 @@ loudness_app = typer.Typer(help="Offline loudness analysis commands", no_args_is
 spectrum_app = typer.Typer(help="Offline spectrum analysis commands", no_args_is_help=True)
 reference_app = typer.Typer(help="Reference comparison commands", no_args_is_help=True)
 transient_app = typer.Typer(help="Offline transient analysis commands", no_args_is_help=True)
+groove_app = typer.Typer(help="Offline groove extraction commands", no_args_is_help=True)
 
 
 @asset_app.command("add")
@@ -180,10 +182,12 @@ _audio_loudness_commands.register(loudness_app)
 _audio_spectrum_commands.register(spectrum_app)
 _audio_reference_commands.register(reference_app)
 _audio_transient_commands.register(transient_app)
+_audio_groove_commands.register(groove_app)
 audio_app.add_typer(loudness_app, name="loudness")
 audio_app.add_typer(spectrum_app, name="spectrum")
 audio_app.add_typer(reference_app, name="reference")
 audio_app.add_typer(transient_app, name="transient")
+audio_app.add_typer(groove_app, name="groove")
 
 
 def register(app: typer.Typer) -> None:

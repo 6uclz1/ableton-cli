@@ -348,6 +348,10 @@ echo '{"id":"req-1","steps":[{"name":"song_info","args":{}}]}' | uv run ableton-
 
 ```bash
 uv run ableton-cli device parameter set 0.25 --track-index 0 --device-index 0 --parameter-index 0
+uv run ableton-cli device chains list --track-index 0 --device-index 0
+uv run ableton-cli device macro list --track-index 0 --device-index 0
+uv run ableton-cli device macro set 0 64.0 --track-index 0 --device-index 0
+uv run ableton-cli device parameter set 0.5 --track-index 0 --device-ref device:12 --parameter-index 0
 ```
 
 ### Synth

@@ -24,6 +24,11 @@ from ..synth_specs import (
     resolve_standard_synth_key_indexes,
 )
 
+# A flat device index (top-level device on a track), or a chain-nested path:
+# (top_device_index, chain_index, device_index, [chain_index, device_index, ...])
+# for a device reached by descending into rack chains.
+DeviceLocator = int | tuple[int, ...]
+
 
 def _invalid_argument(
     message: str,
@@ -164,17 +169,52 @@ class LiveBackendBaseMixin:
             )
         return tracks[index]
 
-    def _device_at(self, track: int, device: int) -> Any:
+    def _device_at(self, track: int, device: DeviceLocator) -> Any:
         target = self._track_at(track)
         devices = list(target.devices)
-        if device < 0 or device >= len(devices):
+        if isinstance(device, int):
+            if device < 0 or device >= len(devices):
+                raise _invalid_argument(
+                    message=f"device out of range: {device}",
+                    hint="Use a valid device index from track info.",
+                )
+            return devices[device]
+
+        if not device:
             raise _invalid_argument(
-                message=f"device out of range: {device}",
+                message="device path must not be empty",
+                hint="Use a valid device index or chain-nested device stable_ref.",
+            )
+        top_index, *rest = device
+        if top_index < 0 or top_index >= len(devices):
+            raise _invalid_argument(
+                message=f"device out of range: {top_index}",
                 hint="Use a valid device index from track info.",
             )
-        return devices[device]
+        current = devices[top_index]
+        while rest:
+            if len(rest) < 2:
+                raise _invalid_argument(
+                    message="malformed chain device path",
+                    hint="Use a stable_ref emitted by 'device chains list'.",
+                )
+            chain_index, chain_device_index, *rest = rest
+            chains = list(getattr(current, "chains", []))
+            if chain_index < 0 or chain_index >= len(chains):
+                raise _invalid_argument(
+                    message=f"chain out of range: {chain_index}",
+                    hint="Use a valid chain index from 'device chains list'.",
+                )
+            chain_devices = list(getattr(chains[chain_index], "devices", []))
+            if chain_device_index < 0 or chain_device_index >= len(chain_devices):
+                raise _invalid_argument(
+                    message=f"chain device out of range: {chain_device_index}",
+                    hint="Use a valid device index from 'device chains list'.",
+                )
+            current = chain_devices[chain_device_index]
+        return current
 
-    def _parameter_at(self, track: int, device: int, parameter: int) -> Any:
+    def _parameter_at(self, track: int, device: DeviceLocator, parameter: int) -> Any:
         target_device = self._device_at(track, device)
         parameters = list(getattr(target_device, "parameters", []))
         if parameter < 0 or parameter >= len(parameters):
@@ -280,6 +320,17 @@ class LiveBackendBaseMixin:
             locator = ("track", track_index, device_index)
         return self._stable_ref("device", device, locator=locator)
 
+    def _device_locator_for(self, track: int, device: DeviceLocator) -> tuple[Any, ...]:
+        if isinstance(device, int):
+            return ("track", track, device)
+        top_index, *rest = device
+        return ("track", track, top_index, "chain", *rest)
+
+    def _device_stable_ref_for(self, track: int, device: DeviceLocator) -> str:
+        device_obj = self._device_at(track, device)
+        locator = self._device_locator_for(track, device)
+        return self._stable_ref("device", device_obj, locator=locator)
+
     def _parameter_stable_ref(
         self,
         parameter: Any,
@@ -325,8 +376,8 @@ class LiveBackendBaseMixin:
         kind: str,
         stable_ref: str,
         candidates: list[tuple[int, Any]],
-        locator_matcher: Callable[[tuple[Any, ...]], int | None] | None = None,
-    ) -> int:
+        locator_matcher: Callable[[tuple[Any, ...]], DeviceLocator | None] | None = None,
+    ) -> DeviceLocator:
         self._ensure_stable_ref_state()
         entry = self._stable_ref_entries.get(stable_ref)
         if entry is None or entry["kind"] != kind:
@@ -368,6 +419,30 @@ class LiveBackendBaseMixin:
         if locator_device < 0 or locator_device >= len(devices):
             return None
         return locator_device
+
+    def _device_locator_with_chains(
+        self, track: int, locator: tuple[Any, ...]
+    ) -> DeviceLocator | None:
+        """Like ``_device_index_from_locator``, but also resolves chain-nested
+        device locators of the shape
+        ``("track", track_index, top_device_index, "chain", chain_index, device_index, ...)``
+        emitted by ``device_chains_list``."""
+        flat = self._device_index_from_locator(track, locator)
+        if flat is not None:
+            return flat
+        if len(locator) < 6 or locator[0] != "track" or locator[3] != "chain":
+            return None
+        if int(locator[1]) != track:
+            return None
+        rest = locator[4:]
+        if len(rest) % 2 != 0:
+            return None
+        path = (int(locator[2]), *(int(value) for value in rest))
+        try:
+            self._device_at(track, path)
+        except CommandError:
+            return None
+        return path
 
     def _parameter_index_from_locator(
         self,
@@ -435,7 +510,7 @@ class LiveBackendBaseMixin:
             )
         return selected_device
 
-    def resolve_device_ref(self, track: int, device_ref: dict[str, Any]) -> int:
+    def resolve_device_ref(self, track: int, device_ref: dict[str, Any]) -> DeviceLocator:
         target_track = self._track_at(track)
         devices = list(target_track.devices)
         mode = str(device_ref["mode"])
@@ -466,11 +541,13 @@ class LiveBackendBaseMixin:
                 kind="device",
                 stable_ref=str(device_ref["stable_ref"]),
                 candidates=[(index, device) for index, device in enumerate(devices)],
-                locator_matcher=lambda locator: self._device_index_from_locator(track, locator),
+                locator_matcher=lambda locator: self._device_locator_with_chains(track, locator),
             )
         raise AssertionError(f"unsupported device mode: {mode}")
 
-    def resolve_parameter_ref(self, track: int, device: int, parameter_ref: dict[str, Any]) -> int:
+    def resolve_parameter_ref(
+        self, track: int, device: DeviceLocator, parameter_ref: dict[str, Any]
+    ) -> int:
         target_device = self._device_at(track, device)
         parameters = list(getattr(target_device, "parameters", []))
         mode = str(parameter_ref["mode"])

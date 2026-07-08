@@ -7,6 +7,7 @@ from typing import Any
 from .command_backend_contract import CommandBackend, CommandError, RemoteErrorCode
 from .command_backend_handlers_batch import make_execute_batch_handler
 from .command_backend_handlers_browser import BROWSER_HANDLERS
+from .command_backend_handlers_device_racks import DEVICE_RACKS_HANDLERS
 from .command_backend_handlers_devices import DEVICE_HANDLERS
 from .command_backend_handlers_envelopes import ENVELOPE_HANDLERS
 from .command_backend_handlers_song_transport import SONG_TRANSPORT_HANDLERS
@@ -41,6 +42,7 @@ def _build_handlers() -> dict[str, Handler]:
     handlers.update(TRACKS_CLIPS_HANDLERS)
     handlers.update(BROWSER_HANDLERS)
     handlers.update(DEVICE_HANDLERS)
+    handlers.update(DEVICE_RACKS_HANDLERS)
     handlers.update(ENVELOPE_HANDLERS)
     handlers["execute_batch"] = make_execute_batch_handler(dispatch_command)
     return handlers

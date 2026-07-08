@@ -21,6 +21,43 @@ class _AbletonClientDevicesMixin:
             value=value,
         )
 
+    def device_chains_list(
+        self,
+        track_ref: RefPayload,
+        device_ref: RefPayload,
+    ) -> dict[str, Any]:
+        return self._call(
+            "device_chains_list",
+            {"track_ref": track_ref, "device_ref": device_ref},
+        )
+
+    def device_macro_list(
+        self,
+        track_ref: RefPayload,
+        device_ref: RefPayload,
+    ) -> dict[str, Any]:
+        return self._call(
+            "device_macro_list",
+            {"track_ref": track_ref, "device_ref": device_ref},
+        )
+
+    def device_macro_set(
+        self,
+        track_ref: RefPayload,
+        device_ref: RefPayload,
+        macro_index: int,
+        value: float,
+    ) -> dict[str, Any]:
+        return self._call(
+            "device_macro_set",
+            {
+                "track_ref": track_ref,
+                "device_ref": device_ref,
+                "macro_index": macro_index,
+                "value": value,
+            },
+        )
+
     def find_synth_devices(
         self,
         track: int | None = None,

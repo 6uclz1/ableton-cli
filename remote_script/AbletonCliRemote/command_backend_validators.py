@@ -696,3 +696,19 @@ def _clip_envelope_clear_args(
     device = _device_ref(args.get("device_ref"))
     parameter = _parameter_ref(args.get("parameter_ref"))
     return track, clip, device, parameter, False
+
+
+def _device_ref_args(args: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any]]:
+    track_ref = _track_ref(args.get("track_ref"))
+    device_ref = _device_ref(args.get("device_ref"))
+    return track_ref, device_ref
+
+
+def _device_macro_set_args(
+    args: dict[str, Any],
+) -> tuple[dict[str, Any], dict[str, Any], int, float]:
+    track_ref = _track_ref(args.get("track_ref"))
+    device_ref = _device_ref(args.get("device_ref"))
+    macro_index = _track_index("macro_index", args.get("macro_index"))
+    value = _as_float("value", args.get("value"))
+    return track_ref, device_ref, macro_index, value

@@ -52,10 +52,17 @@ class _Device:
     can_have_chains: bool = False
     class_display_name: str = ""
     drum_pads: list[Any] = field(default_factory=list)
+    chains: list[Any] = field(default_factory=list)
 
     def __post_init__(self) -> None:
         if not self.class_display_name:
             self.class_display_name = self.class_name
+
+
+@dataclass(slots=True)
+class _Chain:
+    name: str
+    devices: list[_Device] = field(default_factory=list)
 
 
 class _DrumPad:

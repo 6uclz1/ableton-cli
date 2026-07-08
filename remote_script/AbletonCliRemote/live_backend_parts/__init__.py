@@ -15,6 +15,7 @@ from .devices import (
     LiveBackendEffectDevicesMixin,
     LiveBackendSynthDevicesMixin,
 )
+from .devices_racks import LiveBackendDeviceRacksMixin
 from .scenes_arrangement import LiveBackendScenesArrangementMixin
 from .song_transport import LiveBackendSongSessionMixin, LiveBackendTransportMixerMixin
 from .tracks_clips import LiveBackendTracksClipsMixin
@@ -34,6 +35,7 @@ __all__ = [
     "LiveBackendBrowserReadMixin",
     "LiveBackendBrowserSearchMixin",
     "LiveBackendDeviceSharedMixin",
+    "LiveBackendDeviceRacksMixin",
     "LiveBackendSynthDevicesMixin",
     "LiveBackendEffectDevicesMixin",
     "LiveBackendScenesArrangementMixin",

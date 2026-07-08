@@ -10,7 +10,7 @@ from ..effect_specs import (
     standard_effect_keys,
 )
 from ..synth_specs import SUPPORTED_SYNTH_TYPES, canonicalize_synth_type, standard_synth_keys
-from .base import _invalid_argument, _not_supported_by_live_api
+from .base import DeviceLocator, _invalid_argument, _not_supported_by_live_api
 
 
 class LiveBackendDeviceSharedMixin:
@@ -274,28 +274,29 @@ class LiveBackendDeviceSharedMixin:
     def set_device_parameter(
         self,
         track: int,
-        device: int,
+        device: DeviceLocator,
         parameter: int,
         value: float,
     ) -> dict[str, Any]:
         target_param = self._parameter_at(track, device, parameter)
         target_param.value = float(value)
+        parameter_stable_ref = (
+            self._parameter_stable_ref(
+                target_param,
+                track_index=track,
+                device_index=device,
+                parameter_index=parameter,
+            )
+            if isinstance(device, int)
+            else self._stable_ref("parameter", target_param, locator=None)
+        )
         return {
             "track": track,
             "device": device,
             "parameter": parameter,
             "track_stable_ref": self._track_stable_ref(self._track_at(track), index=track),
-            "device_stable_ref": self._device_stable_ref(
-                self._device_at(track, device),
-                track_index=track,
-                device_index=device,
-            ),
-            "parameter_stable_ref": self._parameter_stable_ref(
-                target_param,
-                track_index=track,
-                device_index=device,
-                parameter_index=parameter,
-            ),
+            "device_stable_ref": self._device_stable_ref_for(track, device),
+            "parameter_stable_ref": parameter_stable_ref,
             "value": float(target_param.value),
         }
 

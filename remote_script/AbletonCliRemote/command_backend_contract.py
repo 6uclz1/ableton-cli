@@ -613,7 +613,7 @@ class _DevicesBackend(Protocol):
     def set_device_parameter(
         self,
         track: int,
-        device: int,
+        device: int | tuple[int, ...],
         parameter: int,
         value: float,
     ) -> dict[str, Any]: ...
@@ -691,21 +691,38 @@ class _DevicesBackend(Protocol):
     ) -> dict[str, Any]: ...
 
 
+class _DeviceRacksBackend(Protocol):
+    def device_chains_list(self, track: int, device: int | tuple[int, ...]) -> dict[str, Any]: ...
+
+    def device_macro_list(self, track: int, device: int | tuple[int, ...]) -> dict[str, Any]: ...
+
+    def device_macro_set(
+        self,
+        track: int,
+        device: int | tuple[int, ...],
+        macro_index: int,
+        value: float,
+    ) -> dict[str, Any]: ...
+
+
 class CommandBackend(
     _SongTransportBackend,
     _TracksClipsBackend,
     _ClipEnvelopesBackend,
     _BrowserBackend,
     _DevicesBackend,
+    _DeviceRacksBackend,
     Protocol,
 ):
     def resolve_track_ref(self, track_ref: dict[str, Any]) -> int: ...
 
-    def resolve_device_ref(self, track: int, device_ref: dict[str, Any]) -> int: ...
+    def resolve_device_ref(
+        self, track: int, device_ref: dict[str, Any]
+    ) -> int | tuple[int, ...]: ...
 
     def resolve_parameter_ref(
         self,
         track: int,
-        device: int,
+        device: int | tuple[int, ...],
         parameter_ref: dict[str, Any],
     ) -> int: ...

@@ -11,6 +11,7 @@ from .live_backend_parts import (
     LiveBackendBrowserSearchMixin,
     LiveBackendClipEnvelopesMixin,
     LiveBackendClipNotesMixin,
+    LiveBackendDeviceRacksMixin,
     LiveBackendDeviceSharedMixin,
     LiveBackendEffectDevicesMixin,
     LiveBackendScenesArrangementMixin,
@@ -25,6 +26,7 @@ from .live_backend_parts import (
 class LiveBackend(
     LiveBackendEffectDevicesMixin,
     LiveBackendSynthDevicesMixin,
+    LiveBackendDeviceRacksMixin,
     LiveBackendDeviceSharedMixin,
     LiveBackendBrowserSearchMixin,
     LiveBackendBrowserReadMixin,

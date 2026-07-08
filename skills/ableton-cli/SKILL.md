@@ -256,6 +256,11 @@ uv run ableton-cli clip notes quantize 0 0 --grid 1/16 --strength 0.8 --start-ti
 uv run ableton-cli clip notes humanize 0 0 --timing 0.05 --velocity 5
 uv run ableton-cli clip notes velocity-scale 0 0 --scale 1.1 --offset -3
 uv run ableton-cli clip notes transpose 0 0 --semitones 2 --start-time 0.0 --end-time 4.0
+uv run ableton-cli clip notes transpose-in-scale 0 0 --root C --scale major --degrees 1
+uv run ableton-cli clip notes arpeggiate 0 0 --mode up --rate 1/16 --gate 0.9
+uv run ableton-cli clip notes euclidean 0 0 --pitch 36 --steps 16 --pulses 5 --length 4 --mode replace
+uv run ableton-cli clip notes ratchet 0 0 --division 2 --probability 1.0
+uv run ableton-cli clip notes retrograde 0 0 --loop-length 4
 uv run ableton-cli clip groove get 0 0
 uv run ableton-cli clip groove set 0 0 grooves/Hip\ Hop\ Boom\ Bap\ 16ths\ 90\ bpm.agr
 uv run ableton-cli clip groove amount set 0 0 0.6

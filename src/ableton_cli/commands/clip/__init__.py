@@ -14,6 +14,7 @@ from ._groove_commands import register_groove_commands
 from ._name_commands import register_name_commands
 from ._notes_commands import register_notes_commands
 from ._props_commands import register_prop_commands
+from ._theory_commands import register_theory_commands
 
 clip_app = typer.Typer(help="Clip commands", no_args_is_help=True)
 notes_app = typer.Typer(help="Clip note commands", no_args_is_help=True)
@@ -45,6 +46,7 @@ def run_client_command_spec(ctx: typer.Context, **kwargs: object) -> None:
 
 
 register_notes_commands(notes_app)
+register_theory_commands(notes_app)
 register_name_commands(name_app)
 register_active_commands(active_app)
 register_groove_commands(groove_app, groove_amount_app)

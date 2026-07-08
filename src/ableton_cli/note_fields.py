@@ -35,7 +35,7 @@ NOTE_FIELD_SPECS: tuple[NoteFieldSpec, ...] = (
     ),
     NoteFieldSpec(name="velocity", kind="int", required=True, minimum=1, maximum=127),
     NoteFieldSpec(name="mute", kind="bool", required=True),
-    # Live 11+ extended note API fields. Optional on input: when omitted, Live
+    # Live 12+ extended note API fields. Optional on input: when omitted, Live
     # applies its own defaults (probability=1.0, velocity_deviation=0.0,
     # release_velocity=64). Always present on output.
     NoteFieldSpec(name="probability", kind="float", required=False, minimum=0.0, maximum=1.0),

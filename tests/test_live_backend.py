@@ -101,7 +101,7 @@ class _FakeNoteSpec:
 
 
 class _ExtendedNoteMixin:
-    """Shared Live 11+ note-API fake behavior for session/arrangement clips."""
+    """Shared Live 12+ note-API fake behavior for session/arrangement clips."""
 
     _notes: list[_MidiNote]
     _next_note_id: int

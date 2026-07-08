@@ -67,6 +67,26 @@ def test_generated_man_uses_stable_command_name() -> None:
     assert "ableton-cli" in man_page
 
 
+def test_no_outdated_live_11_version_floor_references() -> None:
+    outdated_marker = "Live 11+"
+    scan_globs = (
+        "README.md",
+        "docs/**/*.md",
+        "skills/ableton-cli/SKILL.md",
+        "remote_script/**/*.py",
+        "src/**/*.py",
+    )
+    violations = []
+    for pattern in scan_globs:
+        for path in REPO_ROOT.glob(pattern):
+            if not path.is_file() or "__pycache__" in path.parts:
+                continue
+            if outdated_marker in _read(path):
+                violations.append(str(path.relative_to(REPO_ROOT)))
+
+    assert violations == []
+
+
 def test_composition_docs_use_browser_discovery_before_drum_kit_loading() -> None:
     docs = "\n".join(
         [

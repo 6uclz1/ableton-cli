@@ -169,7 +169,7 @@ class LiveBackendClipNotesMixin:
         if not callable(apply_note_modifications):
             raise _not_supported_by_live_api(
                 message="Clip extended note modification API is not available in Live API",
-                hint="Use a Live version exposing clip.apply_note_modifications (Live 11+).",
+                hint="Use a Live version exposing clip.apply_note_modifications (Live 12+).",
             )
         filtered_objects = self._filtered_clip_note_objects(clip_obj, start_time, end_time, pitch)
         modified: list[Any] = []
@@ -216,7 +216,7 @@ class LiveBackendClipNotesMixin:
         if not callable(add_new_notes):
             raise _not_supported_by_live_api(
                 message="Clip extended note write API is not available in Live API",
-                hint="Use a Live version exposing clip.add_new_notes (Live 11+).",
+                hint="Use a Live version exposing clip.add_new_notes (Live 12+).",
             )
         specs = tuple(self._note_specification(note) for note in notes)
         add_new_notes(specs)
@@ -240,7 +240,7 @@ class LiveBackendClipNotesMixin:
         if not callable(apply_note_modifications):
             raise _not_supported_by_live_api(
                 message="Clip extended note modification API is not available in Live API",
-                hint="Use a Live version exposing clip.apply_note_modifications (Live 11+).",
+                hint="Use a Live version exposing clip.apply_note_modifications (Live 12+).",
             )
         by_id = {int(note_obj.note_id): note_obj for note_obj in self._clip_note_objects(clip_obj)}
         missing_note_ids: list[int] = []

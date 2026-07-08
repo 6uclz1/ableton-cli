@@ -7,6 +7,8 @@ from typing import Any, TypeVar
 
 from ..errors import AppError, ErrorCode, ExitCode
 from ..note_fields import NOTE_FIELD_SPECS, NoteFieldSpec
+from ..pattern_notation import PatternSyntaxError, compile_pattern
+from ..pattern_notation import parse as parse_pattern
 
 NOTE_KEYS = frozenset(spec.name for spec in NOTE_FIELD_SPECS if spec.required)
 _OPTIONAL_NOTE_KEYS = frozenset(spec.name for spec in NOTE_FIELD_SPECS if not spec.required)
@@ -503,3 +505,53 @@ def parse_notes_input(
             hint="Pass a readable UTF-8 JSON file path for --notes-file.",
         ) from exc
     return parser(payload)
+
+
+def parse_pattern_notes(
+    pattern: str,
+    *,
+    pattern_length: float,
+    velocity: int,
+    gate: float = 1.0,
+) -> list[dict[str, Any]]:
+    try:
+        node = parse_pattern(pattern)
+    except PatternSyntaxError as exc:
+        raise invalid_argument(
+            message=f"pattern is invalid at column {exc.column}: {exc}",
+            hint="See docs/pattern-notation.md for the mini-notation grammar.",
+        ) from exc
+    try:
+        return compile_pattern(
+            node,
+            pattern_length=pattern_length,
+            default_velocity=velocity,
+            gate=gate,
+        )
+    except ValueError as exc:
+        raise invalid_argument(
+            message=str(exc),
+            hint="Use --pattern-length > 0 and --gate in (0.0, 1.0].",
+        ) from exc
+
+
+def require_mutually_exclusive_note_sources(
+    *,
+    notes_json: str | None,
+    notes_file: str | None,
+    pattern: str | None,
+) -> None:
+    provided = [
+        name
+        for name, value in (
+            ("--notes-json", notes_json),
+            ("--notes-file", notes_file),
+            ("--pattern", pattern),
+        )
+        if value is not None
+    ]
+    if len(provided) > 1:
+        raise invalid_argument(
+            message=f"{' and '.join(provided)} are mutually exclusive",
+            hint="Pass exactly one of --notes-json, --notes-file, or --pattern.",
+        )

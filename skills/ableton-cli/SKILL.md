@@ -247,6 +247,7 @@ uv run ableton-cli mixer cue-routing set Ext.\ Out
 uv run ableton-cli clip create 0 0 --length 4
 uv run ableton-cli clip notes add 0 0 --notes-json '[{"pitch":60,"start_time":0.0,"duration":0.5,"velocity":100,"mute":false}]'
 uv run ableton-cli clip notes add 0 0 --notes-file ./notes.json
+uv run ableton-cli clip notes add 0 0 --pattern "c3 ~ [e3 g3] c4*2" --pattern-length 4
 uv run ableton-cli clip notes get 0 0 --start-time 0.0 --end-time 4.0 --pitch 60
 uv run ableton-cli clip notes clear 0 0 --start-time 0.0 --end-time 1.0
 uv run ableton-cli clip notes replace 0 0 --notes-json '[{"pitch":65,"start_time":0.25,"duration":0.5,"velocity":100,"mute":false}]' --start-time 0.0 --end-time 1.0

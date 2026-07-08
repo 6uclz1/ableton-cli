@@ -261,10 +261,12 @@ class _ClipSlot:
         self.clip = _Clip(length=length, is_audio_clip=False, is_midi_clip=True)
 
     def fire(self) -> None:
-        if not self.has_clip:
-            raise RuntimeError("missing clip")
-        assert self.clip is not None
-        self.clip.is_playing = True
+        # Real Ableton Live allows firing an empty slot on an armed,
+        # record-enabled track to start recording; the fake does not model
+        # recording, so firing an empty slot is simply a no-op here.
+        if self.has_clip:
+            assert self.clip is not None
+            self.clip.is_playing = True
 
     def stop(self) -> None:
         if not self.has_clip:

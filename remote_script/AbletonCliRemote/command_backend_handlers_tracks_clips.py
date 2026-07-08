@@ -155,6 +155,12 @@ def _handle_clip_props_get(backend: CommandBackend, args: dict[str, Any]) -> dic
     return backend.clip_props_get(track, clip)
 
 
+def _handle_clip_file_path_get(backend: CommandBackend, args: dict[str, Any]) -> dict[str, Any]:
+    track = _track_index("track", args.get("track"))
+    clip = _track_index("clip", args.get("clip"))
+    return backend.clip_file_path_get(track, clip)
+
+
 def _handle_clip_loop_set(backend: CommandBackend, args: dict[str, Any]) -> dict[str, Any]:
     track = _track_index("track", args.get("track"))
     clip = _track_index("clip", args.get("clip"))
@@ -857,6 +863,7 @@ TRACKS_CLIPS_HANDLERS: dict[str, Handler] = {
     "clip_groove_amount_set": _handle_clip_groove_amount_set,
     "clip_groove_clear": _handle_clip_groove_clear,
     "clip_props_get": _handle_clip_props_get,
+    "clip_file_path_get": _handle_clip_file_path_get,
     "clip_loop_set": _handle_clip_loop_set,
     "clip_marker_set": _handle_clip_marker_set,
     "clip_warp_get": _handle_clip_warp_get,

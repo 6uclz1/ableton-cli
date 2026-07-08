@@ -40,6 +40,10 @@ TRANSPOSE_SET_SPEC = CommandSpec(
     client_method="clip_transpose_set",
 )
 FILE_REPLACE_SPEC = CommandSpec(command_name="clip file replace", client_method="clip_file_replace")
+FILE_PATH_GET_SPEC = CommandSpec(
+    command_name="clip file path get",
+    client_method="clip_file_path_get",
+)
 CommandRunner = Callable[..., None]
 
 
@@ -361,6 +365,25 @@ def _register_file_replace(file_app: typer.Typer, run_client_command_spec: Comma
         )
 
 
+def _register_file_path_get(file_app: typer.Typer, run_client_command_spec: CommandRunner) -> None:
+    path_app = typer.Typer(help="Clip file path commands", no_args_is_help=True)
+
+    @path_app.command("get")
+    def clip_file_path_get(
+        ctx: typer.Context,
+        track: Annotated[int, typer.Argument(help="Track index")],
+        clip: Annotated[int, typer.Argument(help="Clip slot index")],
+    ) -> None:
+        run_client_command_spec(
+            ctx,
+            spec=FILE_PATH_GET_SPEC,
+            args={"track": track, "clip": clip},
+            method_kwargs=lambda: _track_clip_kwargs(track, clip),
+        )
+
+    file_app.add_typer(path_app, name="path")
+
+
 def register_prop_commands(
     *,
     props_app: typer.Typer,
@@ -385,3 +408,4 @@ def register_prop_commands(
     _register_gain_set(gain_app, run_client_command_spec)
     _register_transpose_set(transpose_app, run_client_command_spec)
     _register_file_replace(file_app, run_client_command_spec)
+    _register_file_path_get(file_app, run_client_command_spec)

@@ -467,6 +467,9 @@ class _AbletonClientTracksClipsMixin:
     def clip_props_get(self, track: int, clip: int) -> dict[str, Any]:
         return self._call("clip_props_get", {"track": track, "clip": clip})
 
+    def clip_file_path_get(self, track: int, clip: int) -> dict[str, Any]:
+        return self._call("clip_file_path_get", {"track": track, "clip": clip})
+
     def clip_loop_set(
         self,
         track: int,

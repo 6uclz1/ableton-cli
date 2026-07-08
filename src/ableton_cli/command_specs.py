@@ -166,6 +166,7 @@ _LOCAL_ONLY_COMMANDS = frozenset(
         "remix setup-sidechain",
         "remix setup-sound",
         "remix vocal-chop",
+        "session capture",
         "session diff",
         "session watch",
         "wait-ready",

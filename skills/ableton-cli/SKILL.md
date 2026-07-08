@@ -50,6 +50,7 @@ uv run ableton-cli session info
 uv run ableton-cli session snapshot
 uv run ableton-cli session diff --from ./snapshot-before.json --to ./snapshot-after.json
 uv run ableton-cli session watch --interval-ms 500 --scope all --count 5
+uv run ableton-cli session capture --track-index 0 --slot 0 --bars 8 --set-routing --analyze
 uv run ableton-cli session stop-all-clips
 ```
 
@@ -299,6 +300,7 @@ uv run ableton-cli clip warp-marker remove 0 0 --beat-time 33.0
 uv run ableton-cli clip gain set 0 0 --db -3.0
 uv run ableton-cli clip transpose set 0 0 --semitones 2
 uv run ableton-cli clip file replace 0 0 --audio-path /tmp/replacement.wav
+uv run ableton-cli clip file path get 0 0
 ```
 
 ### Scenes

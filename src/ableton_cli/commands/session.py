@@ -7,13 +7,19 @@ from typing import Annotated
 
 import typer
 
+from ..capture import capture_session
 from ..runtime import execute_command, get_client, get_runtime
 from ..session_diff import compute_session_diff
 from ..watch import WATCH_SCOPES, run_watch_loop
 from ._client_command_runner import CommandSpec
 from ._client_command_runner import run_client_command as run_client_command_shared
 from ._client_command_runner import run_client_command_spec as run_client_command_spec_shared
-from ._validation import invalid_argument
+from ._validation import (
+    invalid_argument,
+    require_non_negative_float,
+    require_positive_float,
+    require_track_index,
+)
 
 session_app = typer.Typer(help="Session information commands", no_args_is_help=True)
 
@@ -133,6 +139,67 @@ def session_diff(
         command_name="session diff",
         args={"from": from_path, "to": to_path},
         fn=lambda _client: _session_diff_result(from_path=from_path, to_path=to_path),
+    )
+
+
+@session_app.command("capture")
+def session_capture(
+    ctx: typer.Context,
+    track_index: Annotated[
+        int, typer.Option("--track-index", help="Audio track index (0-based) to capture into")
+    ],
+    slot: Annotated[
+        int, typer.Option("--slot", help="Empty session clip slot index (0-based) to record into")
+    ],
+    bars: Annotated[float, typer.Option("--bars", help="Number of bars to capture")],
+    start: Annotated[
+        float, typer.Option("--start", help="Transport start position in beats")
+    ] = 0.0,
+    set_routing: Annotated[
+        bool,
+        typer.Option(
+            "--set-routing", help="Set the track's input routing to Resampling automatically"
+        ),
+    ] = False,
+    analyze: Annotated[
+        bool, typer.Option("--analyze", help="Run loudness/spectrum analysis on the captured file")
+    ] = False,
+    qa_project: Annotated[
+        str | None,
+        typer.Option("--qa-project", help="Run remix mastering QA against this project file"),
+    ] = None,
+) -> None:
+    def _run() -> dict[str, object]:
+        valid_track = require_track_index(track_index)
+        valid_slot = require_track_index(slot, hint="Use a valid clip slot index.")
+        valid_bars = require_positive_float("bars", bars, hint="Use a positive --bars value.")
+        valid_start = require_non_negative_float(
+            "start", start, hint="Use a non-negative --start value in beats."
+        )
+        return capture_session(
+            get_client(ctx),
+            track=valid_track,
+            slot=valid_slot,
+            bars=valid_bars,
+            start=valid_start,
+            set_routing=set_routing,
+            analyze=analyze,
+            qa_project=qa_project,
+        )
+
+    execute_command(
+        ctx,
+        command="session capture",
+        args={
+            "track_index": track_index,
+            "slot": slot,
+            "bars": bars,
+            "start": start,
+            "set_routing": set_routing,
+            "analyze": analyze,
+            "qa_project": qa_project,
+        },
+        action=_run,
     )
 
 

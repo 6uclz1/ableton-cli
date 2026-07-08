@@ -261,6 +261,10 @@ uv run ableton-cli clip notes arpeggiate 0 0 --mode up --rate 1/16 --gate 0.9
 uv run ableton-cli clip notes euclidean 0 0 --pitch 36 --steps 16 --pulses 5 --length 4 --mode replace
 uv run ableton-cli clip notes ratchet 0 0 --division 2 --probability 1.0
 uv run ableton-cli clip notes retrograde 0 0 --loop-length 4
+uv run ableton-cli clip envelope set 0 0 --points-json '[{"time":0.0,"value":0.1},{"time":4.0,"value":0.9}]' --device-index 0 --parameter-key filter_cutoff
+uv run ableton-cli clip envelope shape 0 0 --device-index 0 --parameter-key filter_cutoff --shape ramp --from 0.1 --to 0.9 --start 0 --length 4 --resolution 16
+uv run ableton-cli clip envelope clear 0 0 --device-index 0 --parameter-key filter_cutoff
+uv run ableton-cli clip envelope clear 0 0 --all
 uv run ableton-cli clip groove get 0 0
 uv run ableton-cli clip groove set 0 0 grooves/Hip\ Hop\ Boom\ Bap\ 16ths\ 90\ bpm.agr
 uv run ableton-cli clip groove amount set 0 0 0.6

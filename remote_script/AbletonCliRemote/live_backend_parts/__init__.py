@@ -8,6 +8,7 @@ from .browser import (
     LiveBackendBrowserSearchIndexMixin,
     LiveBackendBrowserSearchMixin,
 )
+from .clip_envelopes import LiveBackendClipEnvelopesMixin
 from .clip_notes import LiveBackendClipNotesMixin
 from .devices import (
     LiveBackendDeviceSharedMixin,
@@ -25,6 +26,7 @@ __all__ = [
     "LiveBackendTransportMixerMixin",
     "LiveBackendTracksCutToDrumRackMixin",
     "LiveBackendClipNotesMixin",
+    "LiveBackendClipEnvelopesMixin",
     "LiveBackendTracksClipsMixin",
     "LiveBackendBrowserCatalogMixin",
     "LiveBackendBrowserPathLookupMixin",

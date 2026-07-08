@@ -538,6 +538,27 @@ class _TracksClipsBackend(Protocol):
     def tracks_delete(self, track: int) -> dict[str, Any]: ...
 
 
+class _ClipEnvelopesBackend(Protocol):
+    def clip_envelope_set(
+        self,
+        track: int,
+        clip: int,
+        device: int,
+        parameter: int,
+        points: list[dict[str, float]],
+        mode: str,
+    ) -> dict[str, Any]: ...
+
+    def clip_envelope_clear(
+        self,
+        track: int,
+        clip: int,
+        device: int | None,
+        parameter: int | None,
+        clear_all: bool,
+    ) -> dict[str, Any]: ...
+
+
 class _BrowserBackend(Protocol):
     def load_instrument_or_effect(
         self,
@@ -673,6 +694,7 @@ class _DevicesBackend(Protocol):
 class CommandBackend(
     _SongTransportBackend,
     _TracksClipsBackend,
+    _ClipEnvelopesBackend,
     _BrowserBackend,
     _DevicesBackend,
     Protocol,

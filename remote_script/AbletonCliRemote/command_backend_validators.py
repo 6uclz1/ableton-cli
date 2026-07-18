@@ -623,3 +623,92 @@ def _device_parameter_args(
     parameter = _parameter_ref(args.get("parameter_ref"))
     value = _as_float("value", args.get("value"))
     return track, device, parameter, value
+
+
+def _envelope_points(value: Any) -> list[dict[str, float]]:
+    if not isinstance(value, list) or not value:
+        raise _invalid_argument(
+            message="points must be a non-empty array",
+            hint="Pass points as a JSON array of {time, value} objects.",
+        )
+    parsed: list[dict[str, float]] = []
+    previous_time: float | None = None
+    for index, item in enumerate(value):
+        if not isinstance(item, dict) or set(item.keys()) != {"time", "value"}:
+            raise _invalid_argument(
+                message=f"points[{index}] must be an object with exactly 'time' and 'value'",
+                hint='Each point must be {"time": <float >= 0>, "value": <float>}.',
+            )
+        time = _as_float(f"points[{index}].time", item.get("time"))
+        if time < 0:
+            raise _invalid_argument(
+                message=f"points[{index}].time must be >= 0",
+                hint="Use non-negative, strictly increasing time values.",
+            )
+        if previous_time is not None and time <= previous_time:
+            raise _invalid_argument(
+                message=f"points[{index}].time must be strictly increasing",
+                hint="Sort points by time and remove duplicate time values.",
+            )
+        point_value = _as_float(f"points[{index}].value", item.get("value"))
+        parsed.append({"time": time, "value": point_value})
+        previous_time = time
+    return parsed
+
+
+def _envelope_mode(value: Any) -> str:
+    if value is None:
+        return "replace"
+    mode = _non_empty_string("mode", value)
+    if mode != "replace":
+        raise _invalid_argument(
+            message=f"mode must be 'replace', got {mode!r}",
+            hint="Only mode=replace is currently supported.",
+        )
+    return mode
+
+
+def _clip_envelope_set_args(
+    args: dict[str, Any],
+) -> tuple[int, int, dict[str, Any], dict[str, Any], list[dict[str, float]], str]:
+    track = _track_index("track", args.get("track"))
+    clip = _track_index("clip", args.get("clip"))
+    device = _device_ref(args.get("device_ref"))
+    parameter = _parameter_ref(args.get("parameter_ref"))
+    points = _envelope_points(args.get("points"))
+    mode = _envelope_mode(args.get("mode"))
+    return track, clip, device, parameter, points, mode
+
+
+def _clip_envelope_clear_args(
+    args: dict[str, Any],
+) -> tuple[int, int, dict[str, Any] | None, dict[str, Any] | None, bool]:
+    track = _track_index("track", args.get("track"))
+    clip = _track_index("clip", args.get("clip"))
+    clear_all = _as_bool("clear_all", args.get("clear_all", False))
+    if clear_all:
+        if args.get("device_ref") is not None or args.get("parameter_ref") is not None:
+            raise _invalid_argument(
+                message="device_ref/parameter_ref must not be set when clear_all is true",
+                hint="Pass either clear_all=true or device_ref+parameter_ref, not both.",
+            )
+        return track, clip, None, None, True
+    device = _device_ref(args.get("device_ref"))
+    parameter = _parameter_ref(args.get("parameter_ref"))
+    return track, clip, device, parameter, False
+
+
+def _device_ref_args(args: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any]]:
+    track_ref = _track_ref(args.get("track_ref"))
+    device_ref = _device_ref(args.get("device_ref"))
+    return track_ref, device_ref
+
+
+def _device_macro_set_args(
+    args: dict[str, Any],
+) -> tuple[dict[str, Any], dict[str, Any], int, float]:
+    track_ref = _track_ref(args.get("track_ref"))
+    device_ref = _device_ref(args.get("device_ref"))
+    macro_index = _track_index("macro_index", args.get("macro_index"))
+    value = _as_float("value", args.get("value"))
+    return track_ref, device_ref, macro_index, value

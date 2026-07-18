@@ -217,7 +217,7 @@ class LiveBackendScenesArrangementMixin:
                         "in Live API",
                         hint=(
                             "Use a Live version exposing clip.add_new_notes for arrangement "
-                            "clips (Live 11+)."
+                            "clips (Live 12+)."
                         ),
                     )
                 specs = tuple(self._note_specification(note) for note in notes)
@@ -352,7 +352,7 @@ class LiveBackendScenesArrangementMixin:
                 message="Arrangement clip extended note write API is not available in Live API",
                 hint=(
                     "Use a Live version exposing clip.add_new_notes for arrangement "
-                    "clips (Live 11+)."
+                    "clips (Live 12+)."
                 ),
             )
         specs = tuple(self._note_specification(note) for note in notes)

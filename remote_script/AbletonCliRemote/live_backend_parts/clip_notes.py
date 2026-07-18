@@ -24,11 +24,10 @@ _NOTE_UPDATABLE_FIELD_NAMES = (
 
 
 class LiveBackendClipNotesMixin:
-    """Session clip note read/write/transform commands.
-
-    Split out of ``LiveBackendTracksClipsMixin`` to keep both classes well
-    under the quality harness god-class-risk threshold (see
-    ``docs/quality-harness-phase2.md``). Note-related helpers used by
+    """Session clip note read/write/transform commands: the MIDI note domain
+    (get/add/update/clear/replace plus quantize/humanize/velocity-scale/
+    transpose), split out of ``LiveBackendTracksClipsMixin`` by domain from
+    general clip-slot/track-mixer concerns. Note-related helpers used by
     arrangement clips (``scenes_arrangement.py``) and by drum-rack cutting
     (``tracks_clips_cut_to_drum_rack.py``) also live here and are shared via
     the ``LiveBackend`` mixin composition.
@@ -169,7 +168,7 @@ class LiveBackendClipNotesMixin:
         if not callable(apply_note_modifications):
             raise _not_supported_by_live_api(
                 message="Clip extended note modification API is not available in Live API",
-                hint="Use a Live version exposing clip.apply_note_modifications (Live 11+).",
+                hint="Use a Live version exposing clip.apply_note_modifications (Live 12+).",
             )
         filtered_objects = self._filtered_clip_note_objects(clip_obj, start_time, end_time, pitch)
         modified: list[Any] = []
@@ -216,7 +215,7 @@ class LiveBackendClipNotesMixin:
         if not callable(add_new_notes):
             raise _not_supported_by_live_api(
                 message="Clip extended note write API is not available in Live API",
-                hint="Use a Live version exposing clip.add_new_notes (Live 11+).",
+                hint="Use a Live version exposing clip.add_new_notes (Live 12+).",
             )
         specs = tuple(self._note_specification(note) for note in notes)
         add_new_notes(specs)
@@ -240,7 +239,7 @@ class LiveBackendClipNotesMixin:
         if not callable(apply_note_modifications):
             raise _not_supported_by_live_api(
                 message="Clip extended note modification API is not available in Live API",
-                hint="Use a Live version exposing clip.apply_note_modifications (Live 11+).",
+                hint="Use a Live version exposing clip.apply_note_modifications (Live 12+).",
             )
         by_id = {int(note_obj.note_id): note_obj for note_obj in self._clip_note_objects(clip_obj)}
         missing_note_ids: list[int] = []

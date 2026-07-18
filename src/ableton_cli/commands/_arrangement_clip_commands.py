@@ -10,7 +10,9 @@ from ._arrangement_specs import ArrangementCommandSpec
 from ._validation import (
     invalid_argument,
     parse_notes_input,
+    parse_pattern_notes,
     require_absolute_path,
+    require_mutually_exclusive_note_sources,
     require_non_negative_float,
     require_positive_float,
 )
@@ -72,6 +74,25 @@ def register_commands(
                 help="Path to JSON file containing note array for MIDI clips",
             ),
         ] = None,
+        pattern: Annotated[
+            str | None,
+            typer.Option(
+                "--pattern",
+                help="Mini-notation pattern for MIDI clips, e.g. 'c3 ~ [e3 g3] c4*2'",
+            ),
+        ] = None,
+        pattern_length: Annotated[
+            float,
+            typer.Option("--pattern-length", help="Pattern cycle length in beats"),
+        ] = 4.0,
+        velocity: Annotated[
+            int,
+            typer.Option("--velocity", help="Default velocity for pattern notes without @velocity"),
+        ] = 100,
+        gate: Annotated[
+            float,
+            typer.Option("--gate", help="Sustain fraction of each pattern step, in (0.0, 1.0]"),
+        ] = 1.0,
     ) -> None:
         def _method_kwargs() -> dict[str, object]:
             valid_track = require_track_index(track)
@@ -94,14 +115,23 @@ def register_commands(
                 if audio_path is not None
                 else None
             )
-            notes = (
-                parse_notes_input(notes_json=notes_json, notes_file=notes_file)
-                if notes_json is not None or notes_file is not None
-                else None
+            require_mutually_exclusive_note_sources(
+                notes_json=notes_json, notes_file=notes_file, pattern=pattern
             )
+            if pattern is not None:
+                notes = parse_pattern_notes(
+                    pattern, pattern_length=pattern_length, velocity=velocity, gate=gate
+                )
+            elif notes_json is not None or notes_file is not None:
+                notes = parse_notes_input(notes_json=notes_json, notes_file=notes_file)
+            else:
+                notes = None
             if normalized_audio_path is not None and notes is not None:
                 raise invalid_argument(
-                    message="--audio-path and --notes-json/--notes-file are mutually exclusive",
+                    message=(
+                        "--audio-path and --notes-json/--notes-file/--pattern "
+                        "are mutually exclusive"
+                    ),
                     hint="Use notes options for MIDI clips or --audio-path for audio clips.",
                 )
             return {
@@ -120,7 +150,7 @@ def register_commands(
                 "start_time": start,
                 "length": length,
                 "audio_path": audio_path,
-                "notes": notes_json is not None or notes_file is not None,
+                "notes": notes_json is not None or notes_file is not None or pattern is not None,
             },
             method_kwargs=_method_kwargs,
         )

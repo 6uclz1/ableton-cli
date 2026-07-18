@@ -272,7 +272,7 @@ STABLE_ACTION_MAPPINGS: tuple[StableActionMapping, ...] = (
         ),
         capability=(
             "Edit existing notes in place by note_id without disturbing unrelated notes "
-            "(requires Live 11+ extended note API)."
+            "(requires Live 12+ extended note API)."
         ),
     ),
     StableActionMapping(

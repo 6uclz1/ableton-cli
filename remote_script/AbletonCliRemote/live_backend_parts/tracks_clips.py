@@ -237,12 +237,11 @@ class LiveBackendTracksClipsMixin:
         return {"track": track, "clip": clip, "name": str(clip_obj.name)}
 
     def fire_clip(self, track: int, clip: int) -> dict[str, Any]:
+        # Firing an empty slot is valid Live API usage: on an armed,
+        # record-enabled track this is how session recording starts, so no
+        # has_clip guard here (unlike the other clip-slot commands below,
+        # which operate on an existing clip's contents).
         slot = self._clip_slot_at(track, clip)
-        if not slot.has_clip:
-            raise _invalid_argument(
-                message="No clip in slot",
-                hint="Create a clip in the target slot before firing.",
-            )
         slot.fire()
         return {"track": track, "clip": clip, "fired": True}
 
@@ -382,6 +381,21 @@ class LiveBackendTracksClipsMixin:
     def clip_props_get(self, track: int, clip: int) -> dict[str, Any]:
         clip_obj = self._require_session_clip(track, clip, action="reading clip properties")
         return self._clip_props_payload(clip_obj=clip_obj, track=track, clip=clip, index=None)
+
+    def clip_file_path_get(self, track: int, clip: int) -> dict[str, Any]:
+        clip_obj = self._require_session_audio_clip(track, clip, action="reading clip file path")
+        if not hasattr(clip_obj, "file_path"):
+            raise _not_supported_by_live_api(
+                message="Clip file_path API is not available in Live API",
+                hint="Use a Live version exposing clip.file_path.",
+            )
+        file_path = self._safe_clip_attr(clip_obj, "file_path")
+        if not file_path:
+            raise _invalid_argument(
+                message="Clip has no recorded/rendered file path",
+                hint="Record or render audio into this clip before reading its file path.",
+            )
+        return {"track": track, "clip": clip, "file_path": str(file_path)}
 
     def clip_loop_set(
         self,

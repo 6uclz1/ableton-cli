@@ -49,6 +49,8 @@ uv run ableton-cli song export audio --path /tmp/demo.wav
 uv run ableton-cli session info
 uv run ableton-cli session snapshot
 uv run ableton-cli session diff --from ./snapshot-before.json --to ./snapshot-after.json
+uv run ableton-cli session watch --interval-ms 500 --scope all --count 5
+uv run ableton-cli session capture --track-index 0 --slot 0 --bars 8 --set-routing --analyze
 uv run ableton-cli session stop-all-clips
 ```
 
@@ -247,6 +249,7 @@ uv run ableton-cli mixer cue-routing set Ext.\ Out
 uv run ableton-cli clip create 0 0 --length 4
 uv run ableton-cli clip notes add 0 0 --notes-json '[{"pitch":60,"start_time":0.0,"duration":0.5,"velocity":100,"mute":false}]'
 uv run ableton-cli clip notes add 0 0 --notes-file ./notes.json
+uv run ableton-cli clip notes add 0 0 --pattern "c3 ~ [e3 g3] c4*2" --pattern-length 4
 uv run ableton-cli clip notes get 0 0 --start-time 0.0 --end-time 4.0 --pitch 60
 uv run ableton-cli clip notes clear 0 0 --start-time 0.0 --end-time 1.0
 uv run ableton-cli clip notes replace 0 0 --notes-json '[{"pitch":65,"start_time":0.25,"duration":0.5,"velocity":100,"mute":false}]' --start-time 0.0 --end-time 1.0
@@ -256,6 +259,16 @@ uv run ableton-cli clip notes quantize 0 0 --grid 1/16 --strength 0.8 --start-ti
 uv run ableton-cli clip notes humanize 0 0 --timing 0.05 --velocity 5
 uv run ableton-cli clip notes velocity-scale 0 0 --scale 1.1 --offset -3
 uv run ableton-cli clip notes transpose 0 0 --semitones 2 --start-time 0.0 --end-time 4.0
+uv run ableton-cli clip notes transpose-in-scale 0 0 --root C --scale major --degrees 1
+uv run ableton-cli clip notes arpeggiate 0 0 --mode up --rate 1/16 --gate 0.9
+uv run ableton-cli clip notes euclidean 0 0 --pitch 36 --steps 16 --pulses 5 --length 4 --mode replace
+uv run ableton-cli clip notes ratchet 0 0 --division 2 --probability 1.0
+uv run ableton-cli clip notes retrograde 0 0 --loop-length 4
+uv run ableton-cli clip notes apply-groove 0 0 --groove-file groove.json --timing-amount 1.0 --velocity-amount 0.5
+uv run ableton-cli clip envelope set 0 0 --points-json '[{"time":0.0,"value":0.1},{"time":4.0,"value":0.9}]' --device-index 0 --parameter-key filter_cutoff
+uv run ableton-cli clip envelope shape 0 0 --device-index 0 --parameter-key filter_cutoff --shape ramp --from 0.1 --to 0.9 --start 0 --length 4 --resolution 16
+uv run ableton-cli clip envelope clear 0 0 --device-index 0 --parameter-key filter_cutoff
+uv run ableton-cli clip envelope clear 0 0 --all
 uv run ableton-cli clip groove get 0 0
 uv run ableton-cli clip groove set 0 0 grooves/Hip\ Hop\ Boom\ Bap\ 16ths\ 90\ bpm.agr
 uv run ableton-cli clip groove amount set 0 0 0.6
@@ -270,6 +283,7 @@ uv run ableton-cli clip duplicate 0 0 1
 uv run ableton-cli clip duplicate-many 0 0 --to 2,4,5,6
 uv run ableton-cli clip place-pattern 0 --clip 0 --scenes Intro,Drop,Peak
 uv run ableton-cli audio transient analyze --path ./loops/drum-break.wav --bpm 174 --max-slices 16
+uv run ableton-cli audio groove extract --path ./loops/drum-break.wav --bpm 174 --grid 1/16 --out groove.json
 uv run ableton-cli clip cut-to-drum-rack --source-file ./loops/drum-break.wav --transient --bpm 174 --max-slices 16 --create-trigger-clip --trigger-clip-slot 1
 uv run ableton-cli clip cut-to-drum-rack --source-track 1 --source-clip 0 --slice-count 8 --create-trigger-clip --trigger-clip-slot 1
 uv run ableton-cli clip props get 0 0
@@ -286,6 +300,7 @@ uv run ableton-cli clip warp-marker remove 0 0 --beat-time 33.0
 uv run ableton-cli clip gain set 0 0 --db -3.0
 uv run ableton-cli clip transpose set 0 0 --semitones 2
 uv run ableton-cli clip file replace 0 0 --audio-path /tmp/replacement.wav
+uv run ableton-cli clip file path get 0 0
 ```
 
 ### Scenes
@@ -336,6 +351,10 @@ echo '{"id":"req-1","steps":[{"name":"song_info","args":{}}]}' | uv run ableton-
 
 ```bash
 uv run ableton-cli device parameter set 0.25 --track-index 0 --device-index 0 --parameter-index 0
+uv run ableton-cli device chains list --track-index 0 --device-index 0
+uv run ableton-cli device macro list --track-index 0 --device-index 0
+uv run ableton-cli device macro set 0 64.0 --track-index 0 --device-index 0
+uv run ableton-cli device parameter set 0.5 --track-index 0 --device-ref device:12 --parameter-index 0
 ```
 
 ### Synth

@@ -113,6 +113,7 @@ _LOCAL_ONLY_COMMANDS = frozenset(
         "audio asset list",
         "audio asset remove",
         "audio beatgrid import",
+        "audio groove extract",
         "audio loudness analyze",
         "audio reference compare",
         "audio sections import",
@@ -123,6 +124,13 @@ _LOCAL_ONLY_COMMANDS = frozenset(
         "clip warp conform",
         "clip name set-many",
         "clip place-pattern",
+        "clip notes transpose-in-scale",
+        "clip notes arpeggiate",
+        "clip notes euclidean",
+        "clip notes ratchet",
+        "clip notes retrograde",
+        "clip notes apply-groove",
+        "clip envelope shape",
         "completion",
         "config init",
         "config set",
@@ -158,7 +166,9 @@ _LOCAL_ONLY_COMMANDS = frozenset(
         "remix setup-sidechain",
         "remix setup-sound",
         "remix vocal-chop",
+        "session capture",
         "session diff",
+        "session watch",
         "wait-ready",
     }
 )
@@ -234,6 +244,8 @@ _DESTRUCTIVE_COMMANDS = frozenset(
         "batch run",
         "batch stream",
         "clip cut-to-drum-rack",
+        "clip envelope clear",
+        "clip envelope set",
         "clip file replace",
         "clip groove clear",
         "clip notes clear",
@@ -329,6 +341,7 @@ def _is_read_command(command_name: str) -> bool:
         "session diff",
         "session info",
         "session snapshot",
+        "session watch",
         "wait-ready",
     }:
         return True
@@ -379,39 +392,3 @@ def read_only_remote_command_names() -> set[str]:
         for spec in command_specs()
         if spec.remote_command is not None and spec.side_effect.kind == "read"
     }
-
-
-def validate_transport_command_specs() -> None:
-    from .actions import stable_action_capability_map, stable_action_command_map
-    from .capabilities import required_remote_commands
-    from .commands import transport
-    from .contracts.registry import get_registered_contracts
-
-    contracts = get_registered_contracts()
-    action_commands = stable_action_command_map()
-    action_capabilities = stable_action_capability_map()
-    required = required_remote_commands()
-    public_commands = public_command_names()
-    module_specs = {
-        item.command_name: item.client_method
-        for item in (
-            transport.TRANSPORT_PLAY_SPEC,
-            transport.TRANSPORT_STOP_SPEC,
-            transport.TRANSPORT_TOGGLE_SPEC,
-            transport.TRANSPORT_TEMPO_GET_SPEC,
-            transport.TRANSPORT_TEMPO_SET_SPEC,
-            transport.TRANSPORT_POSITION_GET_SPEC,
-            transport.TRANSPORT_POSITION_SET_SPEC,
-            transport.TRANSPORT_REWIND_SPEC,
-        )
-    }
-
-    for spec in TRANSPORT_COMMAND_SPECS:
-        assert spec.command_name in public_commands
-        assert module_specs[spec.command_name] == spec.client_method
-        assert spec.remote_command in required
-        assert spec.command_name in contracts
-        if spec.action_name is None:
-            continue
-        assert action_commands[spec.action_name] == spec.action_command
-        assert action_capabilities[spec.action_name] == spec.capability

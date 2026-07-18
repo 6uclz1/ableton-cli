@@ -8,6 +8,8 @@ from .._validation import (
     invalid_argument,
     parse_notes_input,
     parse_partial_notes_json,
+    parse_pattern_notes,
+    require_mutually_exclusive_note_sources,
     require_non_empty_string,
     require_non_negative_float,
     resolve_uri_or_path_target,
@@ -47,10 +49,34 @@ def clip_notes_add(
         str | None,
         typer.Option("--notes-file", help="Path to JSON file containing note array"),
     ] = None,
+    pattern: Annotated[
+        str | None,
+        typer.Option("--pattern", help="Mini-notation pattern, e.g. 'c3 ~ [e3 g3] c4*2'"),
+    ] = None,
+    pattern_length: Annotated[
+        float,
+        typer.Option("--pattern-length", help="Pattern cycle length in beats"),
+    ] = 4.0,
+    velocity: Annotated[
+        int,
+        typer.Option("--velocity", help="Default velocity for pattern notes without @velocity"),
+    ] = 100,
+    gate: Annotated[
+        float,
+        typer.Option("--gate", help="Sustain fraction of each pattern step, in (0.0, 1.0]"),
+    ] = 1.0,
 ) -> None:
     def _run() -> dict[str, object]:
         valid_track, valid_clip = validate_track_and_clip(track=track, clip=clip)
-        notes = parse_notes_input(notes_json=notes_json, notes_file=notes_file)
+        require_mutually_exclusive_note_sources(
+            notes_json=notes_json, notes_file=notes_file, pattern=pattern
+        )
+        if pattern is not None:
+            notes = parse_pattern_notes(
+                pattern, pattern_length=pattern_length, velocity=velocity, gate=gate
+            )
+        else:
+            notes = parse_notes_input(notes_json=notes_json, notes_file=notes_file)
         return resolve_client(ctx).add_notes_to_clip(valid_track, valid_clip, notes)
 
     execute_clip_command(

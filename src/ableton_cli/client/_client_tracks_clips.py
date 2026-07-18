@@ -199,7 +199,7 @@ class _AbletonClientTracksClipsMixin:
         self,
         track_ref: RefPayload,
         routing_type: str,
-        routing_channel: str,
+        routing_channel: str | None,
     ) -> dict[str, Any]:
         return self._call(
             "track_routing_input_set",
@@ -318,6 +318,40 @@ class _AbletonClientTracksClipsMixin:
         )
         return self._call("replace_clip_notes", args)
 
+    def clip_envelope_set(
+        self,
+        track: int,
+        clip: int,
+        device_ref: RefPayload,
+        parameter_ref: RefPayload,
+        points: list[dict[str, float]],
+        mode: str = "replace",
+    ) -> dict[str, Any]:
+        return self._call(
+            "clip_envelope_set",
+            {
+                "track": track,
+                "clip": clip,
+                "device_ref": device_ref,
+                "parameter_ref": parameter_ref,
+                "points": points,
+                "mode": mode,
+            },
+        )
+
+    def clip_envelope_clear(
+        self,
+        track: int,
+        clip: int,
+        device_ref: RefPayload | None = None,
+        parameter_ref: RefPayload | None = None,
+        clear_all: bool = False,
+    ) -> dict[str, Any]:
+        args: dict[str, Any] = {"track": track, "clip": clip, "clear_all": clear_all}
+        self._add_if_not_none(args, "device_ref", device_ref)
+        self._add_if_not_none(args, "parameter_ref", parameter_ref)
+        return self._call("clip_envelope_clear", args)
+
     def clip_notes_quantize(
         self,
         track: int,
@@ -432,6 +466,9 @@ class _AbletonClientTracksClipsMixin:
 
     def clip_props_get(self, track: int, clip: int) -> dict[str, Any]:
         return self._call("clip_props_get", {"track": track, "clip": clip})
+
+    def clip_file_path_get(self, track: int, clip: int) -> dict[str, Any]:
+        return self._call("clip_file_path_get", {"track": track, "clip": clip})
 
     def clip_loop_set(
         self,

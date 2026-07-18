@@ -152,6 +152,45 @@ quality-harness:
         path: quality-harness-report.json
 ```
 
+## Module Splitting Policy
+
+When a file or class trips a quality-harness warning (`god_class_risk`,
+`estimated_tokens`, `complexity`, `nesting`, `args`, ...), the warning is a
+*signal to go find the domain seam*, not a license to cut the file in half
+at whatever line makes the metric go quiet. A split that satisfies the
+metric while spreading one concern across two files (or worse, two files
+that each still mix concerns) is a Goodhart failure: the number improves,
+discoverability gets worse, and the next contributor has to check two
+places to understand one behavior.
+
+Rules for splitting a module:
+
+1. **Find the seam first.** Read the file's public methods/functions and
+   group them by what they're actually about (e.g. "reading the browser
+   catalog" vs. "loading an item into a track", or "session clips" vs.
+   "arrangement clips"), not by where the file happens to be long. If no
+   natural seam exists, the warning may mean the module needs a genuinely
+   different fix (extracting a helper, simplifying a function) rather than
+   a file split.
+2. **Split along the seam, not the metric.** The resulting files' names and
+   docstrings should describe a domain ("rack chain traversal and macro
+   parameters", "arrangement clip commands"), not a threshold ("kept under
+   god-class-risk"). If a docstring cites a metric or threshold as the
+   reason for a file's existence, that is itself a defect — replace it with
+   a domain description.
+3. **Pure moves for the split itself.** Moving code to satisfy this policy
+   must not change behavior or public signatures. Behavioral changes are a
+   separate, separately-reviewed change.
+4. **Never raise a threshold to make a warning disappear.** If a genuinely
+   cohesive concern is large, that is data about the domain's real
+   complexity, not a bug in the harness config.
+5. **A warning is not always a split.** Many of this harness's warnings
+   (`complexity`, `nesting`, `args`) are per-function properties that a file
+   split does nothing to fix — they require simplifying the function itself.
+   Don't split a file to chase a warning that splitting can't actually
+   resolve; only `god_class_risk` and gross per-file size responds to
+   moving code out of a class/module.
+
 ## Known Limitations
 
 1. Complexity is approximate cyclomatic complexity, not cognitive complexity.

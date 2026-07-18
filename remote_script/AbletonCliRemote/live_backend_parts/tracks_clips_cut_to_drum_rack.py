@@ -476,7 +476,7 @@ class LiveBackendTracksCutToDrumRackMixin:
         if not callable(add_new_notes):
             raise _not_supported_by_live_api(
                 message="Clip extended note write API is not available in Live API",
-                hint="Use a Live version exposing clip.add_new_notes (Live 11+).",
+                hint="Use a Live version exposing clip.add_new_notes (Live 12+).",
             )
 
         notes: list[dict[str, Any]] = []

@@ -5,7 +5,9 @@ It is designed for both humans and automation (Skills/agents), with stable JSON 
 
 ## Prerequisites
 
-- Ableton Live
+- Ableton Live 12+ (the Remote Script uses dataclass `slots=True`, which requires the
+  Python 3.10+ interpreter bundled with Live 12; Live 11 ships Python 3.7 and cannot
+  load this Remote Script)
 - Python 3.10+
 - [uv](https://docs.astral.sh/uv/)
 
@@ -342,7 +344,7 @@ This currently applies to API-limited operations such as `song new/undo/redo/sav
 
 Clip and arrangement note write/edit commands (`clip notes add`, `clip notes update`,
 `clip notes quantize|humanize|velocity-scale|transpose`, `arrangement clip notes add`, and
-`clip cut-to-drum-rack` trigger clip creation) require the Live 11+ extended note API
+`clip cut-to-drum-rack` trigger clip creation) require the Live 12+ extended note API
 (`Clip.add_new_notes` / `Clip.apply_note_modifications`, plus the `note_id`, `probability`,
 `velocity_deviation`, and `release_velocity` note fields). On older Live versions these commands
 fail with the `not_supported_by_live_api` reason above instead of falling back to the legacy

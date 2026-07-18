@@ -202,7 +202,7 @@ class _SongTransportBackend(Protocol):
         self,
         track: int,
         routing_type: str,
-        routing_channel: str,
+        routing_channel: str | None,
     ) -> dict[str, Any]: ...
 
     def track_routing_output_get(self, track: int) -> dict[str, Any]: ...
@@ -211,7 +211,7 @@ class _SongTransportBackend(Protocol):
         self,
         track: int,
         routing_type: str,
-        routing_channel: str,
+        routing_channel: str | None,
     ) -> dict[str, Any]: ...
 
 
@@ -322,6 +322,8 @@ class _TracksClipsBackend(Protocol):
     def clip_active_set(self, track: int, clip: int, value: bool) -> dict[str, Any]: ...
 
     def clip_props_get(self, track: int, clip: int) -> dict[str, Any]: ...
+
+    def clip_file_path_get(self, track: int, clip: int) -> dict[str, Any]: ...
 
     def clip_loop_set(
         self,
@@ -538,6 +540,27 @@ class _TracksClipsBackend(Protocol):
     def tracks_delete(self, track: int) -> dict[str, Any]: ...
 
 
+class _ClipEnvelopesBackend(Protocol):
+    def clip_envelope_set(
+        self,
+        track: int,
+        clip: int,
+        device: int,
+        parameter: int,
+        points: list[dict[str, float]],
+        mode: str,
+    ) -> dict[str, Any]: ...
+
+    def clip_envelope_clear(
+        self,
+        track: int,
+        clip: int,
+        device: int | None,
+        parameter: int | None,
+        clear_all: bool,
+    ) -> dict[str, Any]: ...
+
+
 class _BrowserBackend(Protocol):
     def load_instrument_or_effect(
         self,
@@ -592,7 +615,7 @@ class _DevicesBackend(Protocol):
     def set_device_parameter(
         self,
         track: int,
-        device: int,
+        device: int | tuple[int, ...],
         parameter: int,
         value: float,
     ) -> dict[str, Any]: ...
@@ -670,20 +693,38 @@ class _DevicesBackend(Protocol):
     ) -> dict[str, Any]: ...
 
 
+class _DeviceRacksBackend(Protocol):
+    def device_chains_list(self, track: int, device: int | tuple[int, ...]) -> dict[str, Any]: ...
+
+    def device_macro_list(self, track: int, device: int | tuple[int, ...]) -> dict[str, Any]: ...
+
+    def device_macro_set(
+        self,
+        track: int,
+        device: int | tuple[int, ...],
+        macro_index: int,
+        value: float,
+    ) -> dict[str, Any]: ...
+
+
 class CommandBackend(
     _SongTransportBackend,
     _TracksClipsBackend,
+    _ClipEnvelopesBackend,
     _BrowserBackend,
     _DevicesBackend,
+    _DeviceRacksBackend,
     Protocol,
 ):
     def resolve_track_ref(self, track_ref: dict[str, Any]) -> int: ...
 
-    def resolve_device_ref(self, track: int, device_ref: dict[str, Any]) -> int: ...
+    def resolve_device_ref(
+        self, track: int, device_ref: dict[str, Any]
+    ) -> int | tuple[int, ...]: ...
 
     def resolve_parameter_ref(
         self,
         track: int,
-        device: int,
+        device: int | tuple[int, ...],
         parameter_ref: dict[str, Any],
     ) -> int: ...

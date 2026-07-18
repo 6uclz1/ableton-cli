@@ -3,15 +3,23 @@ from __future__ import annotations
 import json
 from collections.abc import Callable
 from pathlib import Path
+from typing import Annotated
 
 import typer
 
-from ..runtime import execute_command, get_client
+from ..capture import capture_session
+from ..runtime import execute_command, get_client, get_runtime
 from ..session_diff import compute_session_diff
+from ..watch import WATCH_SCOPES, run_watch_loop
 from ._client_command_runner import CommandSpec
 from ._client_command_runner import run_client_command as run_client_command_shared
 from ._client_command_runner import run_client_command_spec as run_client_command_spec_shared
-from ._validation import invalid_argument
+from ._validation import (
+    invalid_argument,
+    require_non_negative_float,
+    require_positive_float,
+    require_track_index,
+)
 
 session_app = typer.Typer(help="Session information commands", no_args_is_help=True)
 
@@ -132,6 +140,145 @@ def session_diff(
         args={"from": from_path, "to": to_path},
         fn=lambda _client: _session_diff_result(from_path=from_path, to_path=to_path),
     )
+
+
+@session_app.command("capture")
+def session_capture(
+    ctx: typer.Context,
+    track_index: Annotated[
+        int, typer.Option("--track-index", help="Audio track index (0-based) to capture into")
+    ],
+    slot: Annotated[
+        int, typer.Option("--slot", help="Empty session clip slot index (0-based) to record into")
+    ],
+    bars: Annotated[float, typer.Option("--bars", help="Number of bars to capture")],
+    start: Annotated[
+        float, typer.Option("--start", help="Transport start position in beats")
+    ] = 0.0,
+    set_routing: Annotated[
+        bool,
+        typer.Option(
+            "--set-routing", help="Set the track's input routing to Resampling automatically"
+        ),
+    ] = False,
+    analyze: Annotated[
+        bool, typer.Option("--analyze", help="Run loudness/spectrum analysis on the captured file")
+    ] = False,
+    qa_project: Annotated[
+        str | None,
+        typer.Option("--qa-project", help="Run remix mastering QA against this project file"),
+    ] = None,
+) -> None:
+    def _run() -> dict[str, object]:
+        valid_track = require_track_index(track_index)
+        valid_slot = require_track_index(slot, hint="Use a valid clip slot index.")
+        valid_bars = require_positive_float("bars", bars, hint="Use a positive --bars value.")
+        valid_start = require_non_negative_float(
+            "start", start, hint="Use a non-negative --start value in beats."
+        )
+        return capture_session(
+            get_client(ctx),
+            track=valid_track,
+            slot=valid_slot,
+            bars=valid_bars,
+            start=valid_start,
+            set_routing=set_routing,
+            analyze=analyze,
+            qa_project=qa_project,
+        )
+
+    execute_command(
+        ctx,
+        command="session capture",
+        args={
+            "track_index": track_index,
+            "slot": slot,
+            "bars": bars,
+            "start": start,
+            "set_routing": set_routing,
+            "analyze": analyze,
+            "qa_project": qa_project,
+        },
+        action=_run,
+    )
+
+
+def _validate_watch_interval(interval_ms: int) -> None:
+    if interval_ms < 50:
+        raise invalid_argument(
+            message=f"interval_ms must be >= 50, got {interval_ms}",
+            hint="Use --interval-ms >= 50.",
+        )
+
+
+def _validate_watch_scope(scope: str) -> None:
+    if scope not in WATCH_SCOPES:
+        raise invalid_argument(
+            message=f"scope must be one of {sorted(WATCH_SCOPES)}, got {scope!r}",
+            hint="Use --scope song|tracks|transport|all.",
+        )
+
+
+@session_app.command("watch")
+def session_watch(
+    ctx: typer.Context,
+    interval_ms: Annotated[
+        int, typer.Option("--interval-ms", help="Poll interval in milliseconds (min 50)")
+    ] = 500,
+    scope: Annotated[str, typer.Option("--scope", help="song|tracks|transport|all")] = "all",
+    count: Annotated[
+        int | None,
+        typer.Option("--count", help="Stop after N emitted diffs (unlimited if omitted)"),
+    ] = None,
+    include_position: Annotated[
+        bool,
+        typer.Option(
+            "--include-position/--no-include-position",
+            help="Include volatile playback position fields in diffs",
+        ),
+    ] = False,
+) -> None:
+    args = {
+        "interval_ms": interval_ms,
+        "scope": scope,
+        "count": count,
+        "include_position": include_position,
+    }
+
+    def _validate() -> dict[str, object]:
+        _validate_watch_interval(interval_ms)
+        _validate_watch_scope(scope)
+        return {}
+
+    if interval_ms < 50 or scope not in WATCH_SCOPES:
+        execute_command(ctx, command="session watch", args=args, action=_validate)
+        return
+
+    runtime = get_runtime(ctx)
+    if (
+        runtime.plan
+        or runtime.dry_run
+        or (runtime.require_confirmation and not runtime.confirm_destructive)
+    ):
+        execute_command(ctx, command="session watch", args=args, action=lambda: {})
+        return
+
+    client = get_client(ctx)
+
+    def _emit(payload: dict[str, object]) -> None:
+        typer.echo(json.dumps(payload))
+
+    try:
+        run_watch_loop(
+            client,
+            scope=scope,
+            interval_seconds=interval_ms / 1000.0,
+            count=count,
+            include_position=include_position,
+            emit=_emit,
+        )
+    except KeyboardInterrupt:
+        raise typer.Exit(code=0) from None
 
 
 @session_app.command("stop-all-clips")

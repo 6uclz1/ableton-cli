@@ -194,8 +194,14 @@ class LiveBackendSongSessionMixin:
 
 class LiveBackendTransportMixerMixin:
     @staticmethod
-    def _string_choices(values: list[object]) -> list[str]:
-        return [str(value) for value in values]
+    def _routing_display_name(value: object) -> str:
+        # Live 12 routing targets are RoutingType/RoutingChannel objects whose
+        # str() is an opaque repr; display_name carries the user-facing name.
+        return str(getattr(value, "display_name", value))
+
+    @classmethod
+    def _string_choices(cls, values: list[object]) -> list[str]:
+        return [cls._routing_display_name(value) for value in values]
 
     def _require_track_routing_support(
         self,
@@ -225,8 +231,10 @@ class LiveBackendTransportMixerMixin:
         return {
             "track": track_index,
             "current": {
-                "type": str(getattr(track, f"{direction}_routing_type")),
-                "channel": str(getattr(track, f"{direction}_routing_channel")),
+                "type": self._routing_display_name(getattr(track, f"{direction}_routing_type")),
+                "channel": self._routing_display_name(
+                    getattr(track, f"{direction}_routing_channel")
+                ),
             },
             "available": {
                 "types": available_types,
@@ -243,19 +251,40 @@ class LiveBackendTransportMixerMixin:
         routing_channel: str,
     ) -> dict[str, Any]:
         track = self._track_at(track_index)
-        available_types, available_channels = self._require_track_routing_support(track, direction)
+        available_types, _ = self._require_track_routing_support(track, direction)
         if routing_type not in available_types:
             raise _invalid_argument(
                 message=f"Unsupported {direction} routing type: {routing_type}",
                 hint="Use one of the exact routing types reported by the get command.",
             )
-        if routing_channel not in available_channels:
-            raise _invalid_argument(
-                message=f"Unsupported {direction} routing channel: {routing_channel}",
-                hint="Use one of the exact routing channels reported by the get command.",
+        # Assign the Live routing objects themselves; Live rejects plain strings.
+        type_choices = list(getattr(track, f"available_{direction}_routing_types"))
+        setattr(
+            track,
+            f"{direction}_routing_type",
+            type_choices[available_types.index(routing_type)],
+        )
+        # Valid channels depend on the routing type, so resolve them only after
+        # the type is applied. A None channel keeps Live's auto-selected default.
+        if routing_channel is not None:
+            channel_choices = list(getattr(track, f"available_{direction}_routing_channels"))
+            available_channels = self._string_choices(channel_choices)
+            if routing_channel not in available_channels:
+                raise _invalid_argument(
+                    message=(
+                        f"Unsupported {direction} routing channel for "
+                        f"{routing_type!r}: {routing_channel}"
+                    ),
+                    hint=(
+                        "The routing type was applied; pick a channel from "
+                        f"{available_channels} or omit the channel to keep Live's default."
+                    ),
+                )
+            setattr(
+                track,
+                f"{direction}_routing_channel",
+                channel_choices[available_channels.index(routing_channel)],
             )
-        setattr(track, f"{direction}_routing_type", routing_type)
-        setattr(track, f"{direction}_routing_channel", routing_channel)
         return self._track_routing_payload(track_index, direction)
 
     def _require_cue_routing_support(self) -> tuple[Any, list[str]]:
@@ -576,7 +605,7 @@ class LiveBackendTransportMixerMixin:
         self,
         track: int,
         routing_type: str,
-        routing_channel: str,
+        routing_channel: str | None,
     ) -> dict[str, Any]:
         return self._set_track_routing(
             track_index=track,
@@ -592,7 +621,7 @@ class LiveBackendTransportMixerMixin:
         self,
         track: int,
         routing_type: str,
-        routing_channel: str,
+        routing_channel: str | None,
     ) -> dict[str, Any]:
         return self._set_track_routing(
             track_index=track,

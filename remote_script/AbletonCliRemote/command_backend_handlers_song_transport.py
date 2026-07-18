@@ -295,13 +295,20 @@ def _handle_track_routing_input_get(
     return backend.track_routing_input_get(track)
 
 
+def _optional_routing_channel(value: Any) -> str | None:
+    # None keeps Live's auto-selected channel for the newly applied routing type.
+    if value is None:
+        return None
+    return _non_empty_string("routing_channel", value)
+
+
 def _handle_track_routing_input_set(
     backend: CommandBackend,
     args: dict[str, Any],
 ) -> dict[str, Any]:
     track = backend.resolve_track_ref(_track_ref(args.get("track_ref")))
     routing_type = _non_empty_string("routing_type", args.get("routing_type"))
-    routing_channel = _non_empty_string("routing_channel", args.get("routing_channel"))
+    routing_channel = _optional_routing_channel(args.get("routing_channel"))
     return backend.track_routing_input_set(track, routing_type, routing_channel)
 
 
@@ -319,7 +326,7 @@ def _handle_track_routing_output_set(
 ) -> dict[str, Any]:
     track = backend.resolve_track_ref(_track_ref(args.get("track_ref")))
     routing_type = _non_empty_string("routing_type", args.get("routing_type"))
-    routing_channel = _non_empty_string("routing_channel", args.get("routing_channel"))
+    routing_channel = _optional_routing_channel(args.get("routing_channel"))
     return backend.track_routing_output_set(track, routing_type, routing_channel)
 
 

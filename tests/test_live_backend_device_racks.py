@@ -172,3 +172,23 @@ def test_dispatch_device_macro_set_end_to_end() -> None:
     )
 
     assert result["value"] == 100.0
+
+
+def test_device_macro_list_includes_renamed_macros_via_original_name() -> None:
+    # Factory preset racks rename mapped macros; Live keeps original_name "Macro N".
+    parameters = [
+        _Parameter("Chain Selector", 0.0, original_name="Chain Selector"),
+        _Parameter("Space", 0.0, min=0.0, max=127.0, original_name="Macro 1"),
+        _Parameter("Texture", 0.0, min=0.0, max=127.0, original_name="Macro 2"),
+        _Parameter("Macro 3", 0.0, min=0.0, max=127.0, original_name="Macro 3"),
+    ]
+    rack = _Device("Rack", "InstrumentGroupDevice", parameters, can_have_chains=True, chains=[])
+    backend = _backend_with_rack(rack)
+
+    result = backend.device_macro_list(0, 0)
+
+    assert [macro["name"] for macro in result["macros"]] == ["Space", "Texture", "Macro 3"]
+
+    updated = backend.device_macro_set(0, 0, 0, 64.0)
+    assert updated["name"] == "Space"
+    assert parameters[1].value == 64.0

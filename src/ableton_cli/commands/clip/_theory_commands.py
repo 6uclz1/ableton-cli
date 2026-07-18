@@ -21,6 +21,7 @@ from ...music_theory import (
 from .._validation import invalid_argument
 from ._shared import (
     execute_clip_command,
+    notes_without_ids,
     require_float_in_range,
     require_int_in_range,
     resolve_client,
@@ -98,7 +99,7 @@ def clip_notes_transpose_in_scale(
         )
         try:
             transformed = transpose_in_scale(
-                existing["notes"], root=root, scale=scale, degrees=degrees
+                notes_without_ids(existing["notes"]), root=root, scale=scale, degrees=degrees
             )
         except MusicTheoryError as exc:
             raise _music_theory_error(
@@ -182,7 +183,9 @@ def clip_notes_arpeggiate(
             pitch=filters["pitch"],
         )
         try:
-            transformed = arpeggiate(existing["notes"], mode=mode, rate=rate, gate=valid_gate)
+            transformed = arpeggiate(
+                notes_without_ids(existing["notes"]), mode=mode, rate=rate, gate=valid_gate
+            )
         except ValueError as exc:
             raise invalid_argument(message=str(exc), hint="Use a grid string like '1/16'.") from exc
         return client.replace_clip_notes(
@@ -342,7 +345,7 @@ def clip_notes_ratchet(
             pitch=filters["pitch"],
         )
         transformed = ratchet_notes(
-            existing["notes"], division=division, probability=valid_probability
+            notes_without_ids(existing["notes"]), division=division, probability=valid_probability
         )
         return client.replace_clip_notes(
             track=track,
@@ -408,7 +411,9 @@ def clip_notes_retrograde(
             pitch=filters["pitch"],
         )
         try:
-            transformed = retrograde_notes(existing["notes"], loop_length=loop_length)
+            transformed = retrograde_notes(
+                notes_without_ids(existing["notes"]), loop_length=loop_length
+            )
         except ValueError as exc:
             raise invalid_argument(
                 message=str(exc), hint="Use a --loop-length covering every filtered note."
@@ -518,7 +523,7 @@ def clip_notes_apply_groove(
         )
         try:
             transformed = apply_groove(
-                existing["notes"],
+                notes_without_ids(existing["notes"]),
                 profile,
                 timing_amount=valid_timing_amount,
                 velocity_amount=valid_velocity_amount,

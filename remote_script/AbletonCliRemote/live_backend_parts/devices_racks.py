@@ -66,11 +66,15 @@ class LiveBackendDeviceRacksMixin:
         return (*base, chain_index, chain_device_index)
 
     def _macro_positions(self, target_device: Any) -> list[int]:
+        # Match on original_name: mapped macros on preset racks are usually
+        # renamed, but Live keeps original_name at "Macro N".
         parameters = list(getattr(target_device, "parameters", []))
         return [
             index
             for index, parameter in enumerate(parameters)
-            if str(getattr(parameter, "name", "")).startswith(_MACRO_NAME_PREFIX)
+            if str(
+                getattr(parameter, "original_name", None) or getattr(parameter, "name", "")
+            ).startswith(_MACRO_NAME_PREFIX)
         ]
 
     def device_macro_list(self, track: int, device: int | tuple[int, ...]) -> dict[str, Any]:

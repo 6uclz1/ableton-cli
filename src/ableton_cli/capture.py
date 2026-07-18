@@ -84,9 +84,9 @@ def capture_session(
                 step="set_routing",
                 available_types=available_types,
             )
-        available_channels = routing.get("available", {}).get("channels", [])
-        channel = available_channels[0] if available_channels else "Resampling"
-        client.track_routing_input_set(track_ref, "Resampling", channel)
+        # Omit the channel: valid channels change with the routing type, so
+        # let Live auto-select its default for Resampling.
+        client.track_routing_input_set(track_ref, "Resampling", None)
 
     client.track_arm_set(track_ref, True)
     client.transport_position_set(start)

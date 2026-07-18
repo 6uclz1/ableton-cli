@@ -41,6 +41,7 @@ class _Parameter:
     max: float = 1.0
     is_enabled: bool = True
     is_quantized: bool = False
+    original_name: str = ""
 
 
 @dataclass(slots=True)
@@ -3877,3 +3878,70 @@ def test_live_backend_track_arm_set_rejects_unarmable_track() -> None:
     with pytest.raises(CommandError) as exc_info:
         backend.track_arm_set(0, True)
     assert exc_info.value.code == "INVALID_ARGUMENT"
+
+
+class _RoutingTarget:
+    # Live 12 Track.RoutingType/RoutingChannel: display_name only; str() is the repr.
+    def __init__(self, display_name: str) -> None:
+        self.display_name = display_name
+
+
+def test_live_backend_track_routing_uses_display_name_for_routing_objects() -> None:
+    surface = _SurfaceStub()
+    track = surface.song().tracks[0]
+    ext_in = _RoutingTarget("Ext. In")
+    resampling = _RoutingTarget("Resampling")
+    ch12 = _RoutingTarget("1/2")
+    track.available_input_routing_types = [ext_in, resampling]
+    track.available_input_routing_channels = [ch12]
+    track.input_routing_type = ext_in
+    track.input_routing_channel = ch12
+    backend = LiveBackend(surface)
+
+    payload = backend.track_routing_input_get(0)
+    assert payload["current"] == {"type": "Ext. In", "channel": "1/2"}
+    assert payload["available"] == {"types": ["Ext. In", "Resampling"], "channels": ["1/2"]}
+
+    updated = backend.track_routing_input_set(0, "Resampling", "1/2")
+    assert updated["current"]["type"] == "Resampling"
+    assert track.input_routing_type is resampling
+    assert track.input_routing_channel is ch12
+
+
+def test_live_backend_track_routing_set_with_none_channel_keeps_live_default() -> None:
+    surface = _SurfaceStub()
+    track = surface.song().tracks[0]
+    ext_in = _RoutingTarget("Ext. In")
+    resampling = _RoutingTarget("Resampling")
+
+    class _AutoChannelTrackProxy:
+        # Live resets routing channels when the routing type changes.
+        def __init__(self, target) -> None:  # noqa: ANN001
+            object.__setattr__(self, "_target", target)
+            object.__setattr__(self, "available_input_routing_types", [ext_in, resampling])
+            object.__setattr__(self, "input_routing_type", ext_in)
+
+        def __getattr__(self, name):  # noqa: ANN001, ANN204
+            if name == "available_input_routing_channels":
+                current = object.__getattribute__(self, "input_routing_type")
+                if current is resampling:
+                    return [_RoutingTarget("")]
+                return [_RoutingTarget("1"), _RoutingTarget("2")]
+            if name == "input_routing_channel":
+                return self.available_input_routing_channels[0]
+            return getattr(object.__getattribute__(self, "_target"), name)
+
+        def __setattr__(self, name, value) -> None:  # noqa: ANN001
+            if name in ("input_routing_type", "input_routing_channel"):
+                object.__setattr__(self, name, value)
+                return
+            setattr(object.__getattribute__(self, "_target"), name, value)
+
+    surface.song().tracks[0] = _AutoChannelTrackProxy(track)
+    backend = LiveBackend(surface)
+
+    updated = backend.track_routing_input_set(0, "Resampling", None)
+
+    assert updated["current"]["type"] == "Resampling"
+    assert updated["current"]["channel"] == ""
+    assert updated["available"]["channels"] == [""]

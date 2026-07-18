@@ -202,7 +202,7 @@ class _SongTransportBackend(Protocol):
         self,
         track: int,
         routing_type: str,
-        routing_channel: str,
+        routing_channel: str | None,
     ) -> dict[str, Any]: ...
 
     def track_routing_output_get(self, track: int) -> dict[str, Any]: ...
@@ -211,7 +211,7 @@ class _SongTransportBackend(Protocol):
         self,
         track: int,
         routing_type: str,
-        routing_channel: str,
+        routing_channel: str | None,
     ) -> dict[str, Any]: ...
 
 

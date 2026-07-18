@@ -199,7 +199,7 @@ class _AbletonClientTracksClipsMixin:
         self,
         track_ref: RefPayload,
         routing_type: str,
-        routing_channel: str,
+        routing_channel: str | None,
     ) -> dict[str, Any]:
         return self._call(
             "track_routing_input_set",

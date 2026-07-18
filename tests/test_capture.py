@@ -132,6 +132,9 @@ def test_capture_session_sets_routing_when_flag_passed() -> None:
     set_calls = [call for call in client.calls if call[0] == "track_routing_input_set"]
     assert len(set_calls) == 1
     assert set_calls[0][2] == "Resampling"
+    # Channel must be omitted: valid channels change with the routing type,
+    # so Live's auto-selected default is the only correct choice.
+    assert set_calls[0][3] is None
 
 
 def test_capture_session_rejects_non_audio_track() -> None:

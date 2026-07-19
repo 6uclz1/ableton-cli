@@ -464,7 +464,7 @@ uv run ableton-cli --output json ping
       "host": "127.0.0.1",
       "port": 8765,
       "protocol_version": 2,
-      "remote_script_version": "0.4.0",
+      "remote_script_version": "0.5.0",
       "rtt_ms": 2.31
     },
   "error": null

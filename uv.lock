@@ -4,9 +4,9 @@ requires-python = ">=3.10"
 
 [[package]]
 name = "ableton-cli"
-version = "0.1.0"
 source = { editable = "." }
 dependencies = [
+    { name = "click" },
     { name = "platformdirs" },
     { name = "tomli" },
     { name = "typer" },
@@ -22,9 +22,10 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "click", specifier = ">=8.0.0,<9.0.0" },
     { name = "platformdirs", specifier = ">=4.2.0,<5.0.0" },
     { name = "tomli", specifier = ">=2.0.1,<3.0.0" },
-    { name = "typer", specifier = ">=0.12.0,<1.0.0" },
+    { name = "typer", specifier = ">=0.12.0,<0.26.0" },
 ]
 
 [package.metadata.requires-dev]

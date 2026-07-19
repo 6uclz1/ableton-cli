@@ -11,6 +11,27 @@ It is designed for both humans and automation (Skills/agents), with stable JSON 
 - Python 3.10+
 - [uv](https://docs.astral.sh/uv/)
 
+## Install
+
+Install as a standalone tool with uv (no checkout needed). Use this repository's
+URL (shown under the GitHub "Code" button) as `<repo-url>`:
+
+```bash
+uv tool install "git+<repo-url>"
+# or pin a release tag:
+uv tool install "git+<repo-url>@vX.Y.Z"
+```
+
+Then use `ableton-cli` directly (no `uv run` prefix):
+
+```bash
+ableton-cli install-remote-script --yes
+ableton-cli doctor
+```
+
+Release tags and prebuilt artifacts are published on this repository's GitHub
+Releases page. To work from source instead, follow Quick Setup below.
+
 ## Quick Setup
 
 1. Install dependencies:

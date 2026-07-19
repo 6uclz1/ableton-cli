@@ -1,0 +1,114 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      should_release: ${{ steps.tag.outputs.should_release }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Read package version
+        id: version
+        run: |
+          VERSION="$(python3 -c "
+          import re, pathlib
+          text = pathlib.Path('src/ableton_cli/__init__.py').read_text()
+          print(re.search(r'__version__ = \"([^\"]+)\"', text).group(1))
+          ")"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Package version: $VERSION"
+
+      - name: Check whether tag already exists
+        id: tag
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          if git ls-remote --exit-code --tags origin "refs/tags/v$VERSION" > /dev/null; then
+            echo "Tag v$VERSION already exists; nothing to release."
+            echo "should_release=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Tag v$VERSION does not exist; releasing."
+            echo "should_release=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  release:
+    needs: check
+    if: needs.check.outputs.should_release == 'true'
+    runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ needs.check.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - uses: astral-sh/setup-uv@v4
+
+      - name: Sync dependencies
+        run: uv sync --dev
+
+      - name: Verify version consistency
+        run: |
+          PKG_VERSION="$(uv run python -c 'import ableton_cli; print(ableton_cli.__version__)')"
+          RS_VERSION="$(uv run python -c 'import sys; sys.path.insert(0, "."); from remote_script.AbletonCliRemote.command_backend_contract import REMOTE_SCRIPT_VERSION; print(REMOTE_SCRIPT_VERSION)')"
+          echo "release=$VERSION package=$PKG_VERSION remote_script=$RS_VERSION"
+          test "$VERSION" = "$PKG_VERSION"
+          test "$VERSION" = "$RS_VERSION"
+
+      - name: Run checks
+        run: uv run python -m ableton_cli.dev_checks
+
+      - name: Build distributions
+        run: uv build
+
+      - name: Verify wheel contents
+        run: |
+          python3 -c "
+          import glob, zipfile
+          wheel = glob.glob('dist/*.whl')[0]
+          names = zipfile.ZipFile(wheel).namelist()
+          assert any(
+              n.startswith('ableton_cli/_bundled/remote_script/AbletonCliRemote/') for n in names
+          ), 'remote_script assets missing from wheel'
+          assert 'ableton_cli/_bundled/skills/ableton-cli/SKILL.md' in names, 'skill asset missing from wheel'
+          assert not any(
+              '__pycache__' in n or n.endswith('.pyc') for n in names
+          ), 'bytecode leaked into wheel'
+          print(f'{wheel}: bundled assets OK ({len(names)} files)')
+          "
+
+      - name: Smoke test wheel install
+        run: |
+          uv tool install --from ./dist/*.whl ableton-cli
+          cd "$RUNNER_TEMP"
+          INSTALLED_VERSION="$(ableton-cli --version)"
+          echo "installed version: $INSTALLED_VERSION"
+          test "$INSTALLED_VERSION" = "$VERSION"
+          mkdir -p "$HOME/Ableton/User Library/Remote Scripts"
+          ableton-cli --output json install-remote-script --yes
+          test -f "$HOME/Ableton/User Library/Remote Scripts/AbletonCliRemote/command_backend_contract.py"
+          ableton-cli --output json install-skill --target claude --dry-run --yes
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "v$VERSION" dist/* \
+            --title "v$VERSION" \
+            --target "$GITHUB_SHA" \
+            --generate-notes

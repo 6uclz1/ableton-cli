@@ -14,9 +14,25 @@ SKILL_DIR_NAME = "ableton-cli"
 SKILL_FILE_NAME = "SKILL.md"
 CODEX_HOME_ENV_VAR = "CODEX_HOME"
 
+_PACKAGE_DIR = Path(__file__).resolve().parent
+_BUNDLED_DIR = _PACKAGE_DIR / "_bundled"
+_REPO_ROOT = _PACKAGE_DIR.parents[1]
+
+
+def _first_existing(candidates: list[Path]) -> Path:
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate
+    return candidates[-1]
+
 
 def remote_script_source_dir() -> Path:
-    return Path(__file__).resolve().parents[2] / "remote_script" / REMOTE_SCRIPT_DIR_NAME
+    return _first_existing(
+        [
+            _BUNDLED_DIR / "remote_script" / REMOTE_SCRIPT_DIR_NAME,
+            _REPO_ROOT / "remote_script" / REMOTE_SCRIPT_DIR_NAME,
+        ]
+    )
 
 
 def _select_target_roots(candidates: list[Path]) -> list[Path]:
@@ -74,7 +90,7 @@ def install_remote_script(
             target_root.mkdir(parents=True, exist_ok=True)
             if target.exists() and backup_path is not None:
                 shutil.move(str(target), str(backup_path))
-            shutil.copytree(source, target)
+            shutil.copytree(source, target, ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
 
         targets.append(str(target))
 
@@ -90,7 +106,12 @@ def install_remote_script(
 
 
 def skill_source_file() -> Path:
-    return Path(__file__).resolve().parents[2] / "skills" / SKILL_DIR_NAME / SKILL_FILE_NAME
+    return _first_existing(
+        [
+            _BUNDLED_DIR / "skills" / SKILL_DIR_NAME / SKILL_FILE_NAME,
+            _REPO_ROOT / "skills" / SKILL_DIR_NAME / SKILL_FILE_NAME,
+        ]
+    )
 
 
 def _resolve_codex_home(codex_home: Path | None) -> Path:

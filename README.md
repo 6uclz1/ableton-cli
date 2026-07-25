@@ -372,6 +372,31 @@ Compatibility validation is now explicit:
 - `uv run ableton-cli ping` for protocol/version metadata
 - `uv run ableton-cli doctor` for supported command integrity checks
 
+### Batch step retries
+
+Batch steps run once unless the step opts in with a `retry` object:
+
+```json
+{"name": "tracks_list", "args": {}, "retry": {"max_attempts": 3, "backoff_ms": 200}}
+```
+
+`retry.on` defaults to `["REMOTE_BUSY"]`. `REMOTE_BUSY` is rejected by the
+Remote Script before the command is queued, so a retry cannot double-apply it.
+
+`TIMEOUT` is not retried by default, and listing it in `retry.on` fails with
+`INVALID_ARGUMENT` unless the step's remote command is idempotent (read
+commands). A timed-out command may already have been applied by Live, so
+retrying it would apply it twice.
+
+A step that fails with `TIMEOUT` reports `error.details.may_have_executed`:
+
+- `true` — Live had already started the command; inspect the set before retrying
+- `false` — the command was cancelled before it ran and can be resent safely
+- `null` — no structured answer reached the CLI; assume it may have been applied
+
+A `TIMEOUT` with `may_have_executed: true` is never retried, even when
+`retry.on` lists `TIMEOUT`.
+
 ## Exit Codes
 
 - `0` success

@@ -77,3 +77,73 @@ def test_read_only_remote_commands_are_derived_from_contract_metadata() -> None:
     from ableton_cli.contracts.registry import read_only_remote_command_names
 
     assert read_only_remote_commands() == read_only_remote_command_names()
+
+
+def test_every_public_command_declares_a_side_effect() -> None:
+    from ableton_cli.command_specs import _SIDE_EFFECTS, public_command_names
+
+    assert set(_SIDE_EFFECTS) == public_command_names()
+
+
+def test_side_effect_table_has_no_entries_for_removed_commands() -> None:
+    from ableton_cli.command_specs import _SIDE_EFFECTS, public_command_names
+
+    assert sorted(set(_SIDE_EFFECTS) - public_command_names()) == []
+
+
+def test_undeclared_command_has_no_default_side_effect() -> None:
+    import pytest
+
+    from ableton_cli.command_specs import _side_effect_spec
+
+    with pytest.raises(KeyError, match="no declared side effect"):
+        _side_effect_spec("totally not a command")
+
+
+def test_destructive_commands_always_require_confirmation() -> None:
+    from ableton_cli.command_specs import _SIDE_EFFECTS
+
+    destructive = [spec for spec in _SIDE_EFFECTS.values() if spec.kind == "destructive"]
+
+    assert destructive
+    assert all(spec.requires_confirmation for spec in destructive)
+
+
+def test_read_commands_are_always_idempotent() -> None:
+    from ableton_cli.command_specs import _SIDE_EFFECTS
+
+    reads = [spec for spec in _SIDE_EFFECTS.values() if spec.kind == "read"]
+
+    assert reads
+    assert all(spec.idempotent for spec in reads)
+
+
+def test_only_read_commands_are_reachable_under_read_only() -> None:
+    from ableton_cli.command_specs import command_specs, read_only_remote_command_names
+
+    read_only = read_only_remote_command_names()
+    writable_remote_commands = {
+        spec.remote_command
+        for spec in command_specs()
+        if spec.remote_command is not None and spec.side_effect.kind != "read"
+    }
+
+    assert read_only.isdisjoint(writable_remote_commands)
+
+
+def test_generated_command_families_are_declared_individually() -> None:
+    from ableton_cli.command_specs import (
+        _SIDE_EFFECTS,
+        _STANDARD_EFFECT_TYPES,
+        _STANDARD_SYNTH_TYPES,
+    )
+
+    for synth_type in _STANDARD_SYNTH_TYPES:
+        for suffix in ("keys", "set", "observe"):
+            assert f"synth {synth_type} {suffix}" in _SIDE_EFFECTS
+    for effect_type in _STANDARD_EFFECT_TYPES:
+        for suffix in ("keys", "set", "observe"):
+            assert f"effect {effect_type} {suffix}" in _SIDE_EFFECTS
+    for effect_type in ("eq8", "limiter", "compressor", "utility"):
+        for suffix in ("keys", "set", "observe"):
+            assert f"master effect {effect_type} {suffix}" in _SIDE_EFFECTS

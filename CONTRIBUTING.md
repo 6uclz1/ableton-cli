@@ -61,17 +61,35 @@ Run locally:
 uv run python tools/quality_harness.py --config .quality-harness.yml --report quality-harness-report.json
 ```
 
-Run with baseline comparison:
+Run with baseline comparison (this is what CI does):
 
 ```bash
-uv run python tools/quality_harness.py --config .quality-harness.yml --report quality-harness-report.json --baseline ./baseline-quality-harness-report.json
+uv run python tools/quality_harness.py --config .quality-harness.yml --report quality-harness-report.json --baseline quality-harness-baseline.json
+```
+
+`quality-harness-baseline.json` is committed and records the violations the
+repository is currently carrying. With a baseline in play the harness gates
+**regressions only**: a fail-level violation whose signature is already in the
+baseline is reported with `baselined: true` and does not fail the run. That
+keeps the harness useful as a ratchet instead of a wall of pre-existing debt
+nobody can act on.
+
+Regenerate the baseline only when the accepted debt genuinely changes, and say
+why in the commit message:
+
+```bash
+uv run python tools/update_quality_harness_baseline.py
 ```
 
 Exit codes:
 
-- `0`: no fail-level violations
-- `1`: fail-level violations detected
+- `0`: no new fail-level violations
+- `1`: fail-level violations not present in the baseline
 - `2`: invalid config/runtime error
+
+Harness reports (`quality-harness-report.json`, `quality-harness-action-log.json`)
+and anything under `output/` are build artifacts: CI uploads them, and they are
+not committed.
 
 Default thresholds in `.quality-harness.yml` are calibrated for this repository's current shape (warn-heavy, fail-guarded).
 They are intended to keep CI fail-level guardrails active while surfacing refactoring candidates as warnings.

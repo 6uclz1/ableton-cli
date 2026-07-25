@@ -52,7 +52,8 @@ def test_ci_workflow_uses_dev_checks_enforce_for_quality_harness_job() -> None:
         "uv run python -m ableton_cli.dev_checks_enforce "
         "--config .quality-harness.yml "
         "--report quality-harness-report.json "
-        "--action-log quality-harness-action-log.json"
+        "--action-log quality-harness-action-log.json "
+        "--baseline quality-harness-baseline.json"
     )
 
     assert any(step.get("name") == "Upload quality harness report" for step in steps)

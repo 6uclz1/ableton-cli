@@ -6,6 +6,8 @@ from typing import Any
 
 from .models import BaselineComparison, BaselineConfig, Threshold, Violation
 
+ViolationSignature = tuple[str, str, str | None, str | None]
+
 
 class BaselineError(ValueError):
     pass
@@ -18,7 +20,13 @@ def compare_against_baseline(
     current_warning_count: int,
     current_failure_count: int,
     current_violations: list[Violation],
-) -> tuple[BaselineComparison, list[Violation]]:
+) -> tuple[BaselineComparison, list[Violation], set[ViolationSignature]]:
+    """Compare against a baseline report.
+
+    Returns the comparison, the delta violations it produced, and the
+    signatures of the fail-level violations the baseline already contains
+    so the caller can mark them as pre-existing rather than regressions.
+    """
     baseline_data = _load_baseline_report(baseline_path)
     baseline_warning_count = _read_int(baseline_data, ["summary", "warning_count"])
     baseline_failure_count = _read_int(baseline_data, ["summary", "failure_count"])
@@ -33,7 +41,7 @@ def compare_against_baseline(
         if item.get("severity") == "fail"
     }
     current_fail_signatures = {
-        _violation_signature_from_model(item)
+        violation_signature(item)
         for item in current_violations
         if item.severity == "fail"
     }
@@ -76,7 +84,7 @@ def compare_against_baseline(
         )
     )
 
-    return comparison, violations
+    return comparison, violations, baseline_fail_signatures
 
 
 def _load_baseline_report(path: Path) -> dict[str, Any]:
@@ -166,7 +174,7 @@ def _violation_signature_from_dict(
     return str(scope), str(metric), _as_optional_str(path), _as_optional_str(qualname)
 
 
-def _violation_signature_from_model(item: Violation) -> tuple[str, str, str | None, str | None]:
+def violation_signature(item: Violation) -> ViolationSignature:
     return item.scope, item.metric, item.path, item.qualname
 
 

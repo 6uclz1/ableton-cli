@@ -84,7 +84,7 @@ jobs:
         run: uv sync --dev
 
       - name: Run dev checks enforce
-        run: uv run python -m ableton_cli.dev_checks_enforce --config .quality-harness.yml --report quality-harness-report.json --action-log quality-harness-action-log.json
+        run: uv run python -m ableton_cli.dev_checks_enforce --config .quality-harness.yml --report quality-harness-report.json --action-log quality-harness-action-log.json --baseline quality-harness-baseline.json
 
       - name: Upload quality harness report
         if: always()

@@ -468,3 +468,83 @@ def test_round_trip_transforms_strip_note_id_from_replace_payload(
         sent_notes = fake.replace_calls[0]["notes"]
         assert sent_notes, args
         assert all("note_id" not in note for note in sent_notes), args
+
+
+def _arpeggiate_with_seed(runner, cli_app, monkeypatch, seed: str) -> list[int]:
+    from ableton_cli.commands import clip
+
+    fake = _FakeClient([_note(60, 0.0), _note(64, 0.0), _note(67, 0.0), _note(71, 0.0)])
+    monkeypatch.setattr(clip, "get_client", lambda ctx: fake)
+    result = runner.invoke(
+        cli_app,
+        [
+            "--output",
+            "json",
+            "clip",
+            "notes",
+            "arpeggiate",
+            "0",
+            "0",
+            "--mode",
+            "random",
+            "--seed",
+            seed,
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    return [note["pitch"] for note in fake.replace_calls[0]["notes"]]
+
+
+def test_arpeggiate_random_mode_is_reproducible_with_a_seed(runner, cli_app, monkeypatch) -> None:
+    first = _arpeggiate_with_seed(runner, cli_app, monkeypatch, "1234")
+    second = _arpeggiate_with_seed(runner, cli_app, monkeypatch, "1234")
+    other = _arpeggiate_with_seed(runner, cli_app, monkeypatch, "9999")
+    assert first == second
+    assert sorted(first) == [60, 64, 67, 71]
+    assert first != other
+
+
+def _ratchet_with_seed(runner, cli_app, monkeypatch, seed: str) -> list[float]:
+    from ableton_cli.commands import clip
+
+    fake = _FakeClient([_note(60, 0.0, duration=4.0)])
+    monkeypatch.setattr(clip, "get_client", lambda ctx: fake)
+    result = runner.invoke(
+        cli_app,
+        [
+            "--output",
+            "json",
+            "clip",
+            "notes",
+            "ratchet",
+            "0",
+            "0",
+            "--division",
+            "8",
+            "--probability",
+            "0.5",
+            "--seed",
+            seed,
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    return [note["start_time"] for note in fake.replace_calls[0]["notes"]]
+
+
+def test_ratchet_probability_is_reproducible_with_a_seed(runner, cli_app, monkeypatch) -> None:
+    first = _ratchet_with_seed(runner, cli_app, monkeypatch, "7")
+    second = _ratchet_with_seed(runner, cli_app, monkeypatch, "7")
+    assert first == second
+
+
+def test_seed_is_echoed_in_the_command_args(runner, cli_app, monkeypatch) -> None:
+    from ableton_cli.commands import clip
+
+    fake = _FakeClient([_note(60, 0.0)])
+    monkeypatch.setattr(clip, "get_client", lambda ctx: fake)
+    result = runner.invoke(
+        cli_app,
+        ["--output", "json", "clip", "notes", "arpeggiate", "0", "0", "--seed", "5"],
+    )
+    assert result.exit_code == 0, result.output
+    assert json.loads(result.stdout)["args"]["seed"] == 5

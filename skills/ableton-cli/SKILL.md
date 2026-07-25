@@ -255,8 +255,10 @@ uv run ableton-cli clip notes velocity-scale 0 0 --scale 1.1 --offset -3
 uv run ableton-cli clip notes transpose 0 0 --semitones 2 --start-time 0.0 --end-time 4.0
 uv run ableton-cli clip notes transpose-in-scale 0 0 --root C --scale major --degrees 1
 uv run ableton-cli clip notes arpeggiate 0 0 --mode up --rate 1/16 --gate 0.9
+uv run ableton-cli clip notes arpeggiate 0 0 --mode random --seed 42
 uv run ableton-cli clip notes euclidean 0 0 --pitch 36 --steps 16 --pulses 5 --length 4 --mode replace
 uv run ableton-cli clip notes ratchet 0 0 --division 2 --probability 1.0
+uv run ableton-cli clip notes ratchet 0 0 --division 4 --probability 0.6 --seed 42
 uv run ableton-cli clip notes retrograde 0 0 --loop-length 4
 uv run ableton-cli clip notes apply-groove 0 0 --groove-file groove.json --timing-amount 1.0 --velocity-amount 0.5
 uv run ableton-cli clip envelope set 0 0 --points-json '[{"time":0.0,"value":0.1},{"time":4.0,"value":0.9}]' --device-index 0 --parameter-key filter_cutoff

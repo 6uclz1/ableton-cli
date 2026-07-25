@@ -5,6 +5,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
+from .track_facets import track_facet_command_names
+
 SideEffectKind = Literal["read", "write", "destructive"]
 
 
@@ -100,8 +102,9 @@ TRANSPORT_COMMAND_SPECS: tuple[TransportSurfaceSpec, ...] = (
     ),
 )
 
-_COMMAND_NAME_PATTERN = re.compile(r'command_name="([^"]+)"')
-_COMMAND_PATTERN = re.compile(r'command="([^"]+)"')
+# \b keeps these from matching inside identifiers such as "subcommand=".
+_COMMAND_NAME_PATTERN = re.compile(r'\bcommand_name="([^"]+)"')
+_COMMAND_PATTERN = re.compile(r'\bcommand="([^"]+)"')
 _COMMANDS_DIR = Path(__file__).resolve().parent / "commands"
 _STANDARD_SYNTH_TYPES = ("wavetable", "drift", "meld")
 _STANDARD_EFFECT_TYPES = ("eq8", "limiter", "compressor", "auto-filter", "reverb", "utility")
@@ -275,6 +278,7 @@ def public_command_names() -> set[str]:
         commands.update(_COMMAND_PATTERN.findall(text))
 
     commands.update(item.command_name for item in TRANSPORT_COMMAND_SPECS)
+    commands.update(track_facet_command_names())
     commands.add("batch stream")
     for synth_type in _STANDARD_SYNTH_TYPES:
         commands.add(f"synth {synth_type} keys")

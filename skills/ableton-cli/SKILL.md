@@ -493,12 +493,12 @@ uv run ableton-cli --output json ping
 - `get_track_info` -> `uv run ableton-cli --output json track info --track-index <track>`
 - `play` -> `uv run ableton-cli --output json transport play`
 - `stop` -> `uv run ableton-cli --output json transport stop`
-- `arrangement_record_start` -> `uv run ableton-cli --output json arrangement record start`
-- `arrangement_record_stop` -> `uv run ableton-cli --output json arrangement record stop`
 - `set_tempo` -> `uv run ableton-cli --output json transport tempo set <bpm>`
 - `transport_position_get` -> `uv run ableton-cli --output json transport position get`
 - `transport_position_set` -> `uv run ableton-cli --output json transport position set <beats>`
 - `transport_rewind` -> `uv run ableton-cli --output json transport rewind`
+- `arrangement_record_start` -> `uv run ableton-cli --output json arrangement record start`
+- `arrangement_record_stop` -> `uv run ableton-cli --output json arrangement record stop`
 - `list_tracks` -> `uv run ableton-cli --output json tracks list`
 - `create_midi_track` -> `uv run ableton-cli --output json tracks create midi [--index <index>]`
 - `create_audio_track` -> `uv run ableton-cli --output json tracks create audio [--index <index>]`

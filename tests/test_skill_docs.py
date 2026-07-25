@@ -116,3 +116,30 @@ def test_generated_skill_docs_are_up_to_date() -> None:
         text=True,
     )
     assert result.returncode == 0, result.stdout + result.stderr
+
+
+def test_transport_action_mappings_are_derived_not_duplicated() -> None:
+    import ast
+    from pathlib import Path
+
+    from ableton_cli.actions import STABLE_ACTION_MAPPINGS, transport_action_mappings
+    from ableton_cli.command_specs import TRANSPORT_COMMAND_SPECS
+
+    derived = transport_action_mappings()
+    expected_actions = [
+        spec.action_name for spec in TRANSPORT_COMMAND_SPECS if spec.action_name is not None
+    ]
+    assert [item.action for item in derived] == expected_actions
+    for item in derived:
+        assert item in STABLE_ACTION_MAPPINGS
+
+    # None of the derived actions may also be written out by hand.
+    actions_source = Path(__file__).resolve().parents[1] / "src" / "ableton_cli" / "actions.py"
+    literal_actions = [
+        keyword.value.value
+        for node in ast.walk(ast.parse(actions_source.read_text(encoding="utf-8")))
+        if isinstance(node, ast.Call)
+        for keyword in node.keywords
+        if keyword.arg == "action" and isinstance(keyword.value, ast.Constant)
+    ]
+    assert not set(literal_actions) & set(expected_actions)

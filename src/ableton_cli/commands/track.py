@@ -7,11 +7,7 @@ import typer
 
 from ..refs import RefPayload
 from ..runtime import execute_command, get_client
-from ._track_arm_commands import register_commands as register_arm_commands
-from ._track_info_commands import register_commands as register_info_commands
-from ._track_mute_commands import register_commands as register_mute_commands
-from ._track_name_commands import register_commands as register_name_commands
-from ._track_panning_commands import register_commands as register_panning_commands
+from ._track_facets import register_track_facets
 from ._track_routing_commands import register_commands as register_routing_commands
 from ._track_send_commands import register_commands as register_send_commands
 from ._track_shared import (
@@ -20,9 +16,7 @@ from ._track_shared import (
     TValue,
     ValueValidator,
 )
-from ._track_solo_commands import register_commands as register_solo_commands
 from ._track_specs import TrackCommandSpec, TrackValueCommandSpec
-from ._track_volume_commands import register_commands as register_volume_commands
 
 
 def _resolve_track_ref(track_ref: RefPayload | Callable[[], RefPayload]) -> RefPayload:
@@ -124,42 +118,11 @@ def run_track_value_command_spec(
 
 
 track_app = typer.Typer(help="Single-track commands", no_args_is_help=True)
-volume_app = typer.Typer(help="Track volume commands", no_args_is_help=True)
-name_app = typer.Typer(help="Track naming commands", no_args_is_help=True)
-mute_app = typer.Typer(help="Track mute commands", no_args_is_help=True)
-solo_app = typer.Typer(help="Track solo commands", no_args_is_help=True)
-arm_app = typer.Typer(help="Track arm commands", no_args_is_help=True)
-panning_app = typer.Typer(help="Track panning commands", no_args_is_help=True)
 send_app = typer.Typer(help="Track send commands", no_args_is_help=True)
 routing_app = typer.Typer(help="Track routing commands", no_args_is_help=True)
 
-register_info_commands(track_app, run_track_command_spec=run_track_command_spec)
-register_volume_commands(
-    volume_app,
-    run_track_command_spec=run_track_command_spec,
-    run_track_value_command_spec=run_track_value_command_spec,
-)
-register_name_commands(
-    name_app,
-    run_track_value_command_spec=run_track_value_command_spec,
-)
-register_mute_commands(
-    mute_app,
-    run_track_command_spec=run_track_command_spec,
-    run_track_value_command_spec=run_track_value_command_spec,
-)
-register_solo_commands(
-    solo_app,
-    run_track_command_spec=run_track_command_spec,
-    run_track_value_command_spec=run_track_value_command_spec,
-)
-register_arm_commands(
-    arm_app,
-    run_track_command_spec=run_track_command_spec,
-    run_track_value_command_spec=run_track_value_command_spec,
-)
-register_panning_commands(
-    panning_app,
+register_track_facets(
+    track_app,
     run_track_command_spec=run_track_command_spec,
     run_track_value_command_spec=run_track_value_command_spec,
 )
@@ -228,12 +191,6 @@ register_routing_commands(
 )
 
 
-track_app.add_typer(volume_app, name="volume")
-track_app.add_typer(name_app, name="name")
-track_app.add_typer(mute_app, name="mute")
-track_app.add_typer(solo_app, name="solo")
-track_app.add_typer(arm_app, name="arm")
-track_app.add_typer(panning_app, name="panning")
 track_app.add_typer(send_app, name="send")
 track_app.add_typer(routing_app, name="routing")
 

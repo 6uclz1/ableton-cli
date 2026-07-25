@@ -3244,7 +3244,13 @@ class _BatchStreamClientStub:
     def __init__(self) -> None:
         self.calls: list[tuple[str, dict[str, object]]] = []
 
-    def execute_remote_command(self, name: str, args: dict[str, object]):  # noqa: ANN201
+    def execute_remote_command(  # noqa: ANN201
+        self,
+        name: str,
+        args: dict[str, object],
+        *,
+        idempotency_key: str | None = None,
+    ):
         self.calls.append((name, args))
         return {"ok": True, "name": name}
 
@@ -3350,7 +3356,13 @@ class _BatchAdvancedClientStub:
     def ping(self):  # noqa: ANN201
         return dict(self._ping_payload)
 
-    def execute_remote_command(self, name: str, args: dict[str, object]):  # noqa: ANN201
+    def execute_remote_command(  # noqa: ANN201
+        self,
+        name: str,
+        args: dict[str, object],
+        *,
+        idempotency_key: str | None = None,
+    ):
         self.calls.append((name, args))
         queue = self._responses.get(name)
         if queue:

@@ -136,3 +136,87 @@ def test_cancelled_request_is_skipped_by_drain_without_executing_flag(
     assert calls == []
     assert request.event.is_set()
     surface.disconnect()
+
+
+def _timing_out_mid_dispatch(
+    monkeypatch: pytest.MonkeyPatch,
+    request: _CommandRequest,
+    calls: list[str],
+) -> None:
+    """Dispatch that has the client's wait expire while Live is applying it.
+
+    This is the only sequence that can double-apply: the request is already
+    ``executing`` when the cancellation lands, so the drain cannot stop it and
+    the client is told TIMEOUT for a command that did in fact run.
+    """
+
+    def _dispatch(_backend: Any, name: str, _args: dict[str, Any]) -> dict[str, Any]:
+        calls.append(name)
+        assert _mark_request_timed_out(request) is True
+        return {"note_count": 1}
+
+    monkeypatch.setattr(control_surface_module, "dispatch_command", _dispatch)
+
+
+def _abandoned_request(
+    surface: control_surface_module.AbletonCliRemoteSurface,
+    *,
+    idempotency_key: str | None,
+) -> _CommandRequest:
+    request = _CommandRequest(
+        name="add_notes_to_clip",
+        args={"notes": []},
+        timeout_ms=1,
+        event=threading.Event(),
+        idempotency_key=idempotency_key,
+    )
+    surface._queue.put(request)
+    return request
+
+
+def test_retry_after_timeout_with_the_same_key_does_not_apply_twice(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    surface = _make_surface(monkeypatch)
+    calls: list[str] = []
+    request = _abandoned_request(surface, idempotency_key="step-key")
+    _timing_out_mid_dispatch(monkeypatch, request, calls)
+
+    try:
+        surface._drain_requests()
+        assert calls == ["add_notes_to_clip"]
+
+        result = surface._execute_command_from_server_thread(
+            "add_notes_to_clip",
+            {"notes": []},
+            {"request_timeout_ms": 1000, "idempotency_key": "step-key"},
+        )
+
+        assert calls == ["add_notes_to_clip"]
+        assert result == {"note_count": 1, "idempotent_replay": True}
+    finally:
+        surface.disconnect()
+
+
+def test_retry_after_timeout_without_a_key_still_applies_twice(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    surface = _make_surface(monkeypatch)
+    calls: list[str] = []
+    request = _abandoned_request(surface, idempotency_key=None)
+    _timing_out_mid_dispatch(monkeypatch, request, calls)
+
+    try:
+        surface._drain_requests()
+
+        surface._execute_command_from_server_thread(
+            "add_notes_to_clip",
+            {"notes": []},
+            {"request_timeout_ms": 1000},
+        )
+
+        # Without a key the Remote Script cannot recognise the resend. This is
+        # why `_execute_step` always carries one across a retry.
+        assert calls == ["add_notes_to_clip", "add_notes_to_clip"]
+    finally:
+        surface.disconnect()

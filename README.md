@@ -246,14 +246,14 @@ only be noticed by polling — that is what `session watch` does. A connection c
 instead send one `"type": "subscribe"` request and become an event stream:
 
 ```json
-{"type":"subscribe","name":"events","args":{"events":["tempo","is_playing"]},"meta":{},"request_id":"...","protocol_version":2}
+{"type":"subscribe","name":"events","args":{"events":["tempo","is_playing"]},"meta":{},"request_id":"...","protocol_version":3}
 ```
 
 The remote answers with the usual response envelope (`result.subscribed` lists the
 accepted names, `result.stream` is `true`) and then pushes one line per event:
 
 ```json
-{"type":"event","protocol_version":2,"event":"tempo","ts":1730000000.0,"data":{"tempo":174.0},"dropped":0}
+{"type":"event","protocol_version":3,"event":"tempo","ts":1730000000.0,"data":{"tempo":174.0},"dropped":0}
 ```
 
 - A subscribing connection stops accepting commands, so pushed events can never
@@ -315,11 +315,29 @@ accepted names, `result.stream` is `true`) and then pushes one line per event:
   "name": "song_info",
   "args": {},
   "meta": {
-    "request_timeout_ms": 15000
+    "request_timeout_ms": 15000,
+    "idempotency_key": "0f1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e"
   },
   "request_id": "8c9f9b0c1a9d4dc2abdf2d53f3a19be9",
-  "protocol_version": 2
+  "protocol_version": 3
 }
+```
+
+`request_id` is fresh on every send and never identifies a retry.
+
+`meta.idempotency_key` is optional (max 128 characters) and is what makes a
+resend safe. The Remote Script keeps the response of the last 256 completed
+keys; a request repeating a key it has already completed is **not executed
+again** — the stored response is returned with `idempotent_replay: true` added
+to `result` (or to `error.details` for a stored failure). `batch run` and
+`batch stream` generate one key per step and reuse it for every retry attempt,
+so a step that times out and is retried cannot be applied twice.
+
+Protocol versions must match exactly. After upgrading the CLI, reinstall the
+Remote Script and re-select the Control Surface in Live:
+
+```bash
+uv run ableton-cli install-remote-script --yes
 ```
 
 ### Response (success)
@@ -328,7 +346,7 @@ accepted names, `result.stream` is `true`) and then pushes one line per event:
 {
   "ok": true,
   "request_id": "8c9f9b0c1a9d4dc2abdf2d53f3a19be9",
-  "protocol_version": 2,
+  "protocol_version": 3,
   "result": {
     "tempo": 120.0
   },
@@ -342,7 +360,7 @@ accepted names, `result.stream` is `true`) and then pushes one line per event:
 {
   "ok": false,
   "request_id": "8c9f9b0c1a9d4dc2abdf2d53f3a19be9",
-  "protocol_version": 2,
+  "protocol_version": 3,
   "result": null,
   "error": {
     "code": "INVALID_ARGUMENT",
@@ -383,19 +401,18 @@ Batch steps run once unless the step opts in with a `retry` object:
 `retry.on` defaults to `["REMOTE_BUSY"]`. `REMOTE_BUSY` is rejected by the
 Remote Script before the command is queued, so a retry cannot double-apply it.
 
-`TIMEOUT` is not retried by default, and listing it in `retry.on` fails with
-`INVALID_ARGUMENT` unless the step's remote command is idempotent (read
-commands). A timed-out command may already have been applied by Live, so
-retrying it would apply it twice.
+`TIMEOUT` is not retried by default, but adding it to `retry.on` is safe for
+any command: a retrying step carries one `meta.idempotency_key` across all of
+its attempts, so the Remote Script replays its stored response rather than
+applying the command a second time. A replayed response carries
+`idempotent_replay: true`.
 
-A step that fails with `TIMEOUT` reports `error.details.may_have_executed`:
+A step that fails with `TIMEOUT` and is not retried reports
+`error.details.may_have_executed`:
 
 - `true` — Live had already started the command; inspect the set before retrying
 - `false` — the command was cancelled before it ran and can be resent safely
 - `null` — no structured answer reached the CLI; assume it may have been applied
-
-A `TIMEOUT` with `may_have_executed: true` is never retried, even when
-`retry.on` lists `TIMEOUT`.
 
 ## Exit Codes
 
@@ -514,7 +531,11 @@ Development workflows (local checks, quality gates, and merge criteria) are docu
 2. Confirm Ableton is running and `AbletonCliRemote` is selected as Control Surface.
 3. Confirm host/port (`127.0.0.1:8765` by default).
 4. Try a longer timeout: `--timeout-ms 30000`.
-5. If protocol mismatches, use `--protocol-version <n>` or `uv run ableton-cli config set protocol_version <n>`.
+5. If protocol mismatches, the installed Remote Script is from a different release:
+   run `uv run ableton-cli install-remote-script --yes`, restart Ableton Live, and re-select
+   `AbletonCliRemote` as Control Surface. Use `--protocol-version <n>` or
+   `uv run ableton-cli config set protocol_version <n>` only to talk to a deliberately pinned
+   Remote Script version.
 
 ### `AbletonCliRemote` not shown in Control Surface list
 

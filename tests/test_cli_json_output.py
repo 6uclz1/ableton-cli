@@ -201,7 +201,7 @@ def test_ping_includes_capabilities_when_remote_reports_them(runner, cli_app, mo
     class _ClientStub:
         def ping(self):  # noqa: ANN201
             return {
-                "protocol_version": 2,
+                "protocol_version": 3,
                 "remote_script_version": "0.2.0",
                 "supported_commands": ["ping", "song_info"],
                 "command_set_hash": "abc123",
@@ -237,7 +237,7 @@ def test_config_set_updates_key_and_returns_json_envelope(runner, cli_app, tmp_p
                 'host = "127.0.0.1"',
                 "port = 8765",
                 "timeout_ms = 15000",
-                "protocol_version = 2",
+                "protocol_version = 3",
                 "",
             ]
         ),
@@ -386,7 +386,7 @@ def test_auth_token_global_option_is_used_for_dispatch_meta(
     captured: dict[str, object] = {}
     original_dispatch = backends_module._TransportBackend.dispatch
 
-    def _capture_dispatch(self, name, args):  # noqa: ANN001, ANN202
+    def _capture_dispatch(self, name, args, **kwargs):  # noqa: ANN001, ANN202
         request_meta: dict[str, object] = {}
 
         def _fake_send(payload):  # noqa: ANN001, ANN202
@@ -400,7 +400,7 @@ def test_auth_token_global_option_is_used_for_dispatch_meta(
             }
 
         monkeypatch.setattr(self.transport, "send", _fake_send)
-        result = original_dispatch(self, name, args)
+        result = original_dispatch(self, name, args, **kwargs)
         captured["meta"] = request_meta
         return result
 
@@ -429,7 +429,7 @@ def test_auth_token_global_option_is_used_for_dispatch_meta(
 
 def test_protocol_version_global_option_overrides_config(runner, cli_app, tmp_path) -> None:
     config_path = tmp_path / "config.toml"
-    config_path.write_text("protocol_version = 2\n", encoding="utf-8")
+    config_path.write_text("protocol_version = 3\n", encoding="utf-8")
 
     result = runner.invoke(
         cli_app,
@@ -459,9 +459,9 @@ def test_ping_supports_replay_option_without_network(runner, cli_app, tmp_path: 
                 "response": {
                     "ok": True,
                     "request_id": "recorded-request-id",
-                    "protocol_version": 2,
+                    "protocol_version": 3,
                     "result": {
-                        "protocol_version": 2,
+                        "protocol_version": 3,
                         "remote_script_version": "9.9.9",
                         "supported_commands": ["ping"],
                         "command_set_hash": "hash",
@@ -478,7 +478,15 @@ def test_ping_supports_replay_option_without_network(runner, cli_app, tmp_path: 
 
     result = runner.invoke(
         cli_app,
-        ["--output", "json", "--replay", str(replay_path), "ping"],
+        [
+            "--config",
+            str(tmp_path / "empty.toml"),
+            "--output",
+            "json",
+            "--replay",
+            str(replay_path),
+            "ping",
+        ],
     )
 
     assert result.exit_code == 0
@@ -519,7 +527,7 @@ def test_read_only_allows_read_commands(runner, cli_app, tmp_path: Path) -> None
                 "response": {
                     "ok": True,
                     "request_id": "recorded-request-id",
-                    "protocol_version": 2,
+                    "protocol_version": 3,
                     "result": {"tempo": 120.0},
                     "error": None,
                 },
@@ -532,7 +540,17 @@ def test_read_only_allows_read_commands(runner, cli_app, tmp_path: Path) -> None
 
     result = runner.invoke(
         cli_app,
-        ["--output", "json", "--read-only", "--replay", str(replay_path), "song", "info"],
+        [
+            "--config",
+            str(tmp_path / "empty.toml"),
+            "--output",
+            "json",
+            "--read-only",
+            "--replay",
+            str(replay_path),
+            "song",
+            "info",
+        ],
     )
 
     assert result.exit_code == 0
@@ -577,7 +595,7 @@ def test_read_only_batch_rejects_write_steps(runner, cli_app, tmp_path: Path) ->
                 "response": {
                     "ok": True,
                     "request_id": "recorded-request-id",
-                    "protocol_version": 2,
+                    "protocol_version": 3,
                     "result": {"tracks": []},
                     "error": None,
                 },
@@ -591,6 +609,8 @@ def test_read_only_batch_rejects_write_steps(runner, cli_app, tmp_path: Path) ->
     result = runner.invoke(
         cli_app,
         [
+            "--config",
+            str(tmp_path / "empty.toml"),
             "--output",
             "json",
             "--read-only",

@@ -6,7 +6,7 @@ from typing import Any, Protocol
 
 from .note_fields import NOTE_FIELD_SPECS
 
-PROTOCOL_VERSION = 2
+PROTOCOL_VERSION = 3
 REMOTE_SCRIPT_VERSION = "0.5.0"
 MIN_BPM = 20.0
 MAX_BPM = 999.0

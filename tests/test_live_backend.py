@@ -1076,7 +1076,7 @@ def test_live_backend_ping_info_reports_api_support_matrix() -> None:
 
     result = backend.ping_info()
 
-    assert result["protocol_version"] == 2
+    assert result["protocol_version"] == 3
     assert "remote_script_version" in result
     assert result["api_support"] == {
         "song_new_supported": False,

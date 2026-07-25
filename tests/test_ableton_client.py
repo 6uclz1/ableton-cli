@@ -17,7 +17,7 @@ def _settings() -> Settings:
         timeout_ms=15000,
         log_level="INFO",
         log_file=None,
-        protocol_version=2,
+        protocol_version=3,
         config_path="/tmp/ableton-cli-test.toml",
     )
 
@@ -780,3 +780,32 @@ def test_client_parameter_commands_share_payload_shape(
         "parameter_ref": {"mode": "index", "index": 2},
         "value": expected_value,
     }
+
+
+def test_retrying_a_command_reuses_the_key_but_not_the_request_id(monkeypatch) -> None:
+    client = AbletonClient(_settings())
+    requests: list[dict[str, Any]] = []
+
+    def _send(request: dict[str, Any]):  # noqa: ANN202
+        requests.append(request)
+        return _ok_response(request, {})
+
+    monkeypatch.setattr(client.transport, "send", _send)
+
+    for _attempt in range(2):
+        client.execute_remote_command("add_notes_to_clip", {}, idempotency_key="step-key")
+
+    assert [request["meta"]["idempotency_key"] for request in requests] == [
+        "step-key",
+        "step-key",
+    ]
+    assert requests[0]["request_id"] != requests[1]["request_id"]
+
+
+def test_command_without_an_idempotency_key_sends_no_key(monkeypatch) -> None:
+    client = AbletonClient(_settings())
+    requests = _capture_requests(monkeypatch, client)
+
+    client.execute_remote_command("add_notes_to_clip", {})
+
+    assert "idempotency_key" not in requests[0]["meta"]

@@ -23,7 +23,7 @@ def test_parse_command_request_accepts_strict_protocol_shape() -> None:
             "args": {},
             "meta": {"request_timeout_ms": 15000},
             "request_id": "request-1",
-            "protocol_version": 2,
+            "protocol_version": 3,
         }
     )
 
@@ -40,7 +40,7 @@ def test_parse_command_request_accepts_strict_protocol_shape() -> None:
             "args": {},
             "meta": {},
             "request_id": "request-1",
-            "protocol_version": 2,
+            "protocol_version": 3,
             "extra": "not allowed",
         },
         {
@@ -49,7 +49,7 @@ def test_parse_command_request_accepts_strict_protocol_shape() -> None:
             "args": {},
             "meta": {},
             "request_id": "request-1",
-            "protocol_version": 2,
+            "protocol_version": 3,
         },
         {
             "type": "command",
@@ -57,7 +57,7 @@ def test_parse_command_request_accepts_strict_protocol_shape() -> None:
             "args": [],
             "meta": {},
             "request_id": "request-1",
-            "protocol_version": 2,
+            "protocol_version": 3,
         },
         {
             "type": "command",
@@ -171,3 +171,28 @@ def test_handle_closes_connection_after_malformed_json_line() -> None:
 
     assert first["error"]["code"] == "INVALID_ARGUMENT"
     assert trailing == b""
+
+
+def _command_payload(meta: dict[str, object]) -> dict[str, object]:
+    return {
+        "type": "command",
+        "name": "song_info",
+        "args": {},
+        "meta": meta,
+        "request_id": "request-1",
+        "protocol_version": 3,
+    }
+
+
+def test_parse_command_request_accepts_an_idempotency_key() -> None:
+    request = _parse_command_request(_command_payload({"idempotency_key": "step-key"}))
+
+    assert request[4] == {"idempotency_key": "step-key"}
+
+
+@pytest.mark.parametrize("key", ["", 42, None, "x" * 129])
+def test_parse_command_request_rejects_an_invalid_idempotency_key(key: object) -> None:
+    with pytest.raises(CommandExecutionError) as exc_info:
+        _parse_command_request(_command_payload({"idempotency_key": key}))
+
+    assert exc_info.value.code == "INVALID_ARGUMENT"

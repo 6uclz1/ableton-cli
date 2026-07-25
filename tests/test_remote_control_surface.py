@@ -401,3 +401,123 @@ def test_disconnect_drains_the_queue_regardless_of_budget(
 
     assert executed == [f"command-{index}" for index in range(5)]
     assert surface._queue.empty()
+
+
+def _enqueue_keyed(
+    surface: control_surface_module.AbletonCliRemoteSurface,
+    name: str,
+    key: str | None,
+) -> control_surface_module._CommandRequest:
+    request = control_surface_module._CommandRequest(
+        name=name,
+        args={},
+        timeout_ms=1000,
+        event=threading.Event(),
+        idempotency_key=key,
+    )
+    surface._queue.put(request)
+    return request
+
+
+def _count_dispatches(monkeypatch: pytest.MonkeyPatch, result: dict[str, Any]) -> list[str]:
+    dispatched: list[str] = []
+
+    def _dispatch(_backend: Any, name: str, _args: dict[str, Any]) -> dict[str, Any]:
+        dispatched.append(name)
+        return dict(result)
+
+    monkeypatch.setattr(control_surface_module, "dispatch_command", _dispatch)
+    return dispatched
+
+
+def test_repeating_an_idempotency_key_replays_instead_of_dispatching(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    surface = _make_surface(monkeypatch)
+    dispatched = _count_dispatches(monkeypatch, {"tempo": 120.0})
+
+    first = _enqueue_keyed(surface, "song_info", "key-1")
+    surface._drain_requests()
+    second = _enqueue_keyed(surface, "song_info", "key-1")
+    surface._drain_requests()
+
+    assert dispatched == ["song_info"]
+    assert first.result == {"tempo": 120.0}
+    assert second.result == {"tempo": 120.0, "idempotent_replay": True}
+
+
+def test_requests_without_a_key_are_always_dispatched(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    surface = _make_surface(monkeypatch)
+    dispatched = _count_dispatches(monkeypatch, {"tempo": 120.0})
+
+    _enqueue_keyed(surface, "song_info", None)
+    _enqueue_keyed(surface, "song_info", None)
+    surface._drain_requests()
+
+    assert dispatched == ["song_info", "song_info"]
+
+
+def test_a_failed_command_is_replayed_as_the_same_failure(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from remote_script.AbletonCliRemote.command_backend import CommandError
+
+    surface = _make_surface(monkeypatch)
+    dispatched: list[str] = []
+
+    def _dispatch(_backend: Any, name: str, _args: dict[str, Any]) -> dict[str, Any]:
+        dispatched.append(name)
+        raise CommandError(code="INVALID_ARGUMENT", message="bad track", hint="fix it")
+
+    monkeypatch.setattr(control_surface_module, "dispatch_command", _dispatch)
+
+    _enqueue_keyed(surface, "track_volume_set", "key-1")
+    surface._drain_requests()
+    second = _enqueue_keyed(surface, "track_volume_set", "key-1")
+    surface._drain_requests()
+
+    assert dispatched == ["track_volume_set"]
+    assert isinstance(second.error, CommandError)
+    assert second.error.code == "INVALID_ARGUMENT"
+    assert second.error.message == "bad track"
+    assert second.error.details == {"idempotent_replay": True}
+
+
+def test_cancelled_requests_leave_nothing_to_replay(monkeypatch: pytest.MonkeyPatch) -> None:
+    surface = _make_surface(monkeypatch)
+    dispatched = _count_dispatches(monkeypatch, {"tempo": 120.0})
+
+    cancelled = _enqueue_keyed(surface, "song_info", "key-1")
+    cancelled.cancelled = True
+    surface._drain_requests()
+    assert dispatched == []
+
+    retry = _enqueue_keyed(surface, "song_info", "key-1")
+    surface._drain_requests()
+
+    assert dispatched == ["song_info"]
+    assert retry.result == {"tempo": 120.0}
+
+
+def test_response_cache_evicts_the_oldest_keys(monkeypatch: pytest.MonkeyPatch) -> None:
+    surface = _make_surface(monkeypatch)
+    monkeypatch.setattr(control_surface_module, "IDEMPOTENCY_CACHE_SIZE", 3)
+    dispatched = _count_dispatches(monkeypatch, {"tempo": 120.0})
+
+    for index in range(4):
+        _enqueue_keyed(surface, "song_info", f"key-{index}")
+    surface._drain_requests()
+    assert len(dispatched) == 4
+    assert list(surface._response_cache) == ["key-1", "key-2", "key-3"]
+
+    # key-0 fell out of the cache, so its retry has to run again.
+    evicted_retry = _enqueue_keyed(surface, "song_info", "key-0")
+    # key-3 is still cached, so its retry is replayed.
+    cached_retry = _enqueue_keyed(surface, "song_info", "key-3")
+    surface._drain_requests()
+
+    assert len(dispatched) == 5
+    assert evicted_retry.result == {"tempo": 120.0}
+    assert cached_retry.result == {"tempo": 120.0, "idempotent_replay": True}

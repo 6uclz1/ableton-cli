@@ -4,6 +4,7 @@ import hmac
 import queue
 import threading
 import time
+from collections import OrderedDict
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
@@ -45,17 +46,54 @@ except Exception:  # pragma: no cover - only used outside Ableton for local chec
 DRAIN_BUDGET_S = 0.005
 
 
+#: How many completed responses are kept for idempotency-key replay.
+#: A retry follows within one request timeout, so only recent keys can ever be
+#: hit; 256 covers a deep `batch stream` burst while keeping the cache small
+#: enough to be irrelevant to Live's memory. Eviction is FIFO by insertion.
+IDEMPOTENCY_CACHE_SIZE = 256
+
+#: Reserved result/details field marking a response that was replayed from the
+#: idempotency cache instead of being executed again. No command handler may
+#: return a result key by this name.
+IDEMPOTENT_REPLAY_FIELD = "idempotent_replay"
+
+
 @dataclass(slots=True)
 class _CommandRequest:
     name: str
     args: dict[str, Any]
     timeout_ms: int
     event: threading.Event
+    idempotency_key: str | None = None
     result: dict[str, Any] | None = None
     error: Exception | None = None
     lock: threading.Lock = field(default_factory=threading.Lock)
     cancelled: bool = False
     executing: bool = False
+
+
+@dataclass(slots=True)
+class _CachedResponse:
+    """A completed dispatch, kept so a retry can replay it instead of rerunning."""
+
+    result: dict[str, Any] | None = None
+    error: CommandError | None = None
+
+
+def _as_command_error(error: Exception) -> CommandError:
+    """Normalize a dispatch failure for caching.
+
+    Mirrors how ``_execute_command_from_server_thread`` renders a
+    non-``CommandError`` exception, so a replayed failure is byte-identical to
+    the original apart from the replay marker.
+    """
+    if isinstance(error, CommandError):
+        return error
+    return CommandError(
+        code=RemoteErrorCode.INTERNAL_ERROR.value,
+        message=str(error),
+        hint="Check Ableton Log.txt for details.",
+    )
 
 
 def _mark_request_timed_out(request: _CommandRequest) -> bool:
@@ -82,6 +120,10 @@ class AbletonCliRemoteSurface(_ControlSurface):
         self._queue: queue.Queue[_CommandRequest] = queue.Queue()
         self._drain_lock = threading.Lock()
         self._drain_scheduled = False
+        # Read and written only from `_drain_requests`, i.e. only on Live's
+        # main thread, which serializes dispatch — so no lock is needed and no
+        # request can observe another one mid-flight under the same key.
+        self._response_cache: OrderedDict[str, _CachedResponse] = OrderedDict()
         remote_config = load_remote_config()
         self._auth_token = remote_config.auth_token
         self._event_broker = EventBroker()
@@ -184,6 +226,7 @@ class AbletonCliRemoteSurface(_ControlSurface):
             args=args,
             timeout_ms=timeout_ms,
             event=threading.Event(),
+            idempotency_key=meta.get("idempotency_key"),
         )
         self._queue.put(request)
         self._schedule_drain()
@@ -232,6 +275,38 @@ class AbletonCliRemoteSurface(_ControlSurface):
         if needs_reschedule:
             self._schedule_drain()
 
+    def _remember_response(self, request: _CommandRequest) -> None:
+        key = request.idempotency_key
+        if key is None:
+            return
+        if request.error is not None:
+            entry = _CachedResponse(error=_as_command_error(request.error))
+        else:
+            entry = _CachedResponse(result=request.result)
+        self._response_cache.pop(key, None)
+        self._response_cache[key] = entry
+        while len(self._response_cache) > IDEMPOTENCY_CACHE_SIZE:
+            self._response_cache.popitem(last=False)
+
+    def _replay_cached_response(self, request: _CommandRequest) -> bool:
+        """Answer from the cache when this key already ran. Returns True on a hit."""
+        key = request.idempotency_key
+        if key is None:
+            return False
+        entry = self._response_cache.get(key)
+        if entry is None:
+            return False
+        if entry.error is not None:
+            request.error = CommandError(
+                code=entry.error.code,
+                message=entry.error.message,
+                hint=entry.error.hint,
+                details={**(entry.error.details or {}), IDEMPOTENT_REPLAY_FIELD: True},
+            )
+        else:
+            request.result = {**(entry.result or {}), IDEMPOTENT_REPLAY_FIELD: True}
+        return True
+
     def _drain_requests(self, budget_s: float | None = None) -> None:
         """Execute queued requests; ``budget_s=None`` drains without a deadline.
 
@@ -252,9 +327,15 @@ class AbletonCliRemoteSurface(_ControlSurface):
 
             with request.lock:
                 if request.cancelled:
+                    # Never dispatched, so there is nothing to remember: a retry
+                    # of this key must actually run the command.
                     request.event.set()
                     continue
                 request.executing = True
+
+            if self._replay_cached_response(request):
+                request.event.set()
+                continue
 
             dispatched += 1
             try:
@@ -262,6 +343,10 @@ class AbletonCliRemoteSurface(_ControlSurface):
             except Exception as exc:  # noqa: BLE001
                 request.error = exc
             finally:
+                # Recorded even when the client already gave up waiting — that
+                # abandoned response is exactly what a retry needs to replay
+                # instead of applying the command a second time.
+                self._remember_response(request)
                 request.event.set()
 
     def update_display(self) -> None:

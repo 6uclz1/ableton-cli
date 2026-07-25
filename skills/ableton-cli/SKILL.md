@@ -409,7 +409,7 @@ uv run ableton-cli effect utility observe 0 0
 uv run ableton-cli config init
 uv run ableton-cli config init --dry-run
 uv run ableton-cli config show
-uv run ableton-cli config set protocol_version 2
+uv run ableton-cli config set protocol_version 3
 uv run ableton-cli completion
 uv run ableton-cli --install-completion
 uv run ableton-cli --show-completion
@@ -423,8 +423,10 @@ uv run ableton-cli --show-completion
 - For low-latency repeated automation operations, prefer `uv run ableton-cli batch stream`.
 - Capability and compatibility checks are explicit through `uv run ableton-cli ping` and `uv run ableton-cli doctor`.
 - Batch steps run once unless the step declares `retry`. `retry.on` defaults to `["REMOTE_BUSY"]`.
-  - Listing `TIMEOUT` in `retry.on` fails with `INVALID_ARGUMENT` unless the step's remote command is idempotent (read commands). A timed-out write may already have been applied, so a retry would double-apply it.
-  - A `TIMEOUT` step failure reports `error.details.may_have_executed` (`true` / `false` / `null` when unknown). Inspect the set with a read command before resending anything other than `false`.
+  - A retrying step carries one `meta.idempotency_key` across every attempt, so the Remote Script replays its stored response instead of applying the command twice. Adding `TIMEOUT` to `retry.on` is therefore safe for write commands too.
+  - A replayed response is marked with `idempotent_replay: true` in `result` (or in `error.details` for a replayed failure).
+  - A `TIMEOUT` step failure that is not retried reports `error.details.may_have_executed` (`true` / `false` / `null` when unknown). Inspect the set with a read command before resending anything other than `false`.
+- Protocol version 3 is required. On `PROTOCOL_VERSION_MISMATCH`, run `uv run ableton-cli install-remote-script --yes`, restart Ableton Live, and re-select `AbletonCliRemote`.
 - Destructive master device deletion requires `--yes`. Live API unsupported operations fail explicitly with `not_supported_by_live_api`.
 - Standard wrapper commands (`synth <type> ...`, `effect <type> ...`) are strict and intentionally fail if required parameter names are missing.
   - If you get `Missing required standard ... keys`, use generic commands instead:
@@ -464,7 +466,7 @@ uv run ableton-cli --output json ping
     "result": {
       "host": "127.0.0.1",
       "port": 8765,
-      "protocol_version": 2,
+      "protocol_version": 3,
       "remote_script_version": "0.5.0",
       "rtt_ms": 2.31
     },

@@ -21,7 +21,7 @@ class Settings:
     timeout_ms: int = 15000
     log_level: str = "INFO"
     log_file: str | None = None
-    protocol_version: int = 2
+    protocol_version: int = 3
     config_path: str | None = None
     auth_token: str | None = None
 
@@ -153,7 +153,7 @@ def _settings_from_merged(merged: dict[str, Any], *, resolved_path: Path) -> Set
         raise AppError(
             error_code=ErrorCode.CONFIG_INVALID,
             message=f"protocol_version must be positive: {protocol_version}",
-            hint="Set protocol_version to 2.",
+            hint="Set protocol_version to 3.",
             exit_code=ExitCode.CONFIG_INVALID,
         )
 

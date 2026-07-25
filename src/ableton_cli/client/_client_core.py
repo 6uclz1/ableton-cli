@@ -50,7 +50,13 @@ class _AbletonClientCore:
             return RecordingClient(settings, path=record_path)
         return LiveBackendClient(settings)
 
-    def _dispatch(self, name: str, args: dict[str, Any]) -> dict[str, Any]:
+    def _dispatch(
+        self,
+        name: str,
+        args: dict[str, Any],
+        *,
+        idempotency_key: str | None = None,
+    ) -> dict[str, Any]:
         if self.read_only and name not in self._read_only_commands:
             raise AppError(
                 error_code=ErrorCode.READ_ONLY_VIOLATION,
@@ -59,7 +65,7 @@ class _AbletonClientCore:
                 exit_code=ExitCode.EXECUTION_FAILED,
                 details={"command": name},
             )
-        return self._backend.dispatch(name, args)
+        return self._backend.dispatch(name, args, idempotency_key=idempotency_key)
 
     def _call(self, name: str, args: dict[str, Any] | None = None) -> dict[str, Any]:
         payload = {} if args is None else dict(args)
@@ -69,9 +75,11 @@ class _AbletonClientCore:
         self,
         name: str,
         args: dict[str, Any] | None = None,
+        *,
+        idempotency_key: str | None = None,
     ) -> dict[str, Any]:
         payload = {} if args is None else dict(args)
-        return self._dispatch(name, payload)
+        return self._dispatch(name, payload, idempotency_key=idempotency_key)
 
     @staticmethod
     def _add_if_not_none(args: dict[str, Any], key: str, value: Any) -> None:

@@ -239,6 +239,36 @@ request order. A malformed request line closes the connection; well-formed
 requests that fail validation or execution return a structured error and
 keep the connection open.
 
+### Event subscriptions
+
+Commands are strictly request/response, so anything a user does in Live itself can
+only be noticed by polling — that is what `session watch` does. A connection can
+instead send one `"type": "subscribe"` request and become an event stream:
+
+```json
+{"type":"subscribe","name":"events","args":{"events":["tempo","is_playing"]},"meta":{},"request_id":"...","protocol_version":2}
+```
+
+The remote answers with the usual response envelope (`result.subscribed` lists the
+accepted names, `result.stream` is `true`) and then pushes one line per event:
+
+```json
+{"type":"event","protocol_version":2,"event":"tempo","ts":1730000000.0,"data":{"tempo":174.0},"dropped":0}
+```
+
+- A subscribing connection stops accepting commands, so pushed events can never
+  delay a command; `ableton-cli session events` opens its own connection.
+- Event names are `tempo`, `is_playing`, `playing_position` and `selected_track`.
+  Which of them a given Live version can deliver depends on the listener APIs it
+  exposes; subscribing to one that is unavailable fails with `INVALID_ARGUMENT`
+  and a hint listing what is available, rather than accepting the subscription
+  and never delivering.
+- `playing_position` is throttled to at most one event per 100 ms.
+- A subscriber that cannot keep up loses the oldest events instead of growing an
+  unbounded queue; `dropped` reports how many were lost since the previous event.
+- A Remote Script that predates subscriptions rejects `"type": "subscribe"` with
+  `INVALID_ARGUMENT`, so an old install fails loudly instead of hanging.
+
 ## Security Model
 
 - By default the Remote Script listens on 127.0.0.1 only (local loopback), port 8765, with

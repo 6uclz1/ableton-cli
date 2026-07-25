@@ -8,7 +8,9 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from .command_backend import CommandError, RemoteErrorCode, dispatch_command
+from .events import EVENT_NAMES, EventBroker, Subscription, UnknownEventError
 from .live_backend import LiveBackend
+from .live_events import LiveEventSource
 from .remote_config import load_remote_config
 from .server import AbletonCommandServer, CommandExecutionError
 
@@ -69,12 +71,70 @@ class AbletonCliRemoteSurface(_ControlSurface):
         self._drain_scheduled = False
         remote_config = load_remote_config()
         self._auth_token = remote_config.auth_token
+        self._event_broker = EventBroker()
+        # Listeners are registered here, on Live's main thread, once —
+        # never from a socket thread when a client subscribes.
+        self._event_source = LiveEventSource(lambda: self.song(), self._event_broker)
+        self._available_events = self._event_source.attach()
         self._command_server = AbletonCommandServer(
             host=remote_config.host,
             port=remote_config.port,
             command_executor=self._execute_command_from_server_thread,
+            event_subscriber=self._subscribe_from_server_thread,
+            event_unsubscriber=self._event_broker.unsubscribe,
         )
         self._command_server.start()
+
+    @property
+    def available_events(self) -> tuple[str, ...]:
+        return self._available_events
+
+    def _require_auth(self, meta: dict[str, Any]) -> None:
+        provided_auth_token = meta.get("auth_token")
+        if self._auth_token is not None and (
+            not isinstance(provided_auth_token, str)
+            or not hmac.compare_digest(provided_auth_token, self._auth_token)
+        ):
+            raise CommandExecutionError(
+                code=RemoteErrorCode.UNAUTHORIZED.value,
+                message="Missing or invalid auth token",
+                hint=(
+                    "Set the same auth_token in the CLI config and in "
+                    "AbletonCliRemote/remote_config.json."
+                ),
+            )
+
+    def _subscribe_from_server_thread(
+        self, args: dict[str, Any], meta: dict[str, Any]
+    ) -> Subscription:
+        self._require_auth(meta)
+        requested = args.get("events", list(self._available_events))
+        if not isinstance(requested, list) or not all(isinstance(item, str) for item in requested):
+            raise CommandExecutionError(
+                code=RemoteErrorCode.INVALID_ARGUMENT.value,
+                message="events must be a list of event names",
+                hint=f"Use any of: {', '.join(self._available_events) or '(none available)'}.",
+            )
+        names = requested or list(self._available_events)
+        unavailable = [name for name in names if name not in self._available_events]
+        if unavailable:
+            raise CommandExecutionError(
+                code=RemoteErrorCode.INVALID_ARGUMENT.value,
+                message=f"events not available in this Live version: {sorted(unavailable)}",
+                hint=f"Use any of: {', '.join(self._available_events) or '(none available)'}.",
+                details={
+                    "available_events": list(self._available_events),
+                    "known_events": list(EVENT_NAMES),
+                },
+            )
+        try:
+            return self._event_broker.subscribe(names)
+        except UnknownEventError as exc:
+            raise CommandExecutionError(
+                code=RemoteErrorCode.INVALID_ARGUMENT.value,
+                message=str(exc),
+                hint=f"Use any of: {', '.join(EVENT_NAMES)}.",
+            ) from exc
 
     def _parse_request_timeout_ms(self, meta: dict[str, Any]) -> int:
         raw_timeout = meta.get("request_timeout_ms", self.DEFAULT_COMMAND_WAIT_TIMEOUT_MS)
@@ -97,19 +157,7 @@ class AbletonCliRemoteSurface(_ControlSurface):
     def _execute_command_from_server_thread(
         self, name: str, args: dict[str, Any], meta: dict[str, Any]
     ) -> dict[str, Any]:
-        provided_auth_token = meta.get("auth_token")
-        if self._auth_token is not None and (
-            not isinstance(provided_auth_token, str)
-            or not hmac.compare_digest(provided_auth_token, self._auth_token)
-        ):
-            raise CommandExecutionError(
-                code=RemoteErrorCode.UNAUTHORIZED.value,
-                message="Missing or invalid auth token",
-                hint=(
-                    "Set the same auth_token in the CLI config and in "
-                    "AbletonCliRemote/remote_config.json."
-                ),
-            )
+        self._require_auth(meta)
         if self._queue.qsize() >= self.MAX_PENDING_COMMANDS:
             raise CommandExecutionError(
                 code="REMOTE_BUSY",
@@ -196,6 +244,8 @@ class AbletonCliRemoteSurface(_ControlSurface):
 
     def disconnect(self) -> None:
         self._command_server.stop()
+        self._event_source.detach()
+        self._event_broker.close()
         self._drain_requests()
         with self._drain_lock:
             self._drain_scheduled = False

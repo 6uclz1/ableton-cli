@@ -50,6 +50,8 @@ uv run ableton-cli session info
 uv run ableton-cli session snapshot
 uv run ableton-cli session diff --from ./snapshot-before.json --to ./snapshot-after.json
 uv run ableton-cli session watch --interval-ms 500 --scope all --count 5
+uv run ableton-cli session events --events tempo,is_playing --count 5
+uv run ableton-cli session events --idle-timeout-ms 5000
 uv run ableton-cli session capture --track-index 0 --slot 0 --bars 8 --set-routing --analyze
 uv run ableton-cli session stop-all-clips
 ```

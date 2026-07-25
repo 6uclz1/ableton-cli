@@ -21,3 +21,5 @@ build/
 .claude/settings.local.json
 .cursor/settings.local.json
 output/**
+quality-harness-report.json
+quality-harness-action-log.json

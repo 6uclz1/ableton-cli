@@ -2,12 +2,33 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from .command_specs import TRANSPORT_COMMAND_SPECS
+
 
 @dataclass(frozen=True, slots=True)
 class StableActionMapping:
     action: str
     command: str
     capability: str
+
+
+def transport_action_mappings() -> tuple[StableActionMapping, ...]:
+    """Action mappings derived from the transport command specs.
+
+    The action name, CLI form and capability text already live on
+    TransportSurfaceSpec; repeating them here is how the two drift apart.
+    """
+    return tuple(
+        StableActionMapping(
+            action=spec.action_name,
+            command=spec.action_command,
+            capability=spec.capability,
+        )
+        for spec in TRANSPORT_COMMAND_SPECS
+        if spec.action_name is not None
+        and spec.action_command is not None
+        and spec.capability is not None
+    )
 
 
 STABLE_ACTION_MAPPINGS: tuple[StableActionMapping, ...] = (
@@ -61,16 +82,7 @@ STABLE_ACTION_MAPPINGS: tuple[StableActionMapping, ...] = (
         command="uv run ableton-cli --output json track info --track-index <track>",
         capability="Read one track details by selector.",
     ),
-    StableActionMapping(
-        action="play",
-        command="uv run ableton-cli --output json transport play",
-        capability="Start transport playback.",
-    ),
-    StableActionMapping(
-        action="stop",
-        command="uv run ableton-cli --output json transport stop",
-        capability="Stop transport playback.",
-    ),
+    *transport_action_mappings(),
     StableActionMapping(
         action="arrangement_record_start",
         command="uv run ableton-cli --output json arrangement record start",
@@ -80,26 +92,6 @@ STABLE_ACTION_MAPPINGS: tuple[StableActionMapping, ...] = (
         action="arrangement_record_stop",
         command="uv run ableton-cli --output json arrangement record stop",
         capability="Stop arrangement recording when supported by Live API.",
-    ),
-    StableActionMapping(
-        action="set_tempo",
-        command="uv run ableton-cli --output json transport tempo set <bpm>",
-        capability="Update song tempo in BPM.",
-    ),
-    StableActionMapping(
-        action="transport_position_get",
-        command="uv run ableton-cli --output json transport position get",
-        capability="Read current transport beat/time position.",
-    ),
-    StableActionMapping(
-        action="transport_position_set",
-        command="uv run ableton-cli --output json transport position set <beats>",
-        capability="Move transport playhead to a beat position.",
-    ),
-    StableActionMapping(
-        action="transport_rewind",
-        command="uv run ableton-cli --output json transport rewind",
-        capability="Rewind transport playhead to beat 0.",
     ),
     StableActionMapping(
         action="list_tracks",

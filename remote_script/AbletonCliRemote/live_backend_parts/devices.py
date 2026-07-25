@@ -15,7 +15,7 @@ from .base import DeviceLocator, _invalid_argument, _not_supported_by_live_api
 
 class LiveBackendDeviceSharedMixin:
     def _master_track(self) -> Any:
-        master = getattr(self._song(), "master_track", None)
+        master = getattr(self._ctx._song(), "master_track", None)
         if master is None:
             raise _not_supported_by_live_api(
                 message="Master track API is not available in Live API",
@@ -50,7 +50,7 @@ class LiveBackendDeviceSharedMixin:
             self._master_device_at(index)
             return index
         if mode in {"name", "query"}:
-            return self._resolve_by_name_or_query(
+            return self._ctx._resolve_by_name_or_query(
                 kind="master device",
                 candidates=[
                     (index, str(getattr(device, "name", "")))
@@ -59,7 +59,7 @@ class LiveBackendDeviceSharedMixin:
                 ref=device_ref,
             )
         if mode == "stable_ref":
-            return self._resolve_stable_ref(
+            return self._ctx._resolve_stable_ref(
                 kind="device",
                 stable_ref=str(device_ref["stable_ref"]),
                 candidates=[(index, device) for index, device in enumerate(devices)],
@@ -80,7 +80,7 @@ class LiveBackendDeviceSharedMixin:
             self._master_parameter_at(device, index)
             return index
         if mode in {"name", "query"}:
-            return self._resolve_by_name_or_query(
+            return self._ctx._resolve_by_name_or_query(
                 kind="master parameter",
                 candidates=[
                     (index, str(getattr(parameter, "name", "")))
@@ -89,7 +89,7 @@ class LiveBackendDeviceSharedMixin:
                 ref=parameter_ref,
             )
         if mode == "stable_ref":
-            return self._resolve_stable_ref(
+            return self._ctx._resolve_stable_ref(
                 kind="parameter",
                 stable_ref=str(parameter_ref["stable_ref"]),
                 candidates=[(index, parameter) for index, parameter in enumerate(parameters)],
@@ -100,7 +100,7 @@ class LiveBackendDeviceSharedMixin:
             )
         if mode == "key":
             key_indexes, _ = self._resolved_master_standard_effect_key_indexes(
-                effect_type=str(self._effect_type_for_device(target_device)),
+                effect_type=str(self._ctx._effect_type_for_device(target_device)),
                 device=device,
             )
             key = str(parameter_ref["key"])
@@ -139,7 +139,7 @@ class LiveBackendDeviceSharedMixin:
 
     def _master_device_stable_ref(self, device: Any, *, device_index: int | None = None) -> str:
         locator = None if device_index is None else ("master", device_index)
-        return self._stable_ref("device", device, locator=locator)
+        return self._ctx._stable_ref("device", device, locator=locator)
 
     def _master_parameter_stable_ref(
         self,
@@ -151,12 +151,12 @@ class LiveBackendDeviceSharedMixin:
         locator = None
         if device_index is not None and parameter_index is not None:
             locator = ("master", device_index, parameter_index)
-        return self._stable_ref("parameter", parameter, locator=locator)
+        return self._ctx._stable_ref("parameter", parameter, locator=locator)
 
     def _resolve_track_indexes(self, track: int | None) -> Iterable[int]:
         if track is None:
-            return range(len(list(self._song().tracks)))
-        self._track_at(track)
+            return range(len(list(self._ctx._song().tracks)))
+        self._ctx._track_at(track)
         return (track,)
 
     def _canonicalize_optional_type(
@@ -179,7 +179,7 @@ class LiveBackendDeviceSharedMixin:
 
     def _iter_track_devices(self, track_indexes: Iterable[int]) -> Iterator[tuple[int, int, Any]]:
         for track_index in track_indexes:
-            target_track = self._track_at(track_index)
+            target_track = self._ctx._track_at(track_index)
             for device_index, target_device in enumerate(list(target_track.devices)):
                 yield track_index, device_index, target_device
 
@@ -221,8 +221,8 @@ class LiveBackendDeviceSharedMixin:
         target_device, detected_type = require_supported_device(track, device)
         del target_device
 
-        target_parameter = self._parameter_at(track, device, parameter)
-        serialized_parameter = self._serialize_parameter(target_parameter, parameter)
+        target_parameter = self._ctx._parameter_at(track, device, parameter)
+        serialized_parameter = self._ctx._serialize_parameter(target_parameter, parameter)
 
         if not serialized_parameter["is_enabled"]:
             raise _invalid_argument(
@@ -250,13 +250,15 @@ class LiveBackendDeviceSharedMixin:
             "track": track,
             "device": device,
             "parameter": parameter,
-            "track_stable_ref": self._track_stable_ref(self._track_at(track), index=track),
-            "device_stable_ref": self._device_stable_ref(
-                self._device_at(track, device),
+            "track_stable_ref": self._ctx._track_stable_ref(
+                self._ctx._track_at(track), index=track
+            ),
+            "device_stable_ref": self._ctx._device_stable_ref(
+                self._ctx._device_at(track, device),
                 track_index=track,
                 device_index=device,
             ),
-            "parameter_stable_ref": self._parameter_stable_ref(
+            "parameter_stable_ref": self._ctx._parameter_stable_ref(
                 target_parameter,
                 track_index=track,
                 device_index=device,
@@ -278,24 +280,26 @@ class LiveBackendDeviceSharedMixin:
         parameter: int,
         value: float,
     ) -> dict[str, Any]:
-        target_param = self._parameter_at(track, device, parameter)
+        target_param = self._ctx._parameter_at(track, device, parameter)
         target_param.value = float(value)
         parameter_stable_ref = (
-            self._parameter_stable_ref(
+            self._ctx._parameter_stable_ref(
                 target_param,
                 track_index=track,
                 device_index=device,
                 parameter_index=parameter,
             )
             if isinstance(device, int)
-            else self._stable_ref("parameter", target_param, locator=None)
+            else self._ctx._stable_ref("parameter", target_param, locator=None)
         )
         return {
             "track": track,
             "device": device,
             "parameter": parameter,
-            "track_stable_ref": self._track_stable_ref(self._track_at(track), index=track),
-            "device_stable_ref": self._device_stable_ref_for(track, device),
+            "track_stable_ref": self._ctx._track_stable_ref(
+                self._ctx._track_at(track), index=track
+            ),
+            "device_stable_ref": self._ctx._device_stable_ref_for(track, device),
             "parameter_stable_ref": parameter_stable_ref,
             "value": float(target_param.value),
         }
@@ -303,17 +307,19 @@ class LiveBackendDeviceSharedMixin:
     def master_device_load(self, target: str, position: str) -> dict[str, Any]:
         uri, path = self._master_load_target(target)
         if uri is not None:
-            item = self._find_browser_item_by_uri(uri)
+            item = self._ctx.services.browser._find_browser_item_by_uri(uri)
             if item is None:
                 raise _invalid_argument(
                     message=f"Browser item with URI '{uri}' not found",
                     hint="Inspect browser search results and choose a valid URI.",
                 )
-            serialized = self._serialize_browser_item(item, path=self._item_path_by_uri(uri))
+            serialized = self._ctx.services.browser._serialize_browser_item(
+                item, path=self._ctx.services.browser._item_path_by_uri(uri)
+            )
         else:
             assert path is not None
-            item = self._resolve_browser_path(path)
-            serialized = self._serialize_browser_item(item, path=path)
+            item = self._ctx.services.browser._resolve_browser_path(path)
+            serialized = self._ctx.services.browser._serialize_browser_item(item, path=path)
             if not serialized["is_loadable"]:
                 raise _invalid_argument(
                     message=f"Browser item at path '{path}' is not loadable",
@@ -321,8 +327,10 @@ class LiveBackendDeviceSharedMixin:
                 )
         master = self._master_track()
         before = len(list(getattr(master, "devices", [])))
-        self._select_track_for_load(song=self._song(), target_track=master)
-        self._browser().load_item(item)
+        self._ctx.services.browser._select_track_for_load(
+            song=self._ctx._song(), target_track=master
+        )
+        self._ctx.services.browser._browser().load_item(item)
         after_devices = list(getattr(master, "devices", []))
         loaded_index = max(0, len(after_devices) - 1)
         target_index = self._master_insert_index(position, len(after_devices))
@@ -516,8 +524,8 @@ class LiveBackendDeviceSharedMixin:
             ),
             "name": str(getattr(parameter, "name", f"Parameter {parameter_index}")),
             "value": float(getattr(parameter, "value", 0.0)),
-            "min": self._safe_float(getattr(parameter, "min", None)),
-            "max": self._safe_float(getattr(parameter, "max", None)),
+            "min": self._ctx._safe_float(getattr(parameter, "min", None)),
+            "max": self._ctx._safe_float(getattr(parameter, "max", None)),
             "is_enabled": bool(getattr(parameter, "is_enabled", True)),
             "is_quantized": bool(getattr(parameter, "is_quantized", False)),
         }
@@ -542,7 +550,7 @@ class LiveBackendDeviceSharedMixin:
     ) -> tuple[dict[str, int], str]:
         parsed_type = canonicalize_effect_type(effect_type)
         target_device = self._master_device_at(device)
-        detected_type = self._effect_type_for_device(target_device)
+        detected_type = self._ctx._effect_type_for_device(target_device)
         if detected_type != parsed_type:
             raise _invalid_argument(
                 message=(
@@ -585,8 +593,8 @@ class LiveBackendSynthDevicesMixin:
         devices = self._find_devices(
             track=track,
             requested_type=parsed_type,
-            detector=self._synth_type_for_device,
-            payload_builder=self._synth_device_payload,
+            detector=self._ctx._synth_type_for_device,
+            payload_builder=self._ctx._synth_device_payload,
         )
         return {
             "track": track,
@@ -596,7 +604,7 @@ class LiveBackendSynthDevicesMixin:
         }
 
     def list_synth_parameters(self, track: int, device: int) -> dict[str, Any]:
-        return self._list_synth_parameters_payload(track, device)
+        return self._ctx._list_synth_parameters_payload(track, device)
 
     def set_synth_parameter_safe(
         self,
@@ -610,11 +618,11 @@ class LiveBackendSynthDevicesMixin:
             device=device,
             parameter=parameter,
             value=value,
-            require_supported_device=self._require_supported_synth_device,
+            require_supported_device=self._ctx._require_supported_synth_device,
         )
 
     def observe_synth_parameters(self, track: int, device: int) -> dict[str, Any]:
-        return self._list_synth_parameters_payload(track, device)
+        return self._ctx._list_synth_parameters_payload(track, device)
 
     def list_standard_synth_keys(self, synth_type: str) -> dict[str, Any]:
         try:
@@ -639,7 +647,7 @@ class LiveBackendSynthDevicesMixin:
         key: str,
         value: float,
     ) -> dict[str, Any]:
-        key_indexes, parsed_type = self._resolved_standard_synth_key_indexes(
+        key_indexes, parsed_type = self._ctx._resolved_standard_synth_key_indexes(
             synth_type=synth_type,
             track=track,
             device=device,
@@ -670,7 +678,7 @@ class LiveBackendSynthDevicesMixin:
         track: int,
         device: int,
     ) -> dict[str, Any]:
-        key_indexes, parsed_type = self._resolved_standard_synth_key_indexes(
+        key_indexes, parsed_type = self._ctx._resolved_standard_synth_key_indexes(
             synth_type=synth_type,
             track=track,
             device=device,
@@ -705,8 +713,8 @@ class LiveBackendEffectDevicesMixin:
         devices = self._find_devices(
             track=track,
             requested_type=parsed_type,
-            detector=self._effect_type_for_device,
-            payload_builder=self._effect_device_payload,
+            detector=self._ctx._effect_type_for_device,
+            payload_builder=self._ctx._effect_device_payload,
         )
         return {
             "track": track,
@@ -716,7 +724,7 @@ class LiveBackendEffectDevicesMixin:
         }
 
     def list_effect_parameters(self, track: int, device: int) -> dict[str, Any]:
-        return self._list_effect_parameters_payload(track, device)
+        return self._ctx._list_effect_parameters_payload(track, device)
 
     def set_effect_parameter_safe(
         self,
@@ -730,11 +738,11 @@ class LiveBackendEffectDevicesMixin:
             device=device,
             parameter=parameter,
             value=value,
-            require_supported_device=self._require_supported_effect_device,
+            require_supported_device=self._ctx._require_supported_effect_device,
         )
 
     def observe_effect_parameters(self, track: int, device: int) -> dict[str, Any]:
-        return self._list_effect_parameters_payload(track, device)
+        return self._ctx._list_effect_parameters_payload(track, device)
 
     def list_standard_effect_keys(self, effect_type: str) -> dict[str, Any]:
         try:
@@ -759,7 +767,7 @@ class LiveBackendEffectDevicesMixin:
         key: str,
         value: float,
     ) -> dict[str, Any]:
-        key_indexes, parsed_type = self._resolved_standard_effect_key_indexes(
+        key_indexes, parsed_type = self._ctx._resolved_standard_effect_key_indexes(
             effect_type=effect_type,
             track=track,
             device=device,
@@ -790,7 +798,7 @@ class LiveBackendEffectDevicesMixin:
         track: int,
         device: int,
     ) -> dict[str, Any]:
-        key_indexes, parsed_type = self._resolved_standard_effect_key_indexes(
+        key_indexes, parsed_type = self._ctx._resolved_standard_effect_key_indexes(
             effect_type=effect_type,
             track=track,
             device=device,

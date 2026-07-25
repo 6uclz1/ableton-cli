@@ -16,12 +16,12 @@ Stable action names and CLI mappings for automation wrappers.
 | `get_track_info` | `uv run ableton-cli --output json track info --track-index <track>` | Read one track details by selector. |
 | `play` | `uv run ableton-cli --output json transport play` | Start transport playback. |
 | `stop` | `uv run ableton-cli --output json transport stop` | Stop transport playback. |
-| `arrangement_record_start` | `uv run ableton-cli --output json arrangement record start` | Start arrangement recording when supported by Live API. |
-| `arrangement_record_stop` | `uv run ableton-cli --output json arrangement record stop` | Stop arrangement recording when supported by Live API. |
 | `set_tempo` | `uv run ableton-cli --output json transport tempo set <bpm>` | Update song tempo in BPM. |
 | `transport_position_get` | `uv run ableton-cli --output json transport position get` | Read current transport beat/time position. |
 | `transport_position_set` | `uv run ableton-cli --output json transport position set <beats>` | Move transport playhead to a beat position. |
 | `transport_rewind` | `uv run ableton-cli --output json transport rewind` | Rewind transport playhead to beat 0. |
+| `arrangement_record_start` | `uv run ableton-cli --output json arrangement record start` | Start arrangement recording when supported by Live API. |
+| `arrangement_record_stop` | `uv run ableton-cli --output json arrangement record stop` | Stop arrangement recording when supported by Live API. |
 | `list_tracks` | `uv run ableton-cli --output json tracks list` | List all tracks and their basic properties. |
 | `create_midi_track` | `uv run ableton-cli --output json tracks create midi [--index <index>]` | Insert a MIDI track at an index or append. |
 | `create_audio_track` | `uv run ableton-cli --output json tracks create audio [--index <index>]` | Insert an audio track at an index or append. |
@@ -129,9 +129,11 @@ Stable action names and CLI mappings for automation wrappers.
 - `uv run ableton-cli remix plan --project <remix_project.json> --style anime-club`: Generate an arrangement plan in the manifest.
 - `uv run ableton-cli remix apply --project <remix_project.json> --dry-run`: Print planned batch steps without writing to Live.
 - `uv run ableton-cli remix qa --project <remix_project.json>`: Validate remix manifest paths and planning metadata.
-- `uv run ableton-cli remix setup-sound --project <remix_project.json> --kit <query> --bass <query> --lead <query>`: Plan Browser-search-based sound setup.
-- `uv run ableton-cli remix mix-macro --project <remix_project.json> --preset anime-club-basic`: Plan bus, return, and macro setup.
-- `uv run ableton-cli remix device-chain apply --project <remix_project.json> --chain <name>`: Plan Browser-search-based device chain application.
+- `uv run ableton-cli remix generate drums --project <remix_project.json> --style <style> [--section <name> | --bars <n>] [--seed <n>] [--apply --track <t> --clip <c>]`: Generate a drum pattern and optionally write it to a clip.
+- `uv run ableton-cli remix generate bass --project <remix_project.json> --pattern <name> [--key "F minor"] [--follow-chords]`: Generate a bass line, following generated chord roots when present.
+- `uv run ableton-cli remix generate chords --project <remix_project.json> --progression "i-VI-III-VII" --key "F minor" [--voicing drop2]`: Expand a progression into voiced chord notes.
+
+Not implemented (these exit `20` with `error.code=NOT_IMPLEMENTED`): `remix setup-sound`, `remix mix-macro`, `remix setup-mix`, `remix setup-returns`, `remix setup-sidechain`, `remix device-chain apply`, `audio stems split`. Each error carries a hint naming the commands that do the job.
 
 Operational note: after `install-remote-script --yes`, reload Ableton's Control Surface assignment (`None` -> `AbletonCliRemote`) or restart Ableton Live to apply updated Remote Script code.
 

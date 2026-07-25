@@ -239,6 +239,36 @@ request order. A malformed request line closes the connection; well-formed
 requests that fail validation or execution return a structured error and
 keep the connection open.
 
+### Event subscriptions
+
+Commands are strictly request/response, so anything a user does in Live itself can
+only be noticed by polling — that is what `session watch` does. A connection can
+instead send one `"type": "subscribe"` request and become an event stream:
+
+```json
+{"type":"subscribe","name":"events","args":{"events":["tempo","is_playing"]},"meta":{},"request_id":"...","protocol_version":2}
+```
+
+The remote answers with the usual response envelope (`result.subscribed` lists the
+accepted names, `result.stream` is `true`) and then pushes one line per event:
+
+```json
+{"type":"event","protocol_version":2,"event":"tempo","ts":1730000000.0,"data":{"tempo":174.0},"dropped":0}
+```
+
+- A subscribing connection stops accepting commands, so pushed events can never
+  delay a command; `ableton-cli session events` opens its own connection.
+- Event names are `tempo`, `is_playing`, `playing_position` and `selected_track`.
+  Which of them a given Live version can deliver depends on the listener APIs it
+  exposes; subscribing to one that is unavailable fails with `INVALID_ARGUMENT`
+  and a hint listing what is available, rather than accepting the subscription
+  and never delivering.
+- `playing_position` is throttled to at most one event per 100 ms.
+- A subscriber that cannot keep up loses the oldest events instead of growing an
+  unbounded queue; `dropped` reports how many were lost since the previous event.
+- A Remote Script that predates subscriptions rejects `"type": "subscribe"` with
+  `INVALID_ARGUMENT`, so an old install fails loudly instead of hanging.
+
 ## Security Model
 
 - By default the Remote Script listens on 127.0.0.1 only (local loopback), port 8765, with
@@ -370,6 +400,23 @@ Clip and arrangement note write/edit commands (`clip notes add`, `clip notes upd
 `velocity_deviation`, and `release_velocity` note fields). On older Live versions these commands
 fail with the `not_supported_by_live_api` reason above instead of falling back to the legacy
 note API.
+
+## Not-implemented commands
+
+Some commands are part of the published surface but have no working implementation behind
+them, because the Live API does not expose the primitive (creating return or group tracks,
+sidechain routing) or because the work happens outside this CLI (stem separation, browser
+target discovery). They fail explicitly rather than returning a plan nobody executes:
+
+- `error.code=NOT_IMPLEMENTED`
+- `error.details.reason=not_implemented`
+- exit code `20`
+- `error.hint` names the commands that do the job
+
+This currently applies to `remix setup-sound`, `remix mix-macro`, `remix setup-mix`,
+`remix setup-returns`, `remix setup-sidechain`, `remix device-chain apply`, and
+`audio stems split`. Argument validation still runs first, so a bad argument reports
+`INVALID_ARGUMENT` and exit code `2`.
 
 ## Completion
 

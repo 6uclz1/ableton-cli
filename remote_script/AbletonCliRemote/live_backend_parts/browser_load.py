@@ -31,9 +31,9 @@ class LiveBackendBrowserLoadMixin:
             )
 
         if target_track_mode != "new":
-            return self._track_at(track), track
+            return self._ctx._track_at(track), track
 
-        song = self._song()
+        song = self._ctx._song()
         tracks = list(getattr(song, "tracks", []))
         if track > len(tracks):
             raise _invalid_argument(
@@ -47,7 +47,7 @@ class LiveBackendBrowserLoadMixin:
                 hint="Use target_track_mode auto or existing instead.",
             )
         create_midi_track(track)
-        return self._track_at(track), track
+        return self._ctx._track_at(track), track
 
     def _select_track_for_load(self, *, song: Any, target_track: Any) -> None:
         view = getattr(song, "view", None)
@@ -59,7 +59,7 @@ class LiveBackendBrowserLoadMixin:
         view.selected_track = target_track
 
     def _focus_session_view_for_load(self) -> None:
-        app = self._application()
+        app = self._ctx._application()
         view = getattr(app, "view", None)
         if view is None:
             return
@@ -308,9 +308,9 @@ class LiveBackendBrowserLoadMixin:
         target_clip: Any,
         notes_mode: str,
     ) -> int:
-        source_notes = list(self._clip_notes_extended(source_clip))
+        source_notes = list(self._ctx.services.clip_notes._clip_notes_extended(source_clip))
         if notes_mode == "replace":
-            existing_notes = list(self._clip_notes_extended(target_clip))
+            existing_notes = list(self._ctx.services.clip_notes._clip_notes_extended(target_clip))
             note_ids_to_remove = [int(note["note_id"]) for note in existing_notes]
             remove_notes_by_id = getattr(target_clip, "remove_notes_by_id", None)
             if note_ids_to_remove and callable(remove_notes_by_id):
@@ -646,7 +646,7 @@ class LiveBackendBrowserLoadMixin:
             )
         temporary_track_index = base_track_count
         create_midi_track(-1)
-        temporary_track = self._track_at(temporary_track_index)
+        temporary_track = self._ctx._track_at(temporary_track_index)
 
         view = getattr(song, "view", None)
         has_selected_track = view is not None and hasattr(view, "selected_track")
@@ -838,7 +838,7 @@ class LiveBackendBrowserLoadMixin:
                 hint="Use notes_mode replace or append when importing clip length/groove.",
             )
 
-        song = self._song()
+        song = self._ctx._song()
         base_track_count = len(list(getattr(song, "tracks", [])))
         track_count_before = base_track_count
         target, resolved_track = self._resolve_load_target_track(

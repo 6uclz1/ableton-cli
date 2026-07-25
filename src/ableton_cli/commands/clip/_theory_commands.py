@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import random
 from pathlib import Path
 from typing import Annotated, Any
 
@@ -30,6 +31,19 @@ from ._shared import (
 )
 
 _EUCLIDEAN_MODES = frozenset({"replace", "merge"})
+
+SeedOption = Annotated[
+    int | None,
+    typer.Option(
+        "--seed",
+        help="Seed the random choices so the same command yields the same notes",
+    ),
+]
+
+
+def _seeded_rng(seed: int | None) -> random.Random | None:
+    """A seeded generator, or None to leave the transform deterministic."""
+    return None if seed is None else random.Random(seed)
 
 
 def register_theory_commands(notes_app: typer.Typer) -> None:
@@ -161,6 +175,7 @@ def clip_notes_arpeggiate(
         int | None,
         typer.Option("--pitch", help="Exact MIDI pitch filter"),
     ] = None,
+    seed: SeedOption = None,
 ) -> None:
     def _run() -> dict[str, object]:
         filters = validated_transform_filters(
@@ -184,7 +199,11 @@ def clip_notes_arpeggiate(
         )
         try:
             transformed = arpeggiate(
-                notes_without_ids(existing["notes"]), mode=mode, rate=rate, gate=valid_gate
+                notes_without_ids(existing["notes"]),
+                mode=mode,
+                rate=rate,
+                gate=valid_gate,
+                rng=_seeded_rng(seed),
             )
         except ValueError as exc:
             raise invalid_argument(message=str(exc), hint="Use a grid string like '1/16'.") from exc
@@ -209,6 +228,7 @@ def clip_notes_arpeggiate(
             "start_time": start_time,
             "end_time": end_time,
             "pitch": pitch,
+            "seed": seed,
         },
         action=_run,
     )
@@ -321,6 +341,7 @@ def clip_notes_ratchet(
         int | None,
         typer.Option("--pitch", help="Exact MIDI pitch filter"),
     ] = None,
+    seed: SeedOption = None,
 ) -> None:
     def _run() -> dict[str, object]:
         filters = validated_transform_filters(
@@ -345,7 +366,10 @@ def clip_notes_ratchet(
             pitch=filters["pitch"],
         )
         transformed = ratchet_notes(
-            notes_without_ids(existing["notes"]), division=division, probability=valid_probability
+            notes_without_ids(existing["notes"]),
+            division=division,
+            probability=valid_probability,
+            rng=_seeded_rng(seed),
         )
         return client.replace_clip_notes(
             track=track,
@@ -367,6 +391,7 @@ def clip_notes_ratchet(
             "start_time": start_time,
             "end_time": end_time,
             "pitch": pitch,
+            "seed": seed,
         },
         action=_run,
     )

@@ -21,10 +21,14 @@ class _CommandServerStub:
         host: str,
         port: int,
         command_executor: Callable[[str, dict[str, Any], dict[str, Any]], dict[str, Any]],
+        event_subscriber: Callable[[dict[str, Any], dict[str, Any]], Any] | None = None,
+        event_unsubscriber: Callable[[Any], None] | None = None,
     ) -> None:
         self.host = host
         self.port = port
         self.command_executor = command_executor
+        self.event_subscriber = event_subscriber
+        self.event_unsubscriber = event_unsubscriber
 
     def start(self) -> None:
         pass

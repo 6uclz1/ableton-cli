@@ -15,7 +15,7 @@ class LiveBackendClipEnvelopesMixin:
     """
 
     def _clip_for_envelope(self, track: int, clip: int) -> Any:
-        slot = self._clip_slot_at(track, clip)
+        slot = self._ctx._clip_slot_at(track, clip)
         if not slot.has_clip:
             raise _invalid_argument(
                 message="No clip in slot",
@@ -57,7 +57,7 @@ class LiveBackendClipEnvelopesMixin:
         mode: str,
     ) -> dict[str, Any]:
         clip_obj = self._clip_for_envelope(track, clip)
-        target_param = self._parameter_at(track, device, parameter)
+        target_param = self._ctx._parameter_at(track, device, parameter)
         self._validate_envelope_point_range(points, target_param)
 
         create_automation_envelope = getattr(clip_obj, "create_automation_envelope", None)
@@ -116,7 +116,7 @@ class LiveBackendClipEnvelopesMixin:
             return {"track": track, "clip": clip, "cleared_all": True}
 
         assert device is not None and parameter is not None
-        target_param = self._parameter_at(track, device, parameter)
+        target_param = self._ctx._parameter_at(track, device, parameter)
         clear_envelope = getattr(clip_obj, "clear_envelope", None)
         if not callable(clear_envelope):
             raise _not_supported_by_live_api(

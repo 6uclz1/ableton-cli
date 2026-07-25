@@ -8,6 +8,7 @@ from typing import Annotated
 import typer
 
 from ..capture import capture_session
+from ..client.events import EventStream
 from ..runtime import execute_command, get_client, get_runtime
 from ..session_diff import compute_session_diff
 from ..watch import WATCH_SCOPES, run_watch_loop
@@ -279,6 +280,82 @@ def session_watch(
         )
     except KeyboardInterrupt:
         raise typer.Exit(code=0) from None
+
+
+KNOWN_EVENTS: tuple[str, ...] = (
+    "tempo",
+    "is_playing",
+    "playing_position",
+    "selected_track",
+)
+
+
+def _validate_events(events: str | None) -> list[str]:
+    if events is None:
+        return []
+    names = [item.strip() for item in events.split(",") if item.strip()]
+    unknown = [name for name in names if name not in KNOWN_EVENTS]
+    if unknown:
+        raise invalid_argument(
+            message=f"unknown events: {sorted(unknown)}",
+            hint=f"Use --events with any of: {', '.join(KNOWN_EVENTS)}.",
+        )
+    return names
+
+
+def _open_event_stream(ctx: typer.Context, **kwargs: object) -> EventStream:
+    """Seam for tests: a stream over the resolved runtime settings."""
+    return EventStream(get_runtime(ctx).settings, **kwargs)  # type: ignore[arg-type]
+
+
+@session_app.command("events")
+def session_events(
+    ctx: typer.Context,
+    events: Annotated[
+        str | None,
+        typer.Option("--events", help=f"Comma-separated subset of: {', '.join(KNOWN_EVENTS)}"),
+    ] = None,
+    count: Annotated[
+        int | None,
+        typer.Option("--count", help="Stop after N events (unlimited if omitted)"),
+    ] = None,
+    idle_timeout_ms: Annotated[
+        int | None,
+        typer.Option("--idle-timeout-ms", help="Stop after this long with no event"),
+    ] = None,
+) -> None:
+    """Stream events pushed by Live instead of polling for diffs."""
+    args = {"events": events, "count": count, "idle_timeout_ms": idle_timeout_ms}
+
+    def _validate() -> dict[str, object]:
+        _validate_events(events)
+        return {}
+
+    runtime = get_runtime(ctx)
+    if (
+        runtime.plan
+        or runtime.dry_run
+        or (runtime.require_confirmation and not runtime.confirm_destructive)
+    ):
+        execute_command(ctx, command="session events", args=args, action=_validate)
+        return
+
+    if events is not None and any(
+        name.strip() and name.strip() not in KNOWN_EVENTS for name in events.split(",")
+    ):
+        execute_command(ctx, command="session events", args=args, action=_validate)
+        return
+
+    selected = _validate_events(events)
+    stream = _open_event_stream(ctx, events=selected, idle_timeout_ms=idle_timeout_ms)
+    try:
+        stream.open()
+        for event in stream.events(count=count):
+            typer.echo(json.dumps(event))
+    except KeyboardInterrupt:
+        raise typer.Exit(code=0) from None
+    finally:
+        stream.close()
 
 
 @session_app.command("stop-all-clips")

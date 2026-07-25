@@ -191,6 +191,10 @@ class Violation:
     warn_threshold: float | None
     fail_threshold: float | None
     message: str
+    #: True when this exact violation is already in the committed baseline.
+    #: Baselined failures are reported but do not fail the run: the harness
+    #: gates regressions, not the debt it was switched on with.
+    baselined: bool = False
 
 
 @dataclass(frozen=True)

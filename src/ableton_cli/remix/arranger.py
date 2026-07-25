@@ -65,11 +65,13 @@ def generate_plan(
     return plan
 
 
-def apply_plan(
-    manifest: dict[str, Any],
-    *,
-    dry_run: bool,
-) -> dict[str, Any]:
+def planned_steps(manifest: dict[str, Any]) -> dict[str, Any]:
+    """Read the stored arrangement plan.
+
+    Deliberately knows nothing about ``--dry-run`` or ``--yes``: executing
+    the steps is the command layer's job, and a function that accepted a
+    ``dry_run`` flag it then ignored made it look otherwise.
+    """
     plan = manifest.get("arrangement_plan")
     if not isinstance(plan, dict):
         raise remix_error(
@@ -78,7 +80,6 @@ def apply_plan(
         )
     steps = list(plan.get("steps", []))
     return {
-        "dry_run": dry_run,
         "style": plan.get("style"),
         "step_count": len(steps),
         "steps": steps,

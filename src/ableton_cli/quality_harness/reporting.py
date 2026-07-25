@@ -30,7 +30,11 @@ def build_report(
 ) -> Report:
     warning_count = sum(1 for item in violations if item.severity == "warn")
     failure_count = sum(1 for item in violations if item.severity == "fail")
-    status = "fail" if failure_count > 0 else "warn" if warning_count > 0 else "pass"
+    baselined_failure_count = sum(
+        1 for item in violations if item.severity == "fail" and item.baselined
+    )
+    regression_count = failure_count - baselined_failure_count
+    status = "fail" if regression_count > 0 else "warn" if warning_count > 0 else "pass"
 
     summary = {
         "files_total": analysis.files_total,
@@ -44,6 +48,8 @@ def build_report(
         "baseline_used": baseline_comparison is not None,
         "warning_count": warning_count,
         "failure_count": failure_count,
+        "baselined_failure_count": baselined_failure_count,
+        "regression_count": regression_count,
         "status": status,
     }
 

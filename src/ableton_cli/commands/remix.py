@@ -5,7 +5,7 @@ from typing import Annotated
 
 import typer
 
-from ..remix.arranger import apply_plan, export_plan, generate_plan
+from ..remix.arranger import export_plan, generate_plan, planned_steps
 from ..remix.manifest import (
     init_manifest,
     inspect_manifest,
@@ -25,18 +25,12 @@ from ..remix.mastering import (
     run_mastering_qa,
     set_targets,
 )
-from ..remix.mix import (
-    device_chain_apply,
-    mix_macro,
-    setup_mix,
-    setup_returns,
-    setup_sidechain,
-    setup_sound,
-)
 from ..remix.qa import run_qa
+from ..remix.unsupported import fail_unsupported
 from ..remix.vocal_chop import build_vocal_chop
 from ..runtime import execute_command
 from ..runtime import get_client as _runtime_get_client
+from ._remix_generate_commands import register_commands as register_generate_commands
 
 remix_app = typer.Typer(help="Remix project workflow commands", no_args_is_help=True)
 generate_app = typer.Typer(help="Pattern generation commands", no_args_is_help=True)
@@ -150,9 +144,9 @@ def remix_apply(
 ) -> None:
     def _action() -> dict[str, object]:
         manifest = load_manifest(resolve_manifest_path(project))
-        planned = apply_plan(manifest, dry_run=dry_run)
+        planned = {**planned_steps(manifest), "dry_run": dry_run}
         if dry_run:
-            return planned
+            return {**planned, "applied": False}
         if not yes:
             return {**planned, "applied": False, "reason": "Pass --yes to execute the batch plan."}
         batch_result = get_client(ctx).execute_batch(planned["steps"])  # type: ignore[arg-type]
@@ -290,7 +284,7 @@ def remix_setup_sound(
         ctx,
         command="remix setup-sound",
         args={"project": str(project), "kit": kit, "bass": bass, "lead": lead},
-        action=lambda: setup_sound(project, kit=kit, bass=bass, lead=lead),
+        action=lambda: fail_unsupported("remix setup-sound", project=str(project)),
     )
 
 
@@ -304,7 +298,7 @@ def remix_mix_macro(
         ctx,
         command="remix mix-macro",
         args={"project": str(project), "preset": preset},
-        action=lambda: mix_macro(project, preset=preset),
+        action=lambda: fail_unsupported("remix mix-macro", project=str(project)),
     )
 
 
@@ -317,7 +311,7 @@ def remix_setup_mix(
         ctx,
         command="remix setup-mix",
         args={"project": str(project)},
-        action=lambda: setup_mix(project),
+        action=lambda: fail_unsupported("remix setup-mix", project=str(project)),
     )
 
 
@@ -330,7 +324,7 @@ def remix_setup_returns(
         ctx,
         command="remix setup-returns",
         args={"project": str(project)},
-        action=lambda: setup_returns(project),
+        action=lambda: fail_unsupported("remix setup-returns", project=str(project)),
     )
 
 
@@ -343,75 +337,11 @@ def remix_setup_sidechain(
         ctx,
         command="remix setup-sidechain",
         args={"project": str(project)},
-        action=lambda: setup_sidechain(project),
+        action=lambda: fail_unsupported("remix setup-sidechain", project=str(project)),
     )
 
 
-@generate_app.command("drums")
-def remix_generate_drums(
-    ctx: typer.Context,
-    project: Annotated[Path, typer.Option("--project")],
-    style: Annotated[str, typer.Option("--style")] = "dnb",
-    section: Annotated[str | None, typer.Option("--section")] = None,
-    apply: Annotated[bool, typer.Option("--apply")] = False,
-) -> None:
-    execute_command(
-        ctx,
-        command="remix generate drums",
-        args={"project": str(project), "style": style, "section": section, "apply": apply},
-        action=lambda: {
-            "project": str(resolve_manifest_path(project)),
-            "kind": "drums",
-            "style": style,
-            "section": section,
-            "apply": apply,
-            "pattern": {"notes": []},
-        },
-    )
-
-
-@generate_app.command("bass")
-def remix_generate_bass(
-    ctx: typer.Context,
-    project: Annotated[Path, typer.Option("--project")],
-    pattern: Annotated[str, typer.Option("--pattern")] = "offbeat",
-    key: Annotated[str | None, typer.Option("--key")] = None,
-    apply: Annotated[bool, typer.Option("--apply")] = False,
-) -> None:
-    execute_command(
-        ctx,
-        command="remix generate bass",
-        args={"project": str(project), "pattern": pattern, "key": key, "apply": apply},
-        action=lambda: {
-            "project": str(resolve_manifest_path(project)),
-            "kind": "bass",
-            "pattern_name": pattern,
-            "key": key,
-            "apply": apply,
-            "pattern": {"notes": []},
-        },
-    )
-
-
-@generate_app.command("chords")
-def remix_generate_chords(
-    ctx: typer.Context,
-    project: Annotated[Path, typer.Option("--project")],
-    progression: Annotated[str, typer.Option("--progression")],
-    apply: Annotated[bool, typer.Option("--apply")] = False,
-) -> None:
-    execute_command(
-        ctx,
-        command="remix generate chords",
-        args={"project": str(project), "progression": progression, "apply": apply},
-        action=lambda: {
-            "project": str(resolve_manifest_path(project)),
-            "kind": "chords",
-            "progression": progression,
-            "apply": apply,
-            "pattern": {"notes": []},
-        },
-    )
+register_generate_commands(generate_app)
 
 
 @device_chain_app.command("apply")
@@ -424,7 +354,7 @@ def remix_device_chain_apply(
         ctx,
         command="remix device-chain apply",
         args={"project": str(project), "chain": chain},
-        action=lambda: device_chain_apply(project, chain=chain),
+        action=lambda: fail_unsupported("remix device-chain apply", project=str(project)),
     )
 
 

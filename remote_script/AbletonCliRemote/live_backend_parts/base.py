@@ -53,8 +53,30 @@ def _not_supported_by_live_api(message: str, hint: str) -> CommandError:
     )
 
 
-class LiveBackendBaseMixin:
-    _control_surface: Any
+class LiveBackendContext:
+    """State and Live-API helpers shared by every backend service.
+
+    Owns the control surface handle, the stable-ref bookkeeping and the
+    browser search index cache, plus the lookup/serialisation helpers the
+    services build on. Services hold a reference to one of these rather
+    than inheriting from each other, so a helper has exactly one home and
+    a service's dependencies are visible at its call sites.
+
+    ``services`` is populated by the composition root once every service
+    exists, and is the only route from one service to another.
+    """
+
+    def __init__(self, control_surface: Any) -> None:
+        self._control_surface = control_surface
+        self._browser_search_index_cache: dict[str, list[dict[str, Any]]] = {}
+        self._stable_ref_counter = 0
+        self._stable_ref_by_locator: dict[Any, str] = {}
+        self._stable_ref_by_object: dict[Any, str] = {}
+        self._stable_ref_entries: dict[str, Any] = {}
+        self.services: Any = None
+
+    def bind_services(self, services: Any) -> None:
+        self.services = services
 
     def _ensure_stable_ref_state(self) -> None:
         if not hasattr(self, "_stable_ref_counter"):

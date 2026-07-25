@@ -37,11 +37,11 @@ def _attach_envelope_support(clip: object) -> dict[int, _FakeEnvelope]:
 
 def _backend_with_envelope_capable_clip() -> tuple[LiveBackend, dict[int, _FakeEnvelope]]:
     backend = LiveBackend(_SurfaceStub())
-    backend._track_at(0).devices = [
+    backend.context._track_at(0).devices = [
         _Device("Filter", "AudioEffect", [_Parameter("Cutoff", 0.5, min=0.0, max=1.0)])
     ]
     backend.create_clip(0, 0, 4.0)
-    clip_obj = backend._clip_slot_at(0, 0).clip
+    clip_obj = backend.context._clip_slot_at(0, 0).clip
     envelopes = _attach_envelope_support(clip_obj)
     return backend, envelopes
 
@@ -92,7 +92,7 @@ def test_clip_envelope_set_rejects_out_of_range_values_with_offending_indices() 
 
 def test_clip_envelope_set_not_supported_by_live_api_when_method_missing() -> None:
     backend = LiveBackend(_SurfaceStub())
-    backend._track_at(0).devices = [
+    backend.context._track_at(0).devices = [
         _Device("Filter", "AudioEffect", [_Parameter("Cutoff", 0.5, min=0.0, max=1.0)])
     ]
     backend.create_clip(0, 0, 4.0)
@@ -106,7 +106,7 @@ def test_clip_envelope_set_not_supported_by_live_api_when_method_missing() -> No
 
 def test_clip_envelope_set_requires_existing_clip() -> None:
     backend = LiveBackend(_SurfaceStub())
-    backend._track_at(0).devices = [
+    backend.context._track_at(0).devices = [
         _Device("Filter", "AudioEffect", [_Parameter("Cutoff", 0.5, min=0.0, max=1.0)])
     ]
 
@@ -139,7 +139,7 @@ def test_clip_envelope_clear_all() -> None:
 
 def test_clip_envelope_clear_not_supported_by_live_api_when_method_missing() -> None:
     backend = LiveBackend(_SurfaceStub())
-    backend._track_at(0).devices = [
+    backend.context._track_at(0).devices = [
         _Device("Filter", "AudioEffect", [_Parameter("Cutoff", 0.5, min=0.0, max=1.0)])
     ]
     backend.create_clip(0, 0, 4.0)

@@ -35,7 +35,7 @@ def test_remix_manifest_init_and_asset_registry_normalize_paths(tmp_path: Path) 
 
 def test_section_import_and_plan_generate_stable_batch_steps(tmp_path: Path) -> None:
     from ableton_cli.remix.analyze import import_sections
-    from ableton_cli.remix.arranger import apply_plan, generate_plan
+    from ableton_cli.remix.arranger import generate_plan, planned_steps
     from ableton_cli.remix.assets import add_asset
     from ableton_cli.remix.manifest import init_manifest, load_manifest
 
@@ -58,6 +58,6 @@ def test_section_import_and_plan_generate_stable_batch_steps(tmp_path: Path) -> 
     assert plan["steps"][0]["args"]["track"] == 2
     assert plan["steps"][0]["args"]["audio_path"] == str(inst.resolve())
 
-    dry_run = apply_plan(load_manifest(manifest_path), dry_run=True)
-    assert dry_run["dry_run"] is True
-    assert dry_run["step_count"] == len(plan["steps"])
+    stored = planned_steps(load_manifest(manifest_path))
+    assert stored["step_count"] == len(plan["steps"])
+    assert stored["steps"] == plan["steps"]

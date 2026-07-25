@@ -27,7 +27,7 @@ def test_parse_command_request_accepts_strict_protocol_shape() -> None:
         }
     )
 
-    assert request == ("request-1", "song_info", {}, {"request_timeout_ms": 15000})
+    assert request == ("request-1", "command", "song_info", {}, {"request_timeout_ms": 15000})
 
 
 @pytest.mark.parametrize(

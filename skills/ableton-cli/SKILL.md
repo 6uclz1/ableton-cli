@@ -50,6 +50,8 @@ uv run ableton-cli session info
 uv run ableton-cli session snapshot
 uv run ableton-cli session diff --from ./snapshot-before.json --to ./snapshot-after.json
 uv run ableton-cli session watch --interval-ms 500 --scope all --count 5
+uv run ableton-cli session events --events tempo,is_playing --count 5
+uv run ableton-cli session events --idle-timeout-ms 5000
 uv run ableton-cli session capture --track-index 0 --slot 0 --bars 8 --set-routing --analyze
 uv run ableton-cli session stop-all-clips
 ```
@@ -128,16 +130,11 @@ uv run ableton-cli remix arrange --project ./proj/remix_project.json --form anim
 uv run ableton-cli remix import-assets --project ./proj/remix_project.json --to-arrangement
 uv run ableton-cli remix apply --project ./proj/remix_project.json --dry-run
 uv run ableton-cli remix apply --project ./proj/remix_project.json --yes
-uv run ableton-cli remix generate drums --project ./proj/remix_project.json --style dnb --section chorus_drop
-uv run ableton-cli remix generate bass --project ./proj/remix_project.json --pattern offbeat --key "F minor"
-uv run ableton-cli remix generate chords --project ./proj/remix_project.json --progression "i-VI-III-VII"
+uv run ableton-cli remix generate drums --project ./proj/remix_project.json --style dnb --section chorus_drop --humanize 0.3 --seed 42
+uv run ableton-cli remix generate bass --project ./proj/remix_project.json --pattern offbeat --key "F minor" --follow-chords
+uv run ableton-cli remix generate chords --project ./proj/remix_project.json --progression "i-VI-III-VII" --key "F minor" --voicing drop2
+uv run ableton-cli remix generate chords --project ./proj/remix_project.json --progression "Cmaj7 A7 Dm7 G7" --apply --track 2 --clip 0
 uv run ableton-cli remix vocal-chop --project ./proj/remix_project.json --source vocal --section chorus --slice 1/8 --create-trigger
-uv run ableton-cli remix setup-sound --project ./proj/remix_project.json --kit club-drums --bass reese --lead supersaw
-uv run ableton-cli remix mix-macro --project ./proj/remix_project.json --preset anime-club-basic
-uv run ableton-cli remix setup-mix --project ./proj/remix_project.json
-uv run ableton-cli remix setup-returns --project ./proj/remix_project.json
-uv run ableton-cli remix setup-sidechain --project ./proj/remix_project.json
-uv run ableton-cli remix device-chain apply --project ./proj/remix_project.json --chain drop-filter
 uv run ableton-cli remix mastering profile list
 uv run ableton-cli remix mastering target set --project ./proj/remix_project.json --profile anime-club-demo --true-peak-dbtp-max -1.0
 uv run ableton-cli remix mastering reference add --project ./proj/remix_project.json --path ./refs/reference.wav --role commercial-reference --id ref-main
@@ -149,7 +146,6 @@ uv run ableton-cli remix mastering apply --project ./proj/remix_project.json --d
 uv run ableton-cli remix mastering apply --project ./proj/remix_project.json --yes
 uv run ableton-cli remix mastering qa --project ./proj/remix_project.json --render ./renders/remix.wav --strict
 uv run ableton-cli audio stems list --project ./proj/remix_project.json
-uv run ableton-cli audio stems split --project ./proj/remix_project.json --provider manual --out /abs/stems
 uv run ableton-cli remix qa --project ./proj/remix_project.json --include-mastering --render ./renders/remix.wav
 uv run ableton-cli remix export-plan --project ./proj/remix_project.json --target /abs/out/remix.wav
 ```
@@ -261,8 +257,10 @@ uv run ableton-cli clip notes velocity-scale 0 0 --scale 1.1 --offset -3
 uv run ableton-cli clip notes transpose 0 0 --semitones 2 --start-time 0.0 --end-time 4.0
 uv run ableton-cli clip notes transpose-in-scale 0 0 --root C --scale major --degrees 1
 uv run ableton-cli clip notes arpeggiate 0 0 --mode up --rate 1/16 --gate 0.9
+uv run ableton-cli clip notes arpeggiate 0 0 --mode random --seed 42
 uv run ableton-cli clip notes euclidean 0 0 --pitch 36 --steps 16 --pulses 5 --length 4 --mode replace
 uv run ableton-cli clip notes ratchet 0 0 --division 2 --probability 1.0
+uv run ableton-cli clip notes ratchet 0 0 --division 4 --probability 0.6 --seed 42
 uv run ableton-cli clip notes retrograde 0 0 --loop-length 4
 uv run ableton-cli clip notes apply-groove 0 0 --groove-file groove.json --timing-amount 1.0 --velocity-amount 0.5
 uv run ableton-cli clip envelope set 0 0 --points-json '[{"time":0.0,"value":0.1},{"time":4.0,"value":0.9}]' --device-index 0 --parameter-key filter_cutoff
@@ -497,12 +495,12 @@ uv run ableton-cli --output json ping
 - `get_track_info` -> `uv run ableton-cli --output json track info --track-index <track>`
 - `play` -> `uv run ableton-cli --output json transport play`
 - `stop` -> `uv run ableton-cli --output json transport stop`
-- `arrangement_record_start` -> `uv run ableton-cli --output json arrangement record start`
-- `arrangement_record_stop` -> `uv run ableton-cli --output json arrangement record stop`
 - `set_tempo` -> `uv run ableton-cli --output json transport tempo set <bpm>`
 - `transport_position_get` -> `uv run ableton-cli --output json transport position get`
 - `transport_position_set` -> `uv run ableton-cli --output json transport position set <beats>`
 - `transport_rewind` -> `uv run ableton-cli --output json transport rewind`
+- `arrangement_record_start` -> `uv run ableton-cli --output json arrangement record start`
+- `arrangement_record_stop` -> `uv run ableton-cli --output json arrangement record stop`
 - `list_tracks` -> `uv run ableton-cli --output json tracks list`
 - `create_midi_track` -> `uv run ableton-cli --output json tracks create midi [--index <index>]`
 - `create_audio_track` -> `uv run ableton-cli --output json tracks create audio [--index <index>]`
@@ -589,3 +587,19 @@ uv run ableton-cli --output json ping
 - `audio loudness analyze`: `docs/skills/examples/audio-loudness-analyze.json`
 - `remix mastering plan`: `docs/skills/examples/remix-mastering-plan.json`
 - `remix mastering qa`: `docs/skills/examples/remix-mastering-qa.json`
+
+## Not implemented
+
+These commands exist in the surface but always fail with `error.code=NOT_IMPLEMENTED`
+(exit code `20`). Do not call them expecting a mix to be set up; the error hint names the
+commands that actually do the work.
+
+```bash
+uv run ableton-cli remix setup-sound     # use: browser search + browser load / load-drum-kit
+uv run ableton-cli remix mix-macro       # use: create buses in Live, then track/return volume + send set
+uv run ableton-cli remix setup-mix       # same as mix-macro
+uv run ableton-cli remix setup-returns   # use: add returns in Live, then return-tracks list
+uv run ableton-cli remix setup-sidechain # use: route in Live, then device parameter set
+uv run ableton-cli remix device-chain apply  # use: browser search + browser load + device parameter set
+uv run ableton-cli audio stems split     # use: an external separator, then audio asset add
+```

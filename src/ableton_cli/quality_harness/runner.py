@@ -1,15 +1,16 @@
 from __future__ import annotations
 
 import glob
+from dataclasses import replace
 from fnmatch import fnmatch
 from pathlib import Path
 
-from .baseline import compare_against_baseline
+from .baseline import ViolationSignature, compare_against_baseline, violation_signature
 from .config import load_config
 from .dependencies import analyze_dependencies
 from .duplication import detect_duplicate_groups
 from .metrics import analyze_python_files
-from .models import Config, RunResult
+from .models import Config, RunResult, Violation
 from .reporting import build_report, write_report
 from .rules import evaluate_violations, sort_violations
 
@@ -49,17 +50,18 @@ def run_quality_harness(
     )
 
     baseline_comparison = None
-    baseline_violations = []
+    baseline_violations: list[Violation] = []
     if baseline_path is not None:
         warning_count = sum(1 for item in base_violations if item.severity == "warn")
         failure_count = sum(1 for item in base_violations if item.severity == "fail")
-        baseline_comparison, baseline_violations = compare_against_baseline(
+        baseline_comparison, baseline_violations, known_failures = compare_against_baseline(
             baseline_path=baseline_path,
             baseline_config=config.baseline,
             current_warning_count=warning_count,
             current_failure_count=failure_count,
             current_violations=base_violations,
         )
+        base_violations = _mark_baselined(base_violations, known_failures)
 
     violations = sort_violations([*base_violations, *baseline_violations])
 
@@ -74,8 +76,24 @@ def run_quality_harness(
     )
     write_report(report, report_path)
 
-    exit_code = 1 if any(item.severity == "fail" for item in violations) else 0
+    exit_code = 1 if any(is_regression(item) for item in violations) else 0
     return RunResult(exit_code=exit_code, report=report)
+
+
+def is_regression(violation: Violation) -> bool:
+    """A failure that is not already recorded in the baseline."""
+    return violation.severity == "fail" and not violation.baselined
+
+
+def _mark_baselined(
+    violations: list[Violation], known_failures: set[ViolationSignature]
+) -> list[Violation]:
+    return [
+        replace(item, baselined=True)
+        if item.severity == "fail" and violation_signature(item) in known_failures
+        else item
+        for item in violations
+    ]
 
 
 def _collect_target_files(config: Config, *, root_dir: Path) -> list[Path]:

@@ -8,7 +8,7 @@ from .base import _invalid_argument
 
 class LiveBackendBrowserCatalogMixin:
     def _browser(self) -> Any:
-        app = self._application()
+        app = self._ctx._application()
         browser = getattr(app, "browser", None)
         if browser is None:
             raise _invalid_argument(

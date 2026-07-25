@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import Any, NoReturn
 
 from .manifest import load_manifest, remix_error, resolve_manifest_path
+from .unsupported import fail_unsupported
 
 
 def list_stems(project: str | Path) -> dict[str, Any]:
@@ -13,7 +14,8 @@ def list_stems(project: str | Path) -> dict[str, Any]:
     return {"project": str(manifest_path), "stem_count": len(stems), "stems": stems}
 
 
-def split_stems(project: str | Path, *, provider: str, out: str | Path) -> dict[str, Any]:
+def split_stems(project: str | Path, *, provider: str, out: str | Path) -> NoReturn:
+    """Validate the request, then fail: nothing here separates stems."""
     if provider not in {"manual", "external"}:
         raise remix_error(
             message=f"unknown stem provider: {provider}",
@@ -25,11 +27,9 @@ def split_stems(project: str | Path, *, provider: str, out: str | Path) -> dict[
             message=f"out must be absolute, got {str(out_path)!r}",
             hint="Pass an absolute output directory.",
         )
-    listed = list_stems(project)
-    return {
-        **listed,
-        "provider": provider,
-        "out": str(out_path.resolve()),
-        "executed": False,
-        "reason": "Stem provider interface is registered; separation execution is external.",
-    }
+    fail_unsupported(
+        "audio stems split",
+        project=str(resolve_manifest_path(project)),
+        provider=provider,
+        out=str(out_path.resolve()),
+    )

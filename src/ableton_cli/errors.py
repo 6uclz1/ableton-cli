@@ -40,12 +40,14 @@ class ErrorCode(str, Enum):
     INSTALL_TARGET_NOT_FOUND = "INSTALL_TARGET_NOT_FOUND"
     SKILL_SOURCE_NOT_FOUND = "SKILL_SOURCE_NOT_FOUND"
     UNSUPPORTED_OS = "UNSUPPORTED_OS"
+    NOT_IMPLEMENTED = "NOT_IMPLEMENTED"
     INTERNAL_ERROR = "INTERNAL_ERROR"
 
 
 class ErrorDetailReason(str, Enum):
     NOT_SUPPORTED_BY_LIVE_API = "not_supported_by_live_api"
     CONTRACT_VALIDATION_FAILED = "contract_validation_failed"
+    NOT_IMPLEMENTED = "not_implemented"
 
 
 def _error_code_value(error_code: ErrorCode | str) -> str:
@@ -103,8 +105,25 @@ REMOTE_ERROR_TO_EXIT_CODE: dict[ErrorCode, ExitCode] = {
     ErrorCode.INSTALL_TARGET_NOT_FOUND: ExitCode.EXECUTION_FAILED,
     ErrorCode.SKILL_SOURCE_NOT_FOUND: ExitCode.EXECUTION_FAILED,
     ErrorCode.UNSUPPORTED_OS: ExitCode.EXECUTION_FAILED,
+    ErrorCode.NOT_IMPLEMENTED: ExitCode.EXECUTION_FAILED,
     ErrorCode.INTERNAL_ERROR: ExitCode.INTERNAL_ERROR,
 }
+
+
+def not_implemented(*, message: str, hint: str, **details: Any) -> AppError:
+    """Fail a command that has no working implementation behind it.
+
+    Used instead of returning a hardcoded plan with ``ok: true``: a caller
+    that cannot tell "did nothing" from "succeeded" will happily move on to
+    the next step.
+    """
+    return AppError(
+        error_code=ErrorCode.NOT_IMPLEMENTED,
+        message=message,
+        hint=hint,
+        exit_code=ExitCode.EXECUTION_FAILED,
+        details=details_with_reason(ErrorDetailReason.NOT_IMPLEMENTED, **details),
+    )
 
 
 def exit_code_from_error_code(error_code: ErrorCode | str) -> ExitCode:

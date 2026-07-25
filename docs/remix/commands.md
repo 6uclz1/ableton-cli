@@ -33,9 +33,10 @@ uv run ableton-cli remix plan --project ./proj/remix_project.json --style anime-
 uv run ableton-cli remix arrange --project ./proj/remix_project.json --form anime-dnb
 uv run ableton-cli remix apply --project ./proj/remix_project.json --dry-run
 uv run ableton-cli remix apply --project ./proj/remix_project.json --yes
-uv run ableton-cli remix generate drums --project ./proj/remix_project.json --style dnb --section chorus_drop
-uv run ableton-cli remix generate bass --project ./proj/remix_project.json --pattern offbeat --key "F minor"
-uv run ableton-cli remix generate chords --project ./proj/remix_project.json --progression "i-VI-III-VII"
+uv run ableton-cli remix generate drums --project ./proj/remix_project.json --style dnb --section chorus_drop --humanize 0.3 --seed 42
+uv run ableton-cli remix generate bass --project ./proj/remix_project.json --pattern offbeat --key "F minor" --follow-chords
+uv run ableton-cli remix generate chords --project ./proj/remix_project.json --progression "i-VI-III-VII" --key "F minor" --voicing drop2
+uv run ableton-cli remix generate chords --project ./proj/remix_project.json --progression "Cmaj7 A7 Dm7 G7" --apply --track 2 --clip 0
 uv run ableton-cli remix vocal-chop --project ./proj/remix_project.json --source vocal --section chorus --slice 1/8 --create-trigger
 uv run ableton-cli remix setup-sound --project ./proj/remix_project.json --kit club-drums --bass reese --lead supersaw
 uv run ableton-cli remix mix-macro --project ./proj/remix_project.json --preset anime-club-basic

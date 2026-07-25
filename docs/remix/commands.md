@@ -15,7 +15,6 @@ uv run ableton-cli audio asset add --project ./proj/remix_project.json --role vo
 uv run ableton-cli audio asset list --project ./proj/remix_project.json
 uv run ableton-cli audio asset remove --project ./proj/remix_project.json --role vocal --path /abs/vocal.wav
 uv run ableton-cli audio stems list --project ./proj/remix_project.json
-uv run ableton-cli audio stems split --project ./proj/remix_project.json --provider manual --out /abs/stems
 ```
 
 ## Analysis
@@ -38,12 +37,6 @@ uv run ableton-cli remix generate bass --project ./proj/remix_project.json --pat
 uv run ableton-cli remix generate chords --project ./proj/remix_project.json --progression "i-VI-III-VII" --key "F minor" --voicing drop2
 uv run ableton-cli remix generate chords --project ./proj/remix_project.json --progression "Cmaj7 A7 Dm7 G7" --apply --track 2 --clip 0
 uv run ableton-cli remix vocal-chop --project ./proj/remix_project.json --source vocal --section chorus --slice 1/8 --create-trigger
-uv run ableton-cli remix setup-sound --project ./proj/remix_project.json --kit club-drums --bass reese --lead supersaw
-uv run ableton-cli remix mix-macro --project ./proj/remix_project.json --preset anime-club-basic
-uv run ableton-cli remix setup-mix --project ./proj/remix_project.json
-uv run ableton-cli remix setup-returns --project ./proj/remix_project.json
-uv run ableton-cli remix setup-sidechain --project ./proj/remix_project.json
-uv run ableton-cli remix device-chain apply --project ./proj/remix_project.json --chain drop-filter
 ```
 
 ## QA and Export
@@ -81,4 +74,20 @@ uv run ableton-cli arrangement clip warp set 0 0 --enabled true --mode beats
 uv run ableton-cli arrangement clip gain set 0 0 --db -6
 uv run ableton-cli arrangement clip transpose set 0 0 --semitones -1
 uv run ableton-cli arrangement clip file replace 0 0 --audio-path /abs/replacement.wav
+```
+
+## Not implemented
+
+These commands exist in the surface but always fail with `error.code=NOT_IMPLEMENTED`
+(exit code `20`). Do not call them expecting a mix to be set up; the error hint names the
+commands that actually do the work.
+
+```bash
+uv run ableton-cli remix setup-sound     # use: browser search + browser load / load-drum-kit
+uv run ableton-cli remix mix-macro       # use: create buses in Live, then track/return volume + send set
+uv run ableton-cli remix setup-mix       # same as mix-macro
+uv run ableton-cli remix setup-returns   # use: add returns in Live, then return-tracks list
+uv run ableton-cli remix setup-sidechain # use: route in Live, then device parameter set
+uv run ableton-cli remix device-chain apply  # use: browser search + browser load + device parameter set
+uv run ableton-cli audio stems split     # use: an external separator, then audio asset add
 ```

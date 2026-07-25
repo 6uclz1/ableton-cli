@@ -171,7 +171,9 @@ def test_remix_vocal_chop_and_stem_commands_are_manifest_backed(
     assert _payload(stems.stdout)["result"]["stem_count"] == 1  # type: ignore[index]
 
 
-def test_remix_mix_and_device_chain_commands_return_plans(runner, cli_app, tmp_path: Path) -> None:
+def test_unimplemented_remix_setup_commands_fail_explicitly(
+    runner, cli_app, tmp_path: Path
+) -> None:
     source = tmp_path / "song.wav"
     source.write_bytes(b"source")
     project_dir = tmp_path / "proj"
@@ -180,54 +182,54 @@ def test_remix_mix_and_device_chain_commands_return_plans(runner, cli_app, tmp_p
     )
     manifest_path = project_dir / "remix_project.json"
 
-    setup_sound = runner.invoke(
-        cli_app,
-        [
-            "--output",
-            "json",
-            "remix",
-            "setup-sound",
-            "--project",
-            str(manifest_path),
-            "--kit",
-            "club-drums",
-            "--bass",
-            "reese",
-            "--lead",
-            "supersaw",
-        ],
-    )
-    mix_macro = runner.invoke(
-        cli_app,
-        [
-            "--output",
-            "json",
-            "remix",
-            "mix-macro",
-            "--project",
-            str(manifest_path),
-            "--preset",
-            "anime-club-basic",
-        ],
-    )
-    device_chain = runner.invoke(
-        cli_app,
-        [
-            "--output",
-            "json",
-            "remix",
-            "device-chain",
-            "apply",
-            "--project",
-            str(manifest_path),
-            "--chain",
-            "drop-filter",
-        ],
-    )
+    invocations = {
+        "remix setup-sound": ["remix", "setup-sound", "--kit", "club-drums"],
+        "remix mix-macro": ["remix", "mix-macro", "--preset", "anime-club-basic"],
+        "remix setup-mix": ["remix", "setup-mix"],
+        "remix setup-returns": ["remix", "setup-returns"],
+        "remix setup-sidechain": ["remix", "setup-sidechain"],
+        "remix device-chain apply": ["remix", "device-chain", "apply", "--chain", "drop-filter"],
+        "audio stems split": ["audio", "stems", "split", "--out", str(tmp_path / "stems")],
+    }
+    for operation, argv in invocations.items():
+        result = runner.invoke(
+            cli_app,
+            ["--output", "json", *argv, "--project", str(manifest_path)],
+        )
+        assert result.exit_code == 20, f"{operation}: {result.stdout}"
+        payload = _payload(result.stdout)
+        assert payload["ok"] is False, operation
+        error = payload["error"]
+        assert error["code"] == "NOT_IMPLEMENTED", operation  # type: ignore[index]
+        assert error["details"]["reason"] == "not_implemented", operation  # type: ignore[index]
+        assert error["details"]["operation"] == operation  # type: ignore[index]
+        assert error["hint"], operation  # type: ignore[index]
 
-    assert setup_sound.exit_code == 0, setup_sound.stdout
-    assert mix_macro.exit_code == 0, mix_macro.stdout
-    assert device_chain.exit_code == 0, device_chain.stdout
-    assert _payload(setup_sound.stdout)["result"]["requires_browser_search"] is True  # type: ignore[index]
-    assert _payload(mix_macro.stdout)["result"]["preset"] == "anime-club-basic"  # type: ignore[index]
-    assert _payload(device_chain.stdout)["result"]["chain"] == "drop-filter"  # type: ignore[index]
+
+def test_unimplemented_commands_still_validate_arguments_first(
+    runner, cli_app, tmp_path: Path
+) -> None:
+    source = tmp_path / "song.wav"
+    source.write_bytes(b"source")
+    project_dir = tmp_path / "proj"
+    runner.invoke(
+        cli_app, ["remix", "init", "--source", str(source), "--project", str(project_dir)]
+    )
+    result = runner.invoke(
+        cli_app,
+        [
+            "--output",
+            "json",
+            "audio",
+            "stems",
+            "split",
+            "--project",
+            str(project_dir / "remix_project.json"),
+            "--provider",
+            "magic",
+            "--out",
+            str(tmp_path / "stems"),
+        ],
+    )
+    assert result.exit_code == 2, result.stdout
+    assert _payload(result.stdout)["error"]["code"] == "INVALID_ARGUMENT"  # type: ignore[index]

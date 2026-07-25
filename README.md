@@ -371,6 +371,23 @@ Clip and arrangement note write/edit commands (`clip notes add`, `clip notes upd
 fail with the `not_supported_by_live_api` reason above instead of falling back to the legacy
 note API.
 
+## Not-implemented commands
+
+Some commands are part of the published surface but have no working implementation behind
+them, because the Live API does not expose the primitive (creating return or group tracks,
+sidechain routing) or because the work happens outside this CLI (stem separation, browser
+target discovery). They fail explicitly rather than returning a plan nobody executes:
+
+- `error.code=NOT_IMPLEMENTED`
+- `error.details.reason=not_implemented`
+- exit code `20`
+- `error.hint` names the commands that do the job
+
+This currently applies to `remix setup-sound`, `remix mix-macro`, `remix setup-mix`,
+`remix setup-returns`, `remix setup-sidechain`, `remix device-chain apply`, and
+`audio stems split`. Argument validation still runs first, so a bad argument reports
+`INVALID_ARGUMENT` and exit code `2`.
+
 ## Completion
 
 Typer built-in completion is available:

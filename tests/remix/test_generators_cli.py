@@ -108,9 +108,7 @@ def test_generate_chords_expands_roman_numerals(runner, cli_app, project: Path) 
 
 
 def test_generate_chords_without_a_key_fails_explicitly(runner, cli_app, project: Path) -> None:
-    result = _invoke(
-        runner, cli_app, "chords", "--project", str(project), "--progression", "i-VI"
-    )
+    result = _invoke(runner, cli_app, "chords", "--project", str(project), "--progression", "i-VI")
     assert result.exit_code == 2
     assert json.loads(result.stdout)["error"]["code"] == "INVALID_ARGUMENT"
 
@@ -138,9 +136,7 @@ def test_generate_bass_follows_generated_chord_roots(runner, cli_app, project: P
 def test_generate_bass_without_chords_or_key_fails_explicitly(
     runner, cli_app, project: Path
 ) -> None:
-    result = _invoke(
-        runner, cli_app, "bass", "--project", str(project), "--no-follow-chords"
-    )
+    result = _invoke(runner, cli_app, "bass", "--project", str(project), "--no-follow-chords")
     assert result.exit_code == 2
     assert json.loads(result.stdout)["error"]["code"] == "INVALID_ARGUMENT"
 
@@ -196,9 +192,7 @@ def test_section_sets_the_bar_count(runner, cli_app, project: Path) -> None:
     manifest["sections"] = [{"name": "drop", "start_bar": 9, "end_bar": 16}]
     project.write_text(json.dumps(manifest), encoding="utf-8")
     payload = _result(
-        _invoke(
-            runner, cli_app, "drums", "--project", str(project), "--section", "drop"
-        ).stdout
+        _invoke(runner, cli_app, "drums", "--project", str(project), "--section", "drop").stdout
     )
     assert payload["bars"] == 8
     assert payload["length_beats"] == 32.0

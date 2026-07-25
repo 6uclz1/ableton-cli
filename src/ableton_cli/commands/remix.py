@@ -5,7 +5,7 @@ from typing import Annotated
 
 import typer
 
-from ..remix.arranger import apply_plan, export_plan, generate_plan
+from ..remix.arranger import export_plan, generate_plan, planned_steps
 from ..remix.manifest import (
     init_manifest,
     inspect_manifest,
@@ -25,15 +25,8 @@ from ..remix.mastering import (
     run_mastering_qa,
     set_targets,
 )
-from ..remix.mix import (
-    device_chain_apply,
-    mix_macro,
-    setup_mix,
-    setup_returns,
-    setup_sidechain,
-    setup_sound,
-)
 from ..remix.qa import run_qa
+from ..remix.unsupported import fail_unsupported
 from ..remix.vocal_chop import build_vocal_chop
 from ..runtime import execute_command
 from ..runtime import get_client as _runtime_get_client
@@ -151,9 +144,9 @@ def remix_apply(
 ) -> None:
     def _action() -> dict[str, object]:
         manifest = load_manifest(resolve_manifest_path(project))
-        planned = apply_plan(manifest, dry_run=dry_run)
+        planned = {**planned_steps(manifest), "dry_run": dry_run}
         if dry_run:
-            return planned
+            return {**planned, "applied": False}
         if not yes:
             return {**planned, "applied": False, "reason": "Pass --yes to execute the batch plan."}
         batch_result = get_client(ctx).execute_batch(planned["steps"])  # type: ignore[arg-type]
@@ -291,7 +284,7 @@ def remix_setup_sound(
         ctx,
         command="remix setup-sound",
         args={"project": str(project), "kit": kit, "bass": bass, "lead": lead},
-        action=lambda: setup_sound(project, kit=kit, bass=bass, lead=lead),
+        action=lambda: fail_unsupported("remix setup-sound", project=str(project)),
     )
 
 
@@ -305,7 +298,7 @@ def remix_mix_macro(
         ctx,
         command="remix mix-macro",
         args={"project": str(project), "preset": preset},
-        action=lambda: mix_macro(project, preset=preset),
+        action=lambda: fail_unsupported("remix mix-macro", project=str(project)),
     )
 
 
@@ -318,7 +311,7 @@ def remix_setup_mix(
         ctx,
         command="remix setup-mix",
         args={"project": str(project)},
-        action=lambda: setup_mix(project),
+        action=lambda: fail_unsupported("remix setup-mix", project=str(project)),
     )
 
 
@@ -331,7 +324,7 @@ def remix_setup_returns(
         ctx,
         command="remix setup-returns",
         args={"project": str(project)},
-        action=lambda: setup_returns(project),
+        action=lambda: fail_unsupported("remix setup-returns", project=str(project)),
     )
 
 
@@ -344,7 +337,7 @@ def remix_setup_sidechain(
         ctx,
         command="remix setup-sidechain",
         args={"project": str(project)},
-        action=lambda: setup_sidechain(project),
+        action=lambda: fail_unsupported("remix setup-sidechain", project=str(project)),
     )
 
 
@@ -361,7 +354,7 @@ def remix_device_chain_apply(
         ctx,
         command="remix device-chain apply",
         args={"project": str(project), "chain": chain},
-        action=lambda: device_chain_apply(project, chain=chain),
+        action=lambda: fail_unsupported("remix device-chain apply", project=str(project)),
     )
 
 

@@ -35,7 +35,7 @@ class LiveBackendTracksClipsMixin:
         return None
 
     def _require_clip_with_groove_support(self, *, track: int, clip: int) -> tuple[Any, str]:
-        slot = self._clip_slot_at(track, clip)
+        slot = self._ctx._clip_slot_at(track, clip)
         if not slot.has_clip:
             raise _invalid_argument(
                 message="No clip in slot",
@@ -58,18 +58,18 @@ class LiveBackendTracksClipsMixin:
     def _resolve_groove_target(self, target: str) -> dict[str, str | None]:
         parsed_target = str(target).strip()
         if "/" in parsed_target:
-            item = self._resolve_browser_path(parsed_target)
+            item = self._ctx.services.browser._resolve_browser_path(parsed_target)
             item_path = parsed_target
             uri_raw = getattr(item, "uri", None)
             item_uri = str(uri_raw).strip() if uri_raw is not None else None
         elif ":" in parsed_target:
-            item = self._find_browser_item_by_uri(parsed_target)
+            item = self._ctx.services.browser._find_browser_item_by_uri(parsed_target)
             if item is None:
                 raise _invalid_argument(
                     message=f"Browser item with URI '{parsed_target}' not found",
                     hint="Use browser search/items to choose a valid groove URI.",
                 )
-            item_path = self._item_path_by_uri(parsed_target)
+            item_path = self._ctx.services.browser._item_path_by_uri(parsed_target)
             uri_raw = getattr(item, "uri", None)
             item_uri = str(uri_raw).strip() if uri_raw is not None else parsed_target
         else:
@@ -140,7 +140,7 @@ class LiveBackendTracksClipsMixin:
         }
 
     def create_clip(self, track: int, clip: int, length: float) -> dict[str, Any]:
-        slot = self._clip_slot_at(track, clip)
+        slot = self._ctx._clip_slot_at(track, clip)
         if slot.has_clip:
             raise _invalid_argument(
                 message="Clip slot already has a clip",
@@ -226,7 +226,7 @@ class LiveBackendTracksClipsMixin:
         )
 
     def set_clip_name(self, track: int, clip: int, name: str) -> dict[str, Any]:
-        slot = self._clip_slot_at(track, clip)
+        slot = self._ctx._clip_slot_at(track, clip)
         if not slot.has_clip:
             raise _invalid_argument(
                 message="No clip in slot",
@@ -241,12 +241,12 @@ class LiveBackendTracksClipsMixin:
         # record-enabled track this is how session recording starts, so no
         # has_clip guard here (unlike the other clip-slot commands below,
         # which operate on an existing clip's contents).
-        slot = self._clip_slot_at(track, clip)
+        slot = self._ctx._clip_slot_at(track, clip)
         slot.fire()
         return {"track": track, "clip": clip, "fired": True}
 
     def stop_clip(self, track: int, clip: int) -> dict[str, Any]:
-        slot = self._clip_slot_at(track, clip)
+        slot = self._ctx._clip_slot_at(track, clip)
         if not slot.has_clip:
             raise _invalid_argument(
                 message="No clip in slot",
@@ -256,7 +256,7 @@ class LiveBackendTracksClipsMixin:
         return {"track": track, "clip": clip, "stopped": True}
 
     def clip_active_get(self, track: int, clip: int) -> dict[str, Any]:
-        slot = self._clip_slot_at(track, clip)
+        slot = self._ctx._clip_slot_at(track, clip)
         if not slot.has_clip:
             raise _invalid_argument(
                 message="No clip in slot",
@@ -276,7 +276,7 @@ class LiveBackendTracksClipsMixin:
         }
 
     def clip_active_set(self, track: int, clip: int, value: bool) -> dict[str, Any]:
-        slot = self._clip_slot_at(track, clip)
+        slot = self._ctx._clip_slot_at(track, clip)
         if not slot.has_clip:
             raise _invalid_argument(
                 message="No clip in slot",
@@ -297,7 +297,7 @@ class LiveBackendTracksClipsMixin:
         }
 
     def _require_session_clip(self, track: int, clip: int, *, action: str) -> Any:
-        slot = self._clip_slot_at(track, clip)
+        slot = self._ctx._clip_slot_at(track, clip)
         if not slot.has_clip:
             raise _invalid_argument(
                 message="No clip in slot",
@@ -327,14 +327,14 @@ class LiveBackendTracksClipsMixin:
         payload: dict[str, Any] = {
             "track": track,
             "name": str(self._safe_clip_attr(clip_obj, "name", "")),
-            "length": self._safe_float(self._safe_clip_attr(clip_obj, "length")),
+            "length": self._ctx._safe_float(self._safe_clip_attr(clip_obj, "length")),
             "is_audio_clip": bool(self._safe_clip_attr(clip_obj, "is_audio_clip", False)),
             "is_midi_clip": bool(self._safe_clip_attr(clip_obj, "is_midi_clip", False)),
-            "loop_start": self._safe_float(self._safe_clip_attr(clip_obj, "loop_start")),
-            "loop_end": self._safe_float(self._safe_clip_attr(clip_obj, "loop_end")),
+            "loop_start": self._ctx._safe_float(self._safe_clip_attr(clip_obj, "loop_start")),
+            "loop_end": self._ctx._safe_float(self._safe_clip_attr(clip_obj, "loop_end")),
             "looping": bool(self._safe_clip_attr(clip_obj, "looping", False)),
-            "start_marker": self._safe_float(self._safe_clip_attr(clip_obj, "start_marker")),
-            "end_marker": self._safe_float(self._safe_clip_attr(clip_obj, "end_marker")),
+            "start_marker": self._ctx._safe_float(self._safe_clip_attr(clip_obj, "start_marker")),
+            "end_marker": self._ctx._safe_float(self._safe_clip_attr(clip_obj, "end_marker")),
             "warping": bool(self._safe_clip_attr(clip_obj, "warping", False)),
             "warp_mode": self._safe_clip_attr(clip_obj, "warp_mode"),
             "gain_db": self._safe_clip_attr(clip_obj, "_ableton_cli_gain_db"),
@@ -344,7 +344,9 @@ class LiveBackendTracksClipsMixin:
             payload["clip"] = clip
         if index is not None:
             payload["index"] = index
-            payload["start_time"] = self._safe_float(self._safe_clip_attr(clip_obj, "start_time"))
+            payload["start_time"] = self._ctx._safe_float(
+                self._safe_clip_attr(clip_obj, "start_time")
+            )
         return payload
 
     @staticmethod
@@ -574,7 +576,7 @@ class LiveBackendTracksClipsMixin:
         source_length: float,
         live_notes: list[tuple[int, float, float, int, bool]],
     ) -> None:
-        destination_slot = self._clip_slot_at(track, destination_clip)
+        destination_slot = self._ctx._clip_slot_at(track, destination_clip)
         if destination_slot.has_clip:
             raise _invalid_argument(
                 message=f"Destination clip slot already has a clip: {destination_clip}",
@@ -612,7 +614,7 @@ class LiveBackendTracksClipsMixin:
                 hint="Provide either dst_clip or dst_clips.",
             )
 
-        source_slot = self._clip_slot_at(track, src_clip)
+        source_slot = self._ctx._clip_slot_at(track, src_clip)
         if not source_slot.has_clip:
             raise _invalid_argument(
                 message="Source clip does not exist",
@@ -628,7 +630,7 @@ class LiveBackendTracksClipsMixin:
                 hint="Duplicate only clips with positive length.",
             )
 
-        source_notes = self._clip_notes_extended(source_clip)
+        source_notes = self._ctx.services.clip_notes._clip_notes_extended(source_clip)
         live_notes = [
             (
                 int(note["pitch"]),

@@ -41,9 +41,7 @@ def compare_against_baseline(
         if item.get("severity") == "fail"
     }
     current_fail_signatures = {
-        violation_signature(item)
-        for item in current_violations
-        if item.severity == "fail"
+        violation_signature(item) for item in current_violations if item.severity == "fail"
     }
     new_failures = len(current_fail_signatures - baseline_fail_signatures)
 

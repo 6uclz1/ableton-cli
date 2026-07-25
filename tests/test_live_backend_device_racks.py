@@ -23,7 +23,7 @@ def _rack_device(*, macros: int = 2, chains: list[_Chain] | None = None) -> _Dev
 
 def _backend_with_rack(rack: _Device) -> LiveBackend:
     backend = LiveBackend(_SurfaceStub())
-    backend._track_at(0).devices = [rack]
+    backend.context._track_at(0).devices = [rack]
     return backend
 
 

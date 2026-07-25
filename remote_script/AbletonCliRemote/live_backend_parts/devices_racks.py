@@ -31,7 +31,7 @@ class LiveBackendDeviceRacksMixin:
         return chains
 
     def device_chains_list(self, track: int, device: int | tuple[int, ...]) -> dict[str, Any]:
-        target_device = self._device_at(track, device)
+        target_device = self._ctx._device_at(track, device)
         chains = list(self._require_rack_device(target_device))
 
         chains_payload = []
@@ -40,7 +40,7 @@ class LiveBackendDeviceRacksMixin:
             devices_payload = []
             for chain_device_index, chain_device in enumerate(chain_devices):
                 chain_path = self._chain_device_path(device, chain_index, chain_device_index)
-                stable_ref = self._device_stable_ref_for(track, chain_path)
+                stable_ref = self._ctx._device_stable_ref_for(track, chain_path)
                 devices_payload.append(
                     {
                         "index": chain_device_index,
@@ -78,7 +78,7 @@ class LiveBackendDeviceRacksMixin:
         ]
 
     def device_macro_list(self, track: int, device: int | tuple[int, ...]) -> dict[str, Any]:
-        target_device = self._device_at(track, device)
+        target_device = self._ctx._device_at(track, device)
         self._require_rack_device(target_device)
         parameters = list(getattr(target_device, "parameters", []))
 
@@ -86,14 +86,14 @@ class LiveBackendDeviceRacksMixin:
         for macro_index, param_index in enumerate(self._macro_positions(target_device)):
             parameter = parameters[param_index]
             stable_ref = (
-                self._parameter_stable_ref(
+                self._ctx._parameter_stable_ref(
                     parameter,
                     track_index=track,
                     device_index=device,
                     parameter_index=param_index,
                 )
                 if isinstance(device, int)
-                else self._stable_ref("parameter", parameter, locator=None)
+                else self._ctx._stable_ref("parameter", parameter, locator=None)
             )
             macros_payload.append(
                 {
@@ -114,7 +114,7 @@ class LiveBackendDeviceRacksMixin:
         macro_index: int,
         value: float,
     ) -> dict[str, Any]:
-        target_device = self._device_at(track, device)
+        target_device = self._ctx._device_at(track, device)
         self._require_rack_device(target_device)
         parameters = list(getattr(target_device, "parameters", []))
         macro_positions = self._macro_positions(target_device)

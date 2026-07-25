@@ -156,7 +156,7 @@ class LiveBackendClipNotesMixin:
         transform: Callable[[dict[str, Any], int], dict[str, Any]],
         metadata: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
-        slot = self._clip_slot_at(track, clip)
+        slot = self._ctx._clip_slot_at(track, clip)
         if not slot.has_clip:
             raise _invalid_argument(
                 message="No clip in slot",
@@ -204,7 +204,7 @@ class LiveBackendClipNotesMixin:
         clip: int,
         notes: list[dict[str, Any]],
     ) -> dict[str, Any]:
-        slot = self._clip_slot_at(track, clip)
+        slot = self._ctx._clip_slot_at(track, clip)
         if not slot.has_clip:
             raise _invalid_argument(
                 message="No clip in slot",
@@ -227,7 +227,7 @@ class LiveBackendClipNotesMixin:
         clip: int,
         notes: list[dict[str, Any]],
     ) -> dict[str, Any]:
-        slot = self._clip_slot_at(track, clip)
+        slot = self._ctx._clip_slot_at(track, clip)
         if not slot.has_clip:
             raise _invalid_argument(
                 message="No clip in slot",
@@ -272,7 +272,7 @@ class LiveBackendClipNotesMixin:
         end_time: float | None,
         pitch: int | None,
     ) -> dict[str, Any]:
-        slot = self._clip_slot_at(track, clip)
+        slot = self._ctx._clip_slot_at(track, clip)
         if not slot.has_clip:
             raise _invalid_argument(
                 message="No clip in slot",
@@ -313,7 +313,7 @@ class LiveBackendClipNotesMixin:
         end_time: float | None,
         pitch: int | None,
     ) -> dict[str, Any]:
-        slot = self._clip_slot_at(track, clip)
+        slot = self._ctx._clip_slot_at(track, clip)
         if not slot.has_clip:
             raise _invalid_argument(
                 message="No clip in slot",

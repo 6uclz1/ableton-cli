@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from .base import LiveBackendBaseMixin
+from .base import LiveBackendContext
 from .browser import (
     LiveBackendBrowserCatalogMixin,
     LiveBackendBrowserLoadMixin,
@@ -23,7 +23,7 @@ from .tracks_clips import LiveBackendTracksClipsMixin
 from .tracks_clips_cut_to_drum_rack import LiveBackendTracksCutToDrumRackMixin
 
 __all__ = [
-    "LiveBackendBaseMixin",
+    "LiveBackendContext",
     "LiveBackendSongSessionMixin",
     "LiveBackendTransportMixerMixin",
     "LiveBackendTracksCutToDrumRackMixin",

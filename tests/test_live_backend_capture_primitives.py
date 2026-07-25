@@ -17,7 +17,7 @@ def test_fire_clip_on_empty_slot_succeeds() -> None:
 
 def test_clip_file_path_get_returns_path_for_recorded_audio_clip() -> None:
     backend = LiveBackend(_SurfaceStub())
-    slot = backend._clip_slot_at(0, 0)
+    slot = backend.context._clip_slot_at(0, 0)
     slot.create_clip(4.0)
     slot.clip.is_audio_clip = True
     slot.clip.is_midi_clip = False
@@ -49,7 +49,7 @@ def test_clip_file_path_get_rejects_missing_clip() -> None:
 
 def test_clip_file_path_get_rejects_audio_clip_with_no_file_path() -> None:
     backend = LiveBackend(_SurfaceStub())
-    slot = backend._clip_slot_at(0, 0)
+    slot = backend.context._clip_slot_at(0, 0)
     slot.create_clip(4.0)
     slot.clip.is_audio_clip = True
     slot.clip.is_midi_clip = False

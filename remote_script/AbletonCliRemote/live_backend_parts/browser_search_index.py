@@ -80,7 +80,7 @@ class LiveBackendBrowserSearchIndexMixin:
 
     def _browser_search_candidates(self, path: str | None) -> list[dict[str, Any]]:
         key = self._search_cache_key(path)
-        cached = self._browser_search_index_cache.get(key)
+        cached = self._ctx._browser_search_index_cache.get(key)
         if cached is not None:
             return cached
 
@@ -98,5 +98,5 @@ class LiveBackendBrowserSearchIndexMixin:
         for root in roots:
             indexed.extend(self._flatten_serialized_tree(root))
 
-        self._browser_search_index_cache[key] = indexed
+        self._ctx._browser_search_index_cache[key] = indexed
         return indexed

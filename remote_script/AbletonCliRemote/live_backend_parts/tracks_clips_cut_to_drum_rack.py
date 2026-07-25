@@ -28,7 +28,7 @@ class LiveBackendTracksCutToDrumRackMixin:
         source_track: int,
         source_clip: int,
     ) -> dict[str, Any]:
-        slot = self._clip_slot_at(source_track, source_clip)
+        slot = self._ctx._clip_slot_at(source_track, source_clip)
         if not slot.has_clip:
             raise _invalid_argument(
                 message="No clip in source slot",
@@ -98,18 +98,20 @@ class LiveBackendTracksCutToDrumRackMixin:
             )
 
         if source_uri is not None:
-            item = self._find_browser_item_by_uri(source_uri)
+            item = self._ctx.services.browser._find_browser_item_by_uri(source_uri)
             if item is None:
                 raise _invalid_argument(
                     message=f"Browser item with URI '{source_uri}' not found",
                     hint="Choose a valid browser URI from browser items/search.",
                 )
-            resolved_path = self._item_path_by_uri(source_uri)
-            serialized = self._serialize_browser_item(item, path=resolved_path)
+            resolved_path = self._ctx.services.browser._item_path_by_uri(source_uri)
+            serialized = self._ctx.services.browser._serialize_browser_item(
+                item, path=resolved_path
+            )
         else:
             assert source_path is not None
-            item = self._resolve_browser_path(source_path)
-            serialized = self._serialize_browser_item(item, path=source_path)
+            item = self._ctx.services.browser._resolve_browser_path(source_path)
+            serialized = self._ctx.services.browser._serialize_browser_item(item, path=source_path)
 
         if not bool(serialized["is_loadable"]):
             raise _invalid_argument(
@@ -339,8 +341,8 @@ class LiveBackendTracksCutToDrumRackMixin:
         target_track: int | None,
     ) -> tuple[int, Any, bool]:
         if target_track is not None:
-            return target_track, self._track_at(target_track), False
-        song = self._song()
+            return target_track, self._ctx._track_at(target_track), False
+        song = self._ctx._song()
         create_midi_track = getattr(song, "create_midi_track", None)
         if not callable(create_midi_track):
             raise _not_supported_by_live_api(
@@ -349,7 +351,7 @@ class LiveBackendTracksCutToDrumRackMixin:
             )
         create_midi_track(-1)
         resolved_target_track = len(list(getattr(song, "tracks", []))) - 1
-        return resolved_target_track, self._track_at(resolved_target_track), True
+        return resolved_target_track, self._ctx._track_at(resolved_target_track), True
 
     @staticmethod
     def _find_drum_rack_device_on_track(track_obj: Any) -> tuple[int, Any] | None:
@@ -368,7 +370,7 @@ class LiveBackendTracksCutToDrumRackMixin:
         if existing is not None:
             return existing[0], existing[1], False
 
-        self.load_instrument_or_effect(
+        self._ctx.services.browser.load_instrument_or_effect(
             target_track,
             uri=self._DEFAULT_DRUM_RACK_URI,
             path=None,
@@ -379,7 +381,7 @@ class LiveBackendTracksCutToDrumRackMixin:
             import_length=False,
             import_groove=False,
         )
-        refreshed_track = self._track_at(target_track)
+        refreshed_track = self._ctx._track_at(target_track)
         created = self._find_drum_rack_device_on_track(refreshed_track)
         if created is None:
             raise _not_supported_by_live_api(
@@ -451,7 +453,7 @@ class LiveBackendTracksCutToDrumRackMixin:
         range_start: float,
         source_length: float,
     ) -> dict[str, Any]:
-        slot = self._clip_slot_at(target_track, trigger_clip_slot)
+        slot = self._ctx._clip_slot_at(target_track, trigger_clip_slot)
         if slot.has_clip:
             raise _invalid_argument(
                 message=f"Trigger clip slot already has a clip: {trigger_clip_slot}",
@@ -498,7 +500,7 @@ class LiveBackendTracksCutToDrumRackMixin:
                     "mute": False,
                 }
             )
-        specs = tuple(self._note_specification(note) for note in notes)
+        specs = tuple(self._ctx.services.clip_notes._note_specification(note) for note in notes)
         add_new_notes(specs)
         return {
             "trigger_clip_created": True,

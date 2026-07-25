@@ -2202,8 +2202,8 @@ def test_live_backend_track_stable_refs_prefer_explicit_locators_over_object_cac
 
     existing_ref = backend.tracks_list()["tracks"][0]["stable_ref"]
     new_track = _Track(name="New Track", has_audio_input=False, has_midi_input=True)
-    backend._song().tracks.append(new_track)
-    backend._stable_ref_by_object[("track", id(new_track))] = existing_ref
+    backend.context._song().tracks.append(new_track)
+    backend.context._stable_ref_by_object[("track", id(new_track))] = existing_ref
 
     refs = [track["stable_ref"] for track in backend.tracks_list()["tracks"]]
 
@@ -3009,7 +3009,7 @@ def test_live_backend_add_notes_to_clip_accepts_extended_fields_and_applies_defa
 def test_live_backend_add_notes_to_clip_not_supported_by_live_api() -> None:
     backend = LiveBackend(_SurfaceStub())
     backend.create_clip(0, 0, 4.0)
-    clip_obj = backend._clip_slot_at(0, 0).clip  # noqa: SLF001
+    clip_obj = backend.context._clip_slot_at(0, 0).clip  # noqa: SLF001
     clip_obj.add_new_notes = None
 
     with pytest.raises(CommandError) as exc_info:
@@ -3064,7 +3064,7 @@ def test_live_backend_update_clip_notes_not_supported_by_live_api() -> None:
     backend = LiveBackend(_SurfaceStub())
     backend.create_clip(0, 0, 4.0)
     backend.add_notes_to_clip(0, 0, [_note()])
-    clip_obj = backend._clip_slot_at(0, 0).clip  # noqa: SLF001
+    clip_obj = backend.context._clip_slot_at(0, 0).clip  # noqa: SLF001
     clip_obj.apply_note_modifications = None
 
     with pytest.raises(CommandError) as exc_info:
@@ -3341,7 +3341,7 @@ def test_live_backend_arrangement_clip_create_midi_accepts_notes_payload() -> No
 def test_live_backend_arrangement_clip_notes_add_not_supported_by_live_api() -> None:
     backend = LiveBackend(_SurfaceStub())
     backend.arrangement_clip_create(track=0, start_time=0.0, length=4.0, audio_path=None)
-    clip = backend._arrangement_clips(0)[0]  # noqa: SLF001
+    clip = backend.services.scenes_arrangement._arrangement_clips(0)[0]  # noqa: SLF001
     clip.add_new_notes = None
 
     with pytest.raises(CommandError) as exc_info:

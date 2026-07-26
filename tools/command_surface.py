@@ -98,12 +98,19 @@ def _render_help(command: click.Command, path: tuple[str, ...]) -> list[str]:
     Typer renders help through rich, which *prints* to stdout from inside
     ``get_help()`` instead of returning it, so stdout has to be captured too.
     """
+    import rich.console
     import typer.rich_utils as rich_utils
 
     saved = (rich_utils.MAX_WIDTH, rich_utils.FORCE_TERMINAL, rich_utils.COLOR_SYSTEM)
     rich_utils.MAX_WIDTH = _RENDER_WIDTH
     rich_utils.FORCE_TERMINAL = False
     rich_utils.COLOR_SYSTEM = None
+    # rich swaps the rounded panel box for a square one when it thinks it is on
+    # a legacy Windows console, which would make this snapshot disagree between
+    # macOS and Windows CI. Typer builds its Console without passing
+    # legacy_windows, so pinning the detector is the only injection point.
+    saved_detect = rich.console.detect_legacy_windows
+    rich.console.detect_legacy_windows = lambda: False
     buffer = io.StringIO()
     try:
         ctx = click.Context(
@@ -116,6 +123,7 @@ def _render_help(command: click.Command, path: tuple[str, ...]) -> list[str]:
             returned = command.get_help(ctx)
     finally:
         rich_utils.MAX_WIDTH, rich_utils.FORCE_TERMINAL, rich_utils.COLOR_SYSTEM = saved
+        rich.console.detect_legacy_windows = saved_detect
 
     text = buffer.getvalue() or returned
     return [line.rstrip() for line in text.rstrip().splitlines()]

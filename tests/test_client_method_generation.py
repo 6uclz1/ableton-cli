@@ -21,17 +21,22 @@ def test_generated_client_module_is_up_to_date() -> None:
     # render_module() emits unformatted source; the generator runs ruff format
     # over it. Compare on formatted text so the test does not depend on where
     # the formatter chooses to break long signatures.
+    #
+    # stdin is piped as explicit UTF-8 bytes rather than via text=True: text
+    # mode encodes with the locale codec, which is cp1252 on Windows CI, and
+    # ruff rejects the result as invalid UTF-8 the moment the module contains
+    # any non-ASCII character.
     import subprocess
     import sys
 
-    formatted = subprocess.run(
+    completed = subprocess.run(
         [sys.executable, "-m", "ruff", "format", "-"],
-        input=render_module(),
+        input=render_module().encode("utf-8"),
         capture_output=True,
-        text=True,
         cwd=Path(__file__).resolve().parents[1],
         check=True,
-    ).stdout
+    )
+    formatted = completed.stdout.decode("utf-8")
 
     assert on_disk == formatted
 

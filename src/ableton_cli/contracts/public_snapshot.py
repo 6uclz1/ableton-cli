@@ -14,7 +14,7 @@ def build_public_contract_snapshot() -> dict[str, Any]:
     protocol_request = make_request(
         name="example_command",
         args={"example": True},
-        protocol_version=2,
+        protocol_version=3,
         meta={"request_timeout_ms": 15000},
     ).to_dict()
     protocol_request["request_id"] = "<request-id>"
@@ -46,14 +46,14 @@ def build_public_contract_snapshot() -> dict[str, Any]:
             "response_success": {
                 "ok": True,
                 "request_id": "<request-id>",
-                "protocol_version": 2,
+                "protocol_version": 3,
                 "result": {"status": "ok"},
                 "error": None,
             },
             "response_error": {
                 "ok": False,
                 "request_id": "<request-id>",
-                "protocol_version": 2,
+                "protocol_version": 3,
                 "result": None,
                 "error": {
                     "code": ErrorCode.INVALID_ARGUMENT.value,

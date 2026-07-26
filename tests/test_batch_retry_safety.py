@@ -24,13 +24,21 @@ def _timeout_error(*, may_have_executed: bool | None = None) -> AppError:
 class _StepClientStub:
     def __init__(self) -> None:
         self.calls: list[tuple[str, dict[str, Any]]] = []
+        self.idempotency_keys: list[str | None] = []
         self._responses: dict[str, list[dict[str, Any] | AppError]] = {}
 
     def set_responses(self, name: str, items: list[dict[str, Any] | AppError]) -> None:
         self._responses[name] = list(items)
 
-    def execute_remote_command(self, name: str, args: dict[str, Any]) -> dict[str, Any]:
+    def execute_remote_command(
+        self,
+        name: str,
+        args: dict[str, Any],
+        *,
+        idempotency_key: str | None = None,
+    ) -> dict[str, Any]:
         self.calls.append((name, args))
+        self.idempotency_keys.append(idempotency_key)
         queue = self._responses.get(name)
         if queue:
             item = queue.pop(0)
@@ -56,9 +64,11 @@ def _run_batch(runner, cli_app, steps: list[dict[str, Any]]):  # noqa: ANN001, A
     )
 
 
-def test_timeout_retry_is_rejected_for_a_non_idempotent_command(
+def test_timeout_retry_of_a_write_reuses_one_idempotency_key(
     runner, cli_app, client: _StepClientStub
 ) -> None:
+    client.set_responses("add_notes_to_clip", [_timeout_error(), {"ok": True}])
+
     result = _run_batch(
         runner,
         cli_app,
@@ -66,17 +76,32 @@ def test_timeout_retry_is_rejected_for_a_non_idempotent_command(
             {
                 "name": "add_notes_to_clip",
                 "args": {},
-                "retry": {"max_attempts": 3, "on": ["TIMEOUT"]},
+                "retry": {"max_attempts": 3, "backoff_ms": 0, "on": ["TIMEOUT"]},
             }
         ],
     )
 
-    assert result.exit_code == 2
-    payload = json.loads(result.stdout)
-    assert payload["ok"] is False
-    assert payload["error"]["code"] == "INVALID_ARGUMENT"
-    assert "add_notes_to_clip" in payload["error"]["hint"]
-    assert client.calls == []
+    assert result.exit_code == 0
+    assert len(client.calls) == 2
+    assert client.idempotency_keys[0] == client.idempotency_keys[1]
+    assert client.idempotency_keys[0] is not None
+
+
+def test_each_step_gets_its_own_idempotency_key(runner, cli_app, client: _StepClientStub) -> None:
+    step = {"name": "add_notes_to_clip", "args": {}, "retry": {"max_attempts": 2}}
+    result = _run_batch(runner, cli_app, [step, dict(step)])
+
+    assert result.exit_code == 0
+    assert len(set(client.idempotency_keys)) == 2
+
+
+def test_step_without_retry_sends_no_idempotency_key(
+    runner, cli_app, client: _StepClientStub
+) -> None:
+    result = _run_batch(runner, cli_app, [{"name": "add_notes_to_clip", "args": {}}])
+
+    assert result.exit_code == 0
+    assert client.idempotency_keys == [None]
 
 
 def test_timeout_retry_is_allowed_for_an_idempotent_command(
@@ -128,12 +153,12 @@ def test_step_without_retry_is_executed_once(runner, cli_app, client: _StepClien
     assert len(client.calls) == 1
 
 
-def test_timeout_that_may_have_executed_is_never_retried(
+def test_timeout_that_may_have_executed_is_retried_under_one_key(
     runner, cli_app, client: _StepClientStub
 ) -> None:
     client.set_responses(
-        "tracks_list",
-        [_timeout_error(may_have_executed=True), {"tracks": []}],
+        "add_notes_to_clip",
+        [_timeout_error(may_have_executed=True), {"ok": True}],
     )
 
     result = _run_batch(
@@ -141,17 +166,18 @@ def test_timeout_that_may_have_executed_is_never_retried(
         cli_app,
         [
             {
-                "name": "tracks_list",
+                "name": "add_notes_to_clip",
                 "args": {},
                 "retry": {"max_attempts": 3, "backoff_ms": 0, "on": ["TIMEOUT"]},
             }
         ],
     )
 
-    assert result.exit_code == 12
-    payload = json.loads(result.stdout)
-    assert payload["error"]["code"] == "TIMEOUT"
-    assert len(client.calls) == 1
+    # The Remote Script recognises the repeated key and replays its stored
+    # response, so resending cannot double-apply the notes.
+    assert result.exit_code == 0
+    assert len(client.calls) == 2
+    assert client.idempotency_keys[0] == client.idempotency_keys[1]
 
 
 def test_step_timeout_exposes_may_have_executed(runner, cli_app, client: _StepClientStub) -> None:

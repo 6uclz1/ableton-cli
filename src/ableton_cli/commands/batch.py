@@ -3,45 +3,30 @@ from __future__ import annotations
 import json
 import sys
 import time
+import uuid
 from pathlib import Path
 from typing import Annotated, Any
 
 import typer
 
 from ..capabilities import parse_supported_commands, required_remote_commands
-from ..command_specs import remote_command_spec_map
 from ..errors import AppError, ErrorCode, ExitCode
 from ..runtime import execute_command, get_client, get_runtime
 from ._validation import invalid_argument, require_non_empty_string
 
 batch_app = typer.Typer(help="Batch commands", no_args_is_help=True)
 _ASSERT_OPERATORS = frozenset({"eq", "ne", "gt", "gte", "lt", "lte"})
-#: REMOTE_BUSY is the only code that is safe to retry blindly: the Remote Script
-#: raises it from `_execute_command_from_server_thread` on the queue-depth check,
-#: which runs *before* `self._queue.put()`, so a REMOTE_BUSY request provably
-#: never reached Live's main thread and had zero side effects.
-#: TIMEOUT is deliberately absent — a timed-out request may already have been
-#: applied, so retrying it double-applies non-idempotent commands.
+#: REMOTE_BUSY is the only code safe to retry with no further machinery: the
+#: Remote Script raises it from `_execute_command_from_server_thread` on the
+#: queue-depth check, which runs *before* `self._queue.put()`, so the request
+#: provably never reached Live's main thread and had zero side effects.
+#: TIMEOUT stays out of the default so a step must opt in; opting in is safe
+#: because `_execute_step` carries one idempotency key across every attempt and
+#: the Remote Script replays the stored response rather than re-running.
 _DEFAULT_RETRY_CODES = ("REMOTE_BUSY",)
 
 
-def _reject_unsafe_timeout_retry(*, step_index: int, command_name: str) -> None:
-    spec = remote_command_spec_map().get(command_name)
-    if spec is not None and spec.side_effect.idempotent:
-        return
-    known = "" if spec is not None else " with unknown idempotency"
-    raise invalid_argument(
-        message=f"steps[{step_index}].retry.on may not include TIMEOUT for {command_name!r}",
-        hint=(
-            f"TIMEOUT retry is unsafe for non-idempotent command {command_name!r}{known}; "
-            "the command may have already been applied. Remove TIMEOUT from retry.on."
-        ),
-    )
-
-
-def _parse_retry_object(
-    raw_retry: Any, *, step_index: int, command_name: str
-) -> dict[str, Any] | None:
+def _parse_retry_object(raw_retry: Any, *, step_index: int) -> dict[str, Any] | None:
     if raw_retry is None:
         return None
     if not isinstance(raw_retry, dict):
@@ -83,9 +68,6 @@ def _parse_retry_object(
                 hint=f"steps[{step_index}].retry.on[{code_index}] must be non-empty.",
             )
         )
-
-    if "TIMEOUT" in retry_on:
-        _reject_unsafe_timeout_retry(step_index=step_index, command_name=command_name)
 
     return {
         "max_attempts": raw_max_attempts,
@@ -274,9 +256,7 @@ def _parse_batch_object(payload: Any, *, source_name: str) -> dict[str, Any]:
         parsed_step = {
             "name": name,
             "args": raw_args,
-            "retry": _parse_retry_object(
-                raw_step.get("retry"), step_index=index, command_name=name
-            ),
+            "retry": _parse_retry_object(raw_step.get("retry"), step_index=index),
             "assert": _parse_assert_object(raw_step.get("assert"), step_index=index),
         }
         steps.append(parsed_step)
@@ -541,19 +521,24 @@ def _execute_step(
     retry_on = set(retry["on"])
     backoff_ms = retry["backoff_ms"]
 
+    # Generated once and reused by every attempt: that is the whole mechanism.
+    # A fresh request_id is minted per send and can never identify a retry, so
+    # this key is what lets the Remote Script recognise a resend and replay the
+    # stored response instead of applying the command a second time.
+    idempotency_key = uuid.uuid4().hex
+
     attempt = 0
     while True:
         attempt += 1
         try:
-            result = client.execute_remote_command(step["name"], step["args"])
+            result = client.execute_remote_command(
+                step["name"],
+                step["args"],
+                idempotency_key=idempotency_key,
+            )
             return result, attempt
         except AppError as exc:
             _annotate_step_timeout(exc, step_index=step_index, name=step["name"])
-            # The Remote Script could not cancel this request before Live began
-            # dispatching it, so a resend would apply the command a second time.
-            # This outranks retry.on: even an opt-in retry must not double-apply.
-            if exc.details.get("may_have_executed") is True:
-                raise
             if exc.error_code not in retry_on:
                 raise
             if attempt >= max_attempts:

@@ -14,7 +14,7 @@ def test_config_priority_cli_over_env_over_file_over_default(monkeypatch, tmp_pa
                 "port = 7777",
                 "timeout_ms = 3000",
                 'log_level = "DEBUG"',
-                "protocol_version = 2",
+                "protocol_version = 3",
                 "",
             ]
         ),
@@ -41,7 +41,7 @@ def test_config_defaults_use_protocol_v2_and_longer_timeout(tmp_path: Path) -> N
     settings = resolve_settings(cli_overrides={}, config_path=tmp_path / "missing.toml")
 
     assert settings.timeout_ms == 15000
-    assert settings.protocol_version == 2
+    assert settings.protocol_version == 3
 
 
 def test_config_auth_token_defaults_to_none(tmp_path: Path) -> None:

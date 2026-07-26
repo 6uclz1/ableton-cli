@@ -194,7 +194,7 @@ def _subscribe_request(events: list[str]) -> bytes:
                 "args": {"events": events},
                 "meta": {},
                 "request_id": "sub-1",
-                "protocol_version": 2,
+                "protocol_version": 3,
             }
         )
         + "\n"
@@ -224,7 +224,7 @@ def test_server_streams_published_events_to_a_subscriber() -> None:
             line = json.loads(stream.readline().decode("utf-8"))
             assert line == {
                 "type": "event",
-                "protocol_version": 2,
+                "protocol_version": 3,
                 "event": "tempo",
                 "ts": 3.0,
                 "data": {"tempo": 90.0},

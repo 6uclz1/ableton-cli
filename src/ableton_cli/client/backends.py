@@ -11,7 +11,13 @@ from .transport import JsonTransport, RecordingTransport, ReplayTransport, TcpJs
 class ClientBackend(Protocol):
     transport: JsonTransport
 
-    def dispatch(self, name: str, args: dict[str, Any]) -> dict[str, Any]: ...
+    def dispatch(
+        self,
+        name: str,
+        args: dict[str, Any],
+        *,
+        idempotency_key: str | None = None,
+    ) -> dict[str, Any]: ...
 
 
 class _TransportBackend:
@@ -19,7 +25,13 @@ class _TransportBackend:
         self._settings = settings
         self.transport = transport
 
-    def dispatch(self, name: str, args: dict[str, Any]) -> dict[str, Any]:
+    def dispatch(
+        self,
+        name: str,
+        args: dict[str, Any],
+        *,
+        idempotency_key: str | None = None,
+    ) -> dict[str, Any]:
         meta: dict[str, Any] = {"request_timeout_ms": self._settings.timeout_ms}
         if self._settings.auth_token is not None:
             meta["auth_token"] = self._settings.auth_token
@@ -28,6 +40,7 @@ class _TransportBackend:
             args=args,
             protocol_version=self._settings.protocol_version,
             meta=meta,
+            idempotency_key=idempotency_key,
         )
         raw_response = self.transport.send(request.to_dict())
         response = parse_response(

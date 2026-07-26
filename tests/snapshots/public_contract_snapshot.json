@@ -20325,7 +20325,7 @@
         "request_timeout_ms": 15000
       },
       "name": "example_command",
-      "protocol_version": 2,
+      "protocol_version": 3,
       "request_id": "<request-id>",
       "type": "command"
     },
@@ -20339,7 +20339,7 @@
         "message": "Example failure"
       },
       "ok": false,
-      "protocol_version": 2,
+      "protocol_version": 3,
       "request_id": "<request-id>",
       "result": null
     },
@@ -20353,7 +20353,7 @@
     "response_success": {
       "error": null,
       "ok": true,
-      "protocol_version": 2,
+      "protocol_version": 3,
       "request_id": "<request-id>",
       "result": {
         "status": "ok"

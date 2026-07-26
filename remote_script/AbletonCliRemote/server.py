@@ -13,6 +13,11 @@ from .events import Subscription
 _REQUEST_KEYS = {"type", "name", "args", "meta", "request_id", "protocol_version"}
 _REQUEST_TYPES = ("command", "subscribe")
 
+#: Mirrors ableton_cli.client.protocol.IDEMPOTENCY_KEY_MAX_LENGTH. The Remote
+#: Script cannot import from the CLI package, so the bound is restated here and
+#: pinned by a test.
+IDEMPOTENCY_KEY_MAX_LENGTH = 128
+
 #: How long a streaming connection waits for the next event before checking
 #: whether the server is shutting down.
 _EVENT_POLL_INTERVAL_S = 0.25
@@ -150,8 +155,28 @@ def _parse_command_request(
             message="meta must be an object",
             hint="Pass a JSON object for meta.",
         )
+    _validate_idempotency_key(meta)
 
     return request_id, str(request_type), name, args, meta
+
+
+def _validate_idempotency_key(meta: dict[str, Any]) -> None:
+    if "idempotency_key" not in meta:
+        return
+    key = meta["idempotency_key"]
+    if not isinstance(key, str) or not key:
+        raise _invalid_request(
+            message="meta.idempotency_key must be a non-empty string",
+            hint="Send a stable opaque token, or omit meta.idempotency_key.",
+        )
+    if len(key) > IDEMPOTENCY_KEY_MAX_LENGTH:
+        raise _invalid_request(
+            message=(
+                f"meta.idempotency_key must be at most {IDEMPOTENCY_KEY_MAX_LENGTH} "
+                f"characters, got {len(key)}"
+            ),
+            hint="Use a short opaque token such as a uuid4 hex.",
+        )
 
 
 class _CommandTCPServer(socketserver.ThreadingTCPServer):

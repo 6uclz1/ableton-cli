@@ -258,3 +258,146 @@ def test_surface_keeps_timeout_when_drain_is_not_scheduled(monkeypatch: pytest.M
         surface.disconnect()
 
     assert exc_info.value.code == "TIMEOUT"
+
+
+class _FakeClock:
+    """Deterministic stand-in for the ``time`` module used by the drain loop."""
+
+    def __init__(self) -> None:
+        self.now = 0.0
+
+    def monotonic(self) -> float:
+        return self.now
+
+
+def _install_drain_harness(
+    monkeypatch: pytest.MonkeyPatch,
+    surface: control_surface_module.AbletonCliRemoteSurface,
+    *,
+    seconds_per_command: float,
+) -> tuple[_FakeClock, list[str], list[Callable[[], None]]]:
+    clock = _FakeClock()
+    executed: list[str] = []
+
+    def _dispatch(_backend: Any, name: str, _args: dict[str, Any]) -> dict[str, Any]:
+        executed.append(name)
+        clock.now += seconds_per_command
+        return {"name": name}
+
+    monkeypatch.setattr(control_surface_module, "time", clock)
+    monkeypatch.setattr(control_surface_module, "dispatch_command", _dispatch)
+
+    scheduled: list[Callable[[], None]] = []
+    surface.schedule_message = lambda _delay, callback: scheduled.append(  # type: ignore[method-assign]
+        callback
+    )
+    return clock, executed, scheduled
+
+
+def _enqueue(
+    surface: control_surface_module.AbletonCliRemoteSurface, name: str
+) -> control_surface_module._CommandRequest:
+    request = control_surface_module._CommandRequest(
+        name=name,
+        args={},
+        timeout_ms=1000,
+        event=threading.Event(),
+    )
+    surface._queue.put(request)
+    return request
+
+
+def test_scheduled_drain_stops_at_the_main_thread_budget(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    surface = _make_surface(monkeypatch)
+    monkeypatch.setattr(control_surface_module, "DRAIN_BUDGET_S", 0.005)
+    _clock, executed, scheduled = _install_drain_harness(
+        monkeypatch, surface, seconds_per_command=0.004
+    )
+    for index in range(5):
+        _enqueue(surface, f"command-{index}")
+
+    surface._scheduled_drain()
+
+    assert executed == ["command-0", "command-1"]
+    assert not surface._queue.empty()
+
+
+def test_budget_overflow_is_rescheduled_until_every_request_completes(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    surface = _make_surface(monkeypatch)
+    monkeypatch.setattr(control_surface_module, "DRAIN_BUDGET_S", 0.005)
+    clock, executed, scheduled = _install_drain_harness(
+        monkeypatch, surface, seconds_per_command=0.004
+    )
+    requests = [_enqueue(surface, f"command-{index}") for index in range(5)]
+
+    surface._scheduled_drain()
+    while scheduled:
+        callback = scheduled.pop(0)
+        clock.now = 0.0
+        callback()
+
+    assert executed == [f"command-{index}" for index in range(5)]
+    assert all(request.event.is_set() for request in requests)
+    assert surface._queue.empty()
+
+
+def test_budget_overflow_resets_the_drain_scheduled_flag(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    surface = _make_surface(monkeypatch)
+    monkeypatch.setattr(control_surface_module, "DRAIN_BUDGET_S", 0.005)
+    clock, _executed, scheduled = _install_drain_harness(
+        monkeypatch, surface, seconds_per_command=0.004
+    )
+    for index in range(5):
+        _enqueue(surface, f"command-{index}")
+
+    surface._scheduled_drain()
+
+    # The flag was released and immediately re-taken by the pending reschedule.
+    assert len(scheduled) == 1
+    assert surface._drain_scheduled is True
+
+    while scheduled:
+        callback = scheduled.pop(0)
+        clock.now = 0.0
+        callback()
+
+    assert surface._drain_scheduled is False
+
+
+def test_exhausted_budget_still_dispatches_one_request(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    surface = _make_surface(monkeypatch)
+    monkeypatch.setattr(control_surface_module, "DRAIN_BUDGET_S", 0.0)
+    _clock, executed, _scheduled = _install_drain_harness(
+        monkeypatch, surface, seconds_per_command=0.004
+    )
+    for index in range(3):
+        _enqueue(surface, f"command-{index}")
+
+    surface._scheduled_drain()
+
+    assert executed == ["command-0"]
+
+
+def test_disconnect_drains_the_queue_regardless_of_budget(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    surface = _make_surface(monkeypatch)
+    monkeypatch.setattr(control_surface_module, "DRAIN_BUDGET_S", 0.0)
+    _clock, executed, _scheduled = _install_drain_harness(
+        monkeypatch, surface, seconds_per_command=0.004
+    )
+    for index in range(5):
+        _enqueue(surface, f"command-{index}")
+
+    surface.disconnect()
+
+    assert executed == [f"command-{index}" for index in range(5)]
+    assert surface._queue.empty()

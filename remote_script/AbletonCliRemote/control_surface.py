@@ -3,6 +3,7 @@ from __future__ import annotations
 import hmac
 import queue
 import threading
+import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
@@ -30,6 +31,18 @@ except Exception:  # pragma: no cover - only used outside Ableton for local chec
 
         def schedule_message(self, _delay: int, callback: Callable[[], None]) -> None:
             callback()
+
+
+#: Time a single drain tick may spend on Live's main thread before yielding.
+#:
+#: ``_drain_requests`` runs from ``schedule_message`` on the same thread that
+#: renders Live's UI and services audio, and ``MAX_PENDING_COMMANDS`` lets 512
+#: requests queue up — an unbounded drain would run all 512 Live API operations
+#: inside one tick and freeze the UI or drop audio. 5 ms is about a third of a
+#: 60 Hz frame: long enough that an ordinary burst clears in one or two ticks,
+#: short enough to stay imperceptible. Requests past the budget are not
+#: dropped; the existing reschedule path picks them up on the next tick.
+DRAIN_BUDGET_S = 0.005
 
 
 @dataclass(slots=True)
@@ -211,7 +224,7 @@ class AbletonCliRemoteSurface(_ControlSurface):
 
     def _scheduled_drain(self) -> None:
         try:
-            self._drain_requests()
+            self._drain_requests(budget_s=DRAIN_BUDGET_S)
         finally:
             with self._drain_lock:
                 self._drain_scheduled = False
@@ -219,8 +232,19 @@ class AbletonCliRemoteSurface(_ControlSurface):
         if needs_reschedule:
             self._schedule_drain()
 
-    def _drain_requests(self) -> None:
+    def _drain_requests(self, budget_s: float | None = None) -> None:
+        """Execute queued requests; ``budget_s=None`` drains without a deadline.
+
+        The budget is only checked *between* requests. A dispatch that has
+        already started always runs to completion — abandoning it midway would
+        leave Live in a half-applied state — and at least one request is always
+        processed, so an unusually small budget cannot starve the queue.
+        """
+        deadline = None if budget_s is None else time.monotonic() + budget_s
+        dispatched = 0
         while True:
+            if deadline is not None and dispatched and time.monotonic() >= deadline:
+                return
             try:
                 request = self._queue.get_nowait()
             except queue.Empty:
@@ -232,6 +256,7 @@ class AbletonCliRemoteSurface(_ControlSurface):
                     continue
                 request.executing = True
 
+            dispatched += 1
             try:
                 request.result = dispatch_command(self._backend, request.name, request.args)
             except Exception as exc:  # noqa: BLE001
@@ -246,7 +271,8 @@ class AbletonCliRemoteSurface(_ControlSurface):
         self._command_server.stop()
         self._event_source.detach()
         self._event_broker.close()
-        self._drain_requests()
+        # Shutting down: no UI or audio left to protect, so drain everything.
+        self._drain_requests(budget_s=None)
         with self._drain_lock:
             self._drain_scheduled = False
         super().disconnect()

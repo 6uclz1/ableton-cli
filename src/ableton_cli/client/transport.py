@@ -14,11 +14,37 @@ class JsonTransport(Protocol):
     def close(self) -> None: ...
 
 
+#: Extra time the client waits on the socket beyond the logical request deadline
+#: it hands to the Remote Script in ``meta.request_timeout_ms``.
+#:
+#: The Remote Script detects its own main-thread wait expiring at exactly
+#: ``request_timeout_ms`` and only then writes a structured TIMEOUT response
+#: carrying ``may_have_executed``. If the client's socket read used the same
+#: deadline both sides would expire at the same instant — and the client, which
+#: starts its clock first, normally wins — so that signal would be thrown away
+#: and callers could never tell whether the command had already been applied.
+#: The grace window only delays how long a hung request takes to fail; it never
+#: turns a timeout into a success.
+_SOCKET_GRACE_MS = 2000
+
+
+def socket_timeout_ms(request_timeout_ms: int) -> int:
+    """Derive the socket read deadline from the logical request deadline.
+
+    Single derivation point: callers pass ``settings.timeout_ms`` as the request
+    deadline and must never compute a socket deadline of their own.
+    """
+    return request_timeout_ms + _SOCKET_GRACE_MS
+
+
 class TcpJsonlTransport:
     def __init__(self, host: str, port: int, timeout_ms: int) -> None:
         self.host = host
         self.port = port
-        self.timeout_s = timeout_ms / 1000
+        # Connecting is not subject to the main-thread wait the grace covers, so
+        # connection setup keeps the plain request deadline.
+        self.request_timeout_s = timeout_ms / 1000
+        self.socket_timeout_s = socket_timeout_ms(timeout_ms) / 1000
         self._sock: socket.socket | None = None
         self._file: Any | None = None
 
@@ -27,7 +53,7 @@ class TcpJsonlTransport:
             return
 
         try:
-            sock = socket.create_connection((self.host, self.port), timeout=self.timeout_s)
+            sock = socket.create_connection((self.host, self.port), timeout=self.request_timeout_s)
         except TimeoutError as exc:
             raise AppError(
                 error_code=ErrorCode.TIMEOUT,
@@ -50,7 +76,7 @@ class TcpJsonlTransport:
                 exit_code=ExitCode.ABLETON_NOT_CONNECTED,
             ) from exc
 
-        sock.settimeout(self.timeout_s)
+        sock.settimeout(self.socket_timeout_s)
         self._sock = sock
         self._file = sock.makefile("rwb")
 

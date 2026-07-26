@@ -55,6 +55,17 @@ def test_client_non_ping_command_sends_single_request_without_preflight(monkeypa
     assert [request["name"] for request in requests] == ["song_info"]
 
 
+def test_client_socket_deadline_outlives_the_advertised_request_timeout(monkeypatch) -> None:
+    settings = _settings()
+    client = AbletonClient(settings)
+    requests = _capture_requests(monkeypatch, client)
+
+    client.song_info()
+
+    assert requests[0]["meta"]["request_timeout_ms"] == settings.timeout_ms
+    assert client.transport.socket_timeout_s > settings.timeout_ms / 1000
+
+
 def test_client_does_not_retry_read_command_on_timeout(monkeypatch) -> None:
     client = AbletonClient(_settings())
     requests: list[dict[str, Any]] = []

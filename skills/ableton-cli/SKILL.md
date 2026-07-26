@@ -422,6 +422,9 @@ uv run ableton-cli --show-completion
   - Example: `uv run ableton-cli effect parameter set -- -2.0 --track-index 0 --device-index 0 --parameter-index 7`
 - For low-latency repeated automation operations, prefer `uv run ableton-cli batch stream`.
 - Capability and compatibility checks are explicit through `uv run ableton-cli ping` and `uv run ableton-cli doctor`.
+- Batch steps run once unless the step declares `retry`. `retry.on` defaults to `["REMOTE_BUSY"]`.
+  - Listing `TIMEOUT` in `retry.on` fails with `INVALID_ARGUMENT` unless the step's remote command is idempotent (read commands). A timed-out write may already have been applied, so a retry would double-apply it.
+  - A `TIMEOUT` step failure reports `error.details.may_have_executed` (`true` / `false` / `null` when unknown). Inspect the set with a read command before resending anything other than `false`.
 - Destructive master device deletion requires `--yes`. Live API unsupported operations fail explicitly with `not_supported_by_live_api`.
 - Standard wrapper commands (`synth <type> ...`, `effect <type> ...`) are strict and intentionally fail if required parameter names are missing.
   - If you get `Missing required standard ... keys`, use generic commands instead:

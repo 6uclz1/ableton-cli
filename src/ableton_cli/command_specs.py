@@ -385,6 +385,47 @@ def command_spec_map() -> dict[str, CommandSpec]:
     return {spec.command_name: spec for spec in command_specs()}
 
 
+_SIDE_EFFECT_SEVERITY: dict[SideEffectKind, int] = {"read": 0, "write": 1, "destructive": 2}
+
+
+def _merge_side_effects(left: SideEffectSpec, right: SideEffectSpec) -> SideEffectSpec:
+    """Combine two declarations for the same remote command, safe side first."""
+    kind = max(left.kind, right.kind, key=lambda item: _SIDE_EFFECT_SEVERITY[item])
+    return SideEffectSpec(
+        kind=kind,
+        idempotent=left.idempotent and right.idempotent,
+        requires_confirmation=left.requires_confirmation or right.requires_confirmation,
+    )
+
+
+def remote_command_spec_map() -> dict[str, CommandSpec]:
+    """Look up a ``CommandSpec`` by remote command name.
+
+    Batch steps name remote commands (``add_notes_to_clip``) while
+    ``command_spec_map`` is keyed by CLI command names (``clip notes add``).
+    The mapping is many-to-one — ``clip notes import-browser`` and
+    ``browser load`` both dispatch ``load_instrument_or_effect`` — so colliding
+    entries are merged on the safe side: the strongest side-effect kind wins,
+    ``idempotent`` is the conjunction, and ``requires_confirmation`` the
+    disjunction. ``command_name`` is left holding the first CLI name in sorted
+    order and must not be used as an identity.
+    """
+    merged: dict[str, CommandSpec] = {}
+    for spec in command_specs():
+        if spec.remote_command is None:
+            continue
+        existing = merged.get(spec.remote_command)
+        if existing is None:
+            merged[spec.remote_command] = spec
+            continue
+        merged[spec.remote_command] = CommandSpec(
+            command_name=existing.command_name,
+            remote_command=spec.remote_command,
+            side_effect=_merge_side_effects(existing.side_effect, spec.side_effect),
+        )
+    return merged
+
+
 def remote_command_names() -> set[str]:
     return {
         spec.remote_command for spec in command_specs() if spec.remote_command is not None

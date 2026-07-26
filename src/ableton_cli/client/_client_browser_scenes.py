@@ -46,32 +46,11 @@ class _AbletonClientBrowserScenesMixin:
         self._add_if_not_none(args, "import_groove", import_groove)
         return self._call("load_instrument_or_effect", args)
 
-    def get_browser_tree(self, category_type: str = "all") -> dict[str, Any]:
-        return self._call("get_browser_tree", {"category_type": category_type})
-
-    def get_browser_items_at_path(self, path: str) -> dict[str, Any]:
-        return self._call("get_browser_items_at_path", {"path": path})
-
     def get_browser_item(self, uri: str | None, path: str | None) -> dict[str, Any]:
         args: dict[str, Any] = {}
         self._add_if_not_none(args, "uri", uri)
         self._add_if_not_none(args, "path", path)
         return self._call("get_browser_item", args)
-
-    def get_browser_categories(self, category_type: str = "all") -> dict[str, Any]:
-        return self._call("get_browser_categories", {"category_type": category_type})
-
-    def get_browser_items(
-        self,
-        path: str,
-        item_type: str = "all",
-        limit: int = 100,
-        offset: int = 0,
-    ) -> dict[str, Any]:
-        return self._call(
-            "get_browser_items",
-            {"path": path, "item_type": item_type, "limit": limit, "offset": offset},
-        )
 
     def search_browser_items(
         self,
@@ -105,30 +84,6 @@ class _AbletonClientBrowserScenesMixin:
         self._add_if_not_none(args, "kit_uri", kit_uri)
         self._add_if_not_none(args, "kit_path", kit_path)
         return self._call("load_drum_kit", args)
-
-    def scenes_list(self) -> dict[str, Any]:
-        return self._call("scenes_list")
-
-    def create_scene(self, index: int) -> dict[str, Any]:
-        return self._call("create_scene", {"index": index})
-
-    def set_scene_name(self, scene: int, name: str) -> dict[str, Any]:
-        return self._call("set_scene_name", {"scene": scene, "name": name})
-
-    def fire_scene(self, scene: int) -> dict[str, Any]:
-        return self._call("fire_scene", {"scene": scene})
-
-    def scenes_move(self, from_index: int, to_index: int) -> dict[str, Any]:
-        return self._call("scenes_move", {"from": from_index, "to": to_index})
-
-    def stop_all_clips(self) -> dict[str, Any]:
-        return self._call("stop_all_clips")
-
-    def arrangement_record_start(self) -> dict[str, Any]:
-        return self._call("arrangement_record_start")
-
-    def arrangement_record_stop(self) -> dict[str, Any]:
-        return self._call("arrangement_record_stop")
 
     def arrangement_clip_create(
         self,
@@ -258,42 +213,6 @@ class _AbletonClientBrowserScenesMixin:
         self._add_if_not_none(args, "end", end)
         return self._call("arrangement_clip_delete", args)
 
-    def arrangement_clip_props_get(self, track: int, index: int) -> dict[str, Any]:
-        return self._call("arrangement_clip_props_get", {"track": track, "index": index})
-
-    def arrangement_clip_loop_set(
-        self,
-        track: int,
-        index: int,
-        start: float,
-        end: float,
-        enabled: bool,
-    ) -> dict[str, Any]:
-        return self._call(
-            "arrangement_clip_loop_set",
-            {"track": track, "index": index, "start": start, "end": end, "enabled": enabled},
-        )
-
-    def arrangement_clip_marker_set(
-        self,
-        track: int,
-        index: int,
-        start_marker: float,
-        end_marker: float,
-    ) -> dict[str, Any]:
-        return self._call(
-            "arrangement_clip_marker_set",
-            {
-                "track": track,
-                "index": index,
-                "start_marker": start_marker,
-                "end_marker": end_marker,
-            },
-        )
-
-    def arrangement_clip_warp_get(self, track: int, index: int) -> dict[str, Any]:
-        return self._call("arrangement_clip_warp_get", {"track": track, "index": index})
-
     def arrangement_clip_warp_set(
         self,
         track: int,
@@ -304,37 +223,3 @@ class _AbletonClientBrowserScenesMixin:
         args: dict[str, Any] = {"track": track, "index": index, "enabled": enabled}
         self._add_if_not_none(args, "mode", mode)
         return self._call("arrangement_clip_warp_set", args)
-
-    def arrangement_clip_gain_set(self, track: int, index: int, db: float) -> dict[str, Any]:
-        return self._call(
-            "arrangement_clip_gain_set",
-            {"track": track, "index": index, "db": db},
-        )
-
-    def arrangement_clip_transpose_set(
-        self,
-        track: int,
-        index: int,
-        semitones: int,
-    ) -> dict[str, Any]:
-        return self._call(
-            "arrangement_clip_transpose_set",
-            {"track": track, "index": index, "semitones": semitones},
-        )
-
-    def arrangement_clip_file_replace(
-        self,
-        track: int,
-        index: int,
-        audio_path: str,
-    ) -> dict[str, Any]:
-        return self._call(
-            "arrangement_clip_file_replace",
-            {"track": track, "index": index, "audio_path": audio_path},
-        )
-
-    def arrangement_from_session(self, scenes: list[dict[str, float]]) -> dict[str, Any]:
-        return self._call("arrangement_from_session", {"scenes": scenes})
-
-    def tracks_delete(self, track: int) -> dict[str, Any]:
-        return self._call("tracks_delete", {"track": track})

@@ -24,6 +24,27 @@ by one (419 → 418) and adds no new violations.
 Phase 5 covers baseline regeneration. The `register_commands` size violation
 should be fixed rather than baselined.
 
+## Deviations from the plan
+
+### Client argument specs are keyed by remote command, not hung off `CommandDescriptor`
+
+The plan sketched `ClientArgSpec` as a field on `CommandDescriptor`. That does
+not fit the data: the mapping from CLI command to client method is many-to-one.
+All four `master effect <type> keys` commands call one `master_effect_keys`
+client method, and the six `effect <type> keys` commands call one
+`list_standard_effect_keys`. Putting the argument spec on the descriptor would
+duplicate the same parameter list across every sharing command and let the
+copies drift.
+
+`CLIENT_METHOD_SPECS` is therefore a second table in the same module, keyed by
+remote command name — which for all 123 generated methods is also the Python
+method name. `tests/test_client_method_generation.py` asserts every key is a
+declared remote command, so the two tables cannot drift apart.
+
+Everything else about the plan's Phase 2 is unchanged: the table lives in the
+core layer, the generated file is checked in, and CI regenerates it and fails
+on a diff.
+
 ## Observations to revisit after the refactor
 
 ### The plan's command counts were stale

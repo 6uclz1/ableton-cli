@@ -375,3 +375,303 @@ def descriptor_for(command_name: str) -> CommandDescriptor:
             "Add a row to COMMAND_DESCRIPTORS in command_registry.py."
         )
     return descriptor
+
+
+@dataclass(frozen=True, slots=True)
+class ClientParamSpec:
+    """One parameter of a generated client method."""
+
+    name: str
+    #: Type annotation, as source text, copied verbatim into the generated file.
+    annotation: str
+    #: Default value as source text, or ``None`` when the parameter is required.
+    default: str | None = None
+    #: Key this parameter takes in the request payload, when it differs from
+    #: the Python parameter name (``scenes_move`` sends ``from``/``to``, which
+    #: are not usable as Python identifiers).
+    key: str | None = None
+
+    @property
+    def payload_key(self) -> str:
+        return self.key if self.key is not None else self.name
+
+
+@dataclass(frozen=True, slots=True)
+class ClientMethodSpec:
+    """A client method whose whole body is one ``self._call``.
+
+    Keyed by remote command because that is the real cardinality: several CLI
+    commands can share one client method (all four ``master effect <type> keys``
+    commands call ``master_effect_keys``), so this cannot hang off
+    ``CommandDescriptor`` without duplicating a row per sharing command.
+
+    Client methods that assemble arguments, branch, or post-process stay
+    hand-written in the mixins; only the pass-through ones are described here.
+    """
+
+    #: Both the remote command name and the generated Python method name.
+    remote_command: str
+    params: tuple[ClientParamSpec, ...] = ()
+    returns: str = "dict[str, Any]"
+
+
+def _p(
+    name: str, annotation: str, default: str | None = None, key: str | None = None
+) -> ClientParamSpec:
+    return ClientParamSpec(name=name, annotation=annotation, default=default, key=key)
+
+
+def _m(
+    remote_command: str,
+    params: tuple[ClientParamSpec, ...] = (),
+    returns: str = "dict[str, Any]",
+) -> ClientMethodSpec:
+    return ClientMethodSpec(remote_command=remote_command, params=params, returns=returns)
+
+
+#: Every pass-through client method, sorted by name. Transcribed from the
+#: hand-written mixins by AST, not by hand. ``tools/generate_client_methods.py``
+#: turns this into ``client/_client_generated.py``.
+CLIENT_METHOD_SPECS: tuple[ClientMethodSpec, ...] = (
+    _m(
+        "arrangement_clip_file_replace",
+        (_p("track", "int"), _p("index", "int"), _p("audio_path", "str")),
+    ),
+    _m("arrangement_clip_gain_set", (_p("track", "int"), _p("index", "int"), _p("db", "float"))),
+    _m(
+        "arrangement_clip_loop_set",
+        (
+            _p("track", "int"),
+            _p("index", "int"),
+            _p("start", "float"),
+            _p("end", "float"),
+            _p("enabled", "bool"),
+        ),
+    ),
+    _m(
+        "arrangement_clip_marker_set",
+        (
+            _p("track", "int"),
+            _p("index", "int"),
+            _p("start_marker", "float"),
+            _p("end_marker", "float"),
+        ),
+    ),
+    _m("arrangement_clip_props_get", (_p("track", "int"), _p("index", "int"))),
+    _m(
+        "arrangement_clip_transpose_set",
+        (_p("track", "int"), _p("index", "int"), _p("semitones", "int")),
+    ),
+    _m("arrangement_clip_warp_get", (_p("track", "int"), _p("index", "int"))),
+    _m("arrangement_from_session", (_p("scenes", "list[dict[str, float]]"),)),
+    _m("arrangement_record_start", ()),
+    _m("arrangement_record_stop", ()),
+    _m("clip_active_get", (_p("track", "int"), _p("clip", "int"))),
+    _m("clip_active_set", (_p("track", "int"), _p("clip", "int"), _p("value", "bool"))),
+    _m(
+        "clip_envelope_set",
+        (
+            _p("track", "int"),
+            _p("clip", "int"),
+            _p("device_ref", "RefPayload"),
+            _p("parameter_ref", "RefPayload"),
+            _p("points", "list[dict[str, float]]"),
+            _p("mode", "str", default="'replace'"),
+        ),
+    ),
+    _m("clip_file_path_get", (_p("track", "int"), _p("clip", "int"))),
+    _m("clip_file_replace", (_p("track", "int"), _p("clip", "int"), _p("audio_path", "str"))),
+    _m("clip_gain_set", (_p("track", "int"), _p("clip", "int"), _p("db", "float"))),
+    _m("clip_groove_amount_set", (_p("track", "int"), _p("clip", "int"), _p("value", "float"))),
+    _m("clip_groove_clear", (_p("track", "int"), _p("clip", "int"))),
+    _m("clip_groove_get", (_p("track", "int"), _p("clip", "int"))),
+    _m("clip_groove_set", (_p("track", "int"), _p("clip", "int"), _p("target", "str"))),
+    _m(
+        "clip_loop_set",
+        (
+            _p("track", "int"),
+            _p("clip", "int"),
+            _p("start", "float"),
+            _p("end", "float"),
+            _p("enabled", "bool"),
+        ),
+    ),
+    _m(
+        "clip_marker_set",
+        (
+            _p("track", "int"),
+            _p("clip", "int"),
+            _p("start_marker", "float"),
+            _p("end_marker", "float"),
+        ),
+    ),
+    _m("clip_props_get", (_p("track", "int"), _p("clip", "int"))),
+    _m("clip_transpose_set", (_p("track", "int"), _p("clip", "int"), _p("semitones", "int"))),
+    _m("clip_warp_get", (_p("track", "int"), _p("clip", "int"))),
+    _m("clip_warp_marker_list", (_p("track", "int"), _p("clip", "int"))),
+    _m(
+        "clip_warp_marker_move",
+        (_p("track", "int"), _p("clip", "int"), _p("beat_time", "float"), _p("distance", "float")),
+    ),
+    _m(
+        "clip_warp_marker_remove", (_p("track", "int"), _p("clip", "int"), _p("beat_time", "float"))
+    ),
+    _m("create_audio_track", (_p("index", "int", default="-1"),)),
+    _m("create_clip", (_p("track", "int"), _p("clip", "int"), _p("length", "float"))),
+    _m("create_midi_track", (_p("index", "int", default="-1"),)),
+    _m("create_scene", (_p("index", "int"),)),
+    _m("device_chains_list", (_p("track_ref", "RefPayload"), _p("device_ref", "RefPayload"))),
+    _m("device_macro_list", (_p("track_ref", "RefPayload"), _p("device_ref", "RefPayload"))),
+    _m(
+        "device_macro_set",
+        (
+            _p("track_ref", "RefPayload"),
+            _p("device_ref", "RefPayload"),
+            _p("macro_index", "int"),
+            _p("value", "float"),
+        ),
+    ),
+    _m("execute_batch", (_p("steps", "list[dict[str, Any]]"),)),
+    _m("fire_clip", (_p("track", "int"), _p("clip", "int"))),
+    _m("fire_scene", (_p("scene", "int"),)),
+    _m("get_browser_categories", (_p("category_type", "str", default="'all'"),)),
+    _m(
+        "get_browser_items",
+        (
+            _p("path", "str"),
+            _p("item_type", "str", default="'all'"),
+            _p("limit", "int", default="100"),
+            _p("offset", "int", default="0"),
+        ),
+    ),
+    _m("get_browser_items_at_path", (_p("path", "str"),)),
+    _m("get_browser_tree", (_p("category_type", "str", default="'all'"),)),
+    _m("get_session_info", (), returns="dict[str, object]"),
+    _m("get_track_info", (_p("track_ref", "RefPayload"),)),
+    _m("list_effect_parameters", (_p("track_ref", "RefPayload"), _p("device_ref", "RefPayload"))),
+    _m("list_standard_effect_keys", (_p("effect_type", "str"),)),
+    _m("list_standard_synth_keys", (_p("synth_type", "str"),)),
+    _m("list_synth_parameters", (_p("track_ref", "RefPayload"), _p("device_ref", "RefPayload"))),
+    _m("master_device_delete", (_p("device_index", "int"),)),
+    _m("master_device_load", (_p("target", "str"), _p("position", "str"))),
+    _m("master_device_move", (_p("device_index", "int"), _p("to_index", "int"))),
+    _m(
+        "master_device_parameter_set",
+        (
+            _p("device_ref", "dict[str, Any]"),
+            _p("parameter_ref", "dict[str, Any]"),
+            _p("value", "float"),
+        ),
+    ),
+    _m("master_device_parameters_list", (_p("device_ref", "dict[str, Any]"),)),
+    _m("master_devices_list", ()),
+    _m("master_effect_keys", (_p("effect_type", "str"),)),
+    _m("master_effect_observe", (_p("effect_type", "str"), _p("device_ref", "dict[str, Any]"))),
+    _m(
+        "master_effect_set",
+        (
+            _p("effect_type", "str"),
+            _p("device_ref", "dict[str, Any]"),
+            _p("parameter_ref", "dict[str, Any]"),
+            _p("value", "float"),
+        ),
+    ),
+    _m("master_info", ()),
+    _m("master_panning_get", ()),
+    _m("master_panning_set", (_p("value", "float"),)),
+    _m("master_volume_get", ()),
+    _m("master_volume_set", (_p("value", "float"),)),
+    _m("mixer_crossfader_get", ()),
+    _m("mixer_crossfader_set", (_p("value", "float"),)),
+    _m("mixer_cue_routing_get", ()),
+    _m("mixer_cue_routing_set", (_p("routing", "str"),)),
+    _m("mixer_cue_volume_get", ()),
+    _m("mixer_cue_volume_set", (_p("value", "float"),)),
+    _m(
+        "observe_effect_parameters", (_p("track_ref", "RefPayload"), _p("device_ref", "RefPayload"))
+    ),
+    _m(
+        "observe_standard_effect_state",
+        (_p("effect_type", "str"), _p("track_ref", "RefPayload"), _p("device_ref", "RefPayload")),
+    ),
+    _m(
+        "observe_standard_synth_state",
+        (_p("synth_type", "str"), _p("track_ref", "RefPayload"), _p("device_ref", "RefPayload")),
+    ),
+    _m("observe_synth_parameters", (_p("track_ref", "RefPayload"), _p("device_ref", "RefPayload"))),
+    _m("ping", (), returns="dict[str, object]"),
+    _m("return_track_mute_get", (_p("return_track", "int"),)),
+    _m("return_track_mute_set", (_p("return_track", "int"), _p("value", "bool"))),
+    _m("return_track_solo_get", (_p("return_track", "int"),)),
+    _m("return_track_solo_set", (_p("return_track", "int"), _p("value", "bool"))),
+    _m("return_track_volume_get", (_p("return_track", "int"),)),
+    _m("return_track_volume_set", (_p("return_track", "int"), _p("value", "float"))),
+    _m("return_tracks_list", ()),
+    _m("scenes_list", ()),
+    _m("scenes_move", (_p("from_index", "int", key="from"), _p("to_index", "int", key="to"))),
+    _m("session_snapshot", (), returns="dict[str, object]"),
+    _m("set_clip_name", (_p("track", "int"), _p("clip", "int"), _p("name", "str"))),
+    _m("set_scene_name", (_p("scene", "int"), _p("name", "str"))),
+    _m("set_tempo", (_p("tempo", "float"),), returns="dict[str, object]"),
+    _m("set_track_name", (_p("track_ref", "RefPayload"), _p("name", "str"))),
+    _m("song_export_audio", (_p("path", "str"),), returns="dict[str, object]"),
+    _m("song_info", (), returns="dict[str, object]"),
+    _m("song_new", (), returns="dict[str, object]"),
+    _m("song_redo", (), returns="dict[str, object]"),
+    _m("song_save", (_p("path", "str"),), returns="dict[str, object]"),
+    _m("song_undo", (), returns="dict[str, object]"),
+    _m("start_playback", (), returns="dict[str, object]"),
+    _m("stop_all_clips", ()),
+    _m("stop_clip", (_p("track", "int"), _p("clip", "int"))),
+    _m("stop_playback", (), returns="dict[str, object]"),
+    _m("track_arm_get", (_p("track_ref", "RefPayload"),)),
+    _m("track_arm_set", (_p("track_ref", "RefPayload"), _p("value", "bool"))),
+    _m("track_mute_get", (_p("track_ref", "RefPayload"),)),
+    _m("track_mute_set", (_p("track_ref", "RefPayload"), _p("value", "bool"))),
+    _m("track_panning_get", (_p("track_ref", "RefPayload"),)),
+    _m("track_panning_set", (_p("track_ref", "RefPayload"), _p("value", "float"))),
+    _m("track_routing_input_get", (_p("track_ref", "RefPayload"),)),
+    _m(
+        "track_routing_input_set",
+        (
+            _p("track_ref", "RefPayload"),
+            _p("routing_type", "str"),
+            _p("routing_channel", "str | None"),
+        ),
+    ),
+    _m("track_routing_output_get", (_p("track_ref", "RefPayload"),)),
+    _m(
+        "track_routing_output_set",
+        (_p("track_ref", "RefPayload"), _p("routing_type", "str"), _p("routing_channel", "str")),
+    ),
+    _m("track_send_get", (_p("track_ref", "RefPayload"), _p("send", "int"))),
+    _m("track_send_set", (_p("track_ref", "RefPayload"), _p("send", "int"), _p("value", "float"))),
+    _m("track_solo_get", (_p("track_ref", "RefPayload"),)),
+    _m("track_solo_set", (_p("track_ref", "RefPayload"), _p("value", "bool"))),
+    _m("track_volume_get", (_p("track_ref", "RefPayload"),)),
+    _m("track_volume_set", (_p("track_ref", "RefPayload"), _p("value", "float"))),
+    _m("tracks_delete", (_p("track", "int"),)),
+    _m("tracks_list", ()),
+    _m("transport_play", (), returns="dict[str, object]"),
+    _m("transport_position_get", (), returns="dict[str, object]"),
+    _m("transport_position_set", (_p("beats", "float"),), returns="dict[str, object]"),
+    _m("transport_rewind", (), returns="dict[str, object]"),
+    _m("transport_stop", (), returns="dict[str, object]"),
+    _m("transport_tempo_get", (), returns="dict[str, object]"),
+    _m("transport_tempo_set", (_p("bpm", "float"),), returns="dict[str, object]"),
+    _m("transport_toggle", (), returns="dict[str, object]"),
+)
+
+
+def _build_client_method_map() -> dict[str, ClientMethodSpec]:
+    by_name: dict[str, ClientMethodSpec] = {}
+    for spec in CLIENT_METHOD_SPECS:
+        if spec.remote_command in by_name:
+            raise AssertionError(
+                f"duplicate client method spec for {spec.remote_command!r} in CLIENT_METHOD_SPECS"
+            )
+        by_name[spec.remote_command] = spec
+    return by_name
+
+
+CLIENT_METHOD_SPEC_BY_NAME: dict[str, ClientMethodSpec] = _build_client_method_map()

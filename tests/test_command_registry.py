@@ -147,3 +147,37 @@ def test_generated_command_families_are_declared_individually() -> None:
     for effect_type in ("eq8", "limiter", "compressor", "utility"):
         for suffix in ("keys", "set", "observe"):
             assert f"master effect {effect_type} {suffix}" in _SIDE_EFFECTS
+
+
+def test_remote_command_spec_map_covers_every_dispatchable_remote_command() -> None:
+    from ableton_cli.command_specs import (
+        _REMOTE_COMMAND_ALIASES,
+        remote_command_names,
+        remote_command_spec_map,
+    )
+
+    assert set(remote_command_spec_map()) == remote_command_names() - _REMOTE_COMMAND_ALIASES
+
+
+def test_remote_command_spec_map_merges_collisions_on_the_safe_side() -> None:
+    from ableton_cli.command_specs import command_spec_map, remote_command_spec_map
+
+    cli_specs = command_spec_map()
+    # `browser load` (write) and `clip notes import-browser` (destructive) both
+    # dispatch load_instrument_or_effect.
+    assert cli_specs["browser load"].side_effect.kind == "write"
+    assert cli_specs["clip notes import-browser"].side_effect.kind == "destructive"
+
+    merged = remote_command_spec_map()["load_instrument_or_effect"].side_effect
+    assert merged.kind == "destructive"
+    assert merged.idempotent is False
+    assert merged.requires_confirmation is True
+
+
+def test_remote_command_spec_map_marks_note_writes_non_idempotent() -> None:
+    from ableton_cli.command_specs import remote_command_spec_map
+
+    specs = remote_command_spec_map()
+
+    assert specs["add_notes_to_clip"].side_effect.idempotent is False
+    assert specs["tracks_list"].side_effect.idempotent is True

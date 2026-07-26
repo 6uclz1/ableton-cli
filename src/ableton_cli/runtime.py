@@ -8,7 +8,8 @@ from typing import Any
 import typer
 
 from .client.ableton_client import AbletonClient
-from .command_specs import CommandSpec, command_spec_map
+from .command_registry import CommandDescriptor
+from .command_specs import command_spec_map
 from .compact import compact_payload
 from .config import Settings
 from .contracts import validate_command_contract
@@ -55,7 +56,7 @@ class RuntimeContext:
         return self._client
 
 
-def _command_spec(command: str) -> CommandSpec:
+def _command_spec(command: str) -> CommandDescriptor:
     return command_spec_map()[command]
 
 

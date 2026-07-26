@@ -7,7 +7,7 @@ from collections.abc import Iterator
 
 import pytest
 
-from ableton_cli.client.transport import TcpJsonlTransport
+from ableton_cli.client.transport import TcpJsonlTransport, socket_timeout_ms
 
 
 class _FakeJsonlServer:
@@ -95,6 +95,31 @@ def test_send_reuses_a_single_connection_across_calls(fake_server: _FakeJsonlSer
     assert first["result"] == {"echo": "ping"}
     assert second["result"] == {"echo": "ping"}
     assert fake_server.accept_count == 1
+
+
+def test_socket_read_deadline_outlives_the_request_deadline() -> None:
+    transport = TcpJsonlTransport(host="127.0.0.1", port=1, timeout_ms=5000)
+
+    assert transport.request_timeout_s == 5.0
+    assert transport.socket_timeout_s > transport.request_timeout_s
+
+
+def test_socket_timeout_is_derived_in_one_place() -> None:
+    transport = TcpJsonlTransport(host="127.0.0.1", port=1, timeout_ms=5000)
+
+    assert transport.socket_timeout_s == socket_timeout_ms(5000) / 1000
+
+
+def test_established_socket_uses_the_grace_extended_deadline(
+    fake_server: _FakeJsonlServer,
+) -> None:
+    transport = TcpJsonlTransport(host="127.0.0.1", port=fake_server.port, timeout_ms=2000)
+    try:
+        transport.send(_request("request-1"))
+        assert transport._sock is not None
+        assert transport._sock.gettimeout() == transport.socket_timeout_s
+    finally:
+        transport.close()
 
 
 def test_close_then_send_opens_a_new_connection(fake_server: _FakeJsonlServer) -> None:

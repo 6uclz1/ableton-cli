@@ -7,10 +7,11 @@ from pathlib import Path
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent
 _COMMAND_SPECS_PATH = _REPO_ROOT / "src" / "ableton_cli" / "command_specs.py"
+_COMMAND_REGISTRY_PATH = _REPO_ROOT / "src" / "ableton_cli" / "command_registry.py"
 
 
-def test_command_specs_module_has_no_static_import_of_commands() -> None:
-    tree = ast.parse(_COMMAND_SPECS_PATH.read_text(encoding="utf-8"))
+def _assert_no_static_import_of_commands(path: Path) -> None:
+    tree = ast.parse(path.read_text(encoding="utf-8"))
     for node in ast.walk(tree):
         if isinstance(node, ast.Import):
             for alias in node.names:
@@ -22,7 +23,18 @@ def test_command_specs_module_has_no_static_import_of_commands() -> None:
             assert module != "commands"
             # relative "from .commands import ..." has module == "commands" and level == 1
             if module == "commands" and node.level:
-                raise AssertionError("command_specs.py must not import ableton_cli.commands")
+                raise AssertionError(f"{path.name} must not import ableton_cli.commands")
+
+
+def test_command_specs_module_has_no_static_import_of_commands() -> None:
+    _assert_no_static_import_of_commands(_COMMAND_SPECS_PATH)
+
+
+def test_command_registry_module_has_no_static_import_of_commands() -> None:
+    # The descriptor table is read by command_specs, so it inherits the same
+    # constraint: importing the commands package here would make the shared
+    # Typer app's initialisation order load-bearing.
+    _assert_no_static_import_of_commands(_COMMAND_REGISTRY_PATH)
 
 
 def test_command_specs_imports_cleanly_with_commands_package_blocked() -> None:

@@ -45,6 +45,20 @@ Everything else about the plan's Phase 2 is unchanged: the table lives in the
 core layer, the generated file is checked in, and CI regenerates it and fails
 on a diff.
 
+### The other generator tools write with the platform's line ending
+
+`tools/update_command_surface_snapshot.py` now passes `newline="\n"` to
+`write_text`, because a byte-level test caught it rewriting every line ending
+when run on Windows. The same latent inconsistency exists in
+`tools/update_public_contract_snapshot.py`, `tools/generate_skill_docs.py` and
+`tools/update_quality_harness_baseline.py`, which all call `write_text` without
+it.
+
+It is currently harmless: `.gitattributes` pins the repo to `eol=lf`, so `git
+diff --exit-code` normalises the difference away and CI stays green. It only
+surfaces if something compares bytes without going through git. Left alone
+here rather than swept into a refactor PR.
+
 ## Observations to revisit after the refactor
 
 ### The plan's command counts were stale

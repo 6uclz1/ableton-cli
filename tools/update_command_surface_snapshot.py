@@ -17,7 +17,15 @@ def main() -> int:
     snapshot_path = repo_root / "tests" / "snapshots" / "command_surface_snapshot.json"
     payload = build_command_surface_snapshot()
     snapshot_path.parent.mkdir(parents=True, exist_ok=True)
-    snapshot_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    # newline="\n" keeps the file byte-identical across platforms: without it
+    # write_text translates to os.linesep, so running this on Windows would
+    # rewrite every line ending and dirty the working tree. .gitattributes
+    # pins the repo to LF, so LF is what belongs on disk everywhere.
+    snapshot_path.write_text(
+        json.dumps(payload, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+        newline="\n",
+    )
     return 0
 
 

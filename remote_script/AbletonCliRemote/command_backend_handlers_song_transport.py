@@ -7,8 +7,10 @@ from .command_backend_contract import CommandBackend
 from .command_backend_validators import (
     _as_bool,
     _insert_index,
+    _invalid_argument,
     _non_empty_string,
     _non_negative_float,
+    _optional_int,
     _panning,
     _tempo,
     _track_index,
@@ -200,6 +202,33 @@ def _handle_return_tracks_list(backend: CommandBackend, _args: dict[str, Any]) -
     return backend.return_tracks_list()
 
 
+def _handle_return_track_create(backend: CommandBackend, _args: dict[str, Any]) -> dict[str, Any]:
+    return backend.return_track_create()
+
+
+def _handle_return_track_delete(backend: CommandBackend, args: dict[str, Any]) -> dict[str, Any]:
+    return_track = _track_index("return_track", args.get("return_track"))
+    return backend.return_track_delete(return_track)
+
+
+def _handle_song_scale_get(backend: CommandBackend, _args: dict[str, Any]) -> dict[str, Any]:
+    return backend.song_scale_get()
+
+
+def _handle_song_scale_set(backend: CommandBackend, args: dict[str, Any]) -> dict[str, Any]:
+    root_note = _optional_int("root_note", args.get("root_note"))
+    raw_name = args.get("scale_name")
+    scale_name = None if raw_name is None else _non_empty_string("scale_name", raw_name)
+    raw_mode = args.get("scale_mode")
+    scale_mode = None if raw_mode is None else _as_bool("scale_mode", raw_mode)
+    if root_note is None and scale_name is None and scale_mode is None:
+        raise _invalid_argument(
+            message="song scale set requires at least one of root_note, scale_name, scale_mode",
+            hint="Pass the scale fields to change.",
+        )
+    return backend.song_scale_set(root_note, scale_name, scale_mode)
+
+
 def _handle_return_track_volume_get(
     backend: CommandBackend,
     args: dict[str, Any],
@@ -367,6 +396,10 @@ SONG_TRANSPORT_HANDLERS: dict[str, Handler] = {
     "track_panning_set": _handle_track_panning_set,
     "track_send_get": _handle_track_send_get,
     "track_send_set": _handle_track_send_set,
+    "return_track_create": _handle_return_track_create,
+    "return_track_delete": _handle_return_track_delete,
+    "song_scale_get": _handle_song_scale_get,
+    "song_scale_set": _handle_song_scale_set,
     "return_tracks_list": _handle_return_tracks_list,
     "return_track_volume_get": _handle_return_track_volume_get,
     "return_track_volume_set": _handle_return_track_volume_set,

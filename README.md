@@ -119,6 +119,14 @@ uv run ableton-cli browser load 0 query:Synths#Operator
 uv run ableton-cli browser load-drum-kit 0 <rack-uri-from-search> --kit-uri <kit-uri-from-search>
 uv run ableton-cli batch run --steps-file ./steps.json
 uv run ableton-cli device parameter set 0.25 --track-index 0 --device-index 0 --parameter-index 0
+uv run ableton-cli device parameters list --track-name Vox --device-name "Auto Shift"
+uv run ableton-cli device parameter set-display -- -18 --track-name Bass --device-name Compressor --parameter-name Threshold
+uv run ableton-cli device parameter select RMS --track-name Bass --device-name Compressor --parameter-name Model
+uv run ableton-cli device sidechain set --type "1-Kick" --channel "Post FX" --track-name Bass --device-name Compressor
+uv run ableton-cli device insert Compressor --track-name Bass
+uv run ableton-cli device preset set 2 --track-name Vox --device-index 0
+uv run ableton-cli return-tracks create
+uv run ableton-cli song scale set --root A --name Minor --mode
 uv run ableton-cli synth find --type wavetable
 uv run ableton-cli synth wavetable keys
 uv run ableton-cli synth wavetable set 0.6 --selected-track --selected-device --parameter-key filter_cutoff

@@ -5,6 +5,7 @@ from typing import Any
 
 from ..command_backend import MAX_BPM, MAX_PANNING, MAX_VOLUME, MIN_BPM, MIN_PANNING, MIN_VOLUME
 from .base import _invalid_argument, _not_supported_by_live_api
+from .routing import apply_routing, routing_state, string_choices
 
 _TRANSPORT_STATE_TIMEOUT_SECONDS = 1.0
 _TRANSPORT_STATE_POLL_INTERVAL_SECONDS = 0.01
@@ -192,55 +193,63 @@ class LiveBackendSongSessionMixin:
         return {"track": track, "name": str(target.name)}
 
 
-class LiveBackendTransportMixerMixin:
-    @staticmethod
-    def _routing_display_name(value: object) -> str:
-        # Live 12 routing targets are RoutingType/RoutingChannel objects whose
-        # str() is an opaque repr; display_name carries the user-facing name.
-        return str(getattr(value, "display_name", value))
+_NOTE_NAMES = ("C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B")
+_SCALE_ATTRIBUTES = ("root_note", "scale_name", "scale_mode", "scale_intervals")
 
-    @classmethod
-    def _string_choices(cls, values: list[object]) -> list[str]:
-        return [cls._routing_display_name(value) for value in values]
 
-    def _require_track_routing_support(
-        self,
-        track: Any,
-        direction: str,
-    ) -> tuple[list[str], list[str]]:
-        types_attr = f"available_{direction}_routing_types"
-        channels_attr = f"available_{direction}_routing_channels"
-        current_type_attr = f"{direction}_routing_type"
-        current_channel_attr = f"{direction}_routing_channel"
-        if not all(
-            hasattr(track, attribute)
-            for attribute in (types_attr, channels_attr, current_type_attr, current_channel_attr)
-        ):
+class LiveBackendSongScaleMixin:
+    """The Set's global scale (Live 12+), which scale-aware devices follow."""
+
+    def _scale_song(self) -> Any:
+        song = self._ctx._song()
+        if not all(hasattr(song, attribute) for attribute in _SCALE_ATTRIBUTES):
             raise _not_supported_by_live_api(
-                message=f"{direction} routing API is not available in Live API",
-                hint=f"Use a Live version exposing track {direction} routing properties.",
+                message="Song scale API is not available in Live API",
+                hint="Use Live 12 or later, which exposes root_note/scale_name/scale_mode.",
             )
-        return (
-            self._string_choices(list(getattr(track, types_attr))),
-            self._string_choices(list(getattr(track, channels_attr))),
-        )
+        return song
 
+    def song_scale_get(self) -> dict[str, Any]:
+        song = self._scale_song()
+        root_note = int(song.root_note)
+        return {
+            "root_note": root_note,
+            "root_name": _NOTE_NAMES[root_note % 12],
+            "scale_name": str(song.scale_name),
+            "scale_mode": bool(song.scale_mode),
+            "scale_intervals": [int(interval) for interval in list(song.scale_intervals)],
+        }
+
+    def song_scale_set(
+        self,
+        root_note: int | None,
+        scale_name: str | None,
+        scale_mode: bool | None,
+    ) -> dict[str, Any]:
+        song = self._scale_song()
+        if root_note is not None and not 0 <= root_note <= 11:
+            raise _invalid_argument(
+                message=f"root_note out of range: {root_note}",
+                hint="Use 0..11 where 0 = C.",
+            )
+        if scale_name is not None:
+            song.scale_name = scale_name
+            if str(song.scale_name) != scale_name:
+                raise _invalid_argument(
+                    message=f"Live did not accept scale name: {scale_name}",
+                    hint="Use a name from Live's Scale chooser exactly (e.g. 'Minor', 'Dorian').",
+                )
+        if root_note is not None:
+            song.root_note = int(root_note)
+        if scale_mode is not None:
+            song.scale_mode = bool(scale_mode)
+        return self.song_scale_get()
+
+
+class LiveBackendTransportMixerMixin:
     def _track_routing_payload(self, track_index: int, direction: str) -> dict[str, Any]:
         track = self._ctx._track_at(track_index)
-        available_types, available_channels = self._require_track_routing_support(track, direction)
-        return {
-            "track": track_index,
-            "current": {
-                "type": self._routing_display_name(getattr(track, f"{direction}_routing_type")),
-                "channel": self._routing_display_name(
-                    getattr(track, f"{direction}_routing_channel")
-                ),
-            },
-            "available": {
-                "types": available_types,
-                "channels": available_channels,
-            },
-        }
+        return {"track": track_index, **routing_state(track, direction, subject="track")}
 
     def _set_track_routing(
         self,
@@ -248,43 +257,16 @@ class LiveBackendTransportMixerMixin:
         track_index: int,
         direction: str,
         routing_type: str,
-        routing_channel: str,
+        routing_channel: str | None,
     ) -> dict[str, Any]:
         track = self._ctx._track_at(track_index)
-        available_types, _ = self._require_track_routing_support(track, direction)
-        if routing_type not in available_types:
-            raise _invalid_argument(
-                message=f"Unsupported {direction} routing type: {routing_type}",
-                hint="Use one of the exact routing types reported by the get command.",
-            )
-        # Assign the Live routing objects themselves; Live rejects plain strings.
-        type_choices = list(getattr(track, f"available_{direction}_routing_types"))
-        setattr(
+        apply_routing(
             track,
-            f"{direction}_routing_type",
-            type_choices[available_types.index(routing_type)],
+            direction,
+            subject="track",
+            routing_type=routing_type,
+            routing_channel=routing_channel,
         )
-        # Valid channels depend on the routing type, so resolve them only after
-        # the type is applied. A None channel keeps Live's auto-selected default.
-        if routing_channel is not None:
-            channel_choices = list(getattr(track, f"available_{direction}_routing_channels"))
-            available_channels = self._string_choices(channel_choices)
-            if routing_channel not in available_channels:
-                raise _invalid_argument(
-                    message=(
-                        f"Unsupported {direction} routing channel for "
-                        f"{routing_type!r}: {routing_channel}"
-                    ),
-                    hint=(
-                        "The routing type was applied; pick a channel from "
-                        f"{available_channels} or omit the channel to keep Live's default."
-                    ),
-                )
-            setattr(
-                track,
-                f"{direction}_routing_channel",
-                channel_choices[available_channels.index(routing_channel)],
-            )
         return self._track_routing_payload(track_index, direction)
 
     def _require_cue_routing_support(self) -> tuple[Any, list[str]]:
@@ -294,7 +276,7 @@ class LiveBackendTransportMixerMixin:
                 message="Cue routing API is not available in Live API",
                 hint="Use a Live version exposing cue routing properties.",
             )
-        available = self._string_choices(list(song.available_cue_routings))
+        available = string_choices(list(song.available_cue_routings))
         return song, available
 
     def _wait_for_transport_state(self, *, expected: bool | None = None) -> bool:
@@ -477,6 +459,42 @@ class LiveBackendTransportMixerMixin:
                 }
             )
         return {"return_tracks": tracks}
+
+    def _song_callable(self, name: str, *, message: str, hint: str) -> Any:
+        method = getattr(self._ctx._song(), name, None)
+        if not callable(method):
+            raise _not_supported_by_live_api(message=message, hint=hint)
+        return method
+
+    def return_track_create(self) -> dict[str, Any]:
+        create = self._song_callable(
+            "create_return_track",
+            message="Song.create_return_track is not available in Live API",
+            hint="Add the return track manually in Ableton Live.",
+        )
+        create()
+        tracks = list(self._ctx._song().return_tracks)
+        index = len(tracks) - 1
+        return {
+            "return_track": index,
+            "name": str(getattr(tracks[index], "name", f"Return {index}")),
+            "return_track_count": len(tracks),
+        }
+
+    def return_track_delete(self, return_track: int) -> dict[str, Any]:
+        target = self._ctx._return_track_at(return_track)
+        delete = self._song_callable(
+            "delete_return_track",
+            message="Song.delete_return_track is not available in Live API",
+            hint="Delete the return track manually in Ableton Live.",
+        )
+        name = str(getattr(target, "name", f"Return {return_track}"))
+        delete(return_track)
+        return {
+            "return_track": return_track,
+            "name": name,
+            "return_track_count": len(list(self._ctx._song().return_tracks)),
+        }
 
     def return_track_volume_get(self, return_track: int) -> dict[str, Any]:
         target = self._ctx._return_track_at(return_track)

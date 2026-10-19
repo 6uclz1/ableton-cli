@@ -31,7 +31,7 @@ _STANDARD_EFFECT_PARAMETER_NAMES: dict[str, dict[str, tuple[str, ...]]] = {
         "ratio": ("Ratio",),
         "attack": ("Attack",),
         "release": ("Release",),
-        "makeup": ("Makeup", "Make-up"),
+        "makeup": ("Makeup", "Make-up", "Output Gain"),
     },
     "auto_filter": {
         "frequency": ("Frequency",),

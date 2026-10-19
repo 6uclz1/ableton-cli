@@ -184,8 +184,28 @@ class _AbletonClientGeneratedMixin:
     def create_scene(self, index: int) -> dict[str, Any]:
         return self._call("create_scene", {"index": index})
 
+    def device_active_get(self, track_ref: RefPayload, device_ref: RefPayload) -> dict[str, Any]:
+        return self._call("device_active_get", {"track_ref": track_ref, "device_ref": device_ref})
+
+    def device_active_set(
+        self, track_ref: RefPayload, device_ref: RefPayload, value: bool
+    ) -> dict[str, Any]:
+        return self._call(
+            "device_active_set", {"track_ref": track_ref, "device_ref": device_ref, "value": value}
+        )
+
     def device_chains_list(self, track_ref: RefPayload, device_ref: RefPayload) -> dict[str, Any]:
         return self._call("device_chains_list", {"track_ref": track_ref, "device_ref": device_ref})
+
+    def device_delete(self, track_ref: RefPayload, device_ref: RefPayload) -> dict[str, Any]:
+        return self._call("device_delete", {"track_ref": track_ref, "device_ref": device_ref})
+
+    def device_insert(
+        self, track_ref: RefPayload, device_name: str, index: int = -1
+    ) -> dict[str, Any]:
+        return self._call(
+            "device_insert", {"track_ref": track_ref, "device_name": device_name, "index": index}
+        )
 
     def device_macro_list(self, track_ref: RefPayload, device_ref: RefPayload) -> dict[str, Any]:
         return self._call("device_macro_list", {"track_ref": track_ref, "device_ref": device_ref})
@@ -200,6 +220,79 @@ class _AbletonClientGeneratedMixin:
                 "device_ref": device_ref,
                 "macro_index": macro_index,
                 "value": value,
+            },
+        )
+
+    def device_move(
+        self, track_ref: RefPayload, device_ref: RefPayload, to_index: int
+    ) -> dict[str, Any]:
+        return self._call(
+            "device_move", {"track_ref": track_ref, "device_ref": device_ref, "to_index": to_index}
+        )
+
+    def device_parameter_display_set(
+        self, track_ref: RefPayload, device_ref: RefPayload, parameter_ref: RefPayload, value: float
+    ) -> dict[str, Any]:
+        return self._call(
+            "device_parameter_display_set",
+            {
+                "track_ref": track_ref,
+                "device_ref": device_ref,
+                "parameter_ref": parameter_ref,
+                "value": value,
+            },
+        )
+
+    def device_parameter_select(
+        self, track_ref: RefPayload, device_ref: RefPayload, parameter_ref: RefPayload, item: str
+    ) -> dict[str, Any]:
+        return self._call(
+            "device_parameter_select",
+            {
+                "track_ref": track_ref,
+                "device_ref": device_ref,
+                "parameter_ref": parameter_ref,
+                "item": item,
+            },
+        )
+
+    def device_parameters_list(
+        self, track_ref: RefPayload, device_ref: RefPayload
+    ) -> dict[str, Any]:
+        return self._call(
+            "device_parameters_list", {"track_ref": track_ref, "device_ref": device_ref}
+        )
+
+    def device_preset_list(self, track_ref: RefPayload, device_ref: RefPayload) -> dict[str, Any]:
+        return self._call("device_preset_list", {"track_ref": track_ref, "device_ref": device_ref})
+
+    def device_preset_set(
+        self, track_ref: RefPayload, device_ref: RefPayload, preset_index: int
+    ) -> dict[str, Any]:
+        return self._call(
+            "device_preset_set",
+            {"track_ref": track_ref, "device_ref": device_ref, "preset_index": preset_index},
+        )
+
+    def device_sidechain_get(self, track_ref: RefPayload, device_ref: RefPayload) -> dict[str, Any]:
+        return self._call(
+            "device_sidechain_get", {"track_ref": track_ref, "device_ref": device_ref}
+        )
+
+    def device_sidechain_set(
+        self,
+        track_ref: RefPayload,
+        device_ref: RefPayload,
+        routing_type: str,
+        routing_channel: str | None,
+    ) -> dict[str, Any]:
+        return self._call(
+            "device_sidechain_set",
+            {
+                "track_ref": track_ref,
+                "device_ref": device_ref,
+                "routing_type": routing_type,
+                "routing_channel": routing_channel,
             },
         )
 
@@ -371,6 +464,12 @@ class _AbletonClientGeneratedMixin:
     def ping(self) -> dict[str, object]:
         return self._call("ping")
 
+    def return_track_create(self) -> dict[str, Any]:
+        return self._call("return_track_create")
+
+    def return_track_delete(self, return_track: int) -> dict[str, Any]:
+        return self._call("return_track_delete", {"return_track": return_track})
+
     def return_track_mute_get(self, return_track: int) -> dict[str, Any]:
         return self._call("return_track_mute_get", {"return_track": return_track})
 
@@ -427,6 +526,17 @@ class _AbletonClientGeneratedMixin:
 
     def song_save(self, path: str) -> dict[str, object]:
         return self._call("song_save", {"path": path})
+
+    def song_scale_get(self) -> dict[str, Any]:
+        return self._call("song_scale_get")
+
+    def song_scale_set(
+        self, root_note: int | None, scale_name: str | None, scale_mode: bool | None
+    ) -> dict[str, Any]:
+        return self._call(
+            "song_scale_set",
+            {"root_note": root_note, "scale_name": scale_name, "scale_mode": scale_mode},
+        )
 
     def song_undo(self) -> dict[str, object]:
         return self._call("song_undo")

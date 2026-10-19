@@ -19,6 +19,7 @@ from .browser_search import LiveBackendBrowserSearchMixin
 from .browser_search_index import LiveBackendBrowserSearchIndexMixin
 from .clip_envelopes import LiveBackendClipEnvelopesMixin
 from .clip_notes import LiveBackendClipNotesMixin
+from .device_control import LiveBackendDeviceControlMixin
 from .devices import (
     LiveBackendDeviceSharedMixin,
     LiveBackendEffectDevicesMixin,
@@ -27,7 +28,11 @@ from .devices import (
 from .devices_racks import LiveBackendDeviceRacksMixin
 from .scenes_arrangement import LiveBackendScenesArrangementMixin
 from .service import LiveBackendService
-from .song_transport import LiveBackendSongSessionMixin, LiveBackendTransportMixerMixin
+from .song_transport import (
+    LiveBackendSongScaleMixin,
+    LiveBackendSongSessionMixin,
+    LiveBackendTransportMixerMixin,
+)
 from .tracks_clips import LiveBackendTracksClipsMixin
 from .tracks_clips_cut_to_drum_rack import LiveBackendTracksCutToDrumRackMixin
 
@@ -35,6 +40,7 @@ from .tracks_clips_cut_to_drum_rack import LiveBackendTracksCutToDrumRackMixin
 class SongTransportService(
     LiveBackendService,
     LiveBackendSongSessionMixin,
+    LiveBackendSongScaleMixin,
     LiveBackendTransportMixerMixin,
 ):
     """Song/session state, transport, mixer, tracks, returns and master."""
@@ -65,8 +71,10 @@ class DevicesService(
     LiveBackendDeviceSharedMixin,
     LiveBackendSynthDevicesMixin,
     LiveBackendEffectDevicesMixin,
+    LiveBackendDeviceControlMixin,
 ):
-    """Device listing/parameters and the standard synth/effect surfaces."""
+    """Device listing/parameters, the standard synth/effect surfaces and generic
+    per-device control (display values, presets, sidechain, insert/delete/move)."""
 
 
 class DeviceRacksService(LiveBackendService, LiveBackendDeviceRacksMixin):

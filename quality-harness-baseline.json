@@ -2,7 +2,7 @@
   "schema_version": 1,
   "summary": {
     "failure_count": 0,
-    "warning_count": 395
+    "warning_count": 428
   },
   "violations": [
     {
@@ -54,10 +54,18 @@
       "severity": "warn"
     },
     {
-      "message": "class.complexity exceeded threshold (202.0 >= 70.0/400.0)",
+      "message": "class.complexity exceeded threshold (72.0 >= 70.0/400.0)",
+      "metric": "complexity",
+      "path": "remote_script/AbletonCliRemote/command_backend_contract.py",
+      "qualname": "_SongTransportBackend",
+      "scope": "class",
+      "severity": "warn"
+    },
+    {
+      "message": "class.complexity exceeded threshold (204.0 >= 70.0/400.0)",
       "metric": "complexity",
       "path": "remote_script/AbletonCliRemote/live_backend_parts/base.py",
-      "qualname": "LiveBackendBaseMixin",
+      "qualname": "LiveBackendContext",
       "scope": "class",
       "severity": "warn"
     },
@@ -86,7 +94,7 @@
       "severity": "warn"
     },
     {
-      "message": "class.complexity exceeded threshold (90.0 >= 70.0/400.0)",
+      "message": "class.complexity exceeded threshold (85.0 >= 70.0/400.0)",
       "metric": "complexity",
       "path": "remote_script/AbletonCliRemote/live_backend_parts/song_transport.py",
       "qualname": "LiveBackendTransportMixerMixin",
@@ -110,15 +118,15 @@
       "severity": "warn"
     },
     {
-      "message": "class.complexity exceeded threshold (86.0 >= 70.0/400.0)",
+      "message": "class.complexity exceeded threshold (139.0 >= 70.0/400.0)",
       "metric": "complexity",
-      "path": "src/ableton_cli/client/_client_tracks_clips.py",
-      "qualname": "_AbletonClientTracksClipsMixin",
+      "path": "src/ableton_cli/client/_client_generated.py",
+      "qualname": "_AbletonClientGeneratedMixin",
       "scope": "class",
       "severity": "warn"
     },
     {
-      "message": "class.estimated_tokens exceeded threshold (1269.0 >= 1200.0/12000.0)",
+      "message": "class.estimated_tokens exceeded threshold (1348.0 >= 1200.0/12000.0)",
       "metric": "estimated_tokens",
       "path": "remote_script/AbletonCliRemote/command_backend_contract.py",
       "qualname": "_SongTransportBackend",
@@ -134,15 +142,23 @@
       "severity": "warn"
     },
     {
-      "message": "class.estimated_tokens exceeded threshold (5073.0 >= 1200.0/12000.0)",
+      "message": "class.estimated_tokens exceeded threshold (1364.0 >= 1200.0/12000.0)",
       "metric": "estimated_tokens",
-      "path": "remote_script/AbletonCliRemote/live_backend_parts/base.py",
-      "qualname": "LiveBackendBaseMixin",
+      "path": "remote_script/AbletonCliRemote/control_surface.py",
+      "qualname": "AbletonCliRemoteSurface",
       "scope": "class",
       "severity": "warn"
     },
     {
-      "message": "class.estimated_tokens exceeded threshold (5035.0 >= 1200.0/12000.0)",
+      "message": "class.estimated_tokens exceeded threshold (5177.0 >= 1200.0/12000.0)",
+      "metric": "estimated_tokens",
+      "path": "remote_script/AbletonCliRemote/live_backend_parts/base.py",
+      "qualname": "LiveBackendContext",
+      "scope": "class",
+      "severity": "warn"
+    },
+    {
+      "message": "class.estimated_tokens exceeded threshold (5059.0 >= 1200.0/12000.0)",
       "metric": "estimated_tokens",
       "path": "remote_script/AbletonCliRemote/live_backend_parts/browser_load.py",
       "qualname": "LiveBackendBrowserLoadMixin",
@@ -150,7 +166,7 @@
       "severity": "warn"
     },
     {
-      "message": "class.estimated_tokens exceeded threshold (2537.0 >= 1200.0/12000.0)",
+      "message": "class.estimated_tokens exceeded threshold (2547.0 >= 1200.0/12000.0)",
       "metric": "estimated_tokens",
       "path": "remote_script/AbletonCliRemote/live_backend_parts/clip_notes.py",
       "qualname": "LiveBackendClipNotesMixin",
@@ -158,7 +174,15 @@
       "severity": "warn"
     },
     {
-      "message": "class.estimated_tokens exceeded threshold (3237.0 >= 1200.0/12000.0)",
+      "message": "class.estimated_tokens exceeded threshold (2166.0 >= 1200.0/12000.0)",
+      "metric": "estimated_tokens",
+      "path": "remote_script/AbletonCliRemote/live_backend_parts/device_control.py",
+      "qualname": "LiveBackendDeviceControlMixin",
+      "scope": "class",
+      "severity": "warn"
+    },
+    {
+      "message": "class.estimated_tokens exceeded threshold (3335.0 >= 1200.0/12000.0)",
       "metric": "estimated_tokens",
       "path": "remote_script/AbletonCliRemote/live_backend_parts/devices.py",
       "qualname": "LiveBackendDeviceSharedMixin",
@@ -166,7 +190,7 @@
       "severity": "warn"
     },
     {
-      "message": "class.estimated_tokens exceeded threshold (4921.0 >= 1200.0/12000.0)",
+      "message": "class.estimated_tokens exceeded threshold (5121.0 >= 1200.0/12000.0)",
       "metric": "estimated_tokens",
       "path": "remote_script/AbletonCliRemote/live_backend_parts/scenes_arrangement.py",
       "qualname": "LiveBackendScenesArrangementMixin",
@@ -174,7 +198,7 @@
       "severity": "warn"
     },
     {
-      "message": "class.estimated_tokens exceeded threshold (1232.0 >= 1200.0/12000.0)",
+      "message": "class.estimated_tokens exceeded threshold (1270.0 >= 1200.0/12000.0)",
       "metric": "estimated_tokens",
       "path": "remote_script/AbletonCliRemote/live_backend_parts/song_transport.py",
       "qualname": "LiveBackendSongSessionMixin",
@@ -182,7 +206,7 @@
       "severity": "warn"
     },
     {
-      "message": "class.estimated_tokens exceeded threshold (3023.0 >= 1200.0/12000.0)",
+      "message": "class.estimated_tokens exceeded threshold (3021.0 >= 1200.0/12000.0)",
       "metric": "estimated_tokens",
       "path": "remote_script/AbletonCliRemote/live_backend_parts/song_transport.py",
       "qualname": "LiveBackendTransportMixerMixin",
@@ -190,7 +214,7 @@
       "severity": "warn"
     },
     {
-      "message": "class.estimated_tokens exceeded threshold (4001.0 >= 1200.0/12000.0)",
+      "message": "class.estimated_tokens exceeded threshold (4057.0 >= 1200.0/12000.0)",
       "metric": "estimated_tokens",
       "path": "remote_script/AbletonCliRemote/live_backend_parts/tracks_clips.py",
       "qualname": "LiveBackendTracksClipsMixin",
@@ -198,7 +222,7 @@
       "severity": "warn"
     },
     {
-      "message": "class.estimated_tokens exceeded threshold (2992.0 >= 1200.0/12000.0)",
+      "message": "class.estimated_tokens exceeded threshold (3046.0 >= 1200.0/12000.0)",
       "metric": "estimated_tokens",
       "path": "remote_script/AbletonCliRemote/live_backend_parts/tracks_clips_cut_to_drum_rack.py",
       "qualname": "LiveBackendTracksCutToDrumRackMixin",
@@ -206,7 +230,7 @@
       "severity": "warn"
     },
     {
-      "message": "class.estimated_tokens exceeded threshold (2076.0 >= 1200.0/12000.0)",
+      "message": "class.estimated_tokens exceeded threshold (1296.0 >= 1200.0/12000.0)",
       "metric": "estimated_tokens",
       "path": "src/ableton_cli/client/_client_browser_scenes.py",
       "qualname": "_AbletonClientBrowserScenesMixin",
@@ -214,7 +238,15 @@
       "severity": "warn"
     },
     {
-      "message": "class.estimated_tokens exceeded threshold (4075.0 >= 1200.0/12000.0)",
+      "message": "class.estimated_tokens exceeded threshold (4979.0 >= 1200.0/12000.0)",
+      "metric": "estimated_tokens",
+      "path": "src/ableton_cli/client/_client_generated.py",
+      "qualname": "_AbletonClientGeneratedMixin",
+      "scope": "class",
+      "severity": "warn"
+    },
+    {
+      "message": "class.estimated_tokens exceeded threshold (1421.0 >= 1200.0/12000.0)",
       "metric": "estimated_tokens",
       "path": "src/ableton_cli/client/_client_tracks_clips.py",
       "qualname": "_AbletonClientTracksClipsMixin",
@@ -222,7 +254,7 @@
       "severity": "warn"
     },
     {
-      "message": "class.god_class_risk exceeded threshold (76.4 >= 70.0/99.0)",
+      "message": "class.god_class_risk exceeded threshold (78.1 >= 70.0/99.0)",
       "metric": "god_class_risk",
       "path": "remote_script/AbletonCliRemote/command_backend_contract.py",
       "qualname": "_SongTransportBackend",
@@ -238,10 +270,10 @@
       "severity": "warn"
     },
     {
-      "message": "class.god_class_risk exceeded threshold (82.0 >= 70.0/99.0)",
+      "message": "class.god_class_risk exceeded threshold (83.3 >= 70.0/99.0)",
       "metric": "god_class_risk",
       "path": "remote_script/AbletonCliRemote/live_backend_parts/base.py",
-      "qualname": "LiveBackendBaseMixin",
+      "qualname": "LiveBackendContext",
       "scope": "class",
       "severity": "warn"
     },
@@ -262,6 +294,14 @@
       "severity": "warn"
     },
     {
+      "message": "class.god_class_risk exceeded threshold (77.4 >= 70.0/99.0)",
+      "metric": "god_class_risk",
+      "path": "remote_script/AbletonCliRemote/live_backend_parts/device_control.py",
+      "qualname": "LiveBackendDeviceControlMixin",
+      "scope": "class",
+      "severity": "warn"
+    },
+    {
       "message": "class.god_class_risk exceeded threshold (83.8 >= 70.0/99.0)",
       "metric": "god_class_risk",
       "path": "remote_script/AbletonCliRemote/live_backend_parts/devices.py",
@@ -278,7 +318,7 @@
       "severity": "warn"
     },
     {
-      "message": "class.god_class_risk exceeded threshold (89.2 >= 70.0/99.0)",
+      "message": "class.god_class_risk exceeded threshold (87.9 >= 70.0/99.0)",
       "metric": "god_class_risk",
       "path": "remote_script/AbletonCliRemote/live_backend_parts/song_transport.py",
       "qualname": "LiveBackendTransportMixerMixin",
@@ -294,18 +334,26 @@
       "severity": "warn"
     },
     {
-      "message": "class.god_class_risk exceeded threshold (77.5 >= 70.0/99.0)",
+      "message": "class.god_class_risk exceeded threshold (97.5 >= 70.0/99.0)",
       "metric": "god_class_risk",
-      "path": "src/ableton_cli/client/_client_browser_scenes.py",
-      "qualname": "_AbletonClientBrowserScenesMixin",
+      "path": "src/ableton_cli/client/_client_generated.py",
+      "qualname": "_AbletonClientGeneratedMixin",
       "scope": "class",
       "severity": "warn"
     },
     {
-      "message": "class.god_class_risk exceeded threshold (91.5 >= 70.0/99.0)",
-      "metric": "god_class_risk",
-      "path": "src/ableton_cli/client/_client_tracks_clips.py",
-      "qualname": "_AbletonClientTracksClipsMixin",
+      "message": "class.nesting exceeded threshold (3.0 >= 3.0/6.0)",
+      "metric": "nesting",
+      "path": "remote_script/AbletonCliRemote/events.py",
+      "qualname": "Subscription",
+      "scope": "class",
+      "severity": "warn"
+    },
+    {
+      "message": "class.nesting exceeded threshold (3.0 >= 3.0/6.0)",
+      "metric": "nesting",
+      "path": "remote_script/AbletonCliRemote/live_backend.py",
+      "qualname": "LiveBackend",
       "scope": "class",
       "severity": "warn"
     },
@@ -313,7 +361,7 @@
       "message": "class.nesting exceeded threshold (4.0 >= 3.0/6.0)",
       "metric": "nesting",
       "path": "remote_script/AbletonCliRemote/live_backend_parts/base.py",
-      "qualname": "LiveBackendBaseMixin",
+      "qualname": "LiveBackendContext",
       "scope": "class",
       "severity": "warn"
     },
@@ -362,6 +410,14 @@
       "metric": "nesting",
       "path": "remote_script/AbletonCliRemote/live_backend_parts/tracks_clips_cut_to_drum_rack.py",
       "qualname": "LiveBackendTracksCutToDrumRackMixin",
+      "scope": "class",
+      "severity": "warn"
+    },
+    {
+      "message": "class.nesting exceeded threshold (3.0 >= 3.0/6.0)",
+      "metric": "nesting",
+      "path": "remote_script/AbletonCliRemote/live_events.py",
+      "qualname": "LiveEventSource",
       "scope": "class",
       "severity": "warn"
     },
@@ -417,7 +473,7 @@
       "message": "duplicate block occurrences exceeded threshold (3 >= 3.0/7.0)",
       "metric": "occurrences",
       "path": "remote_script/AbletonCliRemote/live_backend_parts/base.py",
-      "qualname": "LiveBackendBaseMixin._scene_at",
+      "qualname": "LiveBackendContext._scene_at",
       "scope": "duplicates",
       "severity": "warn"
     },
@@ -434,14 +490,6 @@
       "metric": "occurrences",
       "path": "remote_script/AbletonCliRemote/live_backend_parts/song_transport.py",
       "qualname": "LiveBackendTransportMixerMixin.track_volume_set",
-      "scope": "duplicates",
-      "severity": "warn"
-    },
-    {
-      "message": "duplicate block occurrences exceeded threshold (3 >= 3.0/7.0)",
-      "metric": "occurrences",
-      "path": "src/ableton_cli/client/_client_browser_scenes.py",
-      "qualname": "_AbletonClientBrowserScenesMixin.arrangement_clip_marker_set",
       "scope": "duplicates",
       "severity": "warn"
     },
@@ -466,6 +514,14 @@
       "metric": "occurrences",
       "path": "src/ableton_cli/client/_client_devices.py",
       "qualname": "_AbletonClientDevicesMixin.set_device_parameter",
+      "scope": "duplicates",
+      "severity": "warn"
+    },
+    {
+      "message": "duplicate block occurrences exceeded threshold (3 >= 3.0/7.0)",
+      "metric": "occurrences",
+      "path": "src/ableton_cli/client/_client_generated.py",
+      "qualname": "_AbletonClientGeneratedMixin.arrangement_clip_marker_set",
       "scope": "duplicates",
       "severity": "warn"
     },
@@ -510,6 +566,14 @@
       "severity": "warn"
     },
     {
+      "message": "duplicate block occurrences exceeded threshold (5 >= 3.0/7.0)",
+      "metric": "occurrences",
+      "path": "src/ableton_cli/commands/device.py",
+      "qualname": "device_parameters_list",
+      "scope": "duplicates",
+      "severity": "warn"
+    },
+    {
       "message": "duplicate block occurrences exceeded threshold (3 >= 3.0/7.0)",
       "metric": "occurrences",
       "path": "src/ableton_cli/commands/remix.py",
@@ -542,9 +606,17 @@
       "severity": "warn"
     },
     {
-      "message": "file.estimated_tokens exceeded threshold (4324.0 >= 3000.0/12000.0)",
+      "message": "file.estimated_tokens exceeded threshold (4797.0 >= 3000.0/12000.0)",
       "metric": "estimated_tokens",
       "path": "remote_script/AbletonCliRemote/command_backend_contract.py",
+      "qualname": null,
+      "scope": "file",
+      "severity": "warn"
+    },
+    {
+      "message": "file.estimated_tokens exceeded threshold (3105.0 >= 3000.0/12000.0)",
+      "metric": "estimated_tokens",
+      "path": "remote_script/AbletonCliRemote/command_backend_handlers_song_transport.py",
       "qualname": null,
       "scope": "file",
       "severity": "warn"
@@ -566,7 +638,7 @@
       "severity": "warn"
     },
     {
-      "message": "file.estimated_tokens exceeded threshold (5239.0 >= 3000.0/12000.0)",
+      "message": "file.estimated_tokens exceeded threshold (5343.0 >= 3000.0/12000.0)",
       "metric": "estimated_tokens",
       "path": "remote_script/AbletonCliRemote/live_backend_parts/base.py",
       "qualname": null,
@@ -574,7 +646,7 @@
       "severity": "warn"
     },
     {
-      "message": "file.estimated_tokens exceeded threshold (5098.0 >= 3000.0/12000.0)",
+      "message": "file.estimated_tokens exceeded threshold (5122.0 >= 3000.0/12000.0)",
       "metric": "estimated_tokens",
       "path": "remote_script/AbletonCliRemote/live_backend_parts/browser_load.py",
       "qualname": null,
@@ -582,7 +654,7 @@
       "severity": "warn"
     },
     {
-      "message": "file.estimated_tokens exceeded threshold (4375.0 >= 3000.0/12000.0)",
+      "message": "file.estimated_tokens exceeded threshold (4501.0 >= 3000.0/12000.0)",
       "metric": "estimated_tokens",
       "path": "remote_script/AbletonCliRemote/live_backend_parts/devices.py",
       "qualname": null,
@@ -590,7 +662,7 @@
       "severity": "warn"
     },
     {
-      "message": "file.estimated_tokens exceeded threshold (4944.0 >= 3000.0/12000.0)",
+      "message": "file.estimated_tokens exceeded threshold (5144.0 >= 3000.0/12000.0)",
       "metric": "estimated_tokens",
       "path": "remote_script/AbletonCliRemote/live_backend_parts/scenes_arrangement.py",
       "qualname": null,
@@ -598,7 +670,7 @@
       "severity": "warn"
     },
     {
-      "message": "file.estimated_tokens exceeded threshold (4294.0 >= 3000.0/12000.0)",
+      "message": "file.estimated_tokens exceeded threshold (4652.0 >= 3000.0/12000.0)",
       "metric": "estimated_tokens",
       "path": "remote_script/AbletonCliRemote/live_backend_parts/song_transport.py",
       "qualname": null,
@@ -606,7 +678,7 @@
       "severity": "warn"
     },
     {
-      "message": "file.estimated_tokens exceeded threshold (4024.0 >= 3000.0/12000.0)",
+      "message": "file.estimated_tokens exceeded threshold (4080.0 >= 3000.0/12000.0)",
       "metric": "estimated_tokens",
       "path": "remote_script/AbletonCliRemote/live_backend_parts/tracks_clips.py",
       "qualname": null,
@@ -614,7 +686,7 @@
       "severity": "warn"
     },
     {
-      "message": "file.estimated_tokens exceeded threshold (3017.0 >= 3000.0/12000.0)",
+      "message": "file.estimated_tokens exceeded threshold (3071.0 >= 3000.0/12000.0)",
       "metric": "estimated_tokens",
       "path": "remote_script/AbletonCliRemote/live_backend_parts/tracks_clips_cut_to_drum_rack.py",
       "qualname": null,
@@ -622,17 +694,33 @@
       "severity": "warn"
     },
     {
-      "message": "file.estimated_tokens exceeded threshold (4089.0 >= 3000.0/12000.0)",
+      "message": "file.estimated_tokens exceeded threshold (4999.0 >= 3000.0/12000.0)",
       "metric": "estimated_tokens",
-      "path": "src/ableton_cli/client/_client_tracks_clips.py",
+      "path": "src/ableton_cli/client/_client_generated.py",
       "qualname": null,
       "scope": "file",
       "severity": "warn"
     },
     {
-      "message": "file.estimated_tokens exceeded threshold (3205.0 >= 3000.0/12000.0)",
+      "message": "file.estimated_tokens exceeded threshold (5815.0 >= 3000.0/12000.0)",
+      "metric": "estimated_tokens",
+      "path": "src/ableton_cli/command_registry.py",
+      "qualname": null,
+      "scope": "file",
+      "severity": "warn"
+    },
+    {
+      "message": "file.estimated_tokens exceeded threshold (3319.0 >= 3000.0/12000.0)",
       "metric": "estimated_tokens",
       "path": "src/ableton_cli/commands/batch.py",
+      "qualname": null,
+      "scope": "file",
+      "severity": "warn"
+    },
+    {
+      "message": "file.estimated_tokens exceeded threshold (4143.0 >= 3000.0/12000.0)",
+      "metric": "estimated_tokens",
+      "path": "src/ableton_cli/commands/device.py",
       "qualname": null,
       "scope": "file",
       "severity": "warn"
@@ -969,7 +1057,39 @@
       "message": "function.args exceeded threshold (11.0 >= 8.0/21.0)",
       "metric": "args",
       "path": "src/ableton_cli/commands/device.py",
+      "qualname": "device_active_get",
+      "scope": "function",
+      "severity": "warn"
+    },
+    {
+      "message": "function.args exceeded threshold (12.0 >= 8.0/21.0)",
+      "metric": "args",
+      "path": "src/ableton_cli/commands/device.py",
+      "qualname": "device_active_set",
+      "scope": "function",
+      "severity": "warn"
+    },
+    {
+      "message": "function.args exceeded threshold (11.0 >= 8.0/21.0)",
+      "metric": "args",
+      "path": "src/ableton_cli/commands/device.py",
       "qualname": "device_chains_list",
+      "scope": "function",
+      "severity": "warn"
+    },
+    {
+      "message": "function.args exceeded threshold (11.0 >= 8.0/21.0)",
+      "metric": "args",
+      "path": "src/ableton_cli/commands/device.py",
+      "qualname": "device_delete",
+      "scope": "function",
+      "severity": "warn"
+    },
+    {
+      "message": "function.args exceeded threshold (8.0 >= 8.0/21.0)",
+      "metric": "args",
+      "path": "src/ableton_cli/commands/device.py",
+      "qualname": "device_insert",
       "scope": "function",
       "severity": "warn"
     },
@@ -986,6 +1106,70 @@
       "metric": "args",
       "path": "src/ableton_cli/commands/device.py",
       "qualname": "device_macro_set",
+      "scope": "function",
+      "severity": "warn"
+    },
+    {
+      "message": "function.args exceeded threshold (12.0 >= 8.0/21.0)",
+      "metric": "args",
+      "path": "src/ableton_cli/commands/device.py",
+      "qualname": "device_move",
+      "scope": "function",
+      "severity": "warn"
+    },
+    {
+      "message": "function.args exceeded threshold (17.0 >= 8.0/21.0)",
+      "metric": "args",
+      "path": "src/ableton_cli/commands/device.py",
+      "qualname": "device_parameter_select",
+      "scope": "function",
+      "severity": "warn"
+    },
+    {
+      "message": "function.args exceeded threshold (17.0 >= 8.0/21.0)",
+      "metric": "args",
+      "path": "src/ableton_cli/commands/device.py",
+      "qualname": "device_parameter_set_display",
+      "scope": "function",
+      "severity": "warn"
+    },
+    {
+      "message": "function.args exceeded threshold (11.0 >= 8.0/21.0)",
+      "metric": "args",
+      "path": "src/ableton_cli/commands/device.py",
+      "qualname": "device_parameters_list",
+      "scope": "function",
+      "severity": "warn"
+    },
+    {
+      "message": "function.args exceeded threshold (11.0 >= 8.0/21.0)",
+      "metric": "args",
+      "path": "src/ableton_cli/commands/device.py",
+      "qualname": "device_preset_list",
+      "scope": "function",
+      "severity": "warn"
+    },
+    {
+      "message": "function.args exceeded threshold (12.0 >= 8.0/21.0)",
+      "metric": "args",
+      "path": "src/ableton_cli/commands/device.py",
+      "qualname": "device_preset_set",
+      "scope": "function",
+      "severity": "warn"
+    },
+    {
+      "message": "function.args exceeded threshold (11.0 >= 8.0/21.0)",
+      "metric": "args",
+      "path": "src/ableton_cli/commands/device.py",
+      "qualname": "device_sidechain_get",
+      "scope": "function",
+      "severity": "warn"
+    },
+    {
+      "message": "function.args exceeded threshold (13.0 >= 8.0/21.0)",
+      "metric": "args",
+      "path": "src/ableton_cli/commands/device.py",
+      "qualname": "device_sidechain_set",
       "scope": "function",
       "severity": "warn"
     },
@@ -1206,10 +1390,26 @@
       "severity": "warn"
     },
     {
+      "message": "function.complexity exceeded threshold (10.0 >= 10.0/35.0)",
+      "metric": "complexity",
+      "path": "remote_script/AbletonCliRemote/control_surface.py",
+      "qualname": "AbletonCliRemoteSurface._drain_requests",
+      "scope": "function",
+      "severity": "warn"
+    },
+    {
+      "message": "function.complexity exceeded threshold (11.0 >= 10.0/35.0)",
+      "metric": "complexity",
+      "path": "remote_script/AbletonCliRemote/control_surface.py",
+      "qualname": "AbletonCliRemoteSurface._subscribe_from_server_thread",
+      "scope": "function",
+      "severity": "warn"
+    },
+    {
       "message": "function.complexity exceeded threshold (13.0 >= 10.0/35.0)",
       "metric": "complexity",
       "path": "remote_script/AbletonCliRemote/live_backend_parts/base.py",
-      "qualname": "LiveBackendBaseMixin._device_at",
+      "qualname": "LiveBackendContext._device_at",
       "scope": "function",
       "severity": "warn"
     },
@@ -1217,7 +1417,7 @@
       "message": "function.complexity exceeded threshold (11.0 >= 10.0/35.0)",
       "metric": "complexity",
       "path": "remote_script/AbletonCliRemote/live_backend_parts/base.py",
-      "qualname": "LiveBackendBaseMixin.resolve_parameter_ref",
+      "qualname": "LiveBackendContext.resolve_parameter_ref",
       "scope": "function",
       "severity": "warn"
     },
@@ -1298,6 +1498,14 @@
       "metric": "complexity",
       "path": "remote_script/AbletonCliRemote/live_backend_parts/clip_notes.py",
       "qualname": "LiveBackendClipNotesMixin.update_clip_notes",
+      "scope": "function",
+      "severity": "warn"
+    },
+    {
+      "message": "function.complexity exceeded threshold (10.0 >= 10.0/35.0)",
+      "metric": "complexity",
+      "path": "remote_script/AbletonCliRemote/live_backend_parts/device_control.py",
+      "qualname": "LiveBackendDeviceControlMixin.device_insert",
       "scope": "function",
       "severity": "warn"
     },
@@ -1446,14 +1654,6 @@
       "severity": "warn"
     },
     {
-      "message": "function.complexity exceeded threshold (12.0 >= 10.0/35.0)",
-      "metric": "complexity",
-      "path": "src/ableton_cli/command_specs.py",
-      "qualname": "_remote_command_name",
-      "scope": "function",
-      "severity": "warn"
-    },
-    {
       "message": "function.complexity exceeded threshold (11.0 >= 10.0/35.0)",
       "metric": "complexity",
       "path": "src/ableton_cli/commands/_validation.py",
@@ -1506,6 +1706,14 @@
       "metric": "complexity",
       "path": "src/ableton_cli/commands/clip/_parsers.py",
       "qualname": "parse_arrangement_scene_durations",
+      "scope": "function",
+      "severity": "warn"
+    },
+    {
+      "message": "function.complexity exceeded threshold (11.0 >= 10.0/35.0)",
+      "metric": "complexity",
+      "path": "src/ableton_cli/commands/session.py",
+      "qualname": "session_events",
       "scope": "function",
       "severity": "warn"
     },
@@ -1702,7 +1910,7 @@
       "severity": "warn"
     },
     {
-      "message": "function.estimated_tokens exceeded threshold (321.0 >= 260.0/950.0)",
+      "message": "function.estimated_tokens exceeded threshold (275.0 >= 260.0/950.0)",
       "metric": "estimated_tokens",
       "path": "remote_script/AbletonCliRemote/control_surface.py",
       "qualname": "AbletonCliRemoteSurface._execute_command_from_server_thread",
@@ -1713,12 +1921,12 @@
       "message": "function.estimated_tokens exceeded threshold (318.0 >= 260.0/950.0)",
       "metric": "estimated_tokens",
       "path": "remote_script/AbletonCliRemote/live_backend_parts/base.py",
-      "qualname": "LiveBackendBaseMixin.resolve_parameter_ref",
+      "qualname": "LiveBackendContext.resolve_parameter_ref",
       "scope": "function",
       "severity": "warn"
     },
     {
-      "message": "function.estimated_tokens exceeded threshold (478.0 >= 260.0/950.0)",
+      "message": "function.estimated_tokens exceeded threshold (480.0 >= 260.0/950.0)",
       "metric": "estimated_tokens",
       "path": "remote_script/AbletonCliRemote/live_backend_parts/browser_load.py",
       "qualname": "LiveBackendBrowserLoadMixin._load_midi_clip_to_temporary_track",
@@ -1750,7 +1958,7 @@
       "severity": "warn"
     },
     {
-      "message": "function.estimated_tokens exceeded threshold (764.0 >= 260.0/950.0)",
+      "message": "function.estimated_tokens exceeded threshold (766.0 >= 260.0/950.0)",
       "metric": "estimated_tokens",
       "path": "remote_script/AbletonCliRemote/live_backend_parts/browser_load.py",
       "qualname": "LiveBackendBrowserLoadMixin.load_instrument_or_effect",
@@ -1766,7 +1974,7 @@
       "severity": "warn"
     },
     {
-      "message": "function.estimated_tokens exceeded threshold (312.0 >= 260.0/950.0)",
+      "message": "function.estimated_tokens exceeded threshold (314.0 >= 260.0/950.0)",
       "metric": "estimated_tokens",
       "path": "remote_script/AbletonCliRemote/live_backend_parts/clip_notes.py",
       "qualname": "LiveBackendClipNotesMixin._transform_filtered_clip_notes",
@@ -1774,7 +1982,15 @@
       "severity": "warn"
     },
     {
-      "message": "function.estimated_tokens exceeded threshold (305.0 >= 260.0/950.0)",
+      "message": "function.estimated_tokens exceeded threshold (260.0 >= 260.0/950.0)",
+      "metric": "estimated_tokens",
+      "path": "remote_script/AbletonCliRemote/live_backend_parts/devices.py",
+      "qualname": "LiveBackendDeviceSharedMixin._resolve_master_parameter_ref",
+      "scope": "function",
+      "severity": "warn"
+    },
+    {
+      "message": "function.estimated_tokens exceeded threshold (319.0 >= 260.0/950.0)",
       "metric": "estimated_tokens",
       "path": "remote_script/AbletonCliRemote/live_backend_parts/devices.py",
       "qualname": "LiveBackendDeviceSharedMixin._set_parameter_safe",
@@ -1782,7 +1998,7 @@
       "severity": "warn"
     },
     {
-      "message": "function.estimated_tokens exceeded threshold (288.0 >= 260.0/950.0)",
+      "message": "function.estimated_tokens exceeded threshold (332.0 >= 260.0/950.0)",
       "metric": "estimated_tokens",
       "path": "remote_script/AbletonCliRemote/live_backend_parts/devices.py",
       "qualname": "LiveBackendDeviceSharedMixin.master_device_load",
@@ -1790,7 +2006,7 @@
       "severity": "warn"
     },
     {
-      "message": "function.estimated_tokens exceeded threshold (595.0 >= 260.0/950.0)",
+      "message": "function.estimated_tokens exceeded threshold (605.0 >= 260.0/950.0)",
       "metric": "estimated_tokens",
       "path": "remote_script/AbletonCliRemote/live_backend_parts/scenes_arrangement.py",
       "qualname": "LiveBackendScenesArrangementMixin.arrangement_clip_create",
@@ -1798,7 +2014,7 @@
       "severity": "warn"
     },
     {
-      "message": "function.estimated_tokens exceeded threshold (406.0 >= 260.0/950.0)",
+      "message": "function.estimated_tokens exceeded threshold (412.0 >= 260.0/950.0)",
       "metric": "estimated_tokens",
       "path": "remote_script/AbletonCliRemote/live_backend_parts/scenes_arrangement.py",
       "qualname": "LiveBackendScenesArrangementMixin.arrangement_clip_delete",
@@ -1806,7 +2022,7 @@
       "severity": "warn"
     },
     {
-      "message": "function.estimated_tokens exceeded threshold (346.0 >= 260.0/950.0)",
+      "message": "function.estimated_tokens exceeded threshold (398.0 >= 260.0/950.0)",
       "metric": "estimated_tokens",
       "path": "remote_script/AbletonCliRemote/live_backend_parts/scenes_arrangement.py",
       "qualname": "LiveBackendScenesArrangementMixin.arrangement_clip_notes_import_browser",
@@ -1814,7 +2030,7 @@
       "severity": "warn"
     },
     {
-      "message": "function.estimated_tokens exceeded threshold (278.0 >= 260.0/950.0)",
+      "message": "function.estimated_tokens exceeded threshold (282.0 >= 260.0/950.0)",
       "metric": "estimated_tokens",
       "path": "remote_script/AbletonCliRemote/live_backend_parts/scenes_arrangement.py",
       "qualname": "LiveBackendScenesArrangementMixin.arrangement_from_session",
@@ -1822,7 +2038,7 @@
       "severity": "warn"
     },
     {
-      "message": "function.estimated_tokens exceeded threshold (299.0 >= 260.0/950.0)",
+      "message": "function.estimated_tokens exceeded threshold (307.0 >= 260.0/950.0)",
       "metric": "estimated_tokens",
       "path": "remote_script/AbletonCliRemote/live_backend_parts/song_transport.py",
       "qualname": "LiveBackendSongSessionMixin.get_track_info",
@@ -1838,7 +2054,7 @@
       "severity": "warn"
     },
     {
-      "message": "function.estimated_tokens exceeded threshold (288.0 >= 260.0/950.0)",
+      "message": "function.estimated_tokens exceeded threshold (300.0 >= 260.0/950.0)",
       "metric": "estimated_tokens",
       "path": "remote_script/AbletonCliRemote/live_backend_parts/tracks_clips.py",
       "qualname": "LiveBackendTracksClipsMixin._clip_props_payload",
@@ -1846,7 +2062,7 @@
       "severity": "warn"
     },
     {
-      "message": "function.estimated_tokens exceeded threshold (395.0 >= 260.0/950.0)",
+      "message": "function.estimated_tokens exceeded threshold (403.0 >= 260.0/950.0)",
       "metric": "estimated_tokens",
       "path": "remote_script/AbletonCliRemote/live_backend_parts/tracks_clips.py",
       "qualname": "LiveBackendTracksClipsMixin.clip_duplicate",
@@ -1854,7 +2070,7 @@
       "severity": "warn"
     },
     {
-      "message": "function.estimated_tokens exceeded threshold (304.0 >= 260.0/950.0)",
+      "message": "function.estimated_tokens exceeded threshold (312.0 >= 260.0/950.0)",
       "metric": "estimated_tokens",
       "path": "remote_script/AbletonCliRemote/live_backend_parts/tracks_clips_cut_to_drum_rack.py",
       "qualname": "LiveBackendTracksCutToDrumRackMixin._create_trigger_clip_for_cut",
@@ -1870,7 +2086,7 @@
       "severity": "warn"
     },
     {
-      "message": "function.estimated_tokens exceeded threshold (310.0 >= 260.0/950.0)",
+      "message": "function.estimated_tokens exceeded threshold (340.0 >= 260.0/950.0)",
       "metric": "estimated_tokens",
       "path": "remote_script/AbletonCliRemote/live_backend_parts/tracks_clips_cut_to_drum_rack.py",
       "qualname": "LiveBackendTracksCutToDrumRackMixin._resolve_browser_audio_source",
@@ -1878,7 +2094,7 @@
       "severity": "warn"
     },
     {
-      "message": "function.estimated_tokens exceeded threshold (277.0 >= 260.0/950.0)",
+      "message": "function.estimated_tokens exceeded threshold (279.0 >= 260.0/950.0)",
       "metric": "estimated_tokens",
       "path": "remote_script/AbletonCliRemote/live_backend_parts/tracks_clips_cut_to_drum_rack.py",
       "qualname": "LiveBackendTracksCutToDrumRackMixin._resolve_session_audio_source",
@@ -1894,7 +2110,7 @@
       "severity": "warn"
     },
     {
-      "message": "function.estimated_tokens exceeded threshold (314.0 >= 260.0/950.0)",
+      "message": "function.estimated_tokens exceeded threshold (330.0 >= 260.0/950.0)",
       "metric": "estimated_tokens",
       "path": "remote_script/AbletonCliRemote/server.py",
       "qualname": "_parse_command_request",
@@ -1986,6 +2202,14 @@
       "metric": "estimated_tokens",
       "path": "src/ableton_cli/ci_summary.py",
       "qualname": "_parse_quality_violation",
+      "scope": "function",
+      "severity": "warn"
+    },
+    {
+      "message": "function.estimated_tokens exceeded threshold (281.0 >= 260.0/950.0)",
+      "metric": "estimated_tokens",
+      "path": "src/ableton_cli/client/events.py",
+      "qualname": "EventStream.open",
       "scope": "function",
       "severity": "warn"
     },
@@ -2090,6 +2314,14 @@
       "metric": "estimated_tokens",
       "path": "src/ableton_cli/commands/_track_send_commands.py",
       "qualname": "register_commands",
+      "scope": "function",
+      "severity": "warn"
+    },
+    {
+      "message": "function.estimated_tokens exceeded threshold (279.0 >= 260.0/950.0)",
+      "metric": "estimated_tokens",
+      "path": "src/ableton_cli/commands/batch.py",
+      "qualname": "_execute_step",
       "scope": "function",
       "severity": "warn"
     },
@@ -2354,6 +2586,14 @@
       "metric": "estimated_tokens",
       "path": "src/ableton_cli/commands/session.py",
       "qualname": "session_capture",
+      "scope": "function",
+      "severity": "warn"
+    },
+    {
+      "message": "function.estimated_tokens exceeded threshold (283.0 >= 260.0/950.0)",
+      "metric": "estimated_tokens",
+      "path": "src/ableton_cli/commands/session.py",
+      "qualname": "session_events",
       "scope": "function",
       "severity": "warn"
     },
@@ -2648,8 +2888,24 @@
     {
       "message": "function.nesting exceeded threshold (3.0 >= 3.0/6.0)",
       "metric": "nesting",
+      "path": "remote_script/AbletonCliRemote/events.py",
+      "qualname": "Subscription.offer",
+      "scope": "function",
+      "severity": "warn"
+    },
+    {
+      "message": "function.nesting exceeded threshold (3.0 >= 3.0/6.0)",
+      "metric": "nesting",
+      "path": "remote_script/AbletonCliRemote/live_backend.py",
+      "qualname": "LiveBackend._bind_command_surface",
+      "scope": "function",
+      "severity": "warn"
+    },
+    {
+      "message": "function.nesting exceeded threshold (3.0 >= 3.0/6.0)",
+      "metric": "nesting",
       "path": "remote_script/AbletonCliRemote/live_backend_parts/base.py",
-      "qualname": "LiveBackendBaseMixin._device_locator",
+      "qualname": "LiveBackendContext._device_locator",
       "scope": "function",
       "severity": "warn"
     },
@@ -2657,7 +2913,7 @@
       "message": "function.nesting exceeded threshold (4.0 >= 3.0/6.0)",
       "metric": "nesting",
       "path": "remote_script/AbletonCliRemote/live_backend_parts/base.py",
-      "qualname": "LiveBackendBaseMixin._parameter_locator",
+      "qualname": "LiveBackendContext._parameter_locator",
       "scope": "function",
       "severity": "warn"
     },
@@ -2665,7 +2921,7 @@
       "message": "function.nesting exceeded threshold (3.0 >= 3.0/6.0)",
       "metric": "nesting",
       "path": "remote_script/AbletonCliRemote/live_backend_parts/base.py",
-      "qualname": "LiveBackendBaseMixin.resolve_device_ref",
+      "qualname": "LiveBackendContext.resolve_device_ref",
       "scope": "function",
       "severity": "warn"
     },
@@ -2673,7 +2929,7 @@
       "message": "function.nesting exceeded threshold (3.0 >= 3.0/6.0)",
       "metric": "nesting",
       "path": "remote_script/AbletonCliRemote/live_backend_parts/base.py",
-      "qualname": "LiveBackendBaseMixin.resolve_parameter_ref",
+      "qualname": "LiveBackendContext.resolve_parameter_ref",
       "scope": "function",
       "severity": "warn"
     },
@@ -2681,7 +2937,7 @@
       "message": "function.nesting exceeded threshold (3.0 >= 3.0/6.0)",
       "metric": "nesting",
       "path": "remote_script/AbletonCliRemote/live_backend_parts/base.py",
-      "qualname": "LiveBackendBaseMixin.resolve_track_ref",
+      "qualname": "LiveBackendContext.resolve_track_ref",
       "scope": "function",
       "severity": "warn"
     },
@@ -2786,6 +3042,14 @@
       "metric": "nesting",
       "path": "remote_script/AbletonCliRemote/live_backend_parts/tracks_clips_cut_to_drum_rack.py",
       "qualname": "LiveBackendTracksCutToDrumRackMixin.clip_cut_to_drum_rack",
+      "scope": "function",
+      "severity": "warn"
+    },
+    {
+      "message": "function.nesting exceeded threshold (3.0 >= 3.0/6.0)",
+      "metric": "nesting",
+      "path": "remote_script/AbletonCliRemote/live_events.py",
+      "qualname": "LiveEventSource.detach",
       "scope": "function",
       "severity": "warn"
     },

@@ -47,17 +47,18 @@ UNSUPPORTED_OPERATIONS: dict[str, UnsupportedOperation] = {
         ),
     ),
     "remix setup-returns": UnsupportedOperation(
-        reason="the Remote Script cannot create return tracks",
+        reason="return-track effects need browser targets discovered at run time",
         hint=(
-            "Add the return tracks in Live, then inspect them with "
-            "'return-tracks list' and set levels with 'return-track volume set'."
+            "Create returns with 'return-tracks create', load effects onto them in Live, "
+            "then set levels with 'return-track volume set' and 'track send set'."
         ),
     ),
     "remix setup-sidechain": UnsupportedOperation(
-        reason="sidechain routing is not exposed to Remote Scripts",
+        reason="the remix plan does not identify the trigger and target tracks",
         hint=(
-            "Route the sidechain in Live's compressor, then automate it with "
-            "'device parameter set' or 'clip envelope set'."
+            "Insert a Compressor on the target track, route it with "
+            "'device sidechain set --type <source>', then dial it in with "
+            "'device parameter set-display'."
         ),
     ),
     "remix device-chain apply": UnsupportedOperation(

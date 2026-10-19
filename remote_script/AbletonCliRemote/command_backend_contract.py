@@ -53,6 +53,19 @@ class CommandError(Exception):
 
 
 class _SongTransportBackend(Protocol):
+    def return_track_create(self) -> dict[str, Any]: ...
+
+    def return_track_delete(self, return_track: int) -> dict[str, Any]: ...
+
+    def song_scale_get(self) -> dict[str, Any]: ...
+
+    def song_scale_set(
+        self,
+        root_note: int | None,
+        scale_name: str | None,
+        scale_mode: bool | None,
+    ) -> dict[str, Any]: ...
+
     def ping_info(self) -> dict[str, Any]: ...
 
     def song_info(self) -> dict[str, Any]: ...
@@ -707,6 +720,58 @@ class _DeviceRacksBackend(Protocol):
     ) -> dict[str, Any]: ...
 
 
+class _DeviceControlBackend(Protocol):
+    def device_parameters_list(
+        self, track: int, device: int | tuple[int, ...]
+    ) -> dict[str, Any]: ...
+
+    def device_parameter_select(
+        self,
+        track: int,
+        device: int | tuple[int, ...],
+        parameter: int,
+        item: str,
+    ) -> dict[str, Any]: ...
+
+    def device_parameter_display_set(
+        self,
+        track: int,
+        device: int | tuple[int, ...],
+        parameter: int,
+        value: float,
+    ) -> dict[str, Any]: ...
+
+    def device_active_get(self, track: int, device: int | tuple[int, ...]) -> dict[str, Any]: ...
+
+    def device_active_set(
+        self, track: int, device: int | tuple[int, ...], value: bool
+    ) -> dict[str, Any]: ...
+
+    def device_preset_list(self, track: int, device: int | tuple[int, ...]) -> dict[str, Any]: ...
+
+    def device_preset_set(
+        self, track: int, device: int | tuple[int, ...], preset_index: int
+    ) -> dict[str, Any]: ...
+
+    def device_sidechain_get(self, track: int, device: int | tuple[int, ...]) -> dict[str, Any]: ...
+
+    def device_sidechain_set(
+        self,
+        track: int,
+        device: int | tuple[int, ...],
+        routing_type: str,
+        routing_channel: str | None,
+    ) -> dict[str, Any]: ...
+
+    def device_insert(self, track: int, device_name: str, index: int) -> dict[str, Any]: ...
+
+    def device_delete(self, track: int, device: int | tuple[int, ...]) -> dict[str, Any]: ...
+
+    def device_move(
+        self, track: int, device: int | tuple[int, ...], to_index: int
+    ) -> dict[str, Any]: ...
+
+
 class CommandBackend(
     _SongTransportBackend,
     _TracksClipsBackend,
@@ -714,6 +779,7 @@ class CommandBackend(
     _BrowserBackend,
     _DevicesBackend,
     _DeviceRacksBackend,
+    _DeviceControlBackend,
     Protocol,
 ):
     def resolve_track_ref(self, track_ref: dict[str, Any]) -> int: ...

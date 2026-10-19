@@ -46,6 +46,8 @@ uv run ableton-cli song undo
 uv run ableton-cli song redo
 uv run ableton-cli song save --path /tmp/demo.als
 uv run ableton-cli song export audio --path /tmp/demo.wav
+uv run ableton-cli song scale get
+uv run ableton-cli song scale set --root A --name Minor --mode
 uv run ableton-cli session info
 uv run ableton-cli session snapshot
 uv run ableton-cli session diff --from ./snapshot-before.json --to ./snapshot-after.json
@@ -197,6 +199,8 @@ Reuse `stable_ref` values emitted by `tracks list`, `track info`, synth/effect f
 
 ```bash
 uv run ableton-cli return-tracks list
+uv run ableton-cli return-tracks create
+uv run ableton-cli return-tracks delete 2
 uv run ableton-cli return-track volume get 0
 uv run ableton-cli return-track volume set 0 0.5
 uv run ableton-cli return-track mute get 0
@@ -353,7 +357,30 @@ uv run ableton-cli device chains list --track-index 0 --device-index 0
 uv run ableton-cli device macro list --track-index 0 --device-index 0
 uv run ableton-cli device macro set 0 64.0 --track-index 0 --device-index 0
 uv run ableton-cli device parameter set 0.5 --track-index 0 --device-ref device:12 --parameter-index 0
+uv run ableton-cli device parameters list --track-name Vox --device-name "Auto Shift"
+uv run ableton-cli device parameter set-display -- -18 --track-name Bass --device-name Compressor --parameter-name Threshold
+uv run ableton-cli device parameter select RMS --track-name Bass --device-name Compressor --parameter-name Model
+uv run ableton-cli device active get --track-index 0 --device-index 1
+uv run ableton-cli device active set false --track-index 0 --device-index 1
+uv run ableton-cli device preset list --track-name Vox --device-index 0
+uv run ableton-cli device preset set 2 --track-name Vox --device-index 0
+uv run ableton-cli device sidechain get --track-name Bass --device-name Compressor
+uv run ableton-cli device sidechain set --type "1-Kick" --channel "Post FX" --track-name Bass --device-name Compressor
+uv run ableton-cli device insert Compressor --track-name Bass
+uv run ableton-cli device insert "Auto Shift" --index 0 --track-name Vox
+uv run ableton-cli device move --to-index 0 --track-index 0 --device-index 2
+uv run ableton-cli device delete --track-index 0 --device-index 2
 ```
+
+`device parameters list` works on any device, including VST/AU plug-ins and Max for Live
+devices: it reports each parameter's `display` string and, for choice parameters,
+`value_items`. Prefer `device parameter set-display` (dB, Hz, ms, %) and
+`device parameter select` (choice by name) over raw normalized values.
+`device sidechain` works on Compressor only, because Live exposes sidechain routing to
+scripts for that device alone; take `--type`/`--channel` exactly from `device sidechain get`.
+`device insert` needs Live 12.3+ and accepts native Live device names only; use
+`browser load` for plug-ins and Max for Live devices. For pitch correction, insert
+Auto Shift and set `song scale set` so it can follow the Set's scale.
 
 ### Synth
 
@@ -603,8 +630,8 @@ commands that actually do the work.
 uv run ableton-cli remix setup-sound     # use: browser search + browser load / load-drum-kit
 uv run ableton-cli remix mix-macro       # use: create buses in Live, then track/return volume + send set
 uv run ableton-cli remix setup-mix       # same as mix-macro
-uv run ableton-cli remix setup-returns   # use: add returns in Live, then return-tracks list
-uv run ableton-cli remix setup-sidechain # use: route in Live, then device parameter set
+uv run ableton-cli remix setup-returns   # use: return-tracks create, then add effects in Live
+uv run ableton-cli remix setup-sidechain # use: device sidechain set on a Compressor
 uv run ableton-cli remix device-chain apply  # use: browser search + browser load + device parameter set
 uv run ableton-cli audio stems split     # use: an external separator, then audio asset add
 ```

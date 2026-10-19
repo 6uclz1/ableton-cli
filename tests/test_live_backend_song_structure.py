@@ -94,25 +94,31 @@ def test_song_scale_set_updates_only_given_fields() -> None:
     assert result["scale_mode"] is True
 
 
-def test_song_scale_set_rejects_name_live_does_not_accept() -> None:
+def test_song_scale_set_restores_previous_name_when_live_rejects_it() -> None:
     backend = _backend_with_scale_api()
     song = backend.context._song()
+    song.scale_name = "Minor"
 
     class _StrictSong(type(song)):  # type: ignore[misc]
+        # Live 12 answers an unknown scale name by switching to Major.
+        _known = ("Major", "Minor", "Dorian")
+
         @property
         def scale_name(self) -> str:
-            return "Major"
+            return self.__dict__["_scale_name"]
 
         @scale_name.setter
         def scale_name(self, value: str) -> None:
-            del value
+            self.__dict__["_scale_name"] = value if value in self._known else "Major"
 
+    song.__dict__["_scale_name"] = "Minor"
     song.__class__ = _StrictSong
 
     with pytest.raises(CommandError) as exc_info:
-        backend.song_scale_set(None, "Nonexistent", None)
+        backend.song_scale_set(None, "Bogus", None)
 
     assert exc_info.value.code == "INVALID_ARGUMENT"
+    assert song.scale_name == "Minor"
 
 
 def test_song_scale_set_rejects_root_out_of_range() -> None:

@@ -233,8 +233,12 @@ class LiveBackendSongScaleMixin:
                 hint="Use 0..11 where 0 = C.",
             )
         if scale_name is not None:
+            previous_name = str(song.scale_name)
             song.scale_name = scale_name
             if str(song.scale_name) != scale_name:
+                # Live answers an unknown name by switching to Major, so undo
+                # that before failing rather than leave the Set changed.
+                song.scale_name = previous_name
                 raise _invalid_argument(
                     message=f"Live did not accept scale name: {scale_name}",
                     hint="Use a name from Live's Scale chooser exactly (e.g. 'Minor', 'Dorian').",

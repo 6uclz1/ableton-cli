@@ -8,4 +8,4 @@ alwaysApply: false
 - Format with ruff; do not introduce alternative tools.
 - Raise `AppError` with explicit `error_code`/`exit_code` per `src/ableton_cli/errors.py`; do not catch and ignore.
 - No fallback execution paths or compatibility shims.
-- Tests live in `tests/` mirroring source layout; follow existing fixtures in `tests/conftest.py`.
+- Put new tests in `tests/` beside the existing tests for the same area; follow existing fixtures in `tests/conftest.py`.

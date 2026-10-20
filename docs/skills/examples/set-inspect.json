@@ -1,0 +1,117 @@
+{
+  "ok": true,
+  "command": "set inspect",
+  "args": {
+    "path": "Song Project/Song.als"
+  },
+  "result": {
+    "path": "Song Project/Song.als",
+    "version": {
+      "major": "5",
+      "minor": "12.0_12402",
+      "creator": "Ableton Live 12.4.6"
+    },
+    "song": {
+      "tempo": 128.0,
+      "tempo_automated": false,
+      "time_signature": {
+        "numerator": 4,
+        "denominator": 4
+      },
+      "scale": {
+        "root_note": 9,
+        "name_index": 1,
+        "in_key": true
+      }
+    },
+    "tracks": [
+      {
+        "index": 0,
+        "id": 3,
+        "type": "group",
+        "name": "Rhythm",
+        "color": 12,
+        "group_id": null,
+        "devices": [],
+        "session_clip_count": 0,
+        "arrangement_clip_count": 0
+      },
+      {
+        "index": 1,
+        "id": 10,
+        "type": "midi",
+        "name": "Drums",
+        "color": 12,
+        "group_id": 3,
+        "devices": [
+          {
+            "class": "DrumGroupDevice",
+            "name": "909 Kit"
+          }
+        ],
+        "session_clip_count": 2,
+        "arrangement_clip_count": 4
+      },
+      {
+        "index": 2,
+        "id": 11,
+        "type": "audio",
+        "name": "Vox",
+        "color": 26,
+        "group_id": null,
+        "devices": [
+          {
+            "class": "PluginDevice",
+            "name": "Serum 2"
+          }
+        ],
+        "session_clip_count": 0,
+        "arrangement_clip_count": 2
+      }
+    ],
+    "return_tracks": [
+      {
+        "index": 0,
+        "id": 2,
+        "name": "A-Reverb",
+        "color": 0,
+        "devices": [
+          {
+            "class": "Reverb",
+            "name": null
+          }
+        ]
+      }
+    ],
+    "scenes": [
+      {
+        "index": 0,
+        "name": "Intro"
+      },
+      {
+        "index": 1,
+        "name": "Drop"
+      }
+    ],
+    "locators": [
+      {
+        "id": 0,
+        "time": 0.0,
+        "name": "Intro"
+      },
+      {
+        "id": 1,
+        "time": 64.0,
+        "name": "Drop"
+      }
+    ],
+    "plugins": [
+      {
+        "format": "Vst3PluginInfo",
+        "name": "Serum 2",
+        "count": 1
+      }
+    ]
+  },
+  "error": null
+}

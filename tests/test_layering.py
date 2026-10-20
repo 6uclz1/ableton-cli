@@ -65,3 +65,16 @@ assert command_specs_module.command_specs()
         check=False,
     )
     assert result.returncode == 0, result.stderr
+
+
+def test_liveset_package_does_not_import_commands_or_client() -> None:
+    # The offline .als package must stay usable without Live, the Remote Script
+    # client, or the Typer command layer.
+    package = _REPO_ROOT / "src" / "ableton_cli" / "liveset"
+    for path in sorted(package.glob("*.py")):
+        _assert_no_static_import_of_commands(path)
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+        for node in ast.walk(tree):
+            if isinstance(node, ast.ImportFrom):
+                module = node.module or ""
+                assert not module.startswith(("client", "ableton_cli.client")), path.name

@@ -95,6 +95,9 @@ Stable action names and CLI mappings for automation wrappers.
 | `audio_loudness_analyze` | `uv run ableton-cli --output json audio loudness analyze --path <wav>` | Analyze an offline render for LUFS, peak, RMS, crest, clipping, and DC offset; requires ffmpeg and ffprobe. |
 | `remix_mastering_plan` | `uv run ableton-cli --output json remix mastering plan --project <remix_project.json>` | Generate a non-destructive master chain plan in the remix manifest. |
 | `remix_mastering_qa` | `uv run ableton-cli --output json remix mastering qa --project <remix_project.json> --render <wav>` | Validate offline render analysis and master-chain readiness against targets. |
+| `inspect_live_set` | `uv run ableton-cli --output json set inspect --path <set.als>` | Summarize a Live Set file offline: song, tracks, returns, scenes, locators, plug-ins. |
+| `lint_live_set` | `uv run ableton-cli --output json set lint --path <set.als>` | Check a Live Set file offline for ID integrity errors and missing samples. |
+| `diff_live_set` | `uv run ableton-cli --output json set diff --from <a.als> --to <b.als>` | Compute semantic added/removed/changed deltas between two Live Set files. |
 | `execute_batch` | `uv run ableton-cli --output json batch run (--steps-file <path> | --steps-json '<json>' | --steps-stdin)` | Execute multiple remote commands atomically from JSON input. |
 
 ## CLI-only commands (not stable actions)

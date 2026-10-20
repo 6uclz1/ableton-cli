@@ -1,0 +1,39 @@
+{
+  "ok": true,
+  "command": "set lint",
+  "args": {
+    "path": "Song Project/Song.als"
+  },
+  "result": {
+    "path": "Song Project/Song.als",
+    "version": {
+      "major": "5",
+      "minor": "12.0_12402",
+      "creator": "Ableton Live 12.4.6"
+    },
+    "error_count": 0,
+    "warning_count": 1,
+    "findings": [
+      {
+        "severity": "warning",
+        "code": "media_missing",
+        "message": "Project samples were not found in the project folder.",
+        "details": {
+          "count": 1,
+          "files": [
+            {
+              "relative_path": "Samples/Recorded/Vox 0001.wav",
+              "file_name": "Vox 0001.wav"
+            }
+          ]
+        }
+      }
+    ],
+    "media": {
+      "checked_count": 1,
+      "unchecked_count": 0,
+      "unchecked_by_relative_path_type": {}
+    }
+  },
+  "error": null
+}

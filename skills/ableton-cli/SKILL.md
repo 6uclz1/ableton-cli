@@ -166,6 +166,22 @@ Mastering workflow is measurement-first:
 - Pick device/preset targets from `browser search`; do not assume fixed URI availability.
 - If a standard effect wrapper fails on locale/device-variant parameter names, switch to generic parameter list/set commands.
 
+### Offline Live Set Files
+
+```bash
+uv run ableton-cli set inspect --path ./Song\ Project/Song.als
+uv run ableton-cli set lint --path ./Song\ Project/Song.als
+uv run ableton-cli set diff --from ./Song\ Project/Song.als --to ./Song\ Project/Song-v2.als
+```
+
+`set` commands read `.als` files directly and never contact Live. They accept Live 12
+sets only (`SET_SCHEMA_UNSUPPORTED` otherwise) and fail with `SET_FILE_INVALID` for
+files that are not gzip-compressed Live Set XML. `set lint` exits `20` with
+`SET_INTEGRITY_FAILED` when the set has integrity errors (duplicate or dangling global
+IDs, bad `NextPointeeId`); missing project samples are warnings, and library samples
+are counted in `result.media` as unchecked, not verified. `set inspect` reports the
+effective tempo, which follows arrangement tempo automation over the manual value.
+
 ### Track
 
 ```bash
@@ -606,6 +622,9 @@ uv run ableton-cli --output json ping
 - `audio_loudness_analyze` -> `uv run ableton-cli --output json audio loudness analyze --path <wav>`
 - `remix_mastering_plan` -> `uv run ableton-cli --output json remix mastering plan --project <remix_project.json>`
 - `remix_mastering_qa` -> `uv run ableton-cli --output json remix mastering qa --project <remix_project.json> --render <wav>`
+- `inspect_live_set` -> `uv run ableton-cli --output json set inspect --path <set.als>`
+- `lint_live_set` -> `uv run ableton-cli --output json set lint --path <set.als>`
+- `diff_live_set` -> `uv run ableton-cli --output json set diff --from <a.als> --to <b.als>`
 - `execute_batch` -> `uv run ableton-cli --output json batch run (--steps-file <path> | --steps-json '<json>' | --steps-stdin)`
 
 ## Examples

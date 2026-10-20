@@ -401,6 +401,9 @@ class _AbletonClientGeneratedMixin:
     def master_info(self) -> dict[str, Any]:
         return self._call("master_info")
 
+    def master_meter_get(self) -> dict[str, Any]:
+        return self._call("master_meter_get")
+
     def master_panning_get(self) -> dict[str, Any]:
         return self._call("master_panning_get")
 
@@ -469,6 +472,9 @@ class _AbletonClientGeneratedMixin:
 
     def return_track_delete(self, return_track: int) -> dict[str, Any]:
         return self._call("return_track_delete", {"return_track": return_track})
+
+    def return_track_meter_get(self, return_track: int) -> dict[str, Any]:
+        return self._call("return_track_meter_get", {"return_track": return_track})
 
     def return_track_mute_get(self, return_track: int) -> dict[str, Any]:
         return self._call("return_track_mute_get", {"return_track": return_track})
@@ -558,6 +564,9 @@ class _AbletonClientGeneratedMixin:
 
     def track_arm_set(self, track_ref: RefPayload, value: bool) -> dict[str, Any]:
         return self._call("track_arm_set", {"track_ref": track_ref, "value": value})
+
+    def track_meter_get(self, track_ref: RefPayload) -> dict[str, Any]:
+        return self._call("track_meter_get", {"track_ref": track_ref})
 
     def track_mute_get(self, track_ref: RefPayload) -> dict[str, Any]:
         return self._call("track_mute_get", {"track_ref": track_ref})

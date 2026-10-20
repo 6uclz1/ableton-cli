@@ -555,3 +555,35 @@ def require_mutually_exclusive_note_sources(
             message=f"{' and '.join(provided)} are mutually exclusive",
             hint="Pass exactly one of --notes-json, --notes-file, or --pattern.",
         )
+
+
+def parse_envelope_points_json(points_json: str) -> list[dict[str, float]]:
+    try:
+        payload = json.loads(points_json)
+    except json.JSONDecodeError as exc:
+        raise invalid_argument(
+            message=f"points_json must be valid JSON: {exc.msg}",
+            hint='Pass a JSON array like \'[{"time":0.0,"value":0.5}]\'.',
+        ) from exc
+
+    if not isinstance(payload, list) or not payload:
+        raise invalid_argument(
+            message="points_json must decode to a non-empty array",
+            hint="Pass a JSON array of {time, value} objects.",
+        )
+
+    parsed: list[dict[str, float]] = []
+    for index, item in enumerate(payload):
+        if not isinstance(item, dict) or set(item.keys()) != {"time", "value"}:
+            raise invalid_argument(
+                message=f"points[{index}] must be an object with exactly 'time' and 'value'",
+                hint='Each point must be {"time": <number>, "value": <number>}.',
+            )
+        try:
+            parsed.append({"time": float(item["time"]), "value": float(item["value"])})
+        except (TypeError, ValueError) as exc:
+            raise invalid_argument(
+                message=f"points[{index}] time/value must be numbers",
+                hint="Use numeric time and value fields.",
+            ) from exc
+    return parsed

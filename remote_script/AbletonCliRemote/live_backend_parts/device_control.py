@@ -70,7 +70,7 @@ class LiveBackendDeviceControlMixin:
                 }
             )
         return {
-            "track": track,
+            "track": self._ctx._track_field(track),
             "device": device,
             "device_stable_ref": self._ctx._device_stable_ref_for(track, device),
             "device_name": str(getattr(target_device, "name", "")),
@@ -109,7 +109,7 @@ class LiveBackendDeviceControlMixin:
         target.value = float(getattr(target, "min", 0.0)) + float(items.index(item))
         after = float(target.value)
         return {
-            "track": track,
+            "track": self._ctx._track_field(track),
             "device": device,
             "parameter": parameter,
             "name": str(getattr(target, "name", "")),
@@ -137,7 +137,7 @@ class LiveBackendDeviceControlMixin:
         target.display_value = float(value)
         after = float(target.value)
         return {
-            "track": track,
+            "track": self._ctx._track_field(track),
             "device": device,
             "parameter": parameter,
             "name": str(getattr(target, "name", "")),
@@ -164,7 +164,7 @@ class LiveBackendDeviceControlMixin:
         target_device = self._ctx._device_at(track, device)
         parameter = self._device_on_parameter(target_device)
         return {
-            "track": track,
+            "track": self._ctx._track_field(track),
             "device": device,
             "name": str(getattr(target_device, "name", "")),
             "active": float(parameter.value) > float(getattr(parameter, "min", 0.0)),
@@ -195,7 +195,7 @@ class LiveBackendDeviceControlMixin:
     ) -> dict[str, Any]:
         selected = int(target_device.selected_preset_index)
         return {
-            "track": track,
+            "track": self._ctx._track_field(track),
             "device": device,
             "name": str(getattr(target_device, "name", "")),
             "presets": [{"index": index, "name": name} for index, name in enumerate(presets)],
@@ -241,7 +241,7 @@ class LiveBackendDeviceControlMixin:
         self, track: int, device: DeviceLocator, target_device: Any
     ) -> dict[str, Any]:
         return {
-            "track": track,
+            "track": self._ctx._track_field(track),
             "device": device,
             "name": str(getattr(target_device, "name", "")),
             **routing_state(target_device, _SIDECHAIN_DIRECTION, subject=_SIDECHAIN_SUBJECT),
@@ -314,7 +314,7 @@ class LiveBackendDeviceControlMixin:
         inserted_index = added[0]
         inserted = devices[inserted_index]
         return {
-            "track": track,
+            "track": self._ctx._track_field(track),
             "device": inserted_index,
             "name": str(getattr(inserted, "name", "")),
             "device_stable_ref": self._ctx._device_stable_ref_for(track, inserted_index),
@@ -334,7 +334,7 @@ class LiveBackendDeviceControlMixin:
         name = str(getattr(target_device, "name", ""))
         delete_device(device_index)
         return {
-            "track": track,
+            "track": self._ctx._track_field(track),
             "device": device_index,
             "name": name,
             "device_count": len(list(target_track.devices)),
@@ -358,7 +358,7 @@ class LiveBackendDeviceControlMixin:
             )
         move_device(target_device, target_track, to_index)
         return {
-            "track": track,
+            "track": self._ctx._track_field(track),
             "device": device_index,
             "to_index": to_index,
             "name": str(getattr(target_device, "name", "")),

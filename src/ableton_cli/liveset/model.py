@@ -41,6 +41,13 @@ def require_value(document: LiveSetDocument, parent: ET.Element, path: str, *, w
     return value
 
 
+def track_name(document: LiveSetDocument, track: ET.Element) -> str:
+    """The name Live displays: ``UserName`` when set, else the generated ``EffectiveName``."""
+    return require_value(document, track, "Name/UserName", where=track.tag) or require_value(
+        document, track, "Name/EffectiveName", where=track.tag
+    )
+
+
 def parse_number(document: LiveSetDocument, raw: str, *, element: str, kind: type) -> Any:
     try:
         return kind(raw)

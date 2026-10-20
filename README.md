@@ -79,6 +79,7 @@ uv run ableton-cli transport position set 32
 uv run ableton-cli transport rewind
 uv run ableton-cli tracks list
 uv run ableton-cli track volume get --track-index 0
+uv run ableton-cli track meter get --track-index 0 --samples 20 --interval-ms 50
 uv run ableton-cli track volume set 0.7 --track-index 0
 uv run ableton-cli track panning set -- -0.25 --track-index 0
 uv run ableton-cli track send set 1 0.6 --track-index 0
@@ -86,7 +87,9 @@ uv run ableton-cli track routing input get --selected-track
 uv run ableton-cli track routing output set --type Master --channel 3/4 --track-name "Bass"
 uv run ableton-cli return-tracks list
 uv run ableton-cli return-track volume set 0 0.5
+uv run ableton-cli return-track meter get 0 --samples 20
 uv run ableton-cli master info
+uv run ableton-cli master meter get --samples 20 --interval-ms 50
 uv run ableton-cli master devices list
 uv run ableton-cli master device load query:Audio\ Effects#Utility --position end
 uv run ableton-cli master device parameter set --device-index 0 --parameter-key gain -- -1.5
@@ -124,6 +127,7 @@ uv run ableton-cli device parameter set-display -- -18 --track-name Bass --devic
 uv run ableton-cli device parameter select RMS --track-name Bass --device-name Compressor --parameter-name Model
 uv run ableton-cli device sidechain set --type "1-Kick" --channel "Post FX" --track-name Bass --device-name Compressor
 uv run ableton-cli device insert Compressor --track-name Bass
+uv run ableton-cli device parameter set-display 4.5 --return-track-index 0 --device-index 0 --parameter-name Decay
 uv run ableton-cli device preset set 2 --track-name Vox --device-index 0
 uv run ableton-cli return-tracks create
 uv run ableton-cli song scale set --root A --name Minor --mode
@@ -136,6 +140,7 @@ uv run ableton-cli effect eq8 set 0.6 --track-query Bass --device-query EQ --par
 uv run ableton-cli set inspect --path ./Song\ Project/Song.als
 uv run ableton-cli set lint --path ./Song\ Project/Song.als
 uv run ableton-cli set diff --from ./Song\ Project/Song.als --to ./Song\ Project/Song-v2.als
+uv run ableton-cli set automation write --path ./Song\ Project/Song.als --out ./Song\ Project/Song-auto.als --track-index 0 --target device.1.Frequency --points-json '[{"time":0,"value":500},{"time":64,"value":8000}]'
 ```
 
 Offline mastering analysis with the `ffmpeg` engine requires both `ffmpeg` and
@@ -144,6 +149,12 @@ compare`, and `remix mastering analyze` fail explicitly with `CONFIG_INVALID`.
 
 Ref-aware track, device, and parameter commands now use mutually exclusive selector flags instead of positional indexes.
 Track selectors: `--track-index`, `--track-name`, `--selected-track`, `--track-query`, `--track-ref`.
+`device` commands also accept `--return-track-index` and `--return-track-name`, so return-track
+devices (reverbs, delays) are reachable; their results report `"track": {"kind": "return", "index": N}`.
+`track meter get`, `return-track meter get` and `master meter get` read Live's output meters
+(`left`, `right`, `level`) on Live's 0.0-1.0 meter scale, not dB. They take `--samples`
+readings `--interval-ms` apart and report each channel's `peak` and `mean`, plus `is_playing`:
+meters read 0.0 while the transport is stopped.
 Device selectors: `--device-index`, `--device-name`, `--selected-device`, `--device-query`, `--device-ref`.
 Parameter selectors: `--parameter-index`, `--parameter-name`, `--parameter-query`, `--parameter-key`, `--parameter-ref`.
 `tracks list`, `track info`, synth/effect device discovery, and parameter listings emit `stable_ref` fields so later commands can reuse exact session-local objects.
@@ -471,14 +482,34 @@ the Remote Script and file access on its own.
   `RelativePathType`. Findings list relative paths and file names, not absolute paths.
 - `set diff --from <a.als> --to <b.als>`: semantic `added` / `removed` / `changed`
   deltas, with tracks matched by their set-local ID.
+- `set automation write --path <set.als> --out <new.als> <selector> --target <target>
+  --points-json <json>`: write one arrangement automation lane, replacing any lane for
+  the same parameter. This is the path for arrangement automation, which the Remote
+  Script cannot write (the Live API only exposes session clip envelopes).
+  - Selector: exactly one of `--track-index`, `--track-name`, `--return-track-index`,
+    `--main`.
+  - Target: `mixer.volume`, `mixer.pan`, `mixer.tempo` (`--main` only),
+    `send.<return index>`, or `device.<top-level device index>.<parameter XML tag>`.
+  - Points: `[{"time": <beats>, "value": <number>}]`, times `>= 0` and strictly
+    increasing. Values are Live's internal parameter values, validated against the
+    parameter's `MidiControllerRange` (tempo: 20-999 BPM). These are not the
+    Remote Script's normalized values: `mixer.volume` and `send.<n>` are linear gain
+    (1.0 = 0 dB, 0.5 = about -6 dB), and device frequencies are in Hz.
+  - Only continuous parameters are written. On/off and choice parameters are rejected;
+    the error for an unknown device parameter lists the writable tags.
+  - `--out` must not exist, must differ from `--path`, and its directory must exist
+    (normally the project folder, so project samples still resolve). The result is
+    integrity-checked before an atomic write; the source file is never modified.
+    `--read-only` blocks the command; `--dry-run` plans without reading or writing.
 
 Failure modes:
 
 - `error.code=SET_FILE_INVALID`, exit code `2`: not gzip, not XML, or not a Live Set.
 - `error.code=SET_SCHEMA_UNSUPPORTED`, exit code `2`: not a Live 12 set, or a structure
   this version does not understand.
-- `error.code=SET_INTEGRITY_FAILED`, exit code `20`: `set lint` found integrity errors;
-  `error.details.findings` lists them.
+- `error.code=SET_INTEGRITY_FAILED`, exit code `20`: `set lint` found integrity errors,
+  or a write command's result failed the integrity check; `error.details.findings`
+  lists them and no file is written.
 
 The `.als` format is undocumented. Only Live 12 sets are accepted, and widening that
 range requires verifying real sets in Live. See `docs/offline-set-editing-design.md`.

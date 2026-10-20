@@ -78,6 +78,82 @@ def _track_ref_schema() -> dict[str, Any]:
     return _ref_schema(include_selected=True, include_key=False)
 
 
+def _device_track_ref_schema() -> dict[str, Any]:
+    """Track selector of the ``device`` group, which also reaches return tracks."""
+    schema = _track_ref_schema()
+    schema["oneOf"].extend(
+        [
+            _selector_ref_schema(
+                mode="return_index",
+                selector_schema={"index": {"type": "integer", "minimum": 0}},
+            ),
+            _selector_ref_schema(
+                mode="return_name",
+                selector_schema={"name": {"type": "string", "minLength": 1}},
+            ),
+        ]
+    )
+    return schema
+
+
+#: ``track`` in a ``device`` group result: a regular track index, or a return track.
+_DEVICE_TRACK_FIELD_SCHEMA: dict[str, Any] = {
+    "oneOf": [
+        {"type": "integer"},
+        {
+            "type": "object",
+            "required": ["kind", "index"],
+            "properties": {
+                "kind": {"type": "string", "const": "return"},
+                "index": {"type": "integer", "minimum": 0},
+            },
+            "additional_properties": False,
+        },
+    ]
+}
+
+
+def _meter_result_schema(identity: dict[str, Any]) -> dict[str, Any]:
+    channel = {
+        "type": "object",
+        "required": ["peak", "mean"],
+        "properties": {
+            "peak": {"type": "number", "minimum": 0},
+            "mean": {"type": "number", "minimum": 0},
+        },
+        "additional_properties": False,
+    }
+    properties: dict[str, Any] = {
+        **identity,
+        "samples": {"type": "integer", "minimum": 1},
+        "interval_ms": {"type": "integer", "minimum": 0},
+        "is_playing": {"type": "boolean"},
+        "left": channel,
+        "right": channel,
+        "level": channel,
+    }
+    return {
+        "type": "object",
+        "required": list(properties),
+        "properties": properties,
+        "additional_properties": False,
+    }
+
+
+def _meter_args_schema(target: dict[str, Any]) -> dict[str, Any]:
+    properties: dict[str, Any] = {
+        **target,
+        "samples": {"type": "integer"},
+        "interval_ms": {"type": "integer"},
+    }
+    return {
+        "type": "object",
+        "required": list(properties),
+        "properties": properties,
+        "additional_properties": False,
+    }
+
+
 def _device_ref_schema() -> dict[str, Any]:
     return _ref_schema(include_selected=True, include_key=False)
 
@@ -125,9 +201,10 @@ def _track_device_args_schema(
 def _track_device_parameter_args_schema(
     *,
     include_value: dict[str, Any] | None = None,
+    track_ref_schema: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     properties: dict[str, Any] = {
-        "track_ref": _track_ref_schema(),
+        "track_ref": track_ref_schema if track_ref_schema is not None else _track_ref_schema(),
         "device_ref": _device_ref_schema(),
         "parameter_ref": _parameter_ref_schema(),
     }
@@ -921,9 +998,22 @@ _DETAILED_CONTRACTS.update(
                 field_name="panning", field_schema={"type": "number"}
             ),
         },
+        "track meter get": {
+            "args": _meter_args_schema({"track_ref": _track_ref_schema()}),
+            "result": _meter_result_schema({"track": {"type": "integer"}}),
+        },
+        "return-track meter get": {
+            "args": _meter_args_schema({"return_track": {"type": "integer"}}),
+            "result": _meter_result_schema({"return_track": {"type": "integer"}}),
+        },
+        "master meter get": {
+            "args": _meter_args_schema({}),
+            "result": _meter_result_schema({}),
+        },
         "device parameter set": {
             "args": _track_device_parameter_args_schema(
-                include_value={"value": {"type": "number"}}
+                include_value={"value": {"type": "number"}},
+                track_ref_schema=_device_track_ref_schema(),
             ),
             "result": {
                 "type": "object",
@@ -937,7 +1027,7 @@ _DETAILED_CONTRACTS.update(
                     "value",
                 ],
                 "properties": {
-                    "track": {"type": "integer"},
+                    "track": _DEVICE_TRACK_FIELD_SCHEMA,
                     "device": {"type": "integer"},
                     "parameter": {"type": "integer"},
                     "track_stable_ref": {"type": "string"},

@@ -36,11 +36,13 @@ Stable action names and CLI mappings for automation wrappers.
 | `set_track_arm` | `uv run ableton-cli --output json track arm set <value> --track-index <track>` | Update track arm state. |
 | `get_track_panning` | `uv run ableton-cli --output json track panning get --track-index <track>` | Read track panning value. |
 | `set_track_panning` | `uv run ableton-cli --output json track panning set <value> --track-index <track>` | Update track panning in range -1.0 to 1.0. |
+| `get_track_meter` | `uv run ableton-cli --output json track meter get --track-index <track> --samples <n> --interval-ms <ms>` | Read a track's output meter peak and mean over a sampling window. |
 | `get_track_send` | `uv run ableton-cli --output json track send get <send> --track-index <track>` | Read one track send level by 0-based send index. |
 | `set_track_send` | `uv run ableton-cli --output json track send set <send> <value> --track-index <track>` | Update one track send level in range 0.0 to 1.0. |
 | `list_return_tracks` | `uv run ableton-cli --output json return-tracks list` | List all return tracks and their mixer state. |
 | `set_return_track_volume` | `uv run ableton-cli --output json return-track volume set <return-track> <value>` | Update one return-track volume in range 0.0 to 1.0. |
 | `get_master_info` | `uv run ableton-cli --output json master info` | Read master track name, volume, and panning. |
+| `get_master_meter` | `uv run ableton-cli --output json master meter get --samples <n> --interval-ms <ms>` | Read the main output meter peak and mean over a sampling window. |
 | `list_master_devices` | `uv run ableton-cli --output json master devices list` | List master track devices and parameters. |
 | `set_mixer_crossfader` | `uv run ableton-cli --output json mixer crossfader set <value>` | Update mixer crossfader position in range -1.0 to 1.0. |
 | `set_mixer_cue_routing` | `uv run ableton-cli --output json mixer cue-routing set <routing>` | Update cue routing using an exact routing name. |
@@ -98,6 +100,7 @@ Stable action names and CLI mappings for automation wrappers.
 | `inspect_live_set` | `uv run ableton-cli --output json set inspect --path <set.als>` | Summarize a Live Set file offline: song, tracks, returns, scenes, locators, plug-ins. |
 | `lint_live_set` | `uv run ableton-cli --output json set lint --path <set.als>` | Check a Live Set file offline for ID integrity errors and missing samples. |
 | `diff_live_set` | `uv run ableton-cli --output json set diff --from <a.als> --to <b.als>` | Compute semantic added/removed/changed deltas between two Live Set files. |
+| `write_live_set_automation` | `uv run ableton-cli --output json set automation write --path <set.als> --out <new.als> --track-index <track> --target <target> --points-json '<json>'` | Write one arrangement automation lane into a new Live Set file. |
 | `execute_batch` | `uv run ableton-cli --output json batch run (--steps-file <path> | --steps-json '<json>' | --steps-stdin)` | Execute multiple remote commands atomically from JSON input. |
 
 ## CLI-only commands (not stable actions)

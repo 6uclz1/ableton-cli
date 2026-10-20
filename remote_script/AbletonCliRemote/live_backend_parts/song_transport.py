@@ -532,6 +532,30 @@ class LiveBackendTransportMixerMixin:
         target.solo = bool(value)
         return {"return_track": return_track, "solo": bool(target.solo)}
 
+    def _meter_reading(self, target: Any) -> dict[str, Any]:
+        """One reading of a track's output meters (Live's 0.0-1.0 meter scale)."""
+        reading: dict[str, Any] = {}
+        for channel in ("left", "right", "level"):
+            value = getattr(target, f"output_meter_{channel}", None)
+            if not isinstance(value, (int, float)):
+                raise _not_supported_by_live_api(
+                    message=f"Track output_meter_{channel} is not available in Live API",
+                    hint="Use a Live version exposing track output meters.",
+                )
+            reading[channel] = float(value)
+        reading["is_playing"] = bool(self._ctx._song().is_playing)
+        return reading
+
+    def track_meter_get(self, track: int) -> dict[str, Any]:
+        return {"track": track, **self._meter_reading(self._ctx._track_at(track))}
+
+    def return_track_meter_get(self, return_track: int) -> dict[str, Any]:
+        target = self._ctx._return_track_at(return_track)
+        return {"return_track": return_track, **self._meter_reading(target)}
+
+    def master_meter_get(self) -> dict[str, Any]:
+        return self._meter_reading(self._ctx._song().master_track)
+
     def master_info(self) -> dict[str, Any]:
         target = self._ctx._song().master_track
         return {

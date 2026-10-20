@@ -5,6 +5,7 @@ from typing import Annotated
 import typer
 
 from ..runtime import execute_command, get_client
+from ._meter_commands import MeterIntervalOption, MeterSamplesOption, run_meter_command
 from ._track_shared import ReturnTrackArgument, VolumeValueArgument
 from ._validation import VOLUME_VALUE_HINT, require_float_in_range, require_non_negative
 
@@ -14,6 +15,7 @@ return_track_app = typer.Typer(help="Single return-track commands", no_args_is_h
 volume_app = typer.Typer(help="Return-track volume commands", no_args_is_help=True)
 mute_app = typer.Typer(help="Return-track mute commands", no_args_is_help=True)
 solo_app = typer.Typer(help="Return-track solo commands", no_args_is_help=True)
+meter_app = typer.Typer(help="Return-track output meter commands", no_args_is_help=True)
 
 
 def _require_return_track_index(return_track: int) -> int:
@@ -176,9 +178,32 @@ def return_track_solo_set(
     )
 
 
+@meter_app.command("get")
+def return_track_meter_get(
+    ctx: typer.Context,
+    return_track: ReturnTrackArgument,
+    samples: MeterSamplesOption = 1,
+    interval_ms: MeterIntervalOption = 50,
+) -> None:
+    """Read the return track's output meters (0.0-1.0), as peak and mean."""
+
+    def _read() -> dict[str, object]:
+        return get_client(ctx).return_track_meter_get(_require_return_track_index(return_track))
+
+    run_meter_command(
+        ctx,
+        command_name="return-track meter get",
+        target_args={"return_track": return_track},
+        read=_read,
+        samples=samples,
+        interval_ms=interval_ms,
+    )
+
+
 return_track_app.add_typer(volume_app, name="volume")
 return_track_app.add_typer(mute_app, name="mute")
 return_track_app.add_typer(solo_app, name="solo")
+return_track_app.add_typer(meter_app, name="meter")
 
 
 def register(app: typer.Typer) -> None:

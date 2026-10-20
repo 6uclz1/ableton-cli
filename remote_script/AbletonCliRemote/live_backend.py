@@ -28,6 +28,7 @@ from .live_backend_parts.services import BackendServices, build_services
 _CONTEXT_COMMAND_METHODS = (
     "ping_info",
     "resolve_track_ref",
+    "resolve_device_track_ref",
     "resolve_device_ref",
     "resolve_parameter_ref",
 )

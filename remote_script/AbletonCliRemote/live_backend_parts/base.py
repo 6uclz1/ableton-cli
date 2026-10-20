@@ -29,6 +29,11 @@ from ..synth_specs import (
 # for a device reached by descending into rack chains.
 DeviceLocator = int | tuple[int, ...]
 
+# A regular track index, or ("return", return_track_index) for a return track.
+# Only device-group commands resolve return tracks (``resolve_device_track_ref``).
+TrackLocator = int | tuple[str, int]
+RETURN_TRACK = "return"
+
 
 def _invalid_argument(
     message: str,
@@ -139,7 +144,9 @@ class LiveBackendContext:
             )
         return app
 
-    def _track_at(self, index: int) -> Any:
+    def _track_at(self, index: TrackLocator) -> Any:
+        if isinstance(index, tuple):
+            return self._return_track_at(index[1])
         tracks = list(self._song().tracks)
         if index < 0 or index >= len(tracks):
             raise _invalid_argument(
@@ -422,7 +429,7 @@ class LiveBackendContext:
         )
 
     def _track_index_from_locator(self, locator: tuple[Any, ...]) -> int | None:
-        if len(locator) != 2 or locator[0] != "track":
+        if len(locator) != 2 or locator[0] != "track" or not isinstance(locator[1], int):
             return None
         index = int(locator[1])
         tracks = list(self._song().tracks)
@@ -431,12 +438,9 @@ class LiveBackendContext:
         return index
 
     def _device_index_from_locator(self, track: int, locator: tuple[Any, ...]) -> int | None:
-        if len(locator) != 3 or locator[0] != "track":
+        if len(locator) != 3 or locator[0] != "track" or locator[1] != track:
             return None
-        locator_track = int(locator[1])
         locator_device = int(locator[2])
-        if locator_track != track:
-            return None
         devices = list(self._track_at(track).devices)
         if locator_device < 0 or locator_device >= len(devices):
             return None
@@ -454,7 +458,7 @@ class LiveBackendContext:
             return flat
         if len(locator) < 6 or locator[0] != "track" or locator[3] != "chain":
             return None
-        if int(locator[1]) != track:
+        if locator[1] != track:
             return None
         rest = locator[4:]
         if len(rest) % 2 != 0:
@@ -472,12 +476,11 @@ class LiveBackendContext:
         device: int,
         locator: tuple[Any, ...],
     ) -> int | None:
-        if len(locator) != 4 or locator[0] != "track":
+        if len(locator) != 4 or locator[0] != "track" or locator[1] != track:
             return None
-        locator_track = int(locator[1])
         locator_device = int(locator[2])
         locator_parameter = int(locator[3])
-        if locator_track != track or locator_device != device:
+        if locator_device != device:
             return None
         parameters = list(getattr(self._device_at(track, device), "parameters", []))
         if locator_parameter < 0 or locator_parameter >= len(parameters):
@@ -516,6 +519,41 @@ class LiveBackendContext:
                 locator_matcher=self._track_index_from_locator,
             )
         raise AssertionError(f"unsupported track mode: {mode}")
+
+    def resolve_device_track_ref(self, track_ref: dict[str, Any]) -> TrackLocator:
+        """Resolve a device-group track selector, which may name a return track."""
+        mode = str(track_ref["mode"])
+        return_tracks = list(getattr(self._song(), "return_tracks", []))
+        if mode == "return_index":
+            index = int(track_ref["index"])
+            self._return_track_at(index)
+            return (RETURN_TRACK, index)
+        if mode == "return_name":
+            return (
+                RETURN_TRACK,
+                self._resolve_by_name_or_query(
+                    kind="return_track",
+                    candidates=[
+                        (index, str(getattr(track, "name", "")))
+                        for index, track in enumerate(return_tracks)
+                    ],
+                    ref={"mode": "name", "name": track_ref["name"]},
+                ),
+            )
+        if mode == "stable_ref":
+            entry = self._stable_ref_entries.get(str(track_ref["stable_ref"]))
+            if entry is not None and entry["kind"] == "track":
+                for index, track in enumerate(return_tracks):
+                    if self._same_live_object(track, entry["target"]):
+                        return (RETURN_TRACK, index)
+        return self.resolve_track_ref(track_ref)
+
+    @staticmethod
+    def _track_field(track: TrackLocator) -> int | dict[str, Any]:
+        """The ``track`` value reported in device-group results."""
+        if isinstance(track, tuple):
+            return {"kind": RETURN_TRACK, "index": track[1]}
+        return track
 
     def _selected_device(self, track: Any) -> Any:
         view = getattr(track, "view", None)

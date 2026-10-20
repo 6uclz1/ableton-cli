@@ -1,7 +1,8 @@
 # Offline Live Set editing (`set` command group): design proposal
 
-Status: phase 1 (`set inspect`, `set lint`, `set diff`) is implemented; phases 2-4 are
-proposals. Every item here changes the public surface and lands through the normal
+Status: phase 1 (`set inspect`, `set lint`, `set diff`) is implemented, and so is
+`set automation write` from phase 3 (with `save.py` for the shared output rules). The
+rest of phases 2-4 are proposals. Every item here changes the public surface and lands through the normal
 TDD + contract-update workflow in `CONTRIBUTING.md`.
 
 ## 1. Why
@@ -84,7 +85,7 @@ go through `runtime.execute_command`, so `--output json`, `--read-only`,
 | `set init --spec SPEC --out DIR [--template PATH]` | write | Build a new project from a spec |
 | `set group create PATH --track-index ... --name NAME --out OUT` | write | Group existing tracks |
 | `set locators replace PATH --locators-json JSON --out OUT` | write | Replace all locators |
-| `set automation write PATH <selector> --target T --points-json JSON --out OUT` | write | Write an arrangement envelope (replaces the lane) |
+| `set automation write --path PATH <selector> --target T --points-json JSON --out OUT` | write (implemented) | Write an arrangement envelope (replaces the lane) |
 | `set device import PATH <selector> --preset FILE --index N --out OUT` | write | Insert a device from an `.adv` / `.adg` |
 
 Path arguments are options (`--path`, `--from`, `--to`), matching `session diff` and
@@ -119,10 +120,28 @@ Selectors reuse existing flag names (`--track-index`, `--track-name`) and shared
 validation from `commands/_validation.py`. Selection is resolved against the
 file, never against a running Live.
 
-Automation targets (`--target`): `mixer.volume`, `mixer.pan`, `send.<return name>`,
-`tempo`, `device.<index>.<parameter>`. Points are
-`[{"time": beats, "value": number, "curve": [x1, y1, x2, y2]?}]`. Values are
-Live's internal parameter values in v1; see open questions about display units.
+Automation targets (`--target`), as implemented: `mixer.volume`, `mixer.pan`,
+`mixer.tempo` (main track only), `send.<return index>`, and
+`device.<top-level device index>.<parameter XML tag>`. Selectors: `--track-index`,
+`--track-name`, `--return-track-index`, `--main`. Points are
+`[{"time": beats, "value": number}]` (curves stay in phase 4). Values are Live's internal
+parameter values, validated against the parameter's `MidiControllerRange` (tempo against
+20-999 BPM, because its `MidiControllerRange` is only the MIDI-mapping range).
+
+Decisions taken while implementing, from Live 12.4.6 saved sets:
+
+- Verified in Live 12.4.6: a written `Filter_Frequency` lane on Auto Filter played back
+  at the written Hz values, and a send lane followed the written linear-gain values
+  (internal `Send` 0.5 read back as LOM value 0.8, about -6 dB).
+- Sends are addressed by return index, not return name: names are not unique and may
+  contain the separator.
+- Only continuous parameters are written, as `FloatEvent`s. In Live-saved sets they are
+  exactly the ones with a `*ModulationTarget`; choice parameters (EQ Eight `Mode`,
+  Compressor `Model`) have only `AutomationTarget` + `MidiControllerRange` and are
+  automated with `EnumEvent`, and on/off parameters carry `MidiCCOnOffThresholds`. Both
+  are rejected rather than written with the wrong event type.
+- Device parameters use XML tags, and the error for an unknown tag lists the writable
+  tags (`details.available_parameters`), which answers the naming open question for v1.
 
 ### Naming: `set init`, not top-level `init`
 

@@ -4,7 +4,7 @@ from typing import Any
 
 from ..capabilities import read_only_remote_commands
 from ..config import Settings
-from ..errors import AppError, ErrorCode, ExitCode
+from ..errors import AppError, ErrorCode, ExitCode, read_only_violation
 from ..refs import RefPayload
 from .backends import ClientBackend, LiveBackendClient, RecordingClient, ReplayClient
 
@@ -58,13 +58,7 @@ class _AbletonClientCore:
         idempotency_key: str | None = None,
     ) -> dict[str, Any]:
         if self.read_only and name not in self._read_only_commands:
-            raise AppError(
-                error_code=ErrorCode.READ_ONLY_VIOLATION,
-                message=f"Command '{name}' is blocked in read-only mode",
-                hint="Run without --read-only to execute write commands.",
-                exit_code=ExitCode.EXECUTION_FAILED,
-                details={"command": name},
-            )
+            raise read_only_violation(name)
         return self._backend.dispatch(name, args, idempotency_key=idempotency_key)
 
     def _call(self, name: str, args: dict[str, Any] | None = None) -> dict[str, Any]:

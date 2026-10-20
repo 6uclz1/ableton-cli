@@ -293,7 +293,7 @@ class LiveBackendDeviceSharedMixin:
             else self._ctx._stable_ref("parameter", target_param, locator=None)
         )
         return {
-            "track": track,
+            "track": self._ctx._track_field(track),
             "device": device,
             "parameter": parameter,
             "track_stable_ref": self._ctx._track_stable_ref(

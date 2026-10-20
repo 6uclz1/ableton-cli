@@ -21,10 +21,12 @@ from ..refs import (
 from ..runtime import execute_command, get_client
 from ._client_command_runner import CommandSpec
 from ._client_command_runner import run_client_command_spec as run_client_command_spec_shared
+from ._meter_commands import MeterIntervalOption, MeterSamplesOption, run_meter_command
 
 master_app = typer.Typer(help="Master track commands", no_args_is_help=True)
 volume_app = typer.Typer(help="Master volume commands", no_args_is_help=True)
 panning_app = typer.Typer(help="Master panning commands", no_args_is_help=True)
+meter_app = typer.Typer(help="Master output meter commands", no_args_is_help=True)
 devices_app = typer.Typer(help="Master device commands", no_args_is_help=True)
 device_app = typer.Typer(help="Master device write commands", no_args_is_help=True)
 device_parameters_app = typer.Typer(help="Master device parameter listing", no_args_is_help=True)
@@ -335,7 +337,25 @@ def _parameter_ref(
     )
 
 
+@meter_app.command("get")
+def master_meter_get(
+    ctx: typer.Context,
+    samples: MeterSamplesOption = 1,
+    interval_ms: MeterIntervalOption = 50,
+) -> None:
+    """Read the main track's output meters (0.0-1.0), as peak and mean."""
+    run_meter_command(
+        ctx,
+        command_name="master meter get",
+        target_args={},
+        read=lambda: get_client(ctx).master_meter_get(),
+        samples=samples,
+        interval_ms=interval_ms,
+    )
+
+
 master_app.add_typer(volume_app, name="volume")
+master_app.add_typer(meter_app, name="meter")
 master_app.add_typer(panning_app, name="panning")
 master_app.add_typer(devices_app, name="devices")
 device_app.add_typer(device_parameters_app, name="parameters")

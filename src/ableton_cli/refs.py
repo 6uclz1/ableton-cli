@@ -24,6 +24,12 @@ TrackQueryOption = Annotated[
     str | None,
     typer.Option("--track-query", help="Unique case-insensitive track query"),
 ]
+ReturnTrackIndexOption = Annotated[
+    int | None, typer.Option("--return-track-index", help="Return track index (0-based)")
+]
+ReturnTrackNameOption = Annotated[
+    str | None, typer.Option("--return-track-name", help="Exact return track name")
+]
 
 DeviceIndexOption = Annotated[
     int | None, typer.Option("--device-index", help="Device index (0-based)")
@@ -109,14 +115,14 @@ def _select_one(kind: str, selectors: list[RefPayload]) -> RefPayload:
     return selectors[0]
 
 
-def build_track_ref(
+def _track_selectors(
     *,
     track_index: int | None,
     track_name: str | None,
     selected_track: bool,
     track_query: str | None,
     track_ref: str | None,
-) -> RefPayload:
+) -> list[RefPayload]:
     selectors: list[RefPayload] = []
     if track_index is not None:
         selectors.append(
@@ -132,7 +138,70 @@ def build_track_ref(
         selectors.append(
             {"mode": "stable_ref", "stable_ref": _require_non_empty("track_ref", track_ref)}
         )
-    return _select_one("track", selectors)
+    return selectors
+
+
+def build_track_ref(
+    *,
+    track_index: int | None,
+    track_name: str | None,
+    selected_track: bool,
+    track_query: str | None,
+    track_ref: str | None,
+) -> RefPayload:
+    return _select_one(
+        "track",
+        _track_selectors(
+            track_index=track_index,
+            track_name=track_name,
+            selected_track=selected_track,
+            track_query=track_query,
+            track_ref=track_ref,
+        ),
+    )
+
+
+def build_device_track_ref(
+    *,
+    track_index: int | None,
+    track_name: str | None,
+    selected_track: bool,
+    track_query: str | None,
+    track_ref: str | None,
+    return_track_index: int | None,
+    return_track_name: str | None,
+) -> RefPayload:
+    """Track selector for device commands, which also reach return-track devices."""
+    selectors = _track_selectors(
+        track_index=track_index,
+        track_name=track_name,
+        selected_track=selected_track,
+        track_query=track_query,
+        track_ref=track_ref,
+    )
+    if return_track_index is not None:
+        selectors.append(
+            {
+                "mode": "return_index",
+                "index": _require_non_negative("return_track_index", return_track_index),
+            }
+        )
+    if return_track_name is not None:
+        selectors.append(
+            {
+                "mode": "return_name",
+                "name": _require_non_empty("return_track_name", return_track_name),
+            }
+        )
+    if len(selectors) != 1:
+        raise _invalid_argument(
+            message="Exactly one track selector must be provided",
+            hint=(
+                "Choose exactly one of --track-index, --track-name, --selected-track, "
+                "--track-query, --track-ref, --return-track-index, or --return-track-name."
+            ),
+        )
+    return selectors[0]
 
 
 def build_device_ref(

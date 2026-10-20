@@ -5,8 +5,17 @@ from typing import cast
 
 import typer
 
-from ..refs import RefPayload
+from ..refs import (
+    RefPayload,
+    SelectedTrackOption,
+    TrackIndexOption,
+    TrackNameOption,
+    TrackQueryOption,
+    TrackStableRefOption,
+    build_track_ref,
+)
 from ..runtime import execute_command, get_client
+from ._meter_commands import MeterIntervalOption, MeterSamplesOption, run_meter_command
 from ._track_facets import register_track_facets
 from ._track_routing_commands import register_commands as register_routing_commands
 from ._track_send_commands import register_commands as register_send_commands
@@ -191,8 +200,45 @@ register_routing_commands(
 )
 
 
+meter_app = typer.Typer(help="Track output meter commands", no_args_is_help=True)
+
+
+@meter_app.command("get")
+def track_meter_get(
+    ctx: typer.Context,
+    track_index: TrackIndexOption = None,
+    track_name: TrackNameOption = None,
+    selected_track: SelectedTrackOption = False,
+    track_query: TrackQueryOption = None,
+    track_ref: TrackStableRefOption = None,
+    samples: MeterSamplesOption = 1,
+    interval_ms: MeterIntervalOption = 50,
+) -> None:
+    """Read the track's output meters (0.0-1.0), as peak and mean over the samples."""
+
+    def _track_ref() -> RefPayload:
+        return build_track_ref(
+            track_index=track_index,
+            track_name=track_name,
+            selected_track=selected_track,
+            track_query=track_query,
+            track_ref=track_ref,
+        )
+
+    run_meter_command(
+        ctx,
+        command_name="track meter get",
+        target_args={"track_ref": None},
+        resolved_target_args=lambda: {"track_ref": _track_ref()},
+        read=lambda: get_client(ctx).track_meter_get(_track_ref()),
+        samples=samples,
+        interval_ms=interval_ms,
+    )
+
+
 track_app.add_typer(send_app, name="send")
 track_app.add_typer(routing_app, name="routing")
+track_app.add_typer(meter_app, name="meter")
 
 
 def run_track_send_command(

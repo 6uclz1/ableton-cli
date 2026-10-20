@@ -164,6 +164,14 @@ STABLE_ACTION_MAPPINGS: tuple[StableActionMapping, ...] = (
         capability="Update track panning in range -1.0 to 1.0.",
     ),
     StableActionMapping(
+        action="get_track_meter",
+        command=(
+            "uv run ableton-cli --output json track meter get --track-index <track> "
+            "--samples <n> --interval-ms <ms>"
+        ),
+        capability="Read a track's output meter peak and mean over a sampling window.",
+    ),
+    StableActionMapping(
         action="get_track_send",
         command="uv run ableton-cli --output json track send get <send> --track-index <track>",
         capability="Read one track send level by 0-based send index.",
@@ -189,6 +197,13 @@ STABLE_ACTION_MAPPINGS: tuple[StableActionMapping, ...] = (
         action="get_master_info",
         command="uv run ableton-cli --output json master info",
         capability="Read master track name, volume, and panning.",
+    ),
+    StableActionMapping(
+        action="get_master_meter",
+        command=(
+            "uv run ableton-cli --output json master meter get --samples <n> --interval-ms <ms>"
+        ),
+        capability="Read the main output meter peak and mean over a sampling window.",
     ),
     StableActionMapping(
         action="list_master_devices",
@@ -582,6 +597,14 @@ STABLE_ACTION_MAPPINGS: tuple[StableActionMapping, ...] = (
         action="diff_live_set",
         command="uv run ableton-cli --output json set diff --from <a.als> --to <b.als>",
         capability="Compute semantic added/removed/changed deltas between two Live Set files.",
+    ),
+    StableActionMapping(
+        action="write_live_set_automation",
+        command=(
+            "uv run ableton-cli --output json set automation write --path <set.als> "
+            "--out <new.als> --track-index <track> --target <target> --points-json '<json>'"
+        ),
+        capability="Write one arrangement automation lane into a new Live Set file.",
     ),
     StableActionMapping(
         action="execute_batch",

@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 from collections import Counter
+from typing import Any
 
+from ..errors import AppError, ErrorCode, ExitCode
 from .document import LiveSetDocument
 from .findings import Finding, listed_details
 from .ids import global_id_elements, pointee_references
@@ -71,3 +73,13 @@ def check_integrity(document: LiveSetDocument) -> list[Finding]:
     ]
     numeric_ids = [int(value) for value in counts if value.isdigit()]
     return findings + _next_pointee_findings(document, numeric_ids)
+
+
+def integrity_failed(path: str, error_count: int, findings: list[dict[str, Any]]) -> AppError:
+    return AppError(
+        error_code=ErrorCode.SET_INTEGRITY_FAILED,
+        message=f"Live Set has {error_count} integrity error(s)",
+        hint="Open and re-save the set in Live, or restore it from a backup.",
+        exit_code=ExitCode.EXECUTION_FAILED,
+        details={"path": path, "findings": findings},
+    )

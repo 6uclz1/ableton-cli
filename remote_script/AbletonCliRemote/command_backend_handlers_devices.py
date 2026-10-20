@@ -6,6 +6,7 @@ from typing import Any
 from .command_backend_contract import CommandBackend
 from .command_backend_validators import (
     _as_float,
+    _device_group_parameter_args,
     _device_parameter_args,
     _device_ref,
     _effect_type,
@@ -21,8 +22,8 @@ Handler = Callable[[CommandBackend, dict[str, Any]], dict[str, Any]]
 
 
 def _handle_set_device_parameter(backend: CommandBackend, args: dict[str, Any]) -> dict[str, Any]:
-    track_ref, device_ref, parameter_ref, value = _device_parameter_args(args)
-    track = backend.resolve_track_ref(track_ref)
+    track_ref, device_ref, parameter_ref, value = _device_group_parameter_args(args)
+    track = backend.resolve_device_track_ref(track_ref)
     device = backend.resolve_device_ref(track, device_ref)
     parameter = backend.resolve_parameter_ref(track, device, parameter_ref)
     return backend.set_device_parameter(track, device, parameter, value)

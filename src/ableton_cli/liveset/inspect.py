@@ -11,6 +11,7 @@ from .model import (
     require,
     require_value,
     schema_unsupported,
+    track_name,
 )
 
 TRACK_TYPES = {"MidiTrack": "midi", "AudioTrack": "audio", "GroupTrack": "group"}
@@ -81,9 +82,7 @@ def _track_base(document: LiveSetDocument, track: ET.Element) -> dict[str, Any]:
     devices = track.findall("DeviceChain/DeviceChain/Devices/*")
     return {
         "id": parse_number(document, track.get("Id", ""), element=f"{where}@Id", kind=int),
-        # Live displays UserName when set, else the auto-generated EffectiveName.
-        "name": require_value(document, track, "Name/UserName", where=where)
-        or require_value(document, track, "Name/EffectiveName", where=where),
+        "name": track_name(document, track),
         "color": int(require_value(document, track, "Color", where=where)),
         "devices": [_device(device) for device in devices],
     }

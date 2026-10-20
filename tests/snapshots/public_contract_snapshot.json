@@ -4805,6 +4805,42 @@
                   "stable_ref"
                 ],
                 "type": "object"
+              },
+              {
+                "additional_properties": false,
+                "properties": {
+                  "index": {
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "mode": {
+                    "const": "return_index",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "mode",
+                  "index"
+                ],
+                "type": "object"
+              },
+              {
+                "additional_properties": false,
+                "properties": {
+                  "mode": {
+                    "const": "return_name",
+                    "type": "string"
+                  },
+                  "name": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "mode",
+                  "name"
+                ],
+                "type": "object"
               }
             ]
           },
@@ -4867,7 +4903,29 @@
             "type": "string"
           },
           "track": {
-            "type": "integer"
+            "oneOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "additional_properties": false,
+                "properties": {
+                  "index": {
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "kind": {
+                    "const": "return",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "index"
+                ],
+                "type": "object"
+              }
+            ]
           },
           "track_stable_ref": {
             "type": "string"
@@ -11570,6 +11628,139 @@
         "requires_confirmation": false
       }
     },
+    "master meter get": {
+      "args": {
+        "additional_properties": false,
+        "properties": {
+          "interval_ms": {
+            "type": "integer"
+          },
+          "samples": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "samples",
+          "interval_ms"
+        ],
+        "type": "object"
+      },
+      "errors": {
+        "codes": [
+          "ABLETON_NOT_REACHABLE",
+          "BATCH_ASSERT_FAILED",
+          "BATCH_PREFLIGHT_FAILED",
+          "BATCH_RETRY_EXHAUSTED",
+          "BATCH_STEP_FAILED",
+          "CONFIG_INVALID",
+          "CONFIRMATION_REQUIRED",
+          "INSTALL_TARGET_NOT_FOUND",
+          "INTERNAL_ERROR",
+          "INVALID_ARGUMENT",
+          "NOT_IMPLEMENTED",
+          "PROTOCOL_CONNECTION_CLOSED",
+          "PROTOCOL_INVALID_RESPONSE",
+          "PROTOCOL_MALFORMED_JSON",
+          "PROTOCOL_REQUEST_ID_MISMATCH",
+          "PROTOCOL_VERSION_MISMATCH",
+          "READ_ONLY_VIOLATION",
+          "REMOTE_BUSY",
+          "REMOTE_SCRIPT_INCOMPATIBLE",
+          "REMOTE_SCRIPT_NOT_INSTALLED",
+          "SET_FILE_INVALID",
+          "SET_INTEGRITY_FAILED",
+          "SET_SCHEMA_UNSUPPORTED",
+          "SKILL_SOURCE_NOT_FOUND",
+          "TIMEOUT",
+          "UNAUTHORIZED",
+          "UNSUPPORTED_OS"
+        ]
+      },
+      "result": {
+        "additional_properties": false,
+        "properties": {
+          "interval_ms": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "is_playing": {
+            "type": "boolean"
+          },
+          "left": {
+            "additional_properties": false,
+            "properties": {
+              "mean": {
+                "minimum": 0,
+                "type": "number"
+              },
+              "peak": {
+                "minimum": 0,
+                "type": "number"
+              }
+            },
+            "required": [
+              "peak",
+              "mean"
+            ],
+            "type": "object"
+          },
+          "level": {
+            "additional_properties": false,
+            "properties": {
+              "mean": {
+                "minimum": 0,
+                "type": "number"
+              },
+              "peak": {
+                "minimum": 0,
+                "type": "number"
+              }
+            },
+            "required": [
+              "peak",
+              "mean"
+            ],
+            "type": "object"
+          },
+          "right": {
+            "additional_properties": false,
+            "properties": {
+              "mean": {
+                "minimum": 0,
+                "type": "number"
+              },
+              "peak": {
+                "minimum": 0,
+                "type": "number"
+              }
+            },
+            "required": [
+              "peak",
+              "mean"
+            ],
+            "type": "object"
+          },
+          "samples": {
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "samples",
+          "interval_ms",
+          "is_playing",
+          "left",
+          "right",
+          "level"
+        ],
+        "type": "object"
+      },
+      "side_effect": {
+        "idempotent": true,
+        "kind": "read",
+        "requires_confirmation": false
+      }
+    },
     "master panning get": {
       "args": {
         "additional_properties": false,
@@ -13448,6 +13639,147 @@
         "requires_confirmation": false
       }
     },
+    "return-track meter get": {
+      "args": {
+        "additional_properties": false,
+        "properties": {
+          "interval_ms": {
+            "type": "integer"
+          },
+          "return_track": {
+            "type": "integer"
+          },
+          "samples": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "return_track",
+          "samples",
+          "interval_ms"
+        ],
+        "type": "object"
+      },
+      "errors": {
+        "codes": [
+          "ABLETON_NOT_REACHABLE",
+          "BATCH_ASSERT_FAILED",
+          "BATCH_PREFLIGHT_FAILED",
+          "BATCH_RETRY_EXHAUSTED",
+          "BATCH_STEP_FAILED",
+          "CONFIG_INVALID",
+          "CONFIRMATION_REQUIRED",
+          "INSTALL_TARGET_NOT_FOUND",
+          "INTERNAL_ERROR",
+          "INVALID_ARGUMENT",
+          "NOT_IMPLEMENTED",
+          "PROTOCOL_CONNECTION_CLOSED",
+          "PROTOCOL_INVALID_RESPONSE",
+          "PROTOCOL_MALFORMED_JSON",
+          "PROTOCOL_REQUEST_ID_MISMATCH",
+          "PROTOCOL_VERSION_MISMATCH",
+          "READ_ONLY_VIOLATION",
+          "REMOTE_BUSY",
+          "REMOTE_SCRIPT_INCOMPATIBLE",
+          "REMOTE_SCRIPT_NOT_INSTALLED",
+          "SET_FILE_INVALID",
+          "SET_INTEGRITY_FAILED",
+          "SET_SCHEMA_UNSUPPORTED",
+          "SKILL_SOURCE_NOT_FOUND",
+          "TIMEOUT",
+          "UNAUTHORIZED",
+          "UNSUPPORTED_OS"
+        ]
+      },
+      "result": {
+        "additional_properties": false,
+        "properties": {
+          "interval_ms": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "is_playing": {
+            "type": "boolean"
+          },
+          "left": {
+            "additional_properties": false,
+            "properties": {
+              "mean": {
+                "minimum": 0,
+                "type": "number"
+              },
+              "peak": {
+                "minimum": 0,
+                "type": "number"
+              }
+            },
+            "required": [
+              "peak",
+              "mean"
+            ],
+            "type": "object"
+          },
+          "level": {
+            "additional_properties": false,
+            "properties": {
+              "mean": {
+                "minimum": 0,
+                "type": "number"
+              },
+              "peak": {
+                "minimum": 0,
+                "type": "number"
+              }
+            },
+            "required": [
+              "peak",
+              "mean"
+            ],
+            "type": "object"
+          },
+          "return_track": {
+            "type": "integer"
+          },
+          "right": {
+            "additional_properties": false,
+            "properties": {
+              "mean": {
+                "minimum": 0,
+                "type": "number"
+              },
+              "peak": {
+                "minimum": 0,
+                "type": "number"
+              }
+            },
+            "required": [
+              "peak",
+              "mean"
+            ],
+            "type": "object"
+          },
+          "samples": {
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "return_track",
+          "samples",
+          "interval_ms",
+          "is_playing",
+          "left",
+          "right",
+          "level"
+        ],
+        "type": "object"
+      },
+      "side_effect": {
+        "idempotent": true,
+        "kind": "read",
+        "requires_confirmation": false
+      }
+    },
     "return-track mute get": {
       "args": {
         "additional_properties": false,
@@ -14559,6 +14891,148 @@
       "side_effect": {
         "idempotent": true,
         "kind": "read",
+        "requires_confirmation": false
+      }
+    },
+    "set automation write": {
+      "args": {
+        "additional_properties": false,
+        "properties": {
+          "main": {
+            "type": "boolean"
+          },
+          "out": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "return_track_index": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "target": {
+            "type": "string"
+          },
+          "track_index": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "track_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "path",
+          "out",
+          "target",
+          "track_index",
+          "track_name",
+          "return_track_index",
+          "main"
+        ],
+        "type": "object"
+      },
+      "errors": {
+        "codes": [
+          "ABLETON_NOT_REACHABLE",
+          "BATCH_ASSERT_FAILED",
+          "BATCH_PREFLIGHT_FAILED",
+          "BATCH_RETRY_EXHAUSTED",
+          "BATCH_STEP_FAILED",
+          "CONFIG_INVALID",
+          "CONFIRMATION_REQUIRED",
+          "INSTALL_TARGET_NOT_FOUND",
+          "INTERNAL_ERROR",
+          "INVALID_ARGUMENT",
+          "NOT_IMPLEMENTED",
+          "PROTOCOL_CONNECTION_CLOSED",
+          "PROTOCOL_INVALID_RESPONSE",
+          "PROTOCOL_MALFORMED_JSON",
+          "PROTOCOL_REQUEST_ID_MISMATCH",
+          "PROTOCOL_VERSION_MISMATCH",
+          "READ_ONLY_VIOLATION",
+          "REMOTE_BUSY",
+          "REMOTE_SCRIPT_INCOMPATIBLE",
+          "REMOTE_SCRIPT_NOT_INSTALLED",
+          "SET_FILE_INVALID",
+          "SET_INTEGRITY_FAILED",
+          "SET_SCHEMA_UNSUPPORTED",
+          "SKILL_SOURCE_NOT_FOUND",
+          "TIMEOUT",
+          "UNAUTHORIZED",
+          "UNSUPPORTED_OS"
+        ]
+      },
+      "result": {
+        "additional_properties": false,
+        "properties": {
+          "out": {
+            "type": "string"
+          },
+          "parameter": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "point_count": {
+            "type": "integer"
+          },
+          "replaced_point_count": {
+            "type": "integer"
+          },
+          "scope": {
+            "additional_properties": false,
+            "properties": {
+              "index": {
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "kind": {
+                "type": "string"
+              },
+              "name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "kind",
+              "index",
+              "name"
+            ],
+            "type": "object"
+          },
+          "target": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "path",
+          "out",
+          "scope",
+          "target",
+          "parameter",
+          "point_count",
+          "replaced_point_count"
+        ],
+        "type": "object"
+      },
+      "side_effect": {
+        "idempotent": false,
+        "kind": "write",
         "requires_confirmation": false
       }
     },
@@ -19278,6 +19752,233 @@
           "panning",
           "clip_slots",
           "devices"
+        ],
+        "type": "object"
+      },
+      "side_effect": {
+        "idempotent": true,
+        "kind": "read",
+        "requires_confirmation": false
+      }
+    },
+    "track meter get": {
+      "args": {
+        "additional_properties": false,
+        "properties": {
+          "interval_ms": {
+            "type": "integer"
+          },
+          "samples": {
+            "type": "integer"
+          },
+          "track_ref": {
+            "oneOf": [
+              {
+                "additional_properties": false,
+                "properties": {
+                  "index": {
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "mode": {
+                    "const": "index",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "mode",
+                  "index"
+                ],
+                "type": "object"
+              },
+              {
+                "additional_properties": false,
+                "properties": {
+                  "mode": {
+                    "const": "name",
+                    "type": "string"
+                  },
+                  "name": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "mode",
+                  "name"
+                ],
+                "type": "object"
+              },
+              {
+                "additional_properties": false,
+                "properties": {
+                  "mode": {
+                    "const": "selected",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "mode"
+                ],
+                "type": "object"
+              },
+              {
+                "additional_properties": false,
+                "properties": {
+                  "mode": {
+                    "const": "query",
+                    "type": "string"
+                  },
+                  "query": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "mode",
+                  "query"
+                ],
+                "type": "object"
+              },
+              {
+                "additional_properties": false,
+                "properties": {
+                  "mode": {
+                    "const": "stable_ref",
+                    "type": "string"
+                  },
+                  "stable_ref": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "mode",
+                  "stable_ref"
+                ],
+                "type": "object"
+              }
+            ]
+          }
+        },
+        "required": [
+          "track_ref",
+          "samples",
+          "interval_ms"
+        ],
+        "type": "object"
+      },
+      "errors": {
+        "codes": [
+          "ABLETON_NOT_REACHABLE",
+          "BATCH_ASSERT_FAILED",
+          "BATCH_PREFLIGHT_FAILED",
+          "BATCH_RETRY_EXHAUSTED",
+          "BATCH_STEP_FAILED",
+          "CONFIG_INVALID",
+          "CONFIRMATION_REQUIRED",
+          "INSTALL_TARGET_NOT_FOUND",
+          "INTERNAL_ERROR",
+          "INVALID_ARGUMENT",
+          "NOT_IMPLEMENTED",
+          "PROTOCOL_CONNECTION_CLOSED",
+          "PROTOCOL_INVALID_RESPONSE",
+          "PROTOCOL_MALFORMED_JSON",
+          "PROTOCOL_REQUEST_ID_MISMATCH",
+          "PROTOCOL_VERSION_MISMATCH",
+          "READ_ONLY_VIOLATION",
+          "REMOTE_BUSY",
+          "REMOTE_SCRIPT_INCOMPATIBLE",
+          "REMOTE_SCRIPT_NOT_INSTALLED",
+          "SET_FILE_INVALID",
+          "SET_INTEGRITY_FAILED",
+          "SET_SCHEMA_UNSUPPORTED",
+          "SKILL_SOURCE_NOT_FOUND",
+          "TIMEOUT",
+          "UNAUTHORIZED",
+          "UNSUPPORTED_OS"
+        ]
+      },
+      "result": {
+        "additional_properties": false,
+        "properties": {
+          "interval_ms": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "is_playing": {
+            "type": "boolean"
+          },
+          "left": {
+            "additional_properties": false,
+            "properties": {
+              "mean": {
+                "minimum": 0,
+                "type": "number"
+              },
+              "peak": {
+                "minimum": 0,
+                "type": "number"
+              }
+            },
+            "required": [
+              "peak",
+              "mean"
+            ],
+            "type": "object"
+          },
+          "level": {
+            "additional_properties": false,
+            "properties": {
+              "mean": {
+                "minimum": 0,
+                "type": "number"
+              },
+              "peak": {
+                "minimum": 0,
+                "type": "number"
+              }
+            },
+            "required": [
+              "peak",
+              "mean"
+            ],
+            "type": "object"
+          },
+          "right": {
+            "additional_properties": false,
+            "properties": {
+              "mean": {
+                "minimum": 0,
+                "type": "number"
+              },
+              "peak": {
+                "minimum": 0,
+                "type": "number"
+              }
+            },
+            "required": [
+              "peak",
+              "mean"
+            ],
+            "type": "object"
+          },
+          "samples": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "track": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "track",
+          "samples",
+          "interval_ms",
+          "is_playing",
+          "left",
+          "right",
+          "level"
         ],
         "type": "object"
       },

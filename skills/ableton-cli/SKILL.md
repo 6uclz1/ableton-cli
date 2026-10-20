@@ -172,6 +172,9 @@ Mastering workflow is measurement-first:
 uv run ableton-cli set inspect --path ./Song\ Project/Song.als
 uv run ableton-cli set lint --path ./Song\ Project/Song.als
 uv run ableton-cli set diff --from ./Song\ Project/Song.als --to ./Song\ Project/Song-v2.als
+uv run ableton-cli set automation write --path ./Song\ Project/Song.als --out ./Song\ Project/Song-auto.als --track-index 0 --target device.1.Frequency --points-json '[{"time":0,"value":500},{"time":64,"value":8000}]'
+uv run ableton-cli set automation write --path ./Song\ Project/Song.als --out ./Song\ Project/Song-sends.als --track-name Keys --target send.0 --points-json '[{"time":0,"value":0.1},{"time":32,"value":0.6}]'
+uv run ableton-cli set automation write --path ./Song\ Project/Song.als --out ./Song\ Project/Song-tempo.als --main --target mixer.tempo --points-json '[{"time":0,"value":120},{"time":128,"value":132}]'
 ```
 
 `set` commands read `.als` files directly and never contact Live. They accept Live 12
@@ -181,6 +184,18 @@ files that are not gzip-compressed Live Set XML. `set lint` exits `20` with
 IDs, bad `NextPointeeId`); missing project samples are warnings, and library samples
 are counted in `result.media` as unchecked, not verified. `set inspect` reports the
 effective tempo, which follows arrangement tempo automation over the manual value.
+
+`set automation write` is the way to write arrangement automation; the Remote Script can
+only write session clip envelopes. It writes a new set (`--out` must not exist and its
+directory must exist; save the open set in Live first, then open the output in Live).
+Pass exactly one of `--track-index`, `--track-name`, `--return-track-index`, `--main`.
+Targets: `mixer.volume`, `mixer.pan`, `mixer.tempo` (`--main` only), `send.<return index>`,
+`device.<device index>.<parameter XML tag>`. Values are Live's internal parameter values,
+not the normalized values `track volume set` / `track send set` take: volume and sends are
+linear gain (1.0 = 0 dB, 0.5 = about -6 dB) and device frequencies are in Hz. They are
+validated against the parameter's range; on/off and choice parameters are rejected, and
+an unknown device tag fails with `details.available_parameters`. It replaces any lane for
+the same parameter and is blocked by `--read-only`.
 
 ### Track
 
@@ -197,6 +212,7 @@ uv run ableton-cli track arm get --track-index 0
 uv run ableton-cli track arm set false --track-index 0
 uv run ableton-cli track panning get --track-index 0
 uv run ableton-cli track panning set -- -0.25 --track-index 0
+uv run ableton-cli track meter get --track-index 0 --samples 20 --interval-ms 50
 uv run ableton-cli track send get 1 --track-index 0
 uv run ableton-cli track send set 1 0.6 --track-index 0
 uv run ableton-cli track routing input get --selected-track
@@ -206,7 +222,8 @@ uv run ableton-cli track routing output set --type Master --channel 3/4 --track-
 ```
 
 Ref-aware commands use selector flags, not positional indexes.
-Track selectors: `--track-index`, `--track-name`, `--selected-track`, `--track-query`, `--track-ref`.
+Track selectors: `--track-index`, `--track-name`, `--selected-track`, `--track-query`, `--track-ref`
+(`device` commands also accept `--return-track-index`, `--return-track-name`).
 Device selectors: `--device-index`, `--device-name`, `--selected-device`, `--device-query`, `--device-ref`.
 Parameter selectors: `--parameter-index`, `--parameter-name`, `--parameter-query`, `--parameter-key`, `--parameter-ref`.
 Reuse `stable_ref` values emitted by `tracks list`, `track info`, synth/effect finds, and parameter listings when you need an exact session-local target.
@@ -223,6 +240,7 @@ uv run ableton-cli return-track mute get 0
 uv run ableton-cli return-track mute set 0 true
 uv run ableton-cli return-track solo get 0
 uv run ableton-cli return-track solo set 0 false
+uv run ableton-cli return-track meter get 0 --samples 20 --interval-ms 50
 ```
 
 ### Master / Mixer
@@ -233,6 +251,7 @@ uv run ableton-cli master volume get
 uv run ableton-cli master volume set 0.85
 uv run ableton-cli master panning get
 uv run ableton-cli master panning set -- 0.0
+uv run ableton-cli master meter get --samples 20 --interval-ms 50
 uv run ableton-cli master devices list
 uv run ableton-cli master device load query:Audio\ Effects#Utility --position end
 uv run ableton-cli master device move --device-index 2 --to-index 0
@@ -386,7 +405,14 @@ uv run ableton-cli device insert Compressor --track-name Bass
 uv run ableton-cli device insert "Auto Shift" --index 0 --track-name Vox
 uv run ableton-cli device move --to-index 0 --track-index 0 --device-index 2
 uv run ableton-cli device delete --track-index 0 --device-index 2
+uv run ableton-cli device insert "Hybrid Reverb" --return-track-index 0
+uv run ableton-cli device parameters list --return-track-name A-Reverb --device-index 0
+uv run ableton-cli device parameter set-display 4.5 --return-track-index 0 --device-index 0 --parameter-name Decay
 ```
+
+Every `device` command also takes `--return-track-index` or `--return-track-name` in place of
+the track selector, to reach devices on return tracks. Results then report
+`"track": {"kind": "return", "index": N}` instead of an integer.
 
 `device parameters list` works on any device, including VST/AU plug-ins and Max for Live
 devices: it reports each parameter's `display` string and, for choice parameters,
@@ -459,6 +485,10 @@ uv run ableton-cli --show-completion
 ```
 
 ## Operational notes
+
+- `track|return-track|master meter get` read output meters on Live's 0.0-1.0 meter scale (not dB),
+  `--samples` times `--interval-ms` apart, and report `peak`/`mean` per channel. Meters read 0.0
+  while stopped, so check `is_playing` in the result before treating a reading as silence.
 
 - For positional numeric arguments that begin with `-`, insert `--` before the value.
   - Example: `uv run ableton-cli track panning set -- -0.25 --track-index 0`
@@ -563,11 +593,13 @@ uv run ableton-cli --output json ping
 - `set_track_arm` -> `uv run ableton-cli --output json track arm set <value> --track-index <track>`
 - `get_track_panning` -> `uv run ableton-cli --output json track panning get --track-index <track>`
 - `set_track_panning` -> `uv run ableton-cli --output json track panning set <value> --track-index <track>`
+- `get_track_meter` -> `uv run ableton-cli --output json track meter get --track-index <track> --samples <n> --interval-ms <ms>`
 - `get_track_send` -> `uv run ableton-cli --output json track send get <send> --track-index <track>`
 - `set_track_send` -> `uv run ableton-cli --output json track send set <send> <value> --track-index <track>`
 - `list_return_tracks` -> `uv run ableton-cli --output json return-tracks list`
 - `set_return_track_volume` -> `uv run ableton-cli --output json return-track volume set <return-track> <value>`
 - `get_master_info` -> `uv run ableton-cli --output json master info`
+- `get_master_meter` -> `uv run ableton-cli --output json master meter get --samples <n> --interval-ms <ms>`
 - `list_master_devices` -> `uv run ableton-cli --output json master devices list`
 - `set_mixer_crossfader` -> `uv run ableton-cli --output json mixer crossfader set <value>`
 - `set_mixer_cue_routing` -> `uv run ableton-cli --output json mixer cue-routing set <routing>`
@@ -625,6 +657,7 @@ uv run ableton-cli --output json ping
 - `inspect_live_set` -> `uv run ableton-cli --output json set inspect --path <set.als>`
 - `lint_live_set` -> `uv run ableton-cli --output json set lint --path <set.als>`
 - `diff_live_set` -> `uv run ableton-cli --output json set diff --from <a.als> --to <b.als>`
+- `write_live_set_automation` -> `uv run ableton-cli --output json set automation write --path <set.als> --out <new.als> --track-index <track> --target <target> --points-json '<json>'`
 - `execute_batch` -> `uv run ableton-cli --output json batch run (--steps-file <path> | --steps-json '<json>' | --steps-stdin)`
 
 ## Examples

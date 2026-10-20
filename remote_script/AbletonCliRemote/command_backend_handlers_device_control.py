@@ -9,11 +9,11 @@ from .command_backend_validators import (
     _as_float,
     _as_str,
     _device_ref_args,
+    _device_track_ref,
     _insert_index,
     _non_empty_string,
     _parameter_ref,
     _track_index,
-    _track_ref,
 )
 
 Handler = Callable[[CommandBackend, dict[str, Any]], dict[str, Any]]
@@ -23,7 +23,7 @@ def _resolve_device(
     backend: CommandBackend, args: dict[str, Any]
 ) -> tuple[int, int | tuple[int, ...]]:
     track_ref, device_ref = _device_ref_args(args)
-    track = backend.resolve_track_ref(track_ref)
+    track = backend.resolve_device_track_ref(track_ref)
     return track, backend.resolve_device_ref(track, device_ref)
 
 
@@ -92,7 +92,7 @@ def _handle_device_sidechain_set(backend: CommandBackend, args: dict[str, Any]) 
 def _handle_device_insert(backend: CommandBackend, args: dict[str, Any]) -> dict[str, Any]:
     device_name = _non_empty_string("device_name", args.get("device_name"))
     index = _insert_index("index", args.get("index", -1))
-    track = backend.resolve_track_ref(_track_ref(args.get("track_ref")))
+    track = backend.resolve_device_track_ref(_device_track_ref(args.get("track_ref")))
     return backend.device_insert(track, device_name, index)
 
 

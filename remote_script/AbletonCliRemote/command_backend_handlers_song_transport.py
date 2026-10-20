@@ -133,6 +133,18 @@ def _handle_set_tempo(backend: CommandBackend, args: dict[str, Any]) -> dict[str
     return backend.set_tempo(_tempo(args.get("tempo")))
 
 
+def _handle_track_meter_get(backend: CommandBackend, args: dict[str, Any]) -> dict[str, Any]:
+    return backend.track_meter_get(backend.resolve_track_ref(_track_ref(args.get("track_ref"))))
+
+
+def _handle_return_track_meter_get(backend: CommandBackend, args: dict[str, Any]) -> dict[str, Any]:
+    return backend.return_track_meter_get(_track_index("return_track", args.get("return_track")))
+
+
+def _handle_master_meter_get(backend: CommandBackend, _args: dict[str, Any]) -> dict[str, Any]:
+    return backend.master_meter_get()
+
+
 def _handle_track_volume_get(backend: CommandBackend, args: dict[str, Any]) -> dict[str, Any]:
     track = backend.resolve_track_ref(_track_ref(args.get("track_ref")))
     return backend.track_volume_get(track)
@@ -384,6 +396,9 @@ SONG_TRANSPORT_HANDLERS: dict[str, Handler] = {
     "transport_position_set": _handle_transport_position_set,
     "transport_rewind": _handle_transport_rewind,
     "set_tempo": _handle_set_tempo,
+    "track_meter_get": _handle_track_meter_get,
+    "return_track_meter_get": _handle_return_track_meter_get,
+    "master_meter_get": _handle_master_meter_get,
     "track_volume_get": _handle_track_volume_get,
     "track_volume_set": _handle_track_volume_set,
     "track_mute_get": _handle_track_mute_get,

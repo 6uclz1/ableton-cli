@@ -85,6 +85,16 @@ class AppError(Exception):
         }
 
 
+def read_only_violation(command: str) -> AppError:
+    return AppError(
+        error_code=ErrorCode.READ_ONLY_VIOLATION,
+        message=f"Command '{command}' is blocked in read-only mode",
+        hint="Run without --read-only to execute write commands.",
+        exit_code=ExitCode.EXECUTION_FAILED,
+        details={"command": command},
+    )
+
+
 REMOTE_ERROR_TO_EXIT_CODE: dict[ErrorCode, ExitCode] = {
     ErrorCode.INVALID_ARGUMENT: ExitCode.INVALID_ARGUMENT,
     ErrorCode.CONFIG_INVALID: ExitCode.CONFIG_INVALID,

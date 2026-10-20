@@ -567,10 +567,10 @@ def _ref_object(name: str, value: Any, *, allowed_modes: set[str]) -> dict[str, 
             hint=f"Provide only the fields required by the '{mode}' selector mode.",
         )
 
-    if mode == "index":
+    if mode in {"index", "return_index"}:
         require_keys({"mode", "index"})
         return {"mode": mode, "index": _track_index(f"{name}.index", value.get("index"))}
-    if mode == "name":
+    if mode in {"name", "return_name"}:
         require_keys({"mode", "name"})
         return {"mode": mode, "name": _non_empty_string(f"{name}.name", value.get("name"))}
     if mode == "selected":
@@ -596,6 +596,23 @@ def _track_ref(value: Any) -> dict[str, Any]:
         "track_ref",
         value,
         allowed_modes={"index", "name", "selected", "query", "stable_ref"},
+    )
+
+
+def _device_track_ref(value: Any) -> dict[str, Any]:
+    """Track selector of the device command group, which also reaches return tracks."""
+    return _ref_object(
+        "track_ref",
+        value,
+        allowed_modes={
+            "index",
+            "name",
+            "selected",
+            "query",
+            "stable_ref",
+            "return_index",
+            "return_name",
+        },
     )
 
 
@@ -699,15 +716,25 @@ def _clip_envelope_clear_args(
 
 
 def _device_ref_args(args: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any]]:
-    track_ref = _track_ref(args.get("track_ref"))
+    """Track and device selectors of the device command group."""
+    track_ref = _device_track_ref(args.get("track_ref"))
     device_ref = _device_ref(args.get("device_ref"))
     return track_ref, device_ref
+
+
+def _device_group_parameter_args(
+    args: dict[str, Any],
+) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any], float]:
+    track_ref, device_ref = _device_ref_args(args)
+    parameter = _parameter_ref(args.get("parameter_ref"))
+    value = _as_float("value", args.get("value"))
+    return track_ref, device_ref, parameter, value
 
 
 def _device_macro_set_args(
     args: dict[str, Any],
 ) -> tuple[dict[str, Any], dict[str, Any], int, float]:
-    track_ref = _track_ref(args.get("track_ref"))
+    track_ref = _device_track_ref(args.get("track_ref"))
     device_ref = _device_ref(args.get("device_ref"))
     macro_index = _track_index("macro_index", args.get("macro_index"))
     value = _as_float("value", args.get("value"))

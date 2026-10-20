@@ -35,7 +35,35 @@ _TRACK_BASE = {
     "devices": _array(_DEVICE),
 }
 
+_NULLABLE_STRING = {"type": ["string", "null"]}
+
 LIVESET_CONTRACTS: dict[str, dict[str, dict[str, Any]]] = {
+    "set automation write": {
+        "args": _object(
+            {
+                "path": _STRING,
+                "out": _STRING,
+                "target": _STRING,
+                "track_index": _NULLABLE_INTEGER,
+                "track_name": _NULLABLE_STRING,
+                "return_track_index": _NULLABLE_INTEGER,
+                "main": _BOOLEAN,
+            }
+        ),
+        "result": _object(
+            {
+                "path": _STRING,
+                "out": _STRING,
+                "scope": _object(
+                    {"kind": _STRING, "index": _NULLABLE_INTEGER, "name": _NULLABLE_STRING}
+                ),
+                "target": _STRING,
+                "parameter": _STRING,
+                "point_count": _INTEGER,
+                "replaced_point_count": _INTEGER,
+            }
+        ),
+    },
     "set inspect": {
         "args": _PATH_ARGS,
         "result": _object(

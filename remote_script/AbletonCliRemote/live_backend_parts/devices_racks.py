@@ -56,7 +56,7 @@ class LiveBackendDeviceRacksMixin:
                     "devices": devices_payload,
                 }
             )
-        return {"track": track, "device": device, "chains": chains_payload}
+        return {"track": self._ctx._track_field(track), "device": device, "chains": chains_payload}
 
     @staticmethod
     def _chain_device_path(
@@ -105,7 +105,7 @@ class LiveBackendDeviceRacksMixin:
                     "stable_ref": stable_ref,
                 }
             )
-        return {"track": track, "device": device, "macros": macros_payload}
+        return {"track": self._ctx._track_field(track), "device": device, "macros": macros_payload}
 
     def device_macro_set(
         self,
@@ -137,7 +137,7 @@ class LiveBackendDeviceRacksMixin:
             )
         parameter.value = float(value)
         return {
-            "track": track,
+            "track": self._ctx._track_field(track),
             "device": device,
             "macro_index": macro_index,
             "name": str(getattr(parameter, "name", "")),

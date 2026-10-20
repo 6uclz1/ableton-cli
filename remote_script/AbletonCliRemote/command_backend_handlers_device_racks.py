@@ -11,21 +11,21 @@ Handler = Callable[[CommandBackend, dict[str, Any]], dict[str, Any]]
 
 def _handle_device_chains_list(backend: CommandBackend, args: dict[str, Any]) -> dict[str, Any]:
     track_ref, device_ref = _device_ref_args(args)
-    track = backend.resolve_track_ref(track_ref)
+    track = backend.resolve_device_track_ref(track_ref)
     device = backend.resolve_device_ref(track, device_ref)
     return backend.device_chains_list(track, device)
 
 
 def _handle_device_macro_list(backend: CommandBackend, args: dict[str, Any]) -> dict[str, Any]:
     track_ref, device_ref = _device_ref_args(args)
-    track = backend.resolve_track_ref(track_ref)
+    track = backend.resolve_device_track_ref(track_ref)
     device = backend.resolve_device_ref(track, device_ref)
     return backend.device_macro_list(track, device)
 
 
 def _handle_device_macro_set(backend: CommandBackend, args: dict[str, Any]) -> dict[str, Any]:
     track_ref, device_ref, macro_index, value = _device_macro_set_args(args)
-    track = backend.resolve_track_ref(track_ref)
+    track = backend.resolve_device_track_ref(track_ref)
     device = backend.resolve_device_ref(track, device_ref)
     return backend.device_macro_set(track, device, macro_index, value)
 

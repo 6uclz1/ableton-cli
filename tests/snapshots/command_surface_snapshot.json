@@ -13613,17 +13613,19 @@
         " Read whether a device is switched on.",
         "",
         "\u256d\u2500 Options \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e",
-        "\u2502 --track-index            INTEGER  Track index (0-based)                                          \u2502",
-        "\u2502 --track-name             TEXT     Exact track name                                               \u2502",
-        "\u2502 --selected-track                  Use the currently selected track                               \u2502",
-        "\u2502 --track-query            TEXT     Unique case-insensitive track query                            \u2502",
-        "\u2502 --track-ref              TEXT     Session-local stable track reference                           \u2502",
-        "\u2502 --device-index           INTEGER  Device index (0-based)                                         \u2502",
-        "\u2502 --device-name            TEXT     Exact device name                                              \u2502",
-        "\u2502 --selected-device                 Use the currently selected device on the target track          \u2502",
-        "\u2502 --device-query           TEXT     Unique case-insensitive device query                           \u2502",
-        "\u2502 --device-ref             TEXT     Session-local stable device reference                          \u2502",
-        "\u2502 --help                            Show this message and exit.                                    \u2502",
+        "\u2502 --track-index               INTEGER  Track index (0-based)                                       \u2502",
+        "\u2502 --track-name                TEXT     Exact track name                                            \u2502",
+        "\u2502 --selected-track                     Use the currently selected track                            \u2502",
+        "\u2502 --track-query               TEXT     Unique case-insensitive track query                         \u2502",
+        "\u2502 --track-ref                 TEXT     Session-local stable track reference                        \u2502",
+        "\u2502 --return-track-index        INTEGER  Return track index (0-based)                                \u2502",
+        "\u2502 --return-track-name         TEXT     Exact return track name                                     \u2502",
+        "\u2502 --device-index              INTEGER  Device index (0-based)                                      \u2502",
+        "\u2502 --device-name               TEXT     Exact device name                                           \u2502",
+        "\u2502 --selected-device                    Use the currently selected device on the target track       \u2502",
+        "\u2502 --device-query              TEXT     Unique case-insensitive device query                        \u2502",
+        "\u2502 --device-ref                TEXT     Session-local stable device reference                       \u2502",
+        "\u2502 --help                               Show this message and exit.                                 \u2502",
         "\u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f"
       ],
       "hidden": false,
@@ -13750,6 +13752,58 @@
           "nargs": 1,
           "opts": [
             "--track-ref"
+          ],
+          "prompt": null,
+          "required": false,
+          "secondary_opts": [],
+          "show_default": true,
+          "type": {
+            "class": "StringParamType",
+            "name": "text"
+          }
+        },
+        {
+          "count": false,
+          "default": null,
+          "envvar": null,
+          "expose_value": true,
+          "flag_value": null,
+          "help": "Return track index (0-based)",
+          "hidden": false,
+          "is_flag": false,
+          "kind": "option",
+          "metavar": null,
+          "multiple": false,
+          "name": "return_track_index",
+          "nargs": 1,
+          "opts": [
+            "--return-track-index"
+          ],
+          "prompt": null,
+          "required": false,
+          "secondary_opts": [],
+          "show_default": true,
+          "type": {
+            "class": "IntParamType",
+            "name": "integer"
+          }
+        },
+        {
+          "count": false,
+          "default": null,
+          "envvar": null,
+          "expose_value": true,
+          "flag_value": null,
+          "help": "Exact return track name",
+          "hidden": false,
+          "is_flag": false,
+          "kind": "option",
+          "metavar": null,
+          "multiple": false,
+          "name": "return_track_name",
+          "nargs": 1,
+          "opts": [
+            "--return-track-name"
           ],
           "prompt": null,
           "required": false,
@@ -13911,17 +13965,19 @@
         "\u2502 *    value        Active value: true|false [required]                                            \u2502",
         "\u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f",
         "\u256d\u2500 Options \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e",
-        "\u2502 --track-index            INTEGER  Track index (0-based)                                          \u2502",
-        "\u2502 --track-name             TEXT     Exact track name                                               \u2502",
-        "\u2502 --selected-track                  Use the currently selected track                               \u2502",
-        "\u2502 --track-query            TEXT     Unique case-insensitive track query                            \u2502",
-        "\u2502 --track-ref              TEXT     Session-local stable track reference                           \u2502",
-        "\u2502 --device-index           INTEGER  Device index (0-based)                                         \u2502",
-        "\u2502 --device-name            TEXT     Exact device name                                              \u2502",
-        "\u2502 --selected-device                 Use the currently selected device on the target track          \u2502",
-        "\u2502 --device-query           TEXT     Unique case-insensitive device query                           \u2502",
-        "\u2502 --device-ref             TEXT     Session-local stable device reference                          \u2502",
-        "\u2502 --help                            Show this message and exit.                                    \u2502",
+        "\u2502 --track-index               INTEGER  Track index (0-based)                                       \u2502",
+        "\u2502 --track-name                TEXT     Exact track name                                            \u2502",
+        "\u2502 --selected-track                     Use the currently selected track                            \u2502",
+        "\u2502 --track-query               TEXT     Unique case-insensitive track query                         \u2502",
+        "\u2502 --track-ref                 TEXT     Session-local stable track reference                        \u2502",
+        "\u2502 --return-track-index        INTEGER  Return track index (0-based)                                \u2502",
+        "\u2502 --return-track-name         TEXT     Exact return track name                                     \u2502",
+        "\u2502 --device-index              INTEGER  Device index (0-based)                                      \u2502",
+        "\u2502 --device-name               TEXT     Exact device name                                           \u2502",
+        "\u2502 --selected-device                    Use the currently selected device on the target track       \u2502",
+        "\u2502 --device-query              TEXT     Unique case-insensitive device query                        \u2502",
+        "\u2502 --device-ref                TEXT     Session-local stable device reference                       \u2502",
+        "\u2502 --help                               Show this message and exit.                                 \u2502",
         "\u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f"
       ],
       "hidden": false,
@@ -14068,6 +14124,58 @@
           "nargs": 1,
           "opts": [
             "--track-ref"
+          ],
+          "prompt": null,
+          "required": false,
+          "secondary_opts": [],
+          "show_default": true,
+          "type": {
+            "class": "StringParamType",
+            "name": "text"
+          }
+        },
+        {
+          "count": false,
+          "default": null,
+          "envvar": null,
+          "expose_value": true,
+          "flag_value": null,
+          "help": "Return track index (0-based)",
+          "hidden": false,
+          "is_flag": false,
+          "kind": "option",
+          "metavar": null,
+          "multiple": false,
+          "name": "return_track_index",
+          "nargs": 1,
+          "opts": [
+            "--return-track-index"
+          ],
+          "prompt": null,
+          "required": false,
+          "secondary_opts": [],
+          "show_default": true,
+          "type": {
+            "class": "IntParamType",
+            "name": "integer"
+          }
+        },
+        {
+          "count": false,
+          "default": null,
+          "envvar": null,
+          "expose_value": true,
+          "flag_value": null,
+          "help": "Exact return track name",
+          "hidden": false,
+          "is_flag": false,
+          "kind": "option",
+          "metavar": null,
+          "multiple": false,
+          "name": "return_track_name",
+          "nargs": 1,
+          "opts": [
+            "--return-track-name"
           ],
           "prompt": null,
           "required": false,
@@ -14253,17 +14361,19 @@
         " Usage: list [OPTIONS]",
         "",
         "\u256d\u2500 Options \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e",
-        "\u2502 --track-index            INTEGER  Track index (0-based)                                          \u2502",
-        "\u2502 --track-name             TEXT     Exact track name                                               \u2502",
-        "\u2502 --selected-track                  Use the currently selected track                               \u2502",
-        "\u2502 --track-query            TEXT     Unique case-insensitive track query                            \u2502",
-        "\u2502 --track-ref              TEXT     Session-local stable track reference                           \u2502",
-        "\u2502 --device-index           INTEGER  Device index (0-based)                                         \u2502",
-        "\u2502 --device-name            TEXT     Exact device name                                              \u2502",
-        "\u2502 --selected-device                 Use the currently selected device on the target track          \u2502",
-        "\u2502 --device-query           TEXT     Unique case-insensitive device query                           \u2502",
-        "\u2502 --device-ref             TEXT     Session-local stable device reference                          \u2502",
-        "\u2502 --help                            Show this message and exit.                                    \u2502",
+        "\u2502 --track-index               INTEGER  Track index (0-based)                                       \u2502",
+        "\u2502 --track-name                TEXT     Exact track name                                            \u2502",
+        "\u2502 --selected-track                     Use the currently selected track                            \u2502",
+        "\u2502 --track-query               TEXT     Unique case-insensitive track query                         \u2502",
+        "\u2502 --track-ref                 TEXT     Session-local stable track reference                        \u2502",
+        "\u2502 --return-track-index        INTEGER  Return track index (0-based)                                \u2502",
+        "\u2502 --return-track-name         TEXT     Exact return track name                                     \u2502",
+        "\u2502 --device-index              INTEGER  Device index (0-based)                                      \u2502",
+        "\u2502 --device-name               TEXT     Exact device name                                           \u2502",
+        "\u2502 --selected-device                    Use the currently selected device on the target track       \u2502",
+        "\u2502 --device-query              TEXT     Unique case-insensitive device query                        \u2502",
+        "\u2502 --device-ref                TEXT     Session-local stable device reference                       \u2502",
+        "\u2502 --help                               Show this message and exit.                                 \u2502",
         "\u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f"
       ],
       "hidden": false,
@@ -14390,6 +14500,58 @@
           "nargs": 1,
           "opts": [
             "--track-ref"
+          ],
+          "prompt": null,
+          "required": false,
+          "secondary_opts": [],
+          "show_default": true,
+          "type": {
+            "class": "StringParamType",
+            "name": "text"
+          }
+        },
+        {
+          "count": false,
+          "default": null,
+          "envvar": null,
+          "expose_value": true,
+          "flag_value": null,
+          "help": "Return track index (0-based)",
+          "hidden": false,
+          "is_flag": false,
+          "kind": "option",
+          "metavar": null,
+          "multiple": false,
+          "name": "return_track_index",
+          "nargs": 1,
+          "opts": [
+            "--return-track-index"
+          ],
+          "prompt": null,
+          "required": false,
+          "secondary_opts": [],
+          "show_default": true,
+          "type": {
+            "class": "IntParamType",
+            "name": "integer"
+          }
+        },
+        {
+          "count": false,
+          "default": null,
+          "envvar": null,
+          "expose_value": true,
+          "flag_value": null,
+          "help": "Exact return track name",
+          "hidden": false,
+          "is_flag": false,
+          "kind": "option",
+          "metavar": null,
+          "multiple": false,
+          "name": "return_track_name",
+          "nargs": 1,
+          "opts": [
+            "--return-track-name"
           ],
           "prompt": null,
           "required": false,
@@ -14548,17 +14710,19 @@
         " Delete a top-level device from a track.",
         "",
         "\u256d\u2500 Options \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e",
-        "\u2502 --track-index            INTEGER  Track index (0-based)                                          \u2502",
-        "\u2502 --track-name             TEXT     Exact track name                                               \u2502",
-        "\u2502 --selected-track                  Use the currently selected track                               \u2502",
-        "\u2502 --track-query            TEXT     Unique case-insensitive track query                            \u2502",
-        "\u2502 --track-ref              TEXT     Session-local stable track reference                           \u2502",
-        "\u2502 --device-index           INTEGER  Device index (0-based)                                         \u2502",
-        "\u2502 --device-name            TEXT     Exact device name                                              \u2502",
-        "\u2502 --selected-device                 Use the currently selected device on the target track          \u2502",
-        "\u2502 --device-query           TEXT     Unique case-insensitive device query                           \u2502",
-        "\u2502 --device-ref             TEXT     Session-local stable device reference                          \u2502",
-        "\u2502 --help                            Show this message and exit.                                    \u2502",
+        "\u2502 --track-index               INTEGER  Track index (0-based)                                       \u2502",
+        "\u2502 --track-name                TEXT     Exact track name                                            \u2502",
+        "\u2502 --selected-track                     Use the currently selected track                            \u2502",
+        "\u2502 --track-query               TEXT     Unique case-insensitive track query                         \u2502",
+        "\u2502 --track-ref                 TEXT     Session-local stable track reference                        \u2502",
+        "\u2502 --return-track-index        INTEGER  Return track index (0-based)                                \u2502",
+        "\u2502 --return-track-name         TEXT     Exact return track name                                     \u2502",
+        "\u2502 --device-index              INTEGER  Device index (0-based)                                      \u2502",
+        "\u2502 --device-name               TEXT     Exact device name                                           \u2502",
+        "\u2502 --selected-device                    Use the currently selected device on the target track       \u2502",
+        "\u2502 --device-query              TEXT     Unique case-insensitive device query                        \u2502",
+        "\u2502 --device-ref                TEXT     Session-local stable device reference                       \u2502",
+        "\u2502 --help                               Show this message and exit.                                 \u2502",
         "\u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f"
       ],
       "hidden": false,
@@ -14685,6 +14849,58 @@
           "nargs": 1,
           "opts": [
             "--track-ref"
+          ],
+          "prompt": null,
+          "required": false,
+          "secondary_opts": [],
+          "show_default": true,
+          "type": {
+            "class": "StringParamType",
+            "name": "text"
+          }
+        },
+        {
+          "count": false,
+          "default": null,
+          "envvar": null,
+          "expose_value": true,
+          "flag_value": null,
+          "help": "Return track index (0-based)",
+          "hidden": false,
+          "is_flag": false,
+          "kind": "option",
+          "metavar": null,
+          "multiple": false,
+          "name": "return_track_index",
+          "nargs": 1,
+          "opts": [
+            "--return-track-index"
+          ],
+          "prompt": null,
+          "required": false,
+          "secondary_opts": [],
+          "show_default": true,
+          "type": {
+            "class": "IntParamType",
+            "name": "integer"
+          }
+        },
+        {
+          "count": false,
+          "default": null,
+          "envvar": null,
+          "expose_value": true,
+          "flag_value": null,
+          "help": "Exact return track name",
+          "hidden": false,
+          "is_flag": false,
+          "kind": "option",
+          "metavar": null,
+          "multiple": false,
+          "name": "return_track_name",
+          "nargs": 1,
+          "opts": [
+            "--return-track-name"
           ],
           "prompt": null,
           "required": false,
@@ -14845,13 +15061,15 @@
         "\u2502 *    name      TEXT  Native Live device name, e.g. Compressor [required]                         \u2502",
         "\u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f",
         "\u256d\u2500 Options \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e",
-        "\u2502 --index                 INTEGER  Insertion index; -1 appends (Live 12.3+) [default: -1]          \u2502",
-        "\u2502 --track-index           INTEGER  Track index (0-based)                                           \u2502",
-        "\u2502 --track-name            TEXT     Exact track name                                                \u2502",
-        "\u2502 --selected-track                 Use the currently selected track                                \u2502",
-        "\u2502 --track-query           TEXT     Unique case-insensitive track query                             \u2502",
-        "\u2502 --track-ref             TEXT     Session-local stable track reference                            \u2502",
-        "\u2502 --help                           Show this message and exit.                                     \u2502",
+        "\u2502 --index                     INTEGER  Insertion index; -1 appends (Live 12.3+) [default: -1]      \u2502",
+        "\u2502 --track-index               INTEGER  Track index (0-based)                                       \u2502",
+        "\u2502 --track-name                TEXT     Exact track name                                            \u2502",
+        "\u2502 --selected-track                     Use the currently selected track                            \u2502",
+        "\u2502 --track-query               TEXT     Unique case-insensitive track query                         \u2502",
+        "\u2502 --track-ref                 TEXT     Session-local stable track reference                        \u2502",
+        "\u2502 --return-track-index        INTEGER  Return track index (0-based)                                \u2502",
+        "\u2502 --return-track-name         TEXT     Exact return track name                                     \u2502",
+        "\u2502 --help                               Show this message and exit.                                 \u2502",
         "\u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f"
       ],
       "hidden": false,
@@ -15033,6 +15251,58 @@
             "class": "StringParamType",
             "name": "text"
           }
+        },
+        {
+          "count": false,
+          "default": null,
+          "envvar": null,
+          "expose_value": true,
+          "flag_value": null,
+          "help": "Return track index (0-based)",
+          "hidden": false,
+          "is_flag": false,
+          "kind": "option",
+          "metavar": null,
+          "multiple": false,
+          "name": "return_track_index",
+          "nargs": 1,
+          "opts": [
+            "--return-track-index"
+          ],
+          "prompt": null,
+          "required": false,
+          "secondary_opts": [],
+          "show_default": true,
+          "type": {
+            "class": "IntParamType",
+            "name": "integer"
+          }
+        },
+        {
+          "count": false,
+          "default": null,
+          "envvar": null,
+          "expose_value": true,
+          "flag_value": null,
+          "help": "Exact return track name",
+          "hidden": false,
+          "is_flag": false,
+          "kind": "option",
+          "metavar": null,
+          "multiple": false,
+          "name": "return_track_name",
+          "nargs": 1,
+          "opts": [
+            "--return-track-name"
+          ],
+          "prompt": null,
+          "required": false,
+          "secondary_opts": [],
+          "show_default": true,
+          "type": {
+            "class": "StringParamType",
+            "name": "text"
+          }
         }
       ],
       "path": [
@@ -15080,17 +15350,19 @@
         " Usage: list [OPTIONS]",
         "",
         "\u256d\u2500 Options \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e",
-        "\u2502 --track-index            INTEGER  Track index (0-based)                                          \u2502",
-        "\u2502 --track-name             TEXT     Exact track name                                               \u2502",
-        "\u2502 --selected-track                  Use the currently selected track                               \u2502",
-        "\u2502 --track-query            TEXT     Unique case-insensitive track query                            \u2502",
-        "\u2502 --track-ref              TEXT     Session-local stable track reference                           \u2502",
-        "\u2502 --device-index           INTEGER  Device index (0-based)                                         \u2502",
-        "\u2502 --device-name            TEXT     Exact device name                                              \u2502",
-        "\u2502 --selected-device                 Use the currently selected device on the target track          \u2502",
-        "\u2502 --device-query           TEXT     Unique case-insensitive device query                           \u2502",
-        "\u2502 --device-ref             TEXT     Session-local stable device reference                          \u2502",
-        "\u2502 --help                            Show this message and exit.                                    \u2502",
+        "\u2502 --track-index               INTEGER  Track index (0-based)                                       \u2502",
+        "\u2502 --track-name                TEXT     Exact track name                                            \u2502",
+        "\u2502 --selected-track                     Use the currently selected track                            \u2502",
+        "\u2502 --track-query               TEXT     Unique case-insensitive track query                         \u2502",
+        "\u2502 --track-ref                 TEXT     Session-local stable track reference                        \u2502",
+        "\u2502 --return-track-index        INTEGER  Return track index (0-based)                                \u2502",
+        "\u2502 --return-track-name         TEXT     Exact return track name                                     \u2502",
+        "\u2502 --device-index              INTEGER  Device index (0-based)                                      \u2502",
+        "\u2502 --device-name               TEXT     Exact device name                                           \u2502",
+        "\u2502 --selected-device                    Use the currently selected device on the target track       \u2502",
+        "\u2502 --device-query              TEXT     Unique case-insensitive device query                        \u2502",
+        "\u2502 --device-ref                TEXT     Session-local stable device reference                       \u2502",
+        "\u2502 --help                               Show this message and exit.                                 \u2502",
         "\u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f"
       ],
       "hidden": false,
@@ -15217,6 +15489,58 @@
           "nargs": 1,
           "opts": [
             "--track-ref"
+          ],
+          "prompt": null,
+          "required": false,
+          "secondary_opts": [],
+          "show_default": true,
+          "type": {
+            "class": "StringParamType",
+            "name": "text"
+          }
+        },
+        {
+          "count": false,
+          "default": null,
+          "envvar": null,
+          "expose_value": true,
+          "flag_value": null,
+          "help": "Return track index (0-based)",
+          "hidden": false,
+          "is_flag": false,
+          "kind": "option",
+          "metavar": null,
+          "multiple": false,
+          "name": "return_track_index",
+          "nargs": 1,
+          "opts": [
+            "--return-track-index"
+          ],
+          "prompt": null,
+          "required": false,
+          "secondary_opts": [],
+          "show_default": true,
+          "type": {
+            "class": "IntParamType",
+            "name": "integer"
+          }
+        },
+        {
+          "count": false,
+          "default": null,
+          "envvar": null,
+          "expose_value": true,
+          "flag_value": null,
+          "help": "Exact return track name",
+          "hidden": false,
+          "is_flag": false,
+          "kind": "option",
+          "metavar": null,
+          "multiple": false,
+          "name": "return_track_name",
+          "nargs": 1,
+          "opts": [
+            "--return-track-name"
           ],
           "prompt": null,
           "required": false,
@@ -15377,17 +15701,19 @@
         "\u2502 *    value            FLOAT    Target macro value [required]                                     \u2502",
         "\u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f",
         "\u256d\u2500 Options \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e",
-        "\u2502 --track-index            INTEGER  Track index (0-based)                                          \u2502",
-        "\u2502 --track-name             TEXT     Exact track name                                               \u2502",
-        "\u2502 --selected-track                  Use the currently selected track                               \u2502",
-        "\u2502 --track-query            TEXT     Unique case-insensitive track query                            \u2502",
-        "\u2502 --track-ref              TEXT     Session-local stable track reference                           \u2502",
-        "\u2502 --device-index           INTEGER  Device index (0-based)                                         \u2502",
-        "\u2502 --device-name            TEXT     Exact device name                                              \u2502",
-        "\u2502 --selected-device                 Use the currently selected device on the target track          \u2502",
-        "\u2502 --device-query           TEXT     Unique case-insensitive device query                           \u2502",
-        "\u2502 --device-ref             TEXT     Session-local stable device reference                          \u2502",
-        "\u2502 --help                            Show this message and exit.                                    \u2502",
+        "\u2502 --track-index               INTEGER  Track index (0-based)                                       \u2502",
+        "\u2502 --track-name                TEXT     Exact track name                                            \u2502",
+        "\u2502 --selected-track                     Use the currently selected track                            \u2502",
+        "\u2502 --track-query               TEXT     Unique case-insensitive track query                         \u2502",
+        "\u2502 --track-ref                 TEXT     Session-local stable track reference                        \u2502",
+        "\u2502 --return-track-index        INTEGER  Return track index (0-based)                                \u2502",
+        "\u2502 --return-track-name         TEXT     Exact return track name                                     \u2502",
+        "\u2502 --device-index              INTEGER  Device index (0-based)                                      \u2502",
+        "\u2502 --device-name               TEXT     Exact device name                                           \u2502",
+        "\u2502 --selected-device                    Use the currently selected device on the target track       \u2502",
+        "\u2502 --device-query              TEXT     Unique case-insensitive device query                        \u2502",
+        "\u2502 --device-ref                TEXT     Session-local stable device reference                       \u2502",
+        "\u2502 --help                               Show this message and exit.                                 \u2502",
         "\u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f"
       ],
       "hidden": false,
@@ -15570,6 +15896,58 @@
           "envvar": null,
           "expose_value": true,
           "flag_value": null,
+          "help": "Return track index (0-based)",
+          "hidden": false,
+          "is_flag": false,
+          "kind": "option",
+          "metavar": null,
+          "multiple": false,
+          "name": "return_track_index",
+          "nargs": 1,
+          "opts": [
+            "--return-track-index"
+          ],
+          "prompt": null,
+          "required": false,
+          "secondary_opts": [],
+          "show_default": true,
+          "type": {
+            "class": "IntParamType",
+            "name": "integer"
+          }
+        },
+        {
+          "count": false,
+          "default": null,
+          "envvar": null,
+          "expose_value": true,
+          "flag_value": null,
+          "help": "Exact return track name",
+          "hidden": false,
+          "is_flag": false,
+          "kind": "option",
+          "metavar": null,
+          "multiple": false,
+          "name": "return_track_name",
+          "nargs": 1,
+          "opts": [
+            "--return-track-name"
+          ],
+          "prompt": null,
+          "required": false,
+          "secondary_opts": [],
+          "show_default": true,
+          "type": {
+            "class": "StringParamType",
+            "name": "text"
+          }
+        },
+        {
+          "count": false,
+          "default": null,
+          "envvar": null,
+          "expose_value": true,
+          "flag_value": null,
           "help": "Device index (0-based)",
           "hidden": false,
           "is_flag": false,
@@ -15712,18 +16090,20 @@
         " Move a top-level device to another position on its track.",
         "",
         "\u256d\u2500 Options \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e",
-        "\u2502 *  --to-index               INTEGER  Destination index [required]                                \u2502",
-        "\u2502    --track-index            INTEGER  Track index (0-based)                                       \u2502",
-        "\u2502    --track-name             TEXT     Exact track name                                            \u2502",
-        "\u2502    --selected-track                  Use the currently selected track                            \u2502",
-        "\u2502    --track-query            TEXT     Unique case-insensitive track query                         \u2502",
-        "\u2502    --track-ref              TEXT     Session-local stable track reference                        \u2502",
-        "\u2502    --device-index           INTEGER  Device index (0-based)                                      \u2502",
-        "\u2502    --device-name            TEXT     Exact device name                                           \u2502",
-        "\u2502    --selected-device                 Use the currently selected device on the target track       \u2502",
-        "\u2502    --device-query           TEXT     Unique case-insensitive device query                        \u2502",
-        "\u2502    --device-ref             TEXT     Session-local stable device reference                       \u2502",
-        "\u2502    --help                            Show this message and exit.                                 \u2502",
+        "\u2502 *  --to-index                  INTEGER  Destination index [required]                             \u2502",
+        "\u2502    --track-index               INTEGER  Track index (0-based)                                    \u2502",
+        "\u2502    --track-name                TEXT     Exact track name                                         \u2502",
+        "\u2502    --selected-track                     Use the currently selected track                         \u2502",
+        "\u2502    --track-query               TEXT     Unique case-insensitive track query                      \u2502",
+        "\u2502    --track-ref                 TEXT     Session-local stable track reference                     \u2502",
+        "\u2502    --return-track-index        INTEGER  Return track index (0-based)                             \u2502",
+        "\u2502    --return-track-name         TEXT     Exact return track name                                  \u2502",
+        "\u2502    --device-index              INTEGER  Device index (0-based)                                   \u2502",
+        "\u2502    --device-name               TEXT     Exact device name                                        \u2502",
+        "\u2502    --selected-device                    Use the currently selected device on the target track    \u2502",
+        "\u2502    --device-query              TEXT     Unique case-insensitive device query                     \u2502",
+        "\u2502    --device-ref                TEXT     Session-local stable device reference                    \u2502",
+        "\u2502    --help                               Show this message and exit.                              \u2502",
         "\u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f"
       ],
       "hidden": false,
@@ -15876,6 +16256,58 @@
           "nargs": 1,
           "opts": [
             "--track-ref"
+          ],
+          "prompt": null,
+          "required": false,
+          "secondary_opts": [],
+          "show_default": true,
+          "type": {
+            "class": "StringParamType",
+            "name": "text"
+          }
+        },
+        {
+          "count": false,
+          "default": null,
+          "envvar": null,
+          "expose_value": true,
+          "flag_value": null,
+          "help": "Return track index (0-based)",
+          "hidden": false,
+          "is_flag": false,
+          "kind": "option",
+          "metavar": null,
+          "multiple": false,
+          "name": "return_track_index",
+          "nargs": 1,
+          "opts": [
+            "--return-track-index"
+          ],
+          "prompt": null,
+          "required": false,
+          "secondary_opts": [],
+          "show_default": true,
+          "type": {
+            "class": "IntParamType",
+            "name": "integer"
+          }
+        },
+        {
+          "count": false,
+          "default": null,
+          "envvar": null,
+          "expose_value": true,
+          "flag_value": null,
+          "help": "Exact return track name",
+          "hidden": false,
+          "is_flag": false,
+          "kind": "option",
+          "metavar": null,
+          "multiple": false,
+          "name": "return_track_name",
+          "nargs": 1,
+          "opts": [
+            "--return-track-name"
           ],
           "prompt": null,
           "required": false,
@@ -16069,22 +16501,24 @@
         "\u2502 *    item      TEXT  Item name from value_items [required]                                       \u2502",
         "\u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f",
         "\u256d\u2500 Options \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e",
-        "\u2502 --track-index            INTEGER  Track index (0-based)                                          \u2502",
-        "\u2502 --track-name             TEXT     Exact track name                                               \u2502",
-        "\u2502 --selected-track                  Use the currently selected track                               \u2502",
-        "\u2502 --track-query            TEXT     Unique case-insensitive track query                            \u2502",
-        "\u2502 --track-ref              TEXT     Session-local stable track reference                           \u2502",
-        "\u2502 --device-index           INTEGER  Device index (0-based)                                         \u2502",
-        "\u2502 --device-name            TEXT     Exact device name                                              \u2502",
-        "\u2502 --selected-device                 Use the currently selected device on the target track          \u2502",
-        "\u2502 --device-query           TEXT     Unique case-insensitive device query                           \u2502",
-        "\u2502 --device-ref             TEXT     Session-local stable device reference                          \u2502",
-        "\u2502 --parameter-index        INTEGER  Parameter index (0-based)                                      \u2502",
-        "\u2502 --parameter-name         TEXT     Exact parameter name                                           \u2502",
-        "\u2502 --parameter-query        TEXT     Unique case-insensitive parameter query                        \u2502",
-        "\u2502 --parameter-key          TEXT     Stable synth/effect parameter key                              \u2502",
-        "\u2502 --parameter-ref          TEXT     Session-local stable parameter reference                       \u2502",
-        "\u2502 --help                            Show this message and exit.                                    \u2502",
+        "\u2502 --track-index               INTEGER  Track index (0-based)                                       \u2502",
+        "\u2502 --track-name                TEXT     Exact track name                                            \u2502",
+        "\u2502 --selected-track                     Use the currently selected track                            \u2502",
+        "\u2502 --track-query               TEXT     Unique case-insensitive track query                         \u2502",
+        "\u2502 --track-ref                 TEXT     Session-local stable track reference                        \u2502",
+        "\u2502 --return-track-index        INTEGER  Return track index (0-based)                                \u2502",
+        "\u2502 --return-track-name         TEXT     Exact return track name                                     \u2502",
+        "\u2502 --device-index              INTEGER  Device index (0-based)                                      \u2502",
+        "\u2502 --device-name               TEXT     Exact device name                                           \u2502",
+        "\u2502 --selected-device                    Use the currently selected device on the target track       \u2502",
+        "\u2502 --device-query              TEXT     Unique case-insensitive device query                        \u2502",
+        "\u2502 --device-ref                TEXT     Session-local stable device reference                       \u2502",
+        "\u2502 --parameter-index           INTEGER  Parameter index (0-based)                                   \u2502",
+        "\u2502 --parameter-name            TEXT     Exact parameter name                                        \u2502",
+        "\u2502 --parameter-query           TEXT     Unique case-insensitive parameter query                     \u2502",
+        "\u2502 --parameter-key             TEXT     Stable synth/effect parameter key                           \u2502",
+        "\u2502 --parameter-ref             TEXT     Session-local stable parameter reference                    \u2502",
+        "\u2502 --help                               Show this message and exit.                                 \u2502",
         "\u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f"
       ],
       "hidden": false,
@@ -16231,6 +16665,58 @@
           "nargs": 1,
           "opts": [
             "--track-ref"
+          ],
+          "prompt": null,
+          "required": false,
+          "secondary_opts": [],
+          "show_default": true,
+          "type": {
+            "class": "StringParamType",
+            "name": "text"
+          }
+        },
+        {
+          "count": false,
+          "default": null,
+          "envvar": null,
+          "expose_value": true,
+          "flag_value": null,
+          "help": "Return track index (0-based)",
+          "hidden": false,
+          "is_flag": false,
+          "kind": "option",
+          "metavar": null,
+          "multiple": false,
+          "name": "return_track_index",
+          "nargs": 1,
+          "opts": [
+            "--return-track-index"
+          ],
+          "prompt": null,
+          "required": false,
+          "secondary_opts": [],
+          "show_default": true,
+          "type": {
+            "class": "IntParamType",
+            "name": "integer"
+          }
+        },
+        {
+          "count": false,
+          "default": null,
+          "envvar": null,
+          "expose_value": true,
+          "flag_value": null,
+          "help": "Exact return track name",
+          "hidden": false,
+          "is_flag": false,
+          "kind": "option",
+          "metavar": null,
+          "multiple": false,
+          "name": "return_track_name",
+          "nargs": 1,
+          "opts": [
+            "--return-track-name"
           ],
           "prompt": null,
           "required": false,
@@ -16520,22 +17006,24 @@
         "\u2502 *    value      FLOAT  Target parameter value [required]                                         \u2502",
         "\u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f",
         "\u256d\u2500 Options \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e",
-        "\u2502 --track-index            INTEGER  Track index (0-based)                                          \u2502",
-        "\u2502 --track-name             TEXT     Exact track name                                               \u2502",
-        "\u2502 --selected-track                  Use the currently selected track                               \u2502",
-        "\u2502 --track-query            TEXT     Unique case-insensitive track query                            \u2502",
-        "\u2502 --track-ref              TEXT     Session-local stable track reference                           \u2502",
-        "\u2502 --device-index           INTEGER  Device index (0-based)                                         \u2502",
-        "\u2502 --device-name            TEXT     Exact device name                                              \u2502",
-        "\u2502 --selected-device                 Use the currently selected device on the target track          \u2502",
-        "\u2502 --device-query           TEXT     Unique case-insensitive device query                           \u2502",
-        "\u2502 --device-ref             TEXT     Session-local stable device reference                          \u2502",
-        "\u2502 --parameter-index        INTEGER  Parameter index (0-based)                                      \u2502",
-        "\u2502 --parameter-name         TEXT     Exact parameter name                                           \u2502",
-        "\u2502 --parameter-query        TEXT     Unique case-insensitive parameter query                        \u2502",
-        "\u2502 --parameter-key          TEXT     Stable synth/effect parameter key                              \u2502",
-        "\u2502 --parameter-ref          TEXT     Session-local stable parameter reference                       \u2502",
-        "\u2502 --help                            Show this message and exit.                                    \u2502",
+        "\u2502 --track-index               INTEGER  Track index (0-based)                                       \u2502",
+        "\u2502 --track-name                TEXT     Exact track name                                            \u2502",
+        "\u2502 --selected-track                     Use the currently selected track                            \u2502",
+        "\u2502 --track-query               TEXT     Unique case-insensitive track query                         \u2502",
+        "\u2502 --track-ref                 TEXT     Session-local stable track reference                        \u2502",
+        "\u2502 --return-track-index        INTEGER  Return track index (0-based)                                \u2502",
+        "\u2502 --return-track-name         TEXT     Exact return track name                                     \u2502",
+        "\u2502 --device-index              INTEGER  Device index (0-based)                                      \u2502",
+        "\u2502 --device-name               TEXT     Exact device name                                           \u2502",
+        "\u2502 --selected-device                    Use the currently selected device on the target track       \u2502",
+        "\u2502 --device-query              TEXT     Unique case-insensitive device query                        \u2502",
+        "\u2502 --device-ref                TEXT     Session-local stable device reference                       \u2502",
+        "\u2502 --parameter-index           INTEGER  Parameter index (0-based)                                   \u2502",
+        "\u2502 --parameter-name            TEXT     Exact parameter name                                        \u2502",
+        "\u2502 --parameter-query           TEXT     Unique case-insensitive parameter query                     \u2502",
+        "\u2502 --parameter-key             TEXT     Stable synth/effect parameter key                           \u2502",
+        "\u2502 --parameter-ref             TEXT     Session-local stable parameter reference                    \u2502",
+        "\u2502 --help                               Show this message and exit.                                 \u2502",
         "\u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f"
       ],
       "hidden": false,
@@ -16682,6 +17170,58 @@
           "nargs": 1,
           "opts": [
             "--track-ref"
+          ],
+          "prompt": null,
+          "required": false,
+          "secondary_opts": [],
+          "show_default": true,
+          "type": {
+            "class": "StringParamType",
+            "name": "text"
+          }
+        },
+        {
+          "count": false,
+          "default": null,
+          "envvar": null,
+          "expose_value": true,
+          "flag_value": null,
+          "help": "Return track index (0-based)",
+          "hidden": false,
+          "is_flag": false,
+          "kind": "option",
+          "metavar": null,
+          "multiple": false,
+          "name": "return_track_index",
+          "nargs": 1,
+          "opts": [
+            "--return-track-index"
+          ],
+          "prompt": null,
+          "required": false,
+          "secondary_opts": [],
+          "show_default": true,
+          "type": {
+            "class": "IntParamType",
+            "name": "integer"
+          }
+        },
+        {
+          "count": false,
+          "default": null,
+          "envvar": null,
+          "expose_value": true,
+          "flag_value": null,
+          "help": "Exact return track name",
+          "hidden": false,
+          "is_flag": false,
+          "kind": "option",
+          "metavar": null,
+          "multiple": false,
+          "name": "return_track_name",
+          "nargs": 1,
+          "opts": [
+            "--return-track-name"
           ],
           "prompt": null,
           "required": false,
@@ -16973,22 +17513,24 @@
         "\u2502 *    value      FLOAT  Value in display units [required]                                         \u2502",
         "\u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f",
         "\u256d\u2500 Options \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e",
-        "\u2502 --track-index            INTEGER  Track index (0-based)                                          \u2502",
-        "\u2502 --track-name             TEXT     Exact track name                                               \u2502",
-        "\u2502 --selected-track                  Use the currently selected track                               \u2502",
-        "\u2502 --track-query            TEXT     Unique case-insensitive track query                            \u2502",
-        "\u2502 --track-ref              TEXT     Session-local stable track reference                           \u2502",
-        "\u2502 --device-index           INTEGER  Device index (0-based)                                         \u2502",
-        "\u2502 --device-name            TEXT     Exact device name                                              \u2502",
-        "\u2502 --selected-device                 Use the currently selected device on the target track          \u2502",
-        "\u2502 --device-query           TEXT     Unique case-insensitive device query                           \u2502",
-        "\u2502 --device-ref             TEXT     Session-local stable device reference                          \u2502",
-        "\u2502 --parameter-index        INTEGER  Parameter index (0-based)                                      \u2502",
-        "\u2502 --parameter-name         TEXT     Exact parameter name                                           \u2502",
-        "\u2502 --parameter-query        TEXT     Unique case-insensitive parameter query                        \u2502",
-        "\u2502 --parameter-key          TEXT     Stable synth/effect parameter key                              \u2502",
-        "\u2502 --parameter-ref          TEXT     Session-local stable parameter reference                       \u2502",
-        "\u2502 --help                            Show this message and exit.                                    \u2502",
+        "\u2502 --track-index               INTEGER  Track index (0-based)                                       \u2502",
+        "\u2502 --track-name                TEXT     Exact track name                                            \u2502",
+        "\u2502 --selected-track                     Use the currently selected track                            \u2502",
+        "\u2502 --track-query               TEXT     Unique case-insensitive track query                         \u2502",
+        "\u2502 --track-ref                 TEXT     Session-local stable track reference                        \u2502",
+        "\u2502 --return-track-index        INTEGER  Return track index (0-based)                                \u2502",
+        "\u2502 --return-track-name         TEXT     Exact return track name                                     \u2502",
+        "\u2502 --device-index              INTEGER  Device index (0-based)                                      \u2502",
+        "\u2502 --device-name               TEXT     Exact device name                                           \u2502",
+        "\u2502 --selected-device                    Use the currently selected device on the target track       \u2502",
+        "\u2502 --device-query              TEXT     Unique case-insensitive device query                        \u2502",
+        "\u2502 --device-ref                TEXT     Session-local stable device reference                       \u2502",
+        "\u2502 --parameter-index           INTEGER  Parameter index (0-based)                                   \u2502",
+        "\u2502 --parameter-name            TEXT     Exact parameter name                                        \u2502",
+        "\u2502 --parameter-query           TEXT     Unique case-insensitive parameter query                     \u2502",
+        "\u2502 --parameter-key             TEXT     Stable synth/effect parameter key                           \u2502",
+        "\u2502 --parameter-ref             TEXT     Session-local stable parameter reference                    \u2502",
+        "\u2502 --help                               Show this message and exit.                                 \u2502",
         "\u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f"
       ],
       "hidden": false,
@@ -17135,6 +17677,58 @@
           "nargs": 1,
           "opts": [
             "--track-ref"
+          ],
+          "prompt": null,
+          "required": false,
+          "secondary_opts": [],
+          "show_default": true,
+          "type": {
+            "class": "StringParamType",
+            "name": "text"
+          }
+        },
+        {
+          "count": false,
+          "default": null,
+          "envvar": null,
+          "expose_value": true,
+          "flag_value": null,
+          "help": "Return track index (0-based)",
+          "hidden": false,
+          "is_flag": false,
+          "kind": "option",
+          "metavar": null,
+          "multiple": false,
+          "name": "return_track_index",
+          "nargs": 1,
+          "opts": [
+            "--return-track-index"
+          ],
+          "prompt": null,
+          "required": false,
+          "secondary_opts": [],
+          "show_default": true,
+          "type": {
+            "class": "IntParamType",
+            "name": "integer"
+          }
+        },
+        {
+          "count": false,
+          "default": null,
+          "envvar": null,
+          "expose_value": true,
+          "flag_value": null,
+          "help": "Exact return track name",
+          "hidden": false,
+          "is_flag": false,
+          "kind": "option",
+          "metavar": null,
+          "multiple": false,
+          "name": "return_track_name",
+          "nargs": 1,
+          "opts": [
+            "--return-track-name"
           ],
           "prompt": null,
           "required": false,
@@ -17452,17 +18046,19 @@
         " List every parameter of any device, with display strings and choice items.",
         "",
         "\u256d\u2500 Options \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e",
-        "\u2502 --track-index            INTEGER  Track index (0-based)                                          \u2502",
-        "\u2502 --track-name             TEXT     Exact track name                                               \u2502",
-        "\u2502 --selected-track                  Use the currently selected track                               \u2502",
-        "\u2502 --track-query            TEXT     Unique case-insensitive track query                            \u2502",
-        "\u2502 --track-ref              TEXT     Session-local stable track reference                           \u2502",
-        "\u2502 --device-index           INTEGER  Device index (0-based)                                         \u2502",
-        "\u2502 --device-name            TEXT     Exact device name                                              \u2502",
-        "\u2502 --selected-device                 Use the currently selected device on the target track          \u2502",
-        "\u2502 --device-query           TEXT     Unique case-insensitive device query                           \u2502",
-        "\u2502 --device-ref             TEXT     Session-local stable device reference                          \u2502",
-        "\u2502 --help                            Show this message and exit.                                    \u2502",
+        "\u2502 --track-index               INTEGER  Track index (0-based)                                       \u2502",
+        "\u2502 --track-name                TEXT     Exact track name                                            \u2502",
+        "\u2502 --selected-track                     Use the currently selected track                            \u2502",
+        "\u2502 --track-query               TEXT     Unique case-insensitive track query                         \u2502",
+        "\u2502 --track-ref                 TEXT     Session-local stable track reference                        \u2502",
+        "\u2502 --return-track-index        INTEGER  Return track index (0-based)                                \u2502",
+        "\u2502 --return-track-name         TEXT     Exact return track name                                     \u2502",
+        "\u2502 --device-index              INTEGER  Device index (0-based)                                      \u2502",
+        "\u2502 --device-name               TEXT     Exact device name                                           \u2502",
+        "\u2502 --selected-device                    Use the currently selected device on the target track       \u2502",
+        "\u2502 --device-query              TEXT     Unique case-insensitive device query                        \u2502",
+        "\u2502 --device-ref                TEXT     Session-local stable device reference                       \u2502",
+        "\u2502 --help                               Show this message and exit.                                 \u2502",
         "\u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f"
       ],
       "hidden": false,
@@ -17589,6 +18185,58 @@
           "nargs": 1,
           "opts": [
             "--track-ref"
+          ],
+          "prompt": null,
+          "required": false,
+          "secondary_opts": [],
+          "show_default": true,
+          "type": {
+            "class": "StringParamType",
+            "name": "text"
+          }
+        },
+        {
+          "count": false,
+          "default": null,
+          "envvar": null,
+          "expose_value": true,
+          "flag_value": null,
+          "help": "Return track index (0-based)",
+          "hidden": false,
+          "is_flag": false,
+          "kind": "option",
+          "metavar": null,
+          "multiple": false,
+          "name": "return_track_index",
+          "nargs": 1,
+          "opts": [
+            "--return-track-index"
+          ],
+          "prompt": null,
+          "required": false,
+          "secondary_opts": [],
+          "show_default": true,
+          "type": {
+            "class": "IntParamType",
+            "name": "integer"
+          }
+        },
+        {
+          "count": false,
+          "default": null,
+          "envvar": null,
+          "expose_value": true,
+          "flag_value": null,
+          "help": "Exact return track name",
+          "hidden": false,
+          "is_flag": false,
+          "kind": "option",
+          "metavar": null,
+          "multiple": false,
+          "name": "return_track_name",
+          "nargs": 1,
+          "opts": [
+            "--return-track-name"
           ],
           "prompt": null,
           "required": false,
@@ -17778,17 +18426,19 @@
         " List a plug-in device's presets.",
         "",
         "\u256d\u2500 Options \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e",
-        "\u2502 --track-index            INTEGER  Track index (0-based)                                          \u2502",
-        "\u2502 --track-name             TEXT     Exact track name                                               \u2502",
-        "\u2502 --selected-track                  Use the currently selected track                               \u2502",
-        "\u2502 --track-query            TEXT     Unique case-insensitive track query                            \u2502",
-        "\u2502 --track-ref              TEXT     Session-local stable track reference                           \u2502",
-        "\u2502 --device-index           INTEGER  Device index (0-based)                                         \u2502",
-        "\u2502 --device-name            TEXT     Exact device name                                              \u2502",
-        "\u2502 --selected-device                 Use the currently selected device on the target track          \u2502",
-        "\u2502 --device-query           TEXT     Unique case-insensitive device query                           \u2502",
-        "\u2502 --device-ref             TEXT     Session-local stable device reference                          \u2502",
-        "\u2502 --help                            Show this message and exit.                                    \u2502",
+        "\u2502 --track-index               INTEGER  Track index (0-based)                                       \u2502",
+        "\u2502 --track-name                TEXT     Exact track name                                            \u2502",
+        "\u2502 --selected-track                     Use the currently selected track                            \u2502",
+        "\u2502 --track-query               TEXT     Unique case-insensitive track query                         \u2502",
+        "\u2502 --track-ref                 TEXT     Session-local stable track reference                        \u2502",
+        "\u2502 --return-track-index        INTEGER  Return track index (0-based)                                \u2502",
+        "\u2502 --return-track-name         TEXT     Exact return track name                                     \u2502",
+        "\u2502 --device-index              INTEGER  Device index (0-based)                                      \u2502",
+        "\u2502 --device-name               TEXT     Exact device name                                           \u2502",
+        "\u2502 --selected-device                    Use the currently selected device on the target track       \u2502",
+        "\u2502 --device-query              TEXT     Unique case-insensitive device query                        \u2502",
+        "\u2502 --device-ref                TEXT     Session-local stable device reference                       \u2502",
+        "\u2502 --help                               Show this message and exit.                                 \u2502",
         "\u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f"
       ],
       "hidden": false,
@@ -17915,6 +18565,58 @@
           "nargs": 1,
           "opts": [
             "--track-ref"
+          ],
+          "prompt": null,
+          "required": false,
+          "secondary_opts": [],
+          "show_default": true,
+          "type": {
+            "class": "StringParamType",
+            "name": "text"
+          }
+        },
+        {
+          "count": false,
+          "default": null,
+          "envvar": null,
+          "expose_value": true,
+          "flag_value": null,
+          "help": "Return track index (0-based)",
+          "hidden": false,
+          "is_flag": false,
+          "kind": "option",
+          "metavar": null,
+          "multiple": false,
+          "name": "return_track_index",
+          "nargs": 1,
+          "opts": [
+            "--return-track-index"
+          ],
+          "prompt": null,
+          "required": false,
+          "secondary_opts": [],
+          "show_default": true,
+          "type": {
+            "class": "IntParamType",
+            "name": "integer"
+          }
+        },
+        {
+          "count": false,
+          "default": null,
+          "envvar": null,
+          "expose_value": true,
+          "flag_value": null,
+          "help": "Exact return track name",
+          "hidden": false,
+          "is_flag": false,
+          "kind": "option",
+          "metavar": null,
+          "multiple": false,
+          "name": "return_track_name",
+          "nargs": 1,
+          "opts": [
+            "--return-track-name"
           ],
           "prompt": null,
           "required": false,
@@ -18076,17 +18778,19 @@
         "\u2502 *    preset_index      INTEGER  Preset index (0-based) [required]                                \u2502",
         "\u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f",
         "\u256d\u2500 Options \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e",
-        "\u2502 --track-index            INTEGER  Track index (0-based)                                          \u2502",
-        "\u2502 --track-name             TEXT     Exact track name                                               \u2502",
-        "\u2502 --selected-track                  Use the currently selected track                               \u2502",
-        "\u2502 --track-query            TEXT     Unique case-insensitive track query                            \u2502",
-        "\u2502 --track-ref              TEXT     Session-local stable track reference                           \u2502",
-        "\u2502 --device-index           INTEGER  Device index (0-based)                                         \u2502",
-        "\u2502 --device-name            TEXT     Exact device name                                              \u2502",
-        "\u2502 --selected-device                 Use the currently selected device on the target track          \u2502",
-        "\u2502 --device-query           TEXT     Unique case-insensitive device query                           \u2502",
-        "\u2502 --device-ref             TEXT     Session-local stable device reference                          \u2502",
-        "\u2502 --help                            Show this message and exit.                                    \u2502",
+        "\u2502 --track-index               INTEGER  Track index (0-based)                                       \u2502",
+        "\u2502 --track-name                TEXT     Exact track name                                            \u2502",
+        "\u2502 --selected-track                     Use the currently selected track                            \u2502",
+        "\u2502 --track-query               TEXT     Unique case-insensitive track query                         \u2502",
+        "\u2502 --track-ref                 TEXT     Session-local stable track reference                        \u2502",
+        "\u2502 --return-track-index        INTEGER  Return track index (0-based)                                \u2502",
+        "\u2502 --return-track-name         TEXT     Exact return track name                                     \u2502",
+        "\u2502 --device-index              INTEGER  Device index (0-based)                                      \u2502",
+        "\u2502 --device-name               TEXT     Exact device name                                           \u2502",
+        "\u2502 --selected-device                    Use the currently selected device on the target track       \u2502",
+        "\u2502 --device-query              TEXT     Unique case-insensitive device query                        \u2502",
+        "\u2502 --device-ref                TEXT     Session-local stable device reference                       \u2502",
+        "\u2502 --help                               Show this message and exit.                                 \u2502",
         "\u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f"
       ],
       "hidden": false,
@@ -18233,6 +18937,58 @@
           "nargs": 1,
           "opts": [
             "--track-ref"
+          ],
+          "prompt": null,
+          "required": false,
+          "secondary_opts": [],
+          "show_default": true,
+          "type": {
+            "class": "StringParamType",
+            "name": "text"
+          }
+        },
+        {
+          "count": false,
+          "default": null,
+          "envvar": null,
+          "expose_value": true,
+          "flag_value": null,
+          "help": "Return track index (0-based)",
+          "hidden": false,
+          "is_flag": false,
+          "kind": "option",
+          "metavar": null,
+          "multiple": false,
+          "name": "return_track_index",
+          "nargs": 1,
+          "opts": [
+            "--return-track-index"
+          ],
+          "prompt": null,
+          "required": false,
+          "secondary_opts": [],
+          "show_default": true,
+          "type": {
+            "class": "IntParamType",
+            "name": "integer"
+          }
+        },
+        {
+          "count": false,
+          "default": null,
+          "envvar": null,
+          "expose_value": true,
+          "flag_value": null,
+          "help": "Exact return track name",
+          "hidden": false,
+          "is_flag": false,
+          "kind": "option",
+          "metavar": null,
+          "multiple": false,
+          "name": "return_track_name",
+          "nargs": 1,
+          "opts": [
+            "--return-track-name"
           ],
           "prompt": null,
           "required": false,
@@ -18422,17 +19178,19 @@
         " Read a Compressor's sidechain source and the available sources.",
         "",
         "\u256d\u2500 Options \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e",
-        "\u2502 --track-index            INTEGER  Track index (0-based)                                          \u2502",
-        "\u2502 --track-name             TEXT     Exact track name                                               \u2502",
-        "\u2502 --selected-track                  Use the currently selected track                               \u2502",
-        "\u2502 --track-query            TEXT     Unique case-insensitive track query                            \u2502",
-        "\u2502 --track-ref              TEXT     Session-local stable track reference                           \u2502",
-        "\u2502 --device-index           INTEGER  Device index (0-based)                                         \u2502",
-        "\u2502 --device-name            TEXT     Exact device name                                              \u2502",
-        "\u2502 --selected-device                 Use the currently selected device on the target track          \u2502",
-        "\u2502 --device-query           TEXT     Unique case-insensitive device query                           \u2502",
-        "\u2502 --device-ref             TEXT     Session-local stable device reference                          \u2502",
-        "\u2502 --help                            Show this message and exit.                                    \u2502",
+        "\u2502 --track-index               INTEGER  Track index (0-based)                                       \u2502",
+        "\u2502 --track-name                TEXT     Exact track name                                            \u2502",
+        "\u2502 --selected-track                     Use the currently selected track                            \u2502",
+        "\u2502 --track-query               TEXT     Unique case-insensitive track query                         \u2502",
+        "\u2502 --track-ref                 TEXT     Session-local stable track reference                        \u2502",
+        "\u2502 --return-track-index        INTEGER  Return track index (0-based)                                \u2502",
+        "\u2502 --return-track-name         TEXT     Exact return track name                                     \u2502",
+        "\u2502 --device-index              INTEGER  Device index (0-based)                                      \u2502",
+        "\u2502 --device-name               TEXT     Exact device name                                           \u2502",
+        "\u2502 --selected-device                    Use the currently selected device on the target track       \u2502",
+        "\u2502 --device-query              TEXT     Unique case-insensitive device query                        \u2502",
+        "\u2502 --device-ref                TEXT     Session-local stable device reference                       \u2502",
+        "\u2502 --help                               Show this message and exit.                                 \u2502",
         "\u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f"
       ],
       "hidden": false,
@@ -18559,6 +19317,58 @@
           "nargs": 1,
           "opts": [
             "--track-ref"
+          ],
+          "prompt": null,
+          "required": false,
+          "secondary_opts": [],
+          "show_default": true,
+          "type": {
+            "class": "StringParamType",
+            "name": "text"
+          }
+        },
+        {
+          "count": false,
+          "default": null,
+          "envvar": null,
+          "expose_value": true,
+          "flag_value": null,
+          "help": "Return track index (0-based)",
+          "hidden": false,
+          "is_flag": false,
+          "kind": "option",
+          "metavar": null,
+          "multiple": false,
+          "name": "return_track_index",
+          "nargs": 1,
+          "opts": [
+            "--return-track-index"
+          ],
+          "prompt": null,
+          "required": false,
+          "secondary_opts": [],
+          "show_default": true,
+          "type": {
+            "class": "IntParamType",
+            "name": "integer"
+          }
+        },
+        {
+          "count": false,
+          "default": null,
+          "envvar": null,
+          "expose_value": true,
+          "flag_value": null,
+          "help": "Exact return track name",
+          "hidden": false,
+          "is_flag": false,
+          "kind": "option",
+          "metavar": null,
+          "multiple": false,
+          "name": "return_track_name",
+          "nargs": 1,
+          "opts": [
+            "--return-track-name"
           ],
           "prompt": null,
           "required": false,
@@ -18717,20 +19527,22 @@
         " Route a Compressor's sidechain input from a source.",
         "",
         "\u256d\u2500 Options \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e",
-        "\u2502 *  --type                   TEXT     Sidechain source type (from 'device sidechain get')         \u2502",
-        "\u2502                                      [required]                                                  \u2502",
-        "\u2502    --channel                TEXT     Sidechain source channel; omit for Live's default           \u2502",
-        "\u2502    --track-index            INTEGER  Track index (0-based)                                       \u2502",
-        "\u2502    --track-name             TEXT     Exact track name                                            \u2502",
-        "\u2502    --selected-track                  Use the currently selected track                            \u2502",
-        "\u2502    --track-query            TEXT     Unique case-insensitive track query                         \u2502",
-        "\u2502    --track-ref              TEXT     Session-local stable track reference                        \u2502",
-        "\u2502    --device-index           INTEGER  Device index (0-based)                                      \u2502",
-        "\u2502    --device-name            TEXT     Exact device name                                           \u2502",
-        "\u2502    --selected-device                 Use the currently selected device on the target track       \u2502",
-        "\u2502    --device-query           TEXT     Unique case-insensitive device query                        \u2502",
-        "\u2502    --device-ref             TEXT     Session-local stable device reference                       \u2502",
-        "\u2502    --help                            Show this message and exit.                                 \u2502",
+        "\u2502 *  --type                      TEXT     Sidechain source type (from 'device sidechain get')      \u2502",
+        "\u2502                                         [required]                                               \u2502",
+        "\u2502    --channel                   TEXT     Sidechain source channel; omit for Live's default        \u2502",
+        "\u2502    --track-index               INTEGER  Track index (0-based)                                    \u2502",
+        "\u2502    --track-name                TEXT     Exact track name                                         \u2502",
+        "\u2502    --selected-track                     Use the currently selected track                         \u2502",
+        "\u2502    --track-query               TEXT     Unique case-insensitive track query                      \u2502",
+        "\u2502    --track-ref                 TEXT     Session-local stable track reference                     \u2502",
+        "\u2502    --return-track-index        INTEGER  Return track index (0-based)                             \u2502",
+        "\u2502    --return-track-name         TEXT     Exact return track name                                  \u2502",
+        "\u2502    --device-index              INTEGER  Device index (0-based)                                   \u2502",
+        "\u2502    --device-name               TEXT     Exact device name                                        \u2502",
+        "\u2502    --selected-device                    Use the currently selected device on the target track    \u2502",
+        "\u2502    --device-query              TEXT     Unique case-insensitive device query                     \u2502",
+        "\u2502    --device-ref                TEXT     Session-local stable device reference                    \u2502",
+        "\u2502    --help                               Show this message and exit.                              \u2502",
         "\u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f"
       ],
       "hidden": false,
@@ -18909,6 +19721,58 @@
           "nargs": 1,
           "opts": [
             "--track-ref"
+          ],
+          "prompt": null,
+          "required": false,
+          "secondary_opts": [],
+          "show_default": true,
+          "type": {
+            "class": "StringParamType",
+            "name": "text"
+          }
+        },
+        {
+          "count": false,
+          "default": null,
+          "envvar": null,
+          "expose_value": true,
+          "flag_value": null,
+          "help": "Return track index (0-based)",
+          "hidden": false,
+          "is_flag": false,
+          "kind": "option",
+          "metavar": null,
+          "multiple": false,
+          "name": "return_track_index",
+          "nargs": 1,
+          "opts": [
+            "--return-track-index"
+          ],
+          "prompt": null,
+          "required": false,
+          "secondary_opts": [],
+          "show_default": true,
+          "type": {
+            "class": "IntParamType",
+            "name": "integer"
+          }
+        },
+        {
+          "count": false,
+          "default": null,
+          "envvar": null,
+          "expose_value": true,
+          "flag_value": null,
+          "help": "Exact return track name",
+          "hidden": false,
+          "is_flag": false,
+          "kind": "option",
+          "metavar": null,
+          "multiple": false,
+          "name": "return_track_name",
+          "nargs": 1,
+          "opts": [
+            "--return-track-name"
           ],
           "prompt": null,
           "required": false,
@@ -24661,6 +25525,7 @@
         "\u256d\u2500 Commands \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e",
         "\u2502 info                                                                                             \u2502",
         "\u2502 volume   Master volume commands                                                                  \u2502",
+        "\u2502 meter    Master output meter commands                                                            \u2502",
         "\u2502 panning  Master panning commands                                                                 \u2502",
         "\u2502 devices  Master device commands                                                                  \u2502",
         "\u2502 device   Master device write commands                                                            \u2502",
@@ -24678,6 +25543,7 @@
       "subcommands": [
         "info",
         "volume",
+        "meter",
         "panning",
         "devices",
         "device",
@@ -27450,6 +28316,114 @@
       "path": [
         "master",
         "info"
+      ],
+      "short_help": null
+    },
+    "master meter": {
+      "deprecated": false,
+      "help": "Master output meter commands",
+      "help_text": [
+        "",
+        " Usage: meter [OPTIONS] COMMAND [ARGS]...",
+        "",
+        " Master output meter commands",
+        "",
+        "\u256d\u2500 Options \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e",
+        "\u2502 --help          Show this message and exit.                                                      \u2502",
+        "\u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f",
+        "\u256d\u2500 Commands \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e",
+        "\u2502 get  Read the main track's output meters (0.0-1.0), as peak and mean.                            \u2502",
+        "\u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f"
+      ],
+      "hidden": false,
+      "kind": "group",
+      "no_args_is_help": true,
+      "params": [],
+      "path": [
+        "master",
+        "meter"
+      ],
+      "short_help": null,
+      "subcommands": [
+        "get"
+      ]
+    },
+    "master meter get": {
+      "deprecated": false,
+      "help": "Read the main track's output meters (0.0-1.0), as peak and mean.",
+      "help_text": [
+        "",
+        " Usage: get [OPTIONS]",
+        "",
+        " Read the main track's output meters (0.0-1.0), as peak and mean.",
+        "",
+        "\u256d\u2500 Options \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e",
+        "\u2502 --samples            INTEGER  Number of meter readings to take (1-1000) [default: 1]             \u2502",
+        "\u2502 --interval-ms        INTEGER  Delay between readings in milliseconds [default: 50]               \u2502",
+        "\u2502 --help                        Show this message and exit.                                        \u2502",
+        "\u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f"
+      ],
+      "hidden": false,
+      "kind": "command",
+      "no_args_is_help": false,
+      "params": [
+        {
+          "count": false,
+          "default": 1,
+          "envvar": null,
+          "expose_value": true,
+          "flag_value": null,
+          "help": "Number of meter readings to take (1-1000)",
+          "hidden": false,
+          "is_flag": false,
+          "kind": "option",
+          "metavar": null,
+          "multiple": false,
+          "name": "samples",
+          "nargs": 1,
+          "opts": [
+            "--samples"
+          ],
+          "prompt": null,
+          "required": false,
+          "secondary_opts": [],
+          "show_default": true,
+          "type": {
+            "class": "IntParamType",
+            "name": "integer"
+          }
+        },
+        {
+          "count": false,
+          "default": 50,
+          "envvar": null,
+          "expose_value": true,
+          "flag_value": null,
+          "help": "Delay between readings in milliseconds",
+          "hidden": false,
+          "is_flag": false,
+          "kind": "option",
+          "metavar": null,
+          "multiple": false,
+          "name": "interval_ms",
+          "nargs": 1,
+          "opts": [
+            "--interval-ms"
+          ],
+          "prompt": null,
+          "required": false,
+          "secondary_opts": [],
+          "show_default": true,
+          "type": {
+            "class": "IntParamType",
+            "name": "integer"
+          }
+        }
+      ],
+      "path": [
+        "master",
+        "meter",
+        "get"
       ],
       "short_help": null
     },
@@ -31768,6 +32742,7 @@
         "\u2502 volume  Return-track volume commands                                                             \u2502",
         "\u2502 mute    Return-track mute commands                                                               \u2502",
         "\u2502 solo    Return-track solo commands                                                               \u2502",
+        "\u2502 meter   Return-track output meter commands                                                       \u2502",
         "\u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f"
       ],
       "hidden": false,
@@ -31781,8 +32756,140 @@
       "subcommands": [
         "volume",
         "mute",
-        "solo"
+        "solo",
+        "meter"
       ]
+    },
+    "return-track meter": {
+      "deprecated": false,
+      "help": "Return-track output meter commands",
+      "help_text": [
+        "",
+        " Usage: meter [OPTIONS] COMMAND [ARGS]...",
+        "",
+        " Return-track output meter commands",
+        "",
+        "\u256d\u2500 Options \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e",
+        "\u2502 --help          Show this message and exit.                                                      \u2502",
+        "\u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f",
+        "\u256d\u2500 Commands \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e",
+        "\u2502 get  Read the return track's output meters (0.0-1.0), as peak and mean.                          \u2502",
+        "\u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f"
+      ],
+      "hidden": false,
+      "kind": "group",
+      "no_args_is_help": true,
+      "params": [],
+      "path": [
+        "return-track",
+        "meter"
+      ],
+      "short_help": null,
+      "subcommands": [
+        "get"
+      ]
+    },
+    "return-track meter get": {
+      "deprecated": false,
+      "help": "Read the return track's output meters (0.0-1.0), as peak and mean.",
+      "help_text": [
+        "",
+        " Usage: get [OPTIONS] RETURN_TRACK",
+        "",
+        " Read the return track's output meters (0.0-1.0), as peak and mean.",
+        "",
+        "\u256d\u2500 Arguments \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e",
+        "\u2502 *    return_track      INTEGER  Return track index (0-based) [required]                          \u2502",
+        "\u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f",
+        "\u256d\u2500 Options \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e",
+        "\u2502 --samples            INTEGER  Number of meter readings to take (1-1000) [default: 1]             \u2502",
+        "\u2502 --interval-ms        INTEGER  Delay between readings in milliseconds [default: 50]               \u2502",
+        "\u2502 --help                        Show this message and exit.                                        \u2502",
+        "\u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f"
+      ],
+      "hidden": false,
+      "kind": "command",
+      "no_args_is_help": false,
+      "params": [
+        {
+          "default": null,
+          "envvar": null,
+          "expose_value": true,
+          "help": "Return track index (0-based)",
+          "kind": "argument",
+          "metavar": null,
+          "multiple": false,
+          "name": "return_track",
+          "nargs": 1,
+          "opts": [
+            "return_track"
+          ],
+          "required": true,
+          "secondary_opts": [],
+          "type": {
+            "class": "IntParamType",
+            "name": "integer"
+          }
+        },
+        {
+          "count": false,
+          "default": 1,
+          "envvar": null,
+          "expose_value": true,
+          "flag_value": null,
+          "help": "Number of meter readings to take (1-1000)",
+          "hidden": false,
+          "is_flag": false,
+          "kind": "option",
+          "metavar": null,
+          "multiple": false,
+          "name": "samples",
+          "nargs": 1,
+          "opts": [
+            "--samples"
+          ],
+          "prompt": null,
+          "required": false,
+          "secondary_opts": [],
+          "show_default": true,
+          "type": {
+            "class": "IntParamType",
+            "name": "integer"
+          }
+        },
+        {
+          "count": false,
+          "default": 50,
+          "envvar": null,
+          "expose_value": true,
+          "flag_value": null,
+          "help": "Delay between readings in milliseconds",
+          "hidden": false,
+          "is_flag": false,
+          "kind": "option",
+          "metavar": null,
+          "multiple": false,
+          "name": "interval_ms",
+          "nargs": 1,
+          "opts": [
+            "--interval-ms"
+          ],
+          "prompt": null,
+          "required": false,
+          "secondary_opts": [],
+          "show_default": true,
+          "type": {
+            "class": "IntParamType",
+            "name": "integer"
+          }
+        }
+      ],
+      "path": [
+        "return-track",
+        "meter",
+        "get"
+      ],
+      "short_help": null
     },
     "return-track mute": {
       "deprecated": false,
@@ -33301,6 +34408,7 @@
         "\u2502 inspect                                                                                          \u2502",
         "\u2502 lint                                                                                             \u2502",
         "\u2502 diff                                                                                             \u2502",
+        "\u2502 automation  Arrangement automation lanes                                                         \u2502",
         "\u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f"
       ],
       "hidden": false,
@@ -33314,8 +34422,283 @@
       "subcommands": [
         "inspect",
         "lint",
-        "diff"
+        "diff",
+        "automation"
       ]
+    },
+    "set automation": {
+      "deprecated": false,
+      "help": "Arrangement automation lanes",
+      "help_text": [
+        "",
+        " Usage: automation [OPTIONS] COMMAND [ARGS]...",
+        "",
+        " Arrangement automation lanes",
+        "",
+        "\u256d\u2500 Options \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e",
+        "\u2502 --help          Show this message and exit.                                                      \u2502",
+        "\u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f",
+        "\u256d\u2500 Commands \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e",
+        "\u2502 write                                                                                            \u2502",
+        "\u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f"
+      ],
+      "hidden": false,
+      "kind": "group",
+      "no_args_is_help": true,
+      "params": [],
+      "path": [
+        "set",
+        "automation"
+      ],
+      "short_help": null,
+      "subcommands": [
+        "write"
+      ]
+    },
+    "set automation write": {
+      "deprecated": false,
+      "help": null,
+      "help_text": [
+        "",
+        " Usage: write [OPTIONS]",
+        "",
+        "\u256d\u2500 Options \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e",
+        "\u2502 *  --path                      PATH                  Live Set (.als) path [required]             \u2502",
+        "\u2502 *  --out                       PATH                  New Live Set (.als) path to write           \u2502",
+        "\u2502                                                      [required]                                  \u2502",
+        "\u2502 *  --target                    TEXT                  mixer.volume | mixer.pan | mixer.tempo |    \u2502",
+        "\u2502                                                      send.<index> | device.<index>.<Tag>         \u2502",
+        "\u2502                                                      [required]                                  \u2502",
+        "\u2502 *  --points-json               TEXT                  JSON array of {\"time\",\"value\"} breakpoints  \u2502",
+        "\u2502                                                      [required]                                  \u2502",
+        "\u2502    --track-index               INTEGER RANGE [x>=0]  Regular track index                         \u2502",
+        "\u2502    --track-name                TEXT                  Track name                                  \u2502",
+        "\u2502    --return-track-index        INTEGER RANGE [x>=0]  Return track index                          \u2502",
+        "\u2502    --main                                            Target the main track                       \u2502",
+        "\u2502    --help                                            Show this message and exit.                 \u2502",
+        "\u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f"
+      ],
+      "hidden": false,
+      "kind": "command",
+      "no_args_is_help": false,
+      "params": [
+        {
+          "count": false,
+          "default": null,
+          "envvar": null,
+          "expose_value": true,
+          "flag_value": null,
+          "help": "Live Set (.als) path",
+          "hidden": false,
+          "is_flag": false,
+          "kind": "option",
+          "metavar": null,
+          "multiple": false,
+          "name": "path",
+          "nargs": 1,
+          "opts": [
+            "--path"
+          ],
+          "prompt": null,
+          "required": true,
+          "secondary_opts": [],
+          "show_default": true,
+          "type": {
+            "class": "TyperPath",
+            "name": "path"
+          }
+        },
+        {
+          "count": false,
+          "default": null,
+          "envvar": null,
+          "expose_value": true,
+          "flag_value": null,
+          "help": "New Live Set (.als) path to write",
+          "hidden": false,
+          "is_flag": false,
+          "kind": "option",
+          "metavar": null,
+          "multiple": false,
+          "name": "out",
+          "nargs": 1,
+          "opts": [
+            "--out"
+          ],
+          "prompt": null,
+          "required": true,
+          "secondary_opts": [],
+          "show_default": true,
+          "type": {
+            "class": "TyperPath",
+            "name": "path"
+          }
+        },
+        {
+          "count": false,
+          "default": null,
+          "envvar": null,
+          "expose_value": true,
+          "flag_value": null,
+          "help": "mixer.volume | mixer.pan | mixer.tempo | send.<index> | device.<index>.<Tag>",
+          "hidden": false,
+          "is_flag": false,
+          "kind": "option",
+          "metavar": null,
+          "multiple": false,
+          "name": "target",
+          "nargs": 1,
+          "opts": [
+            "--target"
+          ],
+          "prompt": null,
+          "required": true,
+          "secondary_opts": [],
+          "show_default": true,
+          "type": {
+            "class": "StringParamType",
+            "name": "text"
+          }
+        },
+        {
+          "count": false,
+          "default": null,
+          "envvar": null,
+          "expose_value": true,
+          "flag_value": null,
+          "help": "JSON array of {\"time\",\"value\"} breakpoints",
+          "hidden": false,
+          "is_flag": false,
+          "kind": "option",
+          "metavar": null,
+          "multiple": false,
+          "name": "points_json",
+          "nargs": 1,
+          "opts": [
+            "--points-json"
+          ],
+          "prompt": null,
+          "required": true,
+          "secondary_opts": [],
+          "show_default": true,
+          "type": {
+            "class": "StringParamType",
+            "name": "text"
+          }
+        },
+        {
+          "count": false,
+          "default": null,
+          "envvar": null,
+          "expose_value": true,
+          "flag_value": null,
+          "help": "Regular track index",
+          "hidden": false,
+          "is_flag": false,
+          "kind": "option",
+          "metavar": null,
+          "multiple": false,
+          "name": "track_index",
+          "nargs": 1,
+          "opts": [
+            "--track-index"
+          ],
+          "prompt": null,
+          "required": false,
+          "secondary_opts": [],
+          "show_default": true,
+          "type": {
+            "class": "IntRange",
+            "min": 0,
+            "name": "integer range"
+          }
+        },
+        {
+          "count": false,
+          "default": null,
+          "envvar": null,
+          "expose_value": true,
+          "flag_value": null,
+          "help": "Track name",
+          "hidden": false,
+          "is_flag": false,
+          "kind": "option",
+          "metavar": null,
+          "multiple": false,
+          "name": "track_name",
+          "nargs": 1,
+          "opts": [
+            "--track-name"
+          ],
+          "prompt": null,
+          "required": false,
+          "secondary_opts": [],
+          "show_default": true,
+          "type": {
+            "class": "StringParamType",
+            "name": "text"
+          }
+        },
+        {
+          "count": false,
+          "default": null,
+          "envvar": null,
+          "expose_value": true,
+          "flag_value": null,
+          "help": "Return track index",
+          "hidden": false,
+          "is_flag": false,
+          "kind": "option",
+          "metavar": null,
+          "multiple": false,
+          "name": "return_track_index",
+          "nargs": 1,
+          "opts": [
+            "--return-track-index"
+          ],
+          "prompt": null,
+          "required": false,
+          "secondary_opts": [],
+          "show_default": true,
+          "type": {
+            "class": "IntRange",
+            "min": 0,
+            "name": "integer range"
+          }
+        },
+        {
+          "count": false,
+          "default": false,
+          "envvar": null,
+          "expose_value": true,
+          "flag_value": true,
+          "help": "Target the main track",
+          "hidden": false,
+          "is_flag": true,
+          "kind": "option",
+          "metavar": null,
+          "multiple": false,
+          "name": "main",
+          "nargs": 1,
+          "opts": [
+            "--main"
+          ],
+          "prompt": null,
+          "required": false,
+          "secondary_opts": [],
+          "show_default": true,
+          "type": {
+            "class": "BoolParamType",
+            "name": "boolean"
+          }
+        }
+      ],
+      "path": [
+        "set",
+        "automation",
+        "write"
+      ],
+      "short_help": null
     },
     "set diff": {
       "deprecated": false,
@@ -37211,6 +38594,7 @@
         "\u2502 panning  Track panning commands                                                                  \u2502",
         "\u2502 send     Track send commands                                                                     \u2502",
         "\u2502 routing  Track routing commands                                                                  \u2502",
+        "\u2502 meter    Track output meter commands                                                             \u2502",
         "\u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f"
       ],
       "hidden": false,
@@ -37230,7 +38614,8 @@
         "arm",
         "panning",
         "send",
-        "routing"
+        "routing",
+        "meter"
       ]
     },
     "track arm": {
@@ -37757,6 +39142,249 @@
       "path": [
         "track",
         "info"
+      ],
+      "short_help": null
+    },
+    "track meter": {
+      "deprecated": false,
+      "help": "Track output meter commands",
+      "help_text": [
+        "",
+        " Usage: meter [OPTIONS] COMMAND [ARGS]...",
+        "",
+        " Track output meter commands",
+        "",
+        "\u256d\u2500 Options \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e",
+        "\u2502 --help          Show this message and exit.                                                      \u2502",
+        "\u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f",
+        "\u256d\u2500 Commands \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e",
+        "\u2502 get  Read the track's output meters (0.0-1.0), as peak and mean over the samples.                \u2502",
+        "\u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f"
+      ],
+      "hidden": false,
+      "kind": "group",
+      "no_args_is_help": true,
+      "params": [],
+      "path": [
+        "track",
+        "meter"
+      ],
+      "short_help": null,
+      "subcommands": [
+        "get"
+      ]
+    },
+    "track meter get": {
+      "deprecated": false,
+      "help": "Read the track's output meters (0.0-1.0), as peak and mean over the samples.",
+      "help_text": [
+        "",
+        " Usage: get [OPTIONS]",
+        "",
+        " Read the track's output meters (0.0-1.0), as peak and mean over the samples.",
+        "",
+        "\u256d\u2500 Options \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e",
+        "\u2502 --track-index           INTEGER  Track index (0-based)                                           \u2502",
+        "\u2502 --track-name            TEXT     Exact track name                                                \u2502",
+        "\u2502 --selected-track                 Use the currently selected track                                \u2502",
+        "\u2502 --track-query           TEXT     Unique case-insensitive track query                             \u2502",
+        "\u2502 --track-ref             TEXT     Session-local stable track reference                            \u2502",
+        "\u2502 --samples               INTEGER  Number of meter readings to take (1-1000) [default: 1]          \u2502",
+        "\u2502 --interval-ms           INTEGER  Delay between readings in milliseconds [default: 50]            \u2502",
+        "\u2502 --help                           Show this message and exit.                                     \u2502",
+        "\u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f"
+      ],
+      "hidden": false,
+      "kind": "command",
+      "no_args_is_help": false,
+      "params": [
+        {
+          "count": false,
+          "default": null,
+          "envvar": null,
+          "expose_value": true,
+          "flag_value": null,
+          "help": "Track index (0-based)",
+          "hidden": false,
+          "is_flag": false,
+          "kind": "option",
+          "metavar": null,
+          "multiple": false,
+          "name": "track_index",
+          "nargs": 1,
+          "opts": [
+            "--track-index"
+          ],
+          "prompt": null,
+          "required": false,
+          "secondary_opts": [],
+          "show_default": true,
+          "type": {
+            "class": "IntParamType",
+            "name": "integer"
+          }
+        },
+        {
+          "count": false,
+          "default": null,
+          "envvar": null,
+          "expose_value": true,
+          "flag_value": null,
+          "help": "Exact track name",
+          "hidden": false,
+          "is_flag": false,
+          "kind": "option",
+          "metavar": null,
+          "multiple": false,
+          "name": "track_name",
+          "nargs": 1,
+          "opts": [
+            "--track-name"
+          ],
+          "prompt": null,
+          "required": false,
+          "secondary_opts": [],
+          "show_default": true,
+          "type": {
+            "class": "StringParamType",
+            "name": "text"
+          }
+        },
+        {
+          "count": false,
+          "default": false,
+          "envvar": null,
+          "expose_value": true,
+          "flag_value": true,
+          "help": "Use the currently selected track",
+          "hidden": false,
+          "is_flag": true,
+          "kind": "option",
+          "metavar": null,
+          "multiple": false,
+          "name": "selected_track",
+          "nargs": 1,
+          "opts": [
+            "--selected-track"
+          ],
+          "prompt": null,
+          "required": false,
+          "secondary_opts": [],
+          "show_default": true,
+          "type": {
+            "class": "BoolParamType",
+            "name": "boolean"
+          }
+        },
+        {
+          "count": false,
+          "default": null,
+          "envvar": null,
+          "expose_value": true,
+          "flag_value": null,
+          "help": "Unique case-insensitive track query",
+          "hidden": false,
+          "is_flag": false,
+          "kind": "option",
+          "metavar": null,
+          "multiple": false,
+          "name": "track_query",
+          "nargs": 1,
+          "opts": [
+            "--track-query"
+          ],
+          "prompt": null,
+          "required": false,
+          "secondary_opts": [],
+          "show_default": true,
+          "type": {
+            "class": "StringParamType",
+            "name": "text"
+          }
+        },
+        {
+          "count": false,
+          "default": null,
+          "envvar": null,
+          "expose_value": true,
+          "flag_value": null,
+          "help": "Session-local stable track reference",
+          "hidden": false,
+          "is_flag": false,
+          "kind": "option",
+          "metavar": null,
+          "multiple": false,
+          "name": "track_ref",
+          "nargs": 1,
+          "opts": [
+            "--track-ref"
+          ],
+          "prompt": null,
+          "required": false,
+          "secondary_opts": [],
+          "show_default": true,
+          "type": {
+            "class": "StringParamType",
+            "name": "text"
+          }
+        },
+        {
+          "count": false,
+          "default": 1,
+          "envvar": null,
+          "expose_value": true,
+          "flag_value": null,
+          "help": "Number of meter readings to take (1-1000)",
+          "hidden": false,
+          "is_flag": false,
+          "kind": "option",
+          "metavar": null,
+          "multiple": false,
+          "name": "samples",
+          "nargs": 1,
+          "opts": [
+            "--samples"
+          ],
+          "prompt": null,
+          "required": false,
+          "secondary_opts": [],
+          "show_default": true,
+          "type": {
+            "class": "IntParamType",
+            "name": "integer"
+          }
+        },
+        {
+          "count": false,
+          "default": 50,
+          "envvar": null,
+          "expose_value": true,
+          "flag_value": null,
+          "help": "Delay between readings in milliseconds",
+          "hidden": false,
+          "is_flag": false,
+          "kind": "option",
+          "metavar": null,
+          "multiple": false,
+          "name": "interval_ms",
+          "nargs": 1,
+          "opts": [
+            "--interval-ms"
+          ],
+          "prompt": null,
+          "required": false,
+          "secondary_opts": [],
+          "show_default": true,
+          "type": {
+            "class": "IntParamType",
+            "name": "integer"
+          }
+        }
+      ],
+      "path": [
+        "track",
+        "meter",
+        "get"
       ],
       "short_help": null
     },

@@ -89,6 +89,9 @@ class _BackendStub:
     def resolve_track_ref(self, track_ref: dict[str, object]) -> int:
         return int(track_ref["index"])
 
+    def resolve_device_track_ref(self, track_ref: dict[str, object]) -> int:
+        return self.resolve_track_ref(track_ref)
+
     def resolve_device_ref(self, track: int, device_ref: dict[str, object]) -> int:  # noqa: ARG002
         return int(device_ref["index"])
 

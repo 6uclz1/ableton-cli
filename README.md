@@ -133,6 +133,9 @@ uv run ableton-cli synth wavetable set 0.6 --selected-track --selected-device --
 uv run ableton-cli effect find --type eq8
 uv run ableton-cli effect eq8 keys
 uv run ableton-cli effect eq8 set 0.6 --track-query Bass --device-query EQ --parameter-key band1_freq
+uv run ableton-cli set inspect --path ./Song\ Project/Song.als
+uv run ableton-cli set lint --path ./Song\ Project/Song.als
+uv run ableton-cli set diff --from ./Song\ Project/Song.als --to ./Song\ Project/Song-v2.als
 ```
 
 Offline mastering analysis with the `ffmpeg` engine requires both `ffmpeg` and
@@ -450,6 +453,35 @@ Clip and arrangement note write/edit commands (`clip notes add`, `clip notes upd
 `velocity_deviation`, and `release_velocity` note fields). On older Live versions these commands
 fail with the `not_supported_by_live_api` reason above instead of falling back to the legacy
 note API.
+
+## Offline Live Set files
+
+The `set` command group reads Live Set (`.als`) files directly, without Live or the
+Remote Script. It is a separate surface, not a fallback: no command switches between
+the Remote Script and file access on its own.
+
+- `set inspect --path <set.als>`: tempo, time signature, scale, tracks (type, group,
+  devices, clip counts), return tracks, scenes, locators, and plug-in inventory.
+  Tempo is the effective value: an arrangement tempo envelope overrides the manual value.
+- `set lint --path <set.als>`: integrity of the global ID space (duplicate or dangling
+  IDs, `NextPointeeId`) as errors, and missing project samples as warnings. Project
+  samples resolve against the nearest folder containing `Ableton Project Info`, as in
+  Live. Library and other non-project samples resolve against locations the CLI does
+  not assume, so they are not checked; `result.media` counts them by
+  `RelativePathType`. Findings list relative paths and file names, not absolute paths.
+- `set diff --from <a.als> --to <b.als>`: semantic `added` / `removed` / `changed`
+  deltas, with tracks matched by their set-local ID.
+
+Failure modes:
+
+- `error.code=SET_FILE_INVALID`, exit code `2`: not gzip, not XML, or not a Live Set.
+- `error.code=SET_SCHEMA_UNSUPPORTED`, exit code `2`: not a Live 12 set, or a structure
+  this version does not understand.
+- `error.code=SET_INTEGRITY_FAILED`, exit code `20`: `set lint` found integrity errors;
+  `error.details.findings` lists them.
+
+The `.als` format is undocumented. Only Live 12 sets are accepted, and widening that
+range requires verifying real sets in Live. See `docs/offline-set-editing-design.md`.
 
 ## Not-implemented commands
 

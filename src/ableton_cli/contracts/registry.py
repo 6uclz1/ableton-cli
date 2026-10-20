@@ -6,6 +6,7 @@ from typing import Any
 
 from ..command_specs import command_specs
 from ..errors import AppError, ErrorCode, ErrorDetailReason, ExitCode, details_with_reason
+from .liveset_contracts import LIVESET_CONTRACTS
 from .schema import ContractValidationError, validate_value
 
 
@@ -1031,6 +1032,8 @@ for effect_type in ("eq8", "limiter", "compressor", "auto-filter", "reverb", "ut
         "args": _track_device_args_schema(),
         "result": _standard_state_result_schema(type_field="effect_type"),
     }
+
+_DETAILED_CONTRACTS.update(LIVESET_CONTRACTS)
 
 
 def _default_errors() -> dict[str, Any]:

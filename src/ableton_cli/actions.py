@@ -567,6 +567,23 @@ STABLE_ACTION_MAPPINGS: tuple[StableActionMapping, ...] = (
         capability="Validate offline render analysis and master-chain readiness against targets.",
     ),
     StableActionMapping(
+        action="inspect_live_set",
+        command="uv run ableton-cli --output json set inspect --path <set.als>",
+        capability=(
+            "Summarize a Live Set file offline: song, tracks, returns, scenes, locators, plug-ins."
+        ),
+    ),
+    StableActionMapping(
+        action="lint_live_set",
+        command="uv run ableton-cli --output json set lint --path <set.als>",
+        capability="Check a Live Set file offline for ID integrity errors and missing samples.",
+    ),
+    StableActionMapping(
+        action="diff_live_set",
+        command="uv run ableton-cli --output json set diff --from <a.als> --to <b.als>",
+        capability="Compute semantic added/removed/changed deltas between two Live Set files.",
+    ),
+    StableActionMapping(
         action="execute_batch",
         command=(
             "uv run ableton-cli --output json batch run (--steps-file <path> | --steps-"

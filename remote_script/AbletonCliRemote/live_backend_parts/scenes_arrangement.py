@@ -625,11 +625,13 @@ class LiveBackendScenesArrangementMixin:
         enabled: bool,
     ) -> dict[str, Any]:
         clip = self._arrangement_clip_at(track, index)
-        self._ctx.services.tracks_clips._set_required_clip_attr(
-            clip, "loop_start", float(start), api_name="loop start"
-        )
-        self._ctx.services.tracks_clips._set_required_clip_attr(
-            clip, "loop_end", float(end), api_name="loop end"
+        self._ctx.services.tracks_clips._set_required_clip_range(
+            clip,
+            start_attr="loop_start",
+            end_attr="loop_end",
+            start=start,
+            end=end,
+            api_names=("loop start", "loop end"),
         )
         self._ctx.services.tracks_clips._set_required_clip_attr(
             clip, "looping", bool(enabled), api_name="loop"
@@ -644,11 +646,13 @@ class LiveBackendScenesArrangementMixin:
         end_marker: float,
     ) -> dict[str, Any]:
         clip = self._arrangement_clip_at(track, index)
-        self._ctx.services.tracks_clips._set_required_clip_attr(
-            clip, "start_marker", float(start_marker), api_name="start marker"
-        )
-        self._ctx.services.tracks_clips._set_required_clip_attr(
-            clip, "end_marker", float(end_marker), api_name="end marker"
+        self._ctx.services.tracks_clips._set_required_clip_range(
+            clip,
+            start_attr="start_marker",
+            end_attr="end_marker",
+            start=start_marker,
+            end=end_marker,
+            api_names=("start marker", "end marker"),
         )
         return self.arrangement_clip_props_get(track, index)
 

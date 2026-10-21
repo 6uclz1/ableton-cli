@@ -358,6 +358,57 @@ class LiveBackendTracksClipsMixin:
             )
         setattr(clip_obj, attr, value)
 
+    @classmethod
+    def _set_required_clip_range(
+        cls,
+        clip_obj: Any,
+        *,
+        start_attr: str,
+        end_attr: str,
+        start: float,
+        end: float,
+        api_names: tuple[str, str],
+    ) -> None:
+        # Live rejects any single write that leaves start >= end, so moving a range
+        # forward past the current end must write the end first.
+        current_end = cls._safe_clip_attr(clip_obj, end_attr)
+        writes = [(start_attr, start, api_names[0]), (end_attr, end, api_names[1])]
+        if current_end is not None and start >= float(current_end):
+            writes.reverse()
+        for attr, value, write_api_name in writes:
+            cls._set_required_clip_attr(clip_obj, attr, float(value), api_name=write_api_name)
+        cls._verify_clip_range_applied(clip_obj, ((start_attr, start), (end_attr, end)))
+
+    @classmethod
+    def _verify_clip_range_applied(
+        cls, clip_obj: Any, requested: tuple[tuple[str, float], ...]
+    ) -> None:
+        # Some writes are accepted without raising but ignored or clamped by Live
+        # (e.g. start_marker past loop_end), so read every value back.
+        mismatches = []
+        for attr, value in requested:
+            actual = cls._safe_clip_attr(clip_obj, attr)
+            if actual is None or not math.isclose(float(actual), float(value), abs_tol=1e-6):
+                mismatches.append({"attribute": attr, "requested": float(value), "actual": actual})
+        if not mismatches:
+            return
+        summary = ", ".join(
+            f"{item['attribute']} requested {item['requested']} but is {item['actual']}"
+            for item in mismatches
+        )
+        hint = "Read clip props for the accepted values; the clip may be partially updated."
+        if any(item["attribute"] == "start_marker" for item in mismatches):
+            hint = (
+                "Live ignores a start_marker past loop_end: set the loop range first, "
+                "then the markers. The clip may be partially updated."
+            )
+        raise CommandError(
+            code="INVALID_ARGUMENT",
+            message=f"Live did not apply the requested clip range: {summary}",
+            hint=hint,
+            details={"mismatches": mismatches},
+        )
+
     @staticmethod
     def _safe_clip_attr(clip_obj: Any, attr: str, default: Any = None) -> Any:
         try:
@@ -408,8 +459,14 @@ class LiveBackendTracksClipsMixin:
         enabled: bool,
     ) -> dict[str, Any]:
         clip_obj = self._require_session_clip(track, clip, action="updating clip loop")
-        self._set_required_clip_attr(clip_obj, "loop_start", float(start), api_name="loop start")
-        self._set_required_clip_attr(clip_obj, "loop_end", float(end), api_name="loop end")
+        self._set_required_clip_range(
+            clip_obj,
+            start_attr="loop_start",
+            end_attr="loop_end",
+            start=start,
+            end=end,
+            api_names=("loop start", "loop end"),
+        )
         self._set_required_clip_attr(clip_obj, "looping", bool(enabled), api_name="loop")
         return self.clip_props_get(track, clip)
 
@@ -421,14 +478,13 @@ class LiveBackendTracksClipsMixin:
         end_marker: float,
     ) -> dict[str, Any]:
         clip_obj = self._require_session_clip(track, clip, action="updating clip markers")
-        self._set_required_clip_attr(
+        self._set_required_clip_range(
             clip_obj,
-            "start_marker",
-            float(start_marker),
-            api_name="start marker",
-        )
-        self._set_required_clip_attr(
-            clip_obj, "end_marker", float(end_marker), api_name="end marker"
+            start_attr="start_marker",
+            end_attr="end_marker",
+            start=start_marker,
+            end=end_marker,
+            api_names=("start marker", "end marker"),
         )
         return self.clip_props_get(track, clip)
 

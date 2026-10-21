@@ -117,6 +117,12 @@ uv run ableton-cli arrangement clip file replace 0 0 --audio-path /tmp/replaceme
 uv run ableton-cli arrangement from-session --scenes "0:24,1:48"
 ```
 
+To chop a slice out of an audio file, create the clip, then `loop set` the slice range
+(the arrangement clip length follows the loop), then `marker set` the same range. Live
+ignores a start marker past the loop end, so `marker set` before `loop set` fails with
+`INVALID_ARGUMENT`; `marker set` and `loop set` read their values back and fail the same
+way whenever Live does not apply the requested range.
+
 ### Remix / Audio Workflow
 
 ```bash

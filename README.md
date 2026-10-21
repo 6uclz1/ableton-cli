@@ -493,6 +493,26 @@ If a command is exposed by CLI/Remote but Live API cannot perform it, the comman
 
 This currently applies to API-limited operations such as `song new/undo/redo/save/export`, `arrangement record start|stop`, `scenes move`, and `tracks delete` when the running Live API lacks the required primitive.
 
+`clip cut-to-drum-rack` builds each pad from Live 12.3+ primitives (`Track.insert_device`,
+`RackDevice.insert_chain`, `Chain.insert_device("Simpler")`, `SimplerDevice.replace_sample`) and
+trims every slice with the Simpler sample markers. Browser sources (`--source`) fail with
+`not_supported_by_live_api` because Live's browser items do not expose the file path that
+`replace_sample` needs; use `--source-file <path> --transient` or `--source-track/--source-clip`.
+
+## Transport position
+
+`transport play` (and `transport toggle` when it starts playback) plays from the current playhead.
+Live's `start_playing` restarts from the start marker and `continue_playing` from where playback
+last stopped, so the CLI re-applies a playhead moved while stopped in a follow-up request once
+playback runs (Live ignores the write before then) and verifies it by read-back. Run
+`transport position set <beats>` first to choose where playback and arrangement recording begin.
+Live applies playhead writes after the request returns, so `transport position set` and
+`transport rewind` read the position back in a second request and fail with `INVALID_ARGUMENT`
+and `error.details.mismatches` when a stopped playhead did not move.
+
+`track routing input|output set` take `--channel` as optional: omit it to keep the channel Live
+selects for the routing type (for example `--type Resampling`, whose only channel is empty).
+
 Clip and arrangement note write/edit commands (`clip notes add`, `clip notes update`,
 `clip notes quantize|humanize|velocity-scale|transpose`, `arrangement clip notes add`, and
 `clip cut-to-drum-rack` trigger clip creation) require the Live 12+ extended note API

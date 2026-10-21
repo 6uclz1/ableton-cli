@@ -56,6 +56,58 @@ TRANSPORT_REWIND_SPEC = TransportCommandSpec(
 )
 
 
+_POSITION_TOLERANCE_BEATS = 1e-6
+
+
+def _read_back_position(client: object, *, requested: float) -> dict[str, object]:
+    """Read the playhead back in a separate request and return that song state.
+
+    Live applies ``current_song_time`` writes after the Remote Script handler
+    returns, so the write response still carries the previous position.
+    """
+    song = client.song_info()  # type: ignore[attr-defined]
+    actual = float(song["current_time"])
+    if song["is_playing"]:
+        moved = actual >= requested - _POSITION_TOLERANCE_BEATS
+    else:
+        moved = abs(actual - requested) <= _POSITION_TOLERANCE_BEATS
+    if not moved:
+        raise AppError(
+            error_code=ErrorCode.INVALID_ARGUMENT,
+            message=f"Live did not move the playhead to beat {requested}",
+            hint="Read the position with 'transport position get' and retry.",
+            exit_code=ExitCode.INVALID_ARGUMENT,
+            details={
+                "mismatches": [
+                    {"attribute": "current_song_time", "requested": requested, "actual": actual}
+                ]
+            },
+        )
+    return song
+
+
+def _verified_position(client: object, *, requested: float) -> dict[str, object]:
+    actual = float(_read_back_position(client, requested=requested)["current_time"])
+    return {"current_time": actual, "beat_position": actual}
+
+
+def _start_from_playhead(client: object, client_method: str) -> dict[str, object]:
+    """Run a transport start command so playback begins at the stopped playhead.
+
+    Live restarts from its start marker or the last stop point and ignores a
+    playhead moved while stopped, but honours a playhead write once playback
+    runs, so the stopped position is re-applied in a follow-up request.
+    """
+    before = client.song_info()  # type: ignore[attr-defined]
+    getattr(client, client_method)()
+    if before["is_playing"]:
+        return {"is_playing": bool(client.song_info()["is_playing"])}  # type: ignore[attr-defined]
+    playhead = float(before["current_time"])
+    client.transport_position_set(beats=playhead)  # type: ignore[attr-defined]
+    song = _read_back_position(client, requested=playhead)
+    return {"is_playing": bool(song["is_playing"])}
+
+
 def run_client_command(
     ctx: typer.Context,
     *,
@@ -92,10 +144,11 @@ def run_client_command_spec(
 
 @transport_app.command("play")
 def transport_play(ctx: typer.Context) -> None:
-    run_client_command_spec(
+    run_client_command(
         ctx,
-        spec=TRANSPORT_PLAY_SPEC,
+        command_name=TRANSPORT_PLAY_SPEC.command_name,
         args={},
+        fn=lambda client: _start_from_playhead(client, TRANSPORT_PLAY_SPEC.client_method),
     )
 
 
@@ -110,10 +163,11 @@ def transport_stop(ctx: typer.Context) -> None:
 
 @transport_app.command("toggle")
 def transport_toggle(ctx: typer.Context) -> None:
-    run_client_command_spec(
+    run_client_command(
         ctx,
-        spec=TRANSPORT_TOGGLE_SPEC,
+        command_name=TRANSPORT_TOGGLE_SPEC.command_name,
         args={},
+        fn=lambda client: _start_from_playhead(client, TRANSPORT_TOGGLE_SPEC.client_method),
     )
 
 
@@ -163,28 +217,34 @@ def transport_position_set(
     ctx: typer.Context,
     beats: Annotated[float, typer.Argument(help="Target beat position (>= 0)")],
 ) -> None:
-    def _method_kwargs() -> dict[str, object]:
+    def _run(client: object) -> dict[str, object]:
         valid_beats = require_non_negative_float(
             "beats",
             beats,
             hint="Use a non-negative beat position such as 0 or 32.",
         )
-        return {"beats": valid_beats}
+        getattr(client, TRANSPORT_POSITION_SET_SPEC.client_method)(beats=valid_beats)
+        return _verified_position(client, requested=valid_beats)
 
-    run_client_command_spec(
+    run_client_command(
         ctx,
-        spec=TRANSPORT_POSITION_SET_SPEC,
+        command_name=TRANSPORT_POSITION_SET_SPEC.command_name,
         args={"beats": beats},
-        method_kwargs=_method_kwargs,
+        fn=_run,
     )
 
 
 @transport_app.command("rewind")
 def transport_rewind(ctx: typer.Context) -> None:
-    run_client_command_spec(
+    def _run(client: object) -> dict[str, object]:
+        getattr(client, TRANSPORT_REWIND_SPEC.client_method)()
+        return _verified_position(client, requested=0.0)
+
+    run_client_command(
         ctx,
-        spec=TRANSPORT_REWIND_SPEC,
+        command_name=TRANSPORT_REWIND_SPEC.command_name,
         args={},
+        fn=_run,
     )
 
 

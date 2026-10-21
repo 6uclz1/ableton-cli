@@ -812,7 +812,7 @@ _DETAILED_CONTRACTS: dict[str, dict[str, dict[str, Any]]] = {
             "properties": {
                 "track_ref": _track_ref_schema(),
                 "routing_type": {"type": "string"},
-                "routing_channel": {"type": "string"},
+                "routing_channel": {"type": ["string", "null"]},
             },
             "additional_properties": False,
         },
@@ -852,7 +852,7 @@ _DETAILED_CONTRACTS: dict[str, dict[str, dict[str, Any]]] = {
             "properties": {
                 "track_ref": _track_ref_schema(),
                 "routing_type": {"type": "string"},
-                "routing_channel": {"type": "string"},
+                "routing_channel": {"type": ["string", "null"]},
             },
             "additional_properties": False,
         },

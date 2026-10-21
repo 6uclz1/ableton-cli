@@ -644,7 +644,7 @@ uv run ableton-cli --output json ping
 - `set_mixer_crossfader` -> `uv run ableton-cli --output json mixer crossfader set <value>`
 - `set_mixer_cue_routing` -> `uv run ableton-cli --output json mixer cue-routing set <routing>`
 - `get_track_routing_input` -> `uv run ableton-cli --output json track routing input get --track-index <track>`
-- `set_track_routing_output` -> `uv run ableton-cli --output json track routing output set --track-index <track> --type <routing-type> --channel <routing-channel>`
+- `set_track_routing_output` -> `uv run ableton-cli --output json track routing output set --track-index <track> --type <routing-type> [--channel <routing-channel>]`
 - `create_clip` -> `uv run ableton-cli --output json clip create <track> <clip> --length <beats>`
 - `add_notes_to_clip` -> `uv run ableton-cli --output json clip notes add <track> <clip> (--notes-json '<json-array>' | --notes-file <path>)`
 - `get_clip_notes` -> `uv run ableton-cli --output json clip notes get <track> <clip> [--start-time <beats>] [--end-time <beats>] [--pitch <midi>]`

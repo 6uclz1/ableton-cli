@@ -4841,6 +4841,19 @@
                   "name"
                 ],
                 "type": "object"
+              },
+              {
+                "additional_properties": false,
+                "properties": {
+                  "mode": {
+                    "const": "main",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "mode"
+                ],
+                "type": "object"
               }
             ]
           },
@@ -4896,6 +4909,12 @@
           "device_stable_ref": {
             "type": "string"
           },
+          "display": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "parameter": {
             "type": "integer"
           },
@@ -4924,6 +4943,19 @@
                   "index"
                 ],
                 "type": "object"
+              },
+              {
+                "additional_properties": false,
+                "properties": {
+                  "kind": {
+                    "const": "main",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "kind"
+                ],
+                "type": "object"
               }
             ]
           },
@@ -4941,7 +4973,8 @@
           "track_stable_ref",
           "device_stable_ref",
           "parameter_stable_ref",
-          "value"
+          "value",
+          "display"
         ],
         "type": "object"
       },
@@ -10762,226 +10795,6 @@
         "idempotent": false,
         "kind": "destructive",
         "requires_confirmation": true
-      }
-    },
-    "master device delete": {
-      "args": {
-        "type": "object"
-      },
-      "errors": {
-        "codes": [
-          "ABLETON_NOT_REACHABLE",
-          "BATCH_ASSERT_FAILED",
-          "BATCH_PREFLIGHT_FAILED",
-          "BATCH_RETRY_EXHAUSTED",
-          "BATCH_STEP_FAILED",
-          "CONFIG_INVALID",
-          "CONFIRMATION_REQUIRED",
-          "INSTALL_TARGET_NOT_FOUND",
-          "INTERNAL_ERROR",
-          "INVALID_ARGUMENT",
-          "NOT_IMPLEMENTED",
-          "PROTOCOL_CONNECTION_CLOSED",
-          "PROTOCOL_INVALID_RESPONSE",
-          "PROTOCOL_MALFORMED_JSON",
-          "PROTOCOL_REQUEST_ID_MISMATCH",
-          "PROTOCOL_VERSION_MISMATCH",
-          "READ_ONLY_VIOLATION",
-          "REMOTE_BUSY",
-          "REMOTE_SCRIPT_INCOMPATIBLE",
-          "REMOTE_SCRIPT_NOT_INSTALLED",
-          "SET_FILE_INVALID",
-          "SET_INTEGRITY_FAILED",
-          "SET_SCHEMA_UNSUPPORTED",
-          "SKILL_SOURCE_NOT_FOUND",
-          "TIMEOUT",
-          "UNAUTHORIZED",
-          "UNSUPPORTED_OS"
-        ]
-      },
-      "result": {
-        "type": "object"
-      },
-      "side_effect": {
-        "idempotent": false,
-        "kind": "destructive",
-        "requires_confirmation": true
-      }
-    },
-    "master device load": {
-      "args": {
-        "type": "object"
-      },
-      "errors": {
-        "codes": [
-          "ABLETON_NOT_REACHABLE",
-          "BATCH_ASSERT_FAILED",
-          "BATCH_PREFLIGHT_FAILED",
-          "BATCH_RETRY_EXHAUSTED",
-          "BATCH_STEP_FAILED",
-          "CONFIG_INVALID",
-          "CONFIRMATION_REQUIRED",
-          "INSTALL_TARGET_NOT_FOUND",
-          "INTERNAL_ERROR",
-          "INVALID_ARGUMENT",
-          "NOT_IMPLEMENTED",
-          "PROTOCOL_CONNECTION_CLOSED",
-          "PROTOCOL_INVALID_RESPONSE",
-          "PROTOCOL_MALFORMED_JSON",
-          "PROTOCOL_REQUEST_ID_MISMATCH",
-          "PROTOCOL_VERSION_MISMATCH",
-          "READ_ONLY_VIOLATION",
-          "REMOTE_BUSY",
-          "REMOTE_SCRIPT_INCOMPATIBLE",
-          "REMOTE_SCRIPT_NOT_INSTALLED",
-          "SET_FILE_INVALID",
-          "SET_INTEGRITY_FAILED",
-          "SET_SCHEMA_UNSUPPORTED",
-          "SKILL_SOURCE_NOT_FOUND",
-          "TIMEOUT",
-          "UNAUTHORIZED",
-          "UNSUPPORTED_OS"
-        ]
-      },
-      "result": {
-        "type": "object"
-      },
-      "side_effect": {
-        "idempotent": false,
-        "kind": "write",
-        "requires_confirmation": false
-      }
-    },
-    "master device move": {
-      "args": {
-        "type": "object"
-      },
-      "errors": {
-        "codes": [
-          "ABLETON_NOT_REACHABLE",
-          "BATCH_ASSERT_FAILED",
-          "BATCH_PREFLIGHT_FAILED",
-          "BATCH_RETRY_EXHAUSTED",
-          "BATCH_STEP_FAILED",
-          "CONFIG_INVALID",
-          "CONFIRMATION_REQUIRED",
-          "INSTALL_TARGET_NOT_FOUND",
-          "INTERNAL_ERROR",
-          "INVALID_ARGUMENT",
-          "NOT_IMPLEMENTED",
-          "PROTOCOL_CONNECTION_CLOSED",
-          "PROTOCOL_INVALID_RESPONSE",
-          "PROTOCOL_MALFORMED_JSON",
-          "PROTOCOL_REQUEST_ID_MISMATCH",
-          "PROTOCOL_VERSION_MISMATCH",
-          "READ_ONLY_VIOLATION",
-          "REMOTE_BUSY",
-          "REMOTE_SCRIPT_INCOMPATIBLE",
-          "REMOTE_SCRIPT_NOT_INSTALLED",
-          "SET_FILE_INVALID",
-          "SET_INTEGRITY_FAILED",
-          "SET_SCHEMA_UNSUPPORTED",
-          "SKILL_SOURCE_NOT_FOUND",
-          "TIMEOUT",
-          "UNAUTHORIZED",
-          "UNSUPPORTED_OS"
-        ]
-      },
-      "result": {
-        "type": "object"
-      },
-      "side_effect": {
-        "idempotent": false,
-        "kind": "write",
-        "requires_confirmation": false
-      }
-    },
-    "master device parameter set": {
-      "args": {
-        "type": "object"
-      },
-      "errors": {
-        "codes": [
-          "ABLETON_NOT_REACHABLE",
-          "BATCH_ASSERT_FAILED",
-          "BATCH_PREFLIGHT_FAILED",
-          "BATCH_RETRY_EXHAUSTED",
-          "BATCH_STEP_FAILED",
-          "CONFIG_INVALID",
-          "CONFIRMATION_REQUIRED",
-          "INSTALL_TARGET_NOT_FOUND",
-          "INTERNAL_ERROR",
-          "INVALID_ARGUMENT",
-          "NOT_IMPLEMENTED",
-          "PROTOCOL_CONNECTION_CLOSED",
-          "PROTOCOL_INVALID_RESPONSE",
-          "PROTOCOL_MALFORMED_JSON",
-          "PROTOCOL_REQUEST_ID_MISMATCH",
-          "PROTOCOL_VERSION_MISMATCH",
-          "READ_ONLY_VIOLATION",
-          "REMOTE_BUSY",
-          "REMOTE_SCRIPT_INCOMPATIBLE",
-          "REMOTE_SCRIPT_NOT_INSTALLED",
-          "SET_FILE_INVALID",
-          "SET_INTEGRITY_FAILED",
-          "SET_SCHEMA_UNSUPPORTED",
-          "SKILL_SOURCE_NOT_FOUND",
-          "TIMEOUT",
-          "UNAUTHORIZED",
-          "UNSUPPORTED_OS"
-        ]
-      },
-      "result": {
-        "type": "object"
-      },
-      "side_effect": {
-        "idempotent": false,
-        "kind": "write",
-        "requires_confirmation": false
-      }
-    },
-    "master device parameters list": {
-      "args": {
-        "type": "object"
-      },
-      "errors": {
-        "codes": [
-          "ABLETON_NOT_REACHABLE",
-          "BATCH_ASSERT_FAILED",
-          "BATCH_PREFLIGHT_FAILED",
-          "BATCH_RETRY_EXHAUSTED",
-          "BATCH_STEP_FAILED",
-          "CONFIG_INVALID",
-          "CONFIRMATION_REQUIRED",
-          "INSTALL_TARGET_NOT_FOUND",
-          "INTERNAL_ERROR",
-          "INVALID_ARGUMENT",
-          "NOT_IMPLEMENTED",
-          "PROTOCOL_CONNECTION_CLOSED",
-          "PROTOCOL_INVALID_RESPONSE",
-          "PROTOCOL_MALFORMED_JSON",
-          "PROTOCOL_REQUEST_ID_MISMATCH",
-          "PROTOCOL_VERSION_MISMATCH",
-          "READ_ONLY_VIOLATION",
-          "REMOTE_BUSY",
-          "REMOTE_SCRIPT_INCOMPATIBLE",
-          "REMOTE_SCRIPT_NOT_INSTALLED",
-          "SET_FILE_INVALID",
-          "SET_INTEGRITY_FAILED",
-          "SET_SCHEMA_UNSUPPORTED",
-          "SKILL_SOURCE_NOT_FOUND",
-          "TIMEOUT",
-          "UNAUTHORIZED",
-          "UNSUPPORTED_OS"
-        ]
-      },
-      "result": {
-        "type": "object"
-      },
-      "side_effect": {
-        "idempotent": true,
-        "kind": "read",
-        "requires_confirmation": false
       }
     },
     "master devices list": {

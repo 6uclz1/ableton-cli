@@ -30,6 +30,7 @@ ReturnTrackIndexOption = Annotated[
 ReturnTrackNameOption = Annotated[
     str | None, typer.Option("--return-track-name", help="Exact return track name")
 ]
+MainTrackOption = Annotated[bool, typer.Option("--main", help="Target the main track")]
 
 DeviceIndexOption = Annotated[
     int | None, typer.Option("--device-index", help="Device index (0-based)")
@@ -170,8 +171,9 @@ def build_device_track_ref(
     track_ref: str | None,
     return_track_index: int | None,
     return_track_name: str | None,
+    main: bool,
 ) -> RefPayload:
-    """Track selector for device commands, which also reach return-track devices."""
+    """Track selector for device commands, which also reach return/main-track devices."""
     selectors = _track_selectors(
         track_index=track_index,
         track_name=track_name,
@@ -193,12 +195,15 @@ def build_device_track_ref(
                 "name": _require_non_empty("return_track_name", return_track_name),
             }
         )
+    if main:
+        selectors.append({"mode": "main"})
     if len(selectors) != 1:
         raise _invalid_argument(
             message="Exactly one track selector must be provided",
             hint=(
                 "Choose exactly one of --track-index, --track-name, --selected-track, "
-                "--track-query, --track-ref, --return-track-index, or --return-track-name."
+                "--track-query, --track-ref, --return-track-index, --return-track-name, "
+                "or --main."
             ),
         )
     return selectors[0]

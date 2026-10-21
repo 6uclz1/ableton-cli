@@ -4235,10 +4235,12 @@
         " Usage: run [OPTIONS]",
         "",
         "\u256d\u2500 Options \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e",
-        "\u2502 --steps-file         TEXT  Path to JSON file with batch steps                                    \u2502",
-        "\u2502 --steps-json         TEXT  Inline JSON object with 'steps' array                                 \u2502",
-        "\u2502 --steps-stdin              Read JSON object with 'steps' array from stdin                        \u2502",
-        "\u2502 --help                     Show this message and exit.                                           \u2502",
+        "\u2502 --steps-file               TEXT  Path to JSON file with batch steps                              \u2502",
+        "\u2502 --steps-json               TEXT  Inline JSON object with 'steps' array                           \u2502",
+        "\u2502 --steps-stdin                    Read JSON object with 'steps' array from stdin                  \u2502",
+        "\u2502 --continue-on-error              Run every step even after failures; any failure still fails the \u2502",
+        "\u2502                                  batch                                                           \u2502",
+        "\u2502 --help                           Show this message and exit.                                     \u2502",
         "\u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f"
       ],
       "hidden": false,
@@ -4322,6 +4324,32 @@
             "class": "BoolParamType",
             "name": "boolean"
           }
+        },
+        {
+          "count": false,
+          "default": false,
+          "envvar": null,
+          "expose_value": true,
+          "flag_value": true,
+          "help": "Run every step even after failures; any failure still fails the batch",
+          "hidden": false,
+          "is_flag": true,
+          "kind": "option",
+          "metavar": null,
+          "multiple": false,
+          "name": "continue_on_error",
+          "nargs": 1,
+          "opts": [
+            "--continue-on-error"
+          ],
+          "prompt": null,
+          "required": false,
+          "secondary_opts": [],
+          "show_default": true,
+          "type": {
+            "class": "BoolParamType",
+            "name": "boolean"
+          }
         }
       ],
       "path": [
@@ -4338,13 +4366,42 @@
         " Usage: stream [OPTIONS]",
         "",
         "\u256d\u2500 Options \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e",
-        "\u2502 --help          Show this message and exit.                                                      \u2502",
+        "\u2502 --continue-on-error          Run every step even after failures; any failure still fails the     \u2502",
+        "\u2502                              batch                                                               \u2502",
+        "\u2502 --help                       Show this message and exit.                                         \u2502",
         "\u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f"
       ],
       "hidden": false,
       "kind": "command",
       "no_args_is_help": false,
-      "params": [],
+      "params": [
+        {
+          "count": false,
+          "default": false,
+          "envvar": null,
+          "expose_value": true,
+          "flag_value": true,
+          "help": "Run every step even after failures; any failure still fails the batch",
+          "hidden": false,
+          "is_flag": true,
+          "kind": "option",
+          "metavar": null,
+          "multiple": false,
+          "name": "continue_on_error",
+          "nargs": 1,
+          "opts": [
+            "--continue-on-error"
+          ],
+          "prompt": null,
+          "required": false,
+          "secondary_opts": [],
+          "show_default": true,
+          "type": {
+            "class": "BoolParamType",
+            "name": "boolean"
+          }
+        }
+      ],
       "path": [
         "batch",
         "stream"
@@ -13620,6 +13677,7 @@
         "\u2502 --track-ref                 TEXT     Session-local stable track reference                        \u2502",
         "\u2502 --return-track-index        INTEGER  Return track index (0-based)                                \u2502",
         "\u2502 --return-track-name         TEXT     Exact return track name                                     \u2502",
+        "\u2502 --main                               Target the main track                                       \u2502",
         "\u2502 --device-index              INTEGER  Device index (0-based)                                      \u2502",
         "\u2502 --device-name               TEXT     Exact device name                                           \u2502",
         "\u2502 --selected-device                    Use the currently selected device on the target track       \u2502",
@@ -13816,6 +13874,32 @@
         },
         {
           "count": false,
+          "default": false,
+          "envvar": null,
+          "expose_value": true,
+          "flag_value": true,
+          "help": "Target the main track",
+          "hidden": false,
+          "is_flag": true,
+          "kind": "option",
+          "metavar": null,
+          "multiple": false,
+          "name": "main",
+          "nargs": 1,
+          "opts": [
+            "--main"
+          ],
+          "prompt": null,
+          "required": false,
+          "secondary_opts": [],
+          "show_default": true,
+          "type": {
+            "class": "BoolParamType",
+            "name": "boolean"
+          }
+        },
+        {
+          "count": false,
           "default": null,
           "envvar": null,
           "expose_value": true,
@@ -13972,6 +14056,7 @@
         "\u2502 --track-ref                 TEXT     Session-local stable track reference                        \u2502",
         "\u2502 --return-track-index        INTEGER  Return track index (0-based)                                \u2502",
         "\u2502 --return-track-name         TEXT     Exact return track name                                     \u2502",
+        "\u2502 --main                               Target the main track                                       \u2502",
         "\u2502 --device-index              INTEGER  Device index (0-based)                                      \u2502",
         "\u2502 --device-name               TEXT     Exact device name                                           \u2502",
         "\u2502 --selected-device                    Use the currently selected device on the target track       \u2502",
@@ -14188,6 +14273,32 @@
         },
         {
           "count": false,
+          "default": false,
+          "envvar": null,
+          "expose_value": true,
+          "flag_value": true,
+          "help": "Target the main track",
+          "hidden": false,
+          "is_flag": true,
+          "kind": "option",
+          "metavar": null,
+          "multiple": false,
+          "name": "main",
+          "nargs": 1,
+          "opts": [
+            "--main"
+          ],
+          "prompt": null,
+          "required": false,
+          "secondary_opts": [],
+          "show_default": true,
+          "type": {
+            "class": "BoolParamType",
+            "name": "boolean"
+          }
+        },
+        {
+          "count": false,
           "default": null,
           "envvar": null,
           "expose_value": true,
@@ -14368,6 +14479,7 @@
         "\u2502 --track-ref                 TEXT     Session-local stable track reference                        \u2502",
         "\u2502 --return-track-index        INTEGER  Return track index (0-based)                                \u2502",
         "\u2502 --return-track-name         TEXT     Exact return track name                                     \u2502",
+        "\u2502 --main                               Target the main track                                       \u2502",
         "\u2502 --device-index              INTEGER  Device index (0-based)                                      \u2502",
         "\u2502 --device-name               TEXT     Exact device name                                           \u2502",
         "\u2502 --selected-device                    Use the currently selected device on the target track       \u2502",
@@ -14560,6 +14672,32 @@
           "type": {
             "class": "StringParamType",
             "name": "text"
+          }
+        },
+        {
+          "count": false,
+          "default": false,
+          "envvar": null,
+          "expose_value": true,
+          "flag_value": true,
+          "help": "Target the main track",
+          "hidden": false,
+          "is_flag": true,
+          "kind": "option",
+          "metavar": null,
+          "multiple": false,
+          "name": "main",
+          "nargs": 1,
+          "opts": [
+            "--main"
+          ],
+          "prompt": null,
+          "required": false,
+          "secondary_opts": [],
+          "show_default": true,
+          "type": {
+            "class": "BoolParamType",
+            "name": "boolean"
           }
         },
         {
@@ -14717,6 +14855,7 @@
         "\u2502 --track-ref                 TEXT     Session-local stable track reference                        \u2502",
         "\u2502 --return-track-index        INTEGER  Return track index (0-based)                                \u2502",
         "\u2502 --return-track-name         TEXT     Exact return track name                                     \u2502",
+        "\u2502 --main                               Target the main track                                       \u2502",
         "\u2502 --device-index              INTEGER  Device index (0-based)                                      \u2502",
         "\u2502 --device-name               TEXT     Exact device name                                           \u2502",
         "\u2502 --selected-device                    Use the currently selected device on the target track       \u2502",
@@ -14909,6 +15048,32 @@
           "type": {
             "class": "StringParamType",
             "name": "text"
+          }
+        },
+        {
+          "count": false,
+          "default": false,
+          "envvar": null,
+          "expose_value": true,
+          "flag_value": true,
+          "help": "Target the main track",
+          "hidden": false,
+          "is_flag": true,
+          "kind": "option",
+          "metavar": null,
+          "multiple": false,
+          "name": "main",
+          "nargs": 1,
+          "opts": [
+            "--main"
+          ],
+          "prompt": null,
+          "required": false,
+          "secondary_opts": [],
+          "show_default": true,
+          "type": {
+            "class": "BoolParamType",
+            "name": "boolean"
           }
         },
         {
@@ -15069,6 +15234,7 @@
         "\u2502 --track-ref                 TEXT     Session-local stable track reference                        \u2502",
         "\u2502 --return-track-index        INTEGER  Return track index (0-based)                                \u2502",
         "\u2502 --return-track-name         TEXT     Exact return track name                                     \u2502",
+        "\u2502 --main                               Target the main track                                       \u2502",
         "\u2502 --help                               Show this message and exit.                                 \u2502",
         "\u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f"
       ],
@@ -15303,6 +15469,32 @@
             "class": "StringParamType",
             "name": "text"
           }
+        },
+        {
+          "count": false,
+          "default": false,
+          "envvar": null,
+          "expose_value": true,
+          "flag_value": true,
+          "help": "Target the main track",
+          "hidden": false,
+          "is_flag": true,
+          "kind": "option",
+          "metavar": null,
+          "multiple": false,
+          "name": "main",
+          "nargs": 1,
+          "opts": [
+            "--main"
+          ],
+          "prompt": null,
+          "required": false,
+          "secondary_opts": [],
+          "show_default": true,
+          "type": {
+            "class": "BoolParamType",
+            "name": "boolean"
+          }
         }
       ],
       "path": [
@@ -15357,6 +15549,7 @@
         "\u2502 --track-ref                 TEXT     Session-local stable track reference                        \u2502",
         "\u2502 --return-track-index        INTEGER  Return track index (0-based)                                \u2502",
         "\u2502 --return-track-name         TEXT     Exact return track name                                     \u2502",
+        "\u2502 --main                               Target the main track                                       \u2502",
         "\u2502 --device-index              INTEGER  Device index (0-based)                                      \u2502",
         "\u2502 --device-name               TEXT     Exact device name                                           \u2502",
         "\u2502 --selected-device                    Use the currently selected device on the target track       \u2502",
@@ -15553,6 +15746,32 @@
         },
         {
           "count": false,
+          "default": false,
+          "envvar": null,
+          "expose_value": true,
+          "flag_value": true,
+          "help": "Target the main track",
+          "hidden": false,
+          "is_flag": true,
+          "kind": "option",
+          "metavar": null,
+          "multiple": false,
+          "name": "main",
+          "nargs": 1,
+          "opts": [
+            "--main"
+          ],
+          "prompt": null,
+          "required": false,
+          "secondary_opts": [],
+          "show_default": true,
+          "type": {
+            "class": "BoolParamType",
+            "name": "boolean"
+          }
+        },
+        {
+          "count": false,
           "default": null,
           "envvar": null,
           "expose_value": true,
@@ -15708,6 +15927,7 @@
         "\u2502 --track-ref                 TEXT     Session-local stable track reference                        \u2502",
         "\u2502 --return-track-index        INTEGER  Return track index (0-based)                                \u2502",
         "\u2502 --return-track-name         TEXT     Exact return track name                                     \u2502",
+        "\u2502 --main                               Target the main track                                       \u2502",
         "\u2502 --device-index              INTEGER  Device index (0-based)                                      \u2502",
         "\u2502 --device-name               TEXT     Exact device name                                           \u2502",
         "\u2502 --selected-device                    Use the currently selected device on the target track       \u2502",
@@ -15944,6 +16164,32 @@
         },
         {
           "count": false,
+          "default": false,
+          "envvar": null,
+          "expose_value": true,
+          "flag_value": true,
+          "help": "Target the main track",
+          "hidden": false,
+          "is_flag": true,
+          "kind": "option",
+          "metavar": null,
+          "multiple": false,
+          "name": "main",
+          "nargs": 1,
+          "opts": [
+            "--main"
+          ],
+          "prompt": null,
+          "required": false,
+          "secondary_opts": [],
+          "show_default": true,
+          "type": {
+            "class": "BoolParamType",
+            "name": "boolean"
+          }
+        },
+        {
+          "count": false,
           "default": null,
           "envvar": null,
           "expose_value": true,
@@ -16098,6 +16344,7 @@
         "\u2502    --track-ref                 TEXT     Session-local stable track reference                     \u2502",
         "\u2502    --return-track-index        INTEGER  Return track index (0-based)                             \u2502",
         "\u2502    --return-track-name         TEXT     Exact return track name                                  \u2502",
+        "\u2502    --main                               Target the main track                                    \u2502",
         "\u2502    --device-index              INTEGER  Device index (0-based)                                   \u2502",
         "\u2502    --device-name               TEXT     Exact device name                                        \u2502",
         "\u2502    --selected-device                    Use the currently selected device on the target track    \u2502",
@@ -16320,6 +16567,32 @@
         },
         {
           "count": false,
+          "default": false,
+          "envvar": null,
+          "expose_value": true,
+          "flag_value": true,
+          "help": "Target the main track",
+          "hidden": false,
+          "is_flag": true,
+          "kind": "option",
+          "metavar": null,
+          "multiple": false,
+          "name": "main",
+          "nargs": 1,
+          "opts": [
+            "--main"
+          ],
+          "prompt": null,
+          "required": false,
+          "secondary_opts": [],
+          "show_default": true,
+          "type": {
+            "class": "BoolParamType",
+            "name": "boolean"
+          }
+        },
+        {
+          "count": false,
           "default": null,
           "envvar": null,
           "expose_value": true,
@@ -16508,6 +16781,7 @@
         "\u2502 --track-ref                 TEXT     Session-local stable track reference                        \u2502",
         "\u2502 --return-track-index        INTEGER  Return track index (0-based)                                \u2502",
         "\u2502 --return-track-name         TEXT     Exact return track name                                     \u2502",
+        "\u2502 --main                               Target the main track                                       \u2502",
         "\u2502 --device-index              INTEGER  Device index (0-based)                                      \u2502",
         "\u2502 --device-name               TEXT     Exact device name                                           \u2502",
         "\u2502 --selected-device                    Use the currently selected device on the target track       \u2502",
@@ -16725,6 +16999,32 @@
           "type": {
             "class": "StringParamType",
             "name": "text"
+          }
+        },
+        {
+          "count": false,
+          "default": false,
+          "envvar": null,
+          "expose_value": true,
+          "flag_value": true,
+          "help": "Target the main track",
+          "hidden": false,
+          "is_flag": true,
+          "kind": "option",
+          "metavar": null,
+          "multiple": false,
+          "name": "main",
+          "nargs": 1,
+          "opts": [
+            "--main"
+          ],
+          "prompt": null,
+          "required": false,
+          "secondary_opts": [],
+          "show_default": true,
+          "type": {
+            "class": "BoolParamType",
+            "name": "boolean"
           }
         },
         {
@@ -17013,6 +17313,7 @@
         "\u2502 --track-ref                 TEXT     Session-local stable track reference                        \u2502",
         "\u2502 --return-track-index        INTEGER  Return track index (0-based)                                \u2502",
         "\u2502 --return-track-name         TEXT     Exact return track name                                     \u2502",
+        "\u2502 --main                               Target the main track                                       \u2502",
         "\u2502 --device-index              INTEGER  Device index (0-based)                                      \u2502",
         "\u2502 --device-name               TEXT     Exact device name                                           \u2502",
         "\u2502 --selected-device                    Use the currently selected device on the target track       \u2502",
@@ -17230,6 +17531,32 @@
           "type": {
             "class": "StringParamType",
             "name": "text"
+          }
+        },
+        {
+          "count": false,
+          "default": false,
+          "envvar": null,
+          "expose_value": true,
+          "flag_value": true,
+          "help": "Target the main track",
+          "hidden": false,
+          "is_flag": true,
+          "kind": "option",
+          "metavar": null,
+          "multiple": false,
+          "name": "main",
+          "nargs": 1,
+          "opts": [
+            "--main"
+          ],
+          "prompt": null,
+          "required": false,
+          "secondary_opts": [],
+          "show_default": true,
+          "type": {
+            "class": "BoolParamType",
+            "name": "boolean"
           }
         },
         {
@@ -17520,6 +17847,7 @@
         "\u2502 --track-ref                 TEXT     Session-local stable track reference                        \u2502",
         "\u2502 --return-track-index        INTEGER  Return track index (0-based)                                \u2502",
         "\u2502 --return-track-name         TEXT     Exact return track name                                     \u2502",
+        "\u2502 --main                               Target the main track                                       \u2502",
         "\u2502 --device-index              INTEGER  Device index (0-based)                                      \u2502",
         "\u2502 --device-name               TEXT     Exact device name                                           \u2502",
         "\u2502 --selected-device                    Use the currently selected device on the target track       \u2502",
@@ -17737,6 +18065,32 @@
           "type": {
             "class": "StringParamType",
             "name": "text"
+          }
+        },
+        {
+          "count": false,
+          "default": false,
+          "envvar": null,
+          "expose_value": true,
+          "flag_value": true,
+          "help": "Target the main track",
+          "hidden": false,
+          "is_flag": true,
+          "kind": "option",
+          "metavar": null,
+          "multiple": false,
+          "name": "main",
+          "nargs": 1,
+          "opts": [
+            "--main"
+          ],
+          "prompt": null,
+          "required": false,
+          "secondary_opts": [],
+          "show_default": true,
+          "type": {
+            "class": "BoolParamType",
+            "name": "boolean"
           }
         },
         {
@@ -18053,6 +18407,7 @@
         "\u2502 --track-ref                 TEXT     Session-local stable track reference                        \u2502",
         "\u2502 --return-track-index        INTEGER  Return track index (0-based)                                \u2502",
         "\u2502 --return-track-name         TEXT     Exact return track name                                     \u2502",
+        "\u2502 --main                               Target the main track                                       \u2502",
         "\u2502 --device-index              INTEGER  Device index (0-based)                                      \u2502",
         "\u2502 --device-name               TEXT     Exact device name                                           \u2502",
         "\u2502 --selected-device                    Use the currently selected device on the target track       \u2502",
@@ -18245,6 +18600,32 @@
           "type": {
             "class": "StringParamType",
             "name": "text"
+          }
+        },
+        {
+          "count": false,
+          "default": false,
+          "envvar": null,
+          "expose_value": true,
+          "flag_value": true,
+          "help": "Target the main track",
+          "hidden": false,
+          "is_flag": true,
+          "kind": "option",
+          "metavar": null,
+          "multiple": false,
+          "name": "main",
+          "nargs": 1,
+          "opts": [
+            "--main"
+          ],
+          "prompt": null,
+          "required": false,
+          "secondary_opts": [],
+          "show_default": true,
+          "type": {
+            "class": "BoolParamType",
+            "name": "boolean"
           }
         },
         {
@@ -18433,6 +18814,7 @@
         "\u2502 --track-ref                 TEXT     Session-local stable track reference                        \u2502",
         "\u2502 --return-track-index        INTEGER  Return track index (0-based)                                \u2502",
         "\u2502 --return-track-name         TEXT     Exact return track name                                     \u2502",
+        "\u2502 --main                               Target the main track                                       \u2502",
         "\u2502 --device-index              INTEGER  Device index (0-based)                                      \u2502",
         "\u2502 --device-name               TEXT     Exact device name                                           \u2502",
         "\u2502 --selected-device                    Use the currently selected device on the target track       \u2502",
@@ -18629,6 +19011,32 @@
         },
         {
           "count": false,
+          "default": false,
+          "envvar": null,
+          "expose_value": true,
+          "flag_value": true,
+          "help": "Target the main track",
+          "hidden": false,
+          "is_flag": true,
+          "kind": "option",
+          "metavar": null,
+          "multiple": false,
+          "name": "main",
+          "nargs": 1,
+          "opts": [
+            "--main"
+          ],
+          "prompt": null,
+          "required": false,
+          "secondary_opts": [],
+          "show_default": true,
+          "type": {
+            "class": "BoolParamType",
+            "name": "boolean"
+          }
+        },
+        {
+          "count": false,
           "default": null,
           "envvar": null,
           "expose_value": true,
@@ -18785,6 +19193,7 @@
         "\u2502 --track-ref                 TEXT     Session-local stable track reference                        \u2502",
         "\u2502 --return-track-index        INTEGER  Return track index (0-based)                                \u2502",
         "\u2502 --return-track-name         TEXT     Exact return track name                                     \u2502",
+        "\u2502 --main                               Target the main track                                       \u2502",
         "\u2502 --device-index              INTEGER  Device index (0-based)                                      \u2502",
         "\u2502 --device-name               TEXT     Exact device name                                           \u2502",
         "\u2502 --selected-device                    Use the currently selected device on the target track       \u2502",
@@ -19001,6 +19410,32 @@
         },
         {
           "count": false,
+          "default": false,
+          "envvar": null,
+          "expose_value": true,
+          "flag_value": true,
+          "help": "Target the main track",
+          "hidden": false,
+          "is_flag": true,
+          "kind": "option",
+          "metavar": null,
+          "multiple": false,
+          "name": "main",
+          "nargs": 1,
+          "opts": [
+            "--main"
+          ],
+          "prompt": null,
+          "required": false,
+          "secondary_opts": [],
+          "show_default": true,
+          "type": {
+            "class": "BoolParamType",
+            "name": "boolean"
+          }
+        },
+        {
+          "count": false,
           "default": null,
           "envvar": null,
           "expose_value": true,
@@ -19185,6 +19620,7 @@
         "\u2502 --track-ref                 TEXT     Session-local stable track reference                        \u2502",
         "\u2502 --return-track-index        INTEGER  Return track index (0-based)                                \u2502",
         "\u2502 --return-track-name         TEXT     Exact return track name                                     \u2502",
+        "\u2502 --main                               Target the main track                                       \u2502",
         "\u2502 --device-index              INTEGER  Device index (0-based)                                      \u2502",
         "\u2502 --device-name               TEXT     Exact device name                                           \u2502",
         "\u2502 --selected-device                    Use the currently selected device on the target track       \u2502",
@@ -19381,6 +19817,32 @@
         },
         {
           "count": false,
+          "default": false,
+          "envvar": null,
+          "expose_value": true,
+          "flag_value": true,
+          "help": "Target the main track",
+          "hidden": false,
+          "is_flag": true,
+          "kind": "option",
+          "metavar": null,
+          "multiple": false,
+          "name": "main",
+          "nargs": 1,
+          "opts": [
+            "--main"
+          ],
+          "prompt": null,
+          "required": false,
+          "secondary_opts": [],
+          "show_default": true,
+          "type": {
+            "class": "BoolParamType",
+            "name": "boolean"
+          }
+        },
+        {
+          "count": false,
           "default": null,
           "envvar": null,
           "expose_value": true,
@@ -19537,6 +19999,7 @@
         "\u2502    --track-ref                 TEXT     Session-local stable track reference                     \u2502",
         "\u2502    --return-track-index        INTEGER  Return track index (0-based)                             \u2502",
         "\u2502    --return-track-name         TEXT     Exact return track name                                  \u2502",
+        "\u2502    --main                               Target the main track                                    \u2502",
         "\u2502    --device-index              INTEGER  Device index (0-based)                                   \u2502",
         "\u2502    --device-name               TEXT     Exact device name                                        \u2502",
         "\u2502    --selected-device                    Use the currently selected device on the target track    \u2502",
@@ -19781,6 +20244,32 @@
           "type": {
             "class": "StringParamType",
             "name": "text"
+          }
+        },
+        {
+          "count": false,
+          "default": false,
+          "envvar": null,
+          "expose_value": true,
+          "flag_value": true,
+          "help": "Target the main track",
+          "hidden": false,
+          "is_flag": true,
+          "kind": "option",
+          "metavar": null,
+          "multiple": false,
+          "name": "main",
+          "nargs": 1,
+          "opts": [
+            "--main"
+          ],
+          "prompt": null,
+          "required": false,
+          "secondary_opts": [],
+          "show_default": true,
+          "type": {
+            "class": "BoolParamType",
+            "name": "boolean"
           }
         },
         {
@@ -25528,7 +26017,6 @@
         "\u2502 meter    Master output meter commands                                                            \u2502",
         "\u2502 panning  Master panning commands                                                                 \u2502",
         "\u2502 devices  Master device commands                                                                  \u2502",
-        "\u2502 device   Master device write commands                                                            \u2502",
         "\u2502 effect   Master effect wrapper commands                                                          \u2502",
         "\u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f"
       ],
@@ -25546,755 +26034,8 @@
         "meter",
         "panning",
         "devices",
-        "device",
         "effect"
       ]
-    },
-    "master device": {
-      "deprecated": false,
-      "help": "Master device write commands",
-      "help_text": [
-        "",
-        " Usage: device [OPTIONS] COMMAND [ARGS]...",
-        "",
-        " Master device write commands",
-        "",
-        "\u256d\u2500 Options \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e",
-        "\u2502 --help          Show this message and exit.                                                      \u2502",
-        "\u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f",
-        "\u256d\u2500 Commands \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e",
-        "\u2502 load                                                                                             \u2502",
-        "\u2502 move                                                                                             \u2502",
-        "\u2502 delete                                                                                           \u2502",
-        "\u2502 parameters  Master device parameter listing                                                      \u2502",
-        "\u2502 parameter   Master device parameter writes                                                       \u2502",
-        "\u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f"
-      ],
-      "hidden": false,
-      "kind": "group",
-      "no_args_is_help": true,
-      "params": [],
-      "path": [
-        "master",
-        "device"
-      ],
-      "short_help": null,
-      "subcommands": [
-        "load",
-        "move",
-        "delete",
-        "parameters",
-        "parameter"
-      ]
-    },
-    "master device delete": {
-      "deprecated": false,
-      "help": null,
-      "help_text": [
-        "",
-        " Usage: delete [OPTIONS]",
-        "",
-        "\u256d\u2500 Options \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e",
-        "\u2502 *  --device-index        INTEGER  Device index [required]                                        \u2502",
-        "\u2502    --yes                          Confirm device deletion                                        \u2502",
-        "\u2502    --help                         Show this message and exit.                                    \u2502",
-        "\u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f"
-      ],
-      "hidden": false,
-      "kind": "command",
-      "no_args_is_help": false,
-      "params": [
-        {
-          "count": false,
-          "default": null,
-          "envvar": null,
-          "expose_value": true,
-          "flag_value": null,
-          "help": "Device index",
-          "hidden": false,
-          "is_flag": false,
-          "kind": "option",
-          "metavar": null,
-          "multiple": false,
-          "name": "device_index",
-          "nargs": 1,
-          "opts": [
-            "--device-index"
-          ],
-          "prompt": null,
-          "required": true,
-          "secondary_opts": [],
-          "show_default": true,
-          "type": {
-            "class": "IntParamType",
-            "name": "integer"
-          }
-        },
-        {
-          "count": false,
-          "default": false,
-          "envvar": null,
-          "expose_value": true,
-          "flag_value": true,
-          "help": "Confirm device deletion",
-          "hidden": false,
-          "is_flag": true,
-          "kind": "option",
-          "metavar": null,
-          "multiple": false,
-          "name": "yes",
-          "nargs": 1,
-          "opts": [
-            "--yes"
-          ],
-          "prompt": null,
-          "required": false,
-          "secondary_opts": [],
-          "show_default": true,
-          "type": {
-            "class": "BoolParamType",
-            "name": "boolean"
-          }
-        }
-      ],
-      "path": [
-        "master",
-        "device",
-        "delete"
-      ],
-      "short_help": null
-    },
-    "master device load": {
-      "deprecated": false,
-      "help": null,
-      "help_text": [
-        "",
-        " Usage: load [OPTIONS] TARGET",
-        "",
-        "\u256d\u2500 Arguments \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e",
-        "\u2502 *    target      TEXT  Browser uri/path/query target [required]                                  \u2502",
-        "\u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f",
-        "\u256d\u2500 Options \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e",
-        "\u2502 --position        TEXT  Insert position [default: end]                                           \u2502",
-        "\u2502 --help                  Show this message and exit.                                              \u2502",
-        "\u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f"
-      ],
-      "hidden": false,
-      "kind": "command",
-      "no_args_is_help": false,
-      "params": [
-        {
-          "default": null,
-          "envvar": null,
-          "expose_value": true,
-          "help": "Browser uri/path/query target",
-          "kind": "argument",
-          "metavar": null,
-          "multiple": false,
-          "name": "target",
-          "nargs": 1,
-          "opts": [
-            "target"
-          ],
-          "required": true,
-          "secondary_opts": [],
-          "type": {
-            "class": "StringParamType",
-            "name": "text"
-          }
-        },
-        {
-          "count": false,
-          "default": "end",
-          "envvar": null,
-          "expose_value": true,
-          "flag_value": null,
-          "help": "Insert position",
-          "hidden": false,
-          "is_flag": false,
-          "kind": "option",
-          "metavar": null,
-          "multiple": false,
-          "name": "position",
-          "nargs": 1,
-          "opts": [
-            "--position"
-          ],
-          "prompt": null,
-          "required": false,
-          "secondary_opts": [],
-          "show_default": true,
-          "type": {
-            "class": "StringParamType",
-            "name": "text"
-          }
-        }
-      ],
-      "path": [
-        "master",
-        "device",
-        "load"
-      ],
-      "short_help": null
-    },
-    "master device move": {
-      "deprecated": false,
-      "help": null,
-      "help_text": [
-        "",
-        " Usage: move [OPTIONS]",
-        "",
-        "\u256d\u2500 Options \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e",
-        "\u2502 *  --device-index        INTEGER  Device index [required]                                        \u2502",
-        "\u2502 *  --to-index            INTEGER  Destination index [required]                                   \u2502",
-        "\u2502    --help                         Show this message and exit.                                    \u2502",
-        "\u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f"
-      ],
-      "hidden": false,
-      "kind": "command",
-      "no_args_is_help": false,
-      "params": [
-        {
-          "count": false,
-          "default": null,
-          "envvar": null,
-          "expose_value": true,
-          "flag_value": null,
-          "help": "Device index",
-          "hidden": false,
-          "is_flag": false,
-          "kind": "option",
-          "metavar": null,
-          "multiple": false,
-          "name": "device_index",
-          "nargs": 1,
-          "opts": [
-            "--device-index"
-          ],
-          "prompt": null,
-          "required": true,
-          "secondary_opts": [],
-          "show_default": true,
-          "type": {
-            "class": "IntParamType",
-            "name": "integer"
-          }
-        },
-        {
-          "count": false,
-          "default": null,
-          "envvar": null,
-          "expose_value": true,
-          "flag_value": null,
-          "help": "Destination index",
-          "hidden": false,
-          "is_flag": false,
-          "kind": "option",
-          "metavar": null,
-          "multiple": false,
-          "name": "to_index",
-          "nargs": 1,
-          "opts": [
-            "--to-index"
-          ],
-          "prompt": null,
-          "required": true,
-          "secondary_opts": [],
-          "show_default": true,
-          "type": {
-            "class": "IntParamType",
-            "name": "integer"
-          }
-        }
-      ],
-      "path": [
-        "master",
-        "device",
-        "move"
-      ],
-      "short_help": null
-    },
-    "master device parameter": {
-      "deprecated": false,
-      "help": "Master device parameter writes",
-      "help_text": [
-        "",
-        " Usage: parameter [OPTIONS] COMMAND [ARGS]...",
-        "",
-        " Master device parameter writes",
-        "",
-        "\u256d\u2500 Options \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e",
-        "\u2502 --help          Show this message and exit.                                                      \u2502",
-        "\u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f",
-        "\u256d\u2500 Commands \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e",
-        "\u2502 set                                                                                              \u2502",
-        "\u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f"
-      ],
-      "hidden": false,
-      "kind": "group",
-      "no_args_is_help": true,
-      "params": [],
-      "path": [
-        "master",
-        "device",
-        "parameter"
-      ],
-      "short_help": null,
-      "subcommands": [
-        "set"
-      ]
-    },
-    "master device parameter set": {
-      "deprecated": false,
-      "help": null,
-      "help_text": [
-        "",
-        " Usage: set [OPTIONS] VALUE",
-        "",
-        "\u256d\u2500 Arguments \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e",
-        "\u2502 *    value      FLOAT  Target parameter value [required]                                         \u2502",
-        "\u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f",
-        "\u256d\u2500 Options \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e",
-        "\u2502 --device-index           INTEGER  Device index (0-based)                                         \u2502",
-        "\u2502 --device-name            TEXT     Exact device name                                              \u2502",
-        "\u2502 --device-query           TEXT     Unique case-insensitive device query                           \u2502",
-        "\u2502 --device-ref             TEXT     Session-local stable device reference                          \u2502",
-        "\u2502 --parameter-index        INTEGER  Parameter index (0-based)                                      \u2502",
-        "\u2502 --parameter-name         TEXT     Exact parameter name                                           \u2502",
-        "\u2502 --parameter-query        TEXT     Unique case-insensitive parameter query                        \u2502",
-        "\u2502 --parameter-key          TEXT     Stable synth/effect parameter key                              \u2502",
-        "\u2502 --parameter-ref          TEXT     Session-local stable parameter reference                       \u2502",
-        "\u2502 --help                            Show this message and exit.                                    \u2502",
-        "\u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f"
-      ],
-      "hidden": false,
-      "kind": "command",
-      "no_args_is_help": false,
-      "params": [
-        {
-          "default": null,
-          "envvar": null,
-          "expose_value": true,
-          "help": "Target parameter value",
-          "kind": "argument",
-          "metavar": null,
-          "multiple": false,
-          "name": "value",
-          "nargs": 1,
-          "opts": [
-            "value"
-          ],
-          "required": true,
-          "secondary_opts": [],
-          "type": {
-            "class": "FloatParamType",
-            "name": "float"
-          }
-        },
-        {
-          "count": false,
-          "default": null,
-          "envvar": null,
-          "expose_value": true,
-          "flag_value": null,
-          "help": "Device index (0-based)",
-          "hidden": false,
-          "is_flag": false,
-          "kind": "option",
-          "metavar": null,
-          "multiple": false,
-          "name": "device_index",
-          "nargs": 1,
-          "opts": [
-            "--device-index"
-          ],
-          "prompt": null,
-          "required": false,
-          "secondary_opts": [],
-          "show_default": true,
-          "type": {
-            "class": "IntParamType",
-            "name": "integer"
-          }
-        },
-        {
-          "count": false,
-          "default": null,
-          "envvar": null,
-          "expose_value": true,
-          "flag_value": null,
-          "help": "Exact device name",
-          "hidden": false,
-          "is_flag": false,
-          "kind": "option",
-          "metavar": null,
-          "multiple": false,
-          "name": "device_name",
-          "nargs": 1,
-          "opts": [
-            "--device-name"
-          ],
-          "prompt": null,
-          "required": false,
-          "secondary_opts": [],
-          "show_default": true,
-          "type": {
-            "class": "StringParamType",
-            "name": "text"
-          }
-        },
-        {
-          "count": false,
-          "default": null,
-          "envvar": null,
-          "expose_value": true,
-          "flag_value": null,
-          "help": "Unique case-insensitive device query",
-          "hidden": false,
-          "is_flag": false,
-          "kind": "option",
-          "metavar": null,
-          "multiple": false,
-          "name": "device_query",
-          "nargs": 1,
-          "opts": [
-            "--device-query"
-          ],
-          "prompt": null,
-          "required": false,
-          "secondary_opts": [],
-          "show_default": true,
-          "type": {
-            "class": "StringParamType",
-            "name": "text"
-          }
-        },
-        {
-          "count": false,
-          "default": null,
-          "envvar": null,
-          "expose_value": true,
-          "flag_value": null,
-          "help": "Session-local stable device reference",
-          "hidden": false,
-          "is_flag": false,
-          "kind": "option",
-          "metavar": null,
-          "multiple": false,
-          "name": "device_ref",
-          "nargs": 1,
-          "opts": [
-            "--device-ref"
-          ],
-          "prompt": null,
-          "required": false,
-          "secondary_opts": [],
-          "show_default": true,
-          "type": {
-            "class": "StringParamType",
-            "name": "text"
-          }
-        },
-        {
-          "count": false,
-          "default": null,
-          "envvar": null,
-          "expose_value": true,
-          "flag_value": null,
-          "help": "Parameter index (0-based)",
-          "hidden": false,
-          "is_flag": false,
-          "kind": "option",
-          "metavar": null,
-          "multiple": false,
-          "name": "parameter_index",
-          "nargs": 1,
-          "opts": [
-            "--parameter-index"
-          ],
-          "prompt": null,
-          "required": false,
-          "secondary_opts": [],
-          "show_default": true,
-          "type": {
-            "class": "IntParamType",
-            "name": "integer"
-          }
-        },
-        {
-          "count": false,
-          "default": null,
-          "envvar": null,
-          "expose_value": true,
-          "flag_value": null,
-          "help": "Exact parameter name",
-          "hidden": false,
-          "is_flag": false,
-          "kind": "option",
-          "metavar": null,
-          "multiple": false,
-          "name": "parameter_name",
-          "nargs": 1,
-          "opts": [
-            "--parameter-name"
-          ],
-          "prompt": null,
-          "required": false,
-          "secondary_opts": [],
-          "show_default": true,
-          "type": {
-            "class": "StringParamType",
-            "name": "text"
-          }
-        },
-        {
-          "count": false,
-          "default": null,
-          "envvar": null,
-          "expose_value": true,
-          "flag_value": null,
-          "help": "Unique case-insensitive parameter query",
-          "hidden": false,
-          "is_flag": false,
-          "kind": "option",
-          "metavar": null,
-          "multiple": false,
-          "name": "parameter_query",
-          "nargs": 1,
-          "opts": [
-            "--parameter-query"
-          ],
-          "prompt": null,
-          "required": false,
-          "secondary_opts": [],
-          "show_default": true,
-          "type": {
-            "class": "StringParamType",
-            "name": "text"
-          }
-        },
-        {
-          "count": false,
-          "default": null,
-          "envvar": null,
-          "expose_value": true,
-          "flag_value": null,
-          "help": "Stable synth/effect parameter key",
-          "hidden": false,
-          "is_flag": false,
-          "kind": "option",
-          "metavar": null,
-          "multiple": false,
-          "name": "parameter_key",
-          "nargs": 1,
-          "opts": [
-            "--parameter-key"
-          ],
-          "prompt": null,
-          "required": false,
-          "secondary_opts": [],
-          "show_default": true,
-          "type": {
-            "class": "StringParamType",
-            "name": "text"
-          }
-        },
-        {
-          "count": false,
-          "default": null,
-          "envvar": null,
-          "expose_value": true,
-          "flag_value": null,
-          "help": "Session-local stable parameter reference",
-          "hidden": false,
-          "is_flag": false,
-          "kind": "option",
-          "metavar": null,
-          "multiple": false,
-          "name": "parameter_ref",
-          "nargs": 1,
-          "opts": [
-            "--parameter-ref"
-          ],
-          "prompt": null,
-          "required": false,
-          "secondary_opts": [],
-          "show_default": true,
-          "type": {
-            "class": "StringParamType",
-            "name": "text"
-          }
-        }
-      ],
-      "path": [
-        "master",
-        "device",
-        "parameter",
-        "set"
-      ],
-      "short_help": null
-    },
-    "master device parameters": {
-      "deprecated": false,
-      "help": "Master device parameter listing",
-      "help_text": [
-        "",
-        " Usage: parameters [OPTIONS] COMMAND [ARGS]...",
-        "",
-        " Master device parameter listing",
-        "",
-        "\u256d\u2500 Options \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e",
-        "\u2502 --help          Show this message and exit.                                                      \u2502",
-        "\u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f",
-        "\u256d\u2500 Commands \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e",
-        "\u2502 list                                                                                             \u2502",
-        "\u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f"
-      ],
-      "hidden": false,
-      "kind": "group",
-      "no_args_is_help": true,
-      "params": [],
-      "path": [
-        "master",
-        "device",
-        "parameters"
-      ],
-      "short_help": null,
-      "subcommands": [
-        "list"
-      ]
-    },
-    "master device parameters list": {
-      "deprecated": false,
-      "help": null,
-      "help_text": [
-        "",
-        " Usage: list [OPTIONS]",
-        "",
-        "\u256d\u2500 Options \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e",
-        "\u2502 --device-index        INTEGER  Device index (0-based)                                            \u2502",
-        "\u2502 --device-name         TEXT     Exact device name                                                 \u2502",
-        "\u2502 --device-query        TEXT     Unique case-insensitive device query                              \u2502",
-        "\u2502 --device-ref          TEXT     Session-local stable device reference                             \u2502",
-        "\u2502 --help                         Show this message and exit.                                       \u2502",
-        "\u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f"
-      ],
-      "hidden": false,
-      "kind": "command",
-      "no_args_is_help": false,
-      "params": [
-        {
-          "count": false,
-          "default": null,
-          "envvar": null,
-          "expose_value": true,
-          "flag_value": null,
-          "help": "Device index (0-based)",
-          "hidden": false,
-          "is_flag": false,
-          "kind": "option",
-          "metavar": null,
-          "multiple": false,
-          "name": "device_index",
-          "nargs": 1,
-          "opts": [
-            "--device-index"
-          ],
-          "prompt": null,
-          "required": false,
-          "secondary_opts": [],
-          "show_default": true,
-          "type": {
-            "class": "IntParamType",
-            "name": "integer"
-          }
-        },
-        {
-          "count": false,
-          "default": null,
-          "envvar": null,
-          "expose_value": true,
-          "flag_value": null,
-          "help": "Exact device name",
-          "hidden": false,
-          "is_flag": false,
-          "kind": "option",
-          "metavar": null,
-          "multiple": false,
-          "name": "device_name",
-          "nargs": 1,
-          "opts": [
-            "--device-name"
-          ],
-          "prompt": null,
-          "required": false,
-          "secondary_opts": [],
-          "show_default": true,
-          "type": {
-            "class": "StringParamType",
-            "name": "text"
-          }
-        },
-        {
-          "count": false,
-          "default": null,
-          "envvar": null,
-          "expose_value": true,
-          "flag_value": null,
-          "help": "Unique case-insensitive device query",
-          "hidden": false,
-          "is_flag": false,
-          "kind": "option",
-          "metavar": null,
-          "multiple": false,
-          "name": "device_query",
-          "nargs": 1,
-          "opts": [
-            "--device-query"
-          ],
-          "prompt": null,
-          "required": false,
-          "secondary_opts": [],
-          "show_default": true,
-          "type": {
-            "class": "StringParamType",
-            "name": "text"
-          }
-        },
-        {
-          "count": false,
-          "default": null,
-          "envvar": null,
-          "expose_value": true,
-          "flag_value": null,
-          "help": "Session-local stable device reference",
-          "hidden": false,
-          "is_flag": false,
-          "kind": "option",
-          "metavar": null,
-          "multiple": false,
-          "name": "device_ref",
-          "nargs": 1,
-          "opts": [
-            "--device-ref"
-          ],
-          "prompt": null,
-          "required": false,
-          "secondary_opts": [],
-          "show_default": true,
-          "type": {
-            "class": "StringParamType",
-            "name": "text"
-          }
-        }
-      ],
-      "path": [
-        "master",
-        "device",
-        "parameters",
-        "list"
-      ],
-      "short_help": null
     },
     "master devices": {
       "deprecated": false,

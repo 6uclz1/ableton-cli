@@ -50,6 +50,60 @@ class _RichParameter:
         self.value = value / self._display_scale
 
 
+class _LiveArgumentError(Exception):
+    """Stands in for the Boost.Python exception Live raises; it is not a RuntimeError."""
+
+
+class _SteppedParameter:
+    """A non-quantized parameter whose display snaps to labelled integer steps.
+
+    Live reports Beat Repeat Grid or Glue Compressor Ratio this way:
+    ``is_quantized`` is False and ``value_items`` is empty, but every integer
+    raw value has its own label and values in between snap to a neighbour.
+    Live rejects some ``display_value`` writes for these parameters (Auto Pan Rate).
+    """
+
+    def __init__(self, name: str, labels: list[str], value: float = 0.0) -> None:
+        self.name = name
+        self.original_name = name
+        self.value = value
+        self.min = 0.0
+        self.max = float(len(labels) - 1)
+        self.is_enabled = True
+        self.is_quantized = False
+        self.value_items: list[str] = []
+        self._labels = labels
+
+    def str_for_value(self, value: float) -> str:
+        return self._labels[int(round(value))]
+
+    @property
+    def display_value(self) -> float:
+        return self.value
+
+    @display_value.setter
+    def display_value(self, value: float) -> None:
+        raise _LiveArgumentError("Invalid display value")
+
+
+_GRID_LABELS = ["1/4", "1/6", "1/8", "1/12", "1/16", "1/24", "1/32"]
+
+
+class _BeatRepeatDevice:
+    def __init__(self) -> None:
+        self.name = "Beat Repeat"
+        self.class_name = "BeatRepeat"
+        self.class_display_name = "Beat Repeat"
+        self.can_have_chains = False
+        self.can_have_drum_pads = False
+        self.parameters = [
+            _RichParameter("Device On", 1.0, is_quantized=True, value_items=["Off", "On"]),
+            _SteppedParameter("Grid", _GRID_LABELS, value=2.0),
+            _RichParameter("Dry/Wet", 0.5, unit="%", display_scale=100.0),
+            _RichParameter("Volume", 0.0, max=36.0, unit="dB"),
+        ]
+
+
 class _RoutingTarget:
     def __init__(self, display_name: str) -> None:
         self.display_name = display_name
@@ -201,6 +255,73 @@ def test_device_parameter_display_set_not_supported_without_display_value() -> N
         backend.device_parameter_display_set(0, 0, 0, -3.0)
 
     assert exc_info.value.details == {"reason": "not_supported_by_live_api"}
+
+
+def test_device_parameters_list_reports_step_labels_for_stepped_parameter() -> None:
+    backend = _backend_with_devices(_BeatRepeatDevice())
+
+    parameters = backend.device_parameters_list(0, 0)["parameters"]
+
+    grid = parameters[1]
+    assert grid["is_quantized"] is False
+    assert grid["value_items"] is None
+    assert grid["step_labels"] == _GRID_LABELS
+
+
+def test_device_parameters_list_keeps_continuous_parameters_unstepped() -> None:
+    backend = _backend_with_devices(_BeatRepeatDevice())
+
+    parameters = backend.device_parameters_list(0, 0)["parameters"]
+
+    assert parameters[2]["name"] == "Dry/Wet"
+    assert parameters[2]["step_labels"] is None
+    # Integer bounds alone are not enough: midpoints carry their own label.
+    assert parameters[3]["name"] == "Volume"
+    assert parameters[3]["step_labels"] is None
+    # Quantized parameters keep reporting value_items only.
+    assert parameters[0]["step_labels"] is None
+
+
+def test_device_parameter_select_accepts_step_label() -> None:
+    beat_repeat = _BeatRepeatDevice()
+    backend = _backend_with_devices(beat_repeat)
+
+    result = backend.device_parameter_select(0, 0, 1, "1/32")
+
+    assert beat_repeat.parameters[1].value == 6.0
+    assert result["item"] == "1/32"
+    assert result["display"] == "1/32"
+
+
+def test_device_parameter_select_rejects_unknown_step_label() -> None:
+    backend = _backend_with_devices(_BeatRepeatDevice())
+
+    with pytest.raises(CommandError) as exc_info:
+        backend.device_parameter_select(0, 0, 1, "1/64")
+
+    assert exc_info.value.code == "INVALID_ARGUMENT"
+    assert "1/32" in exc_info.value.hint
+
+
+def test_device_parameter_display_set_maps_live_rejection_to_invalid_argument() -> None:
+    beat_repeat = _BeatRepeatDevice()
+    backend = _backend_with_devices(beat_repeat)
+
+    with pytest.raises(CommandError) as exc_info:
+        backend.device_parameter_display_set(0, 0, 1, 4.0)
+
+    assert exc_info.value.code == "INVALID_ARGUMENT"
+    assert "device parameter select" in exc_info.value.hint
+    assert beat_repeat.parameters[1].value == 2.0
+
+
+def test_set_device_parameter_reports_display() -> None:
+    backend = _backend_with_devices(_BeatRepeatDevice())
+
+    result = backend.set_device_parameter(0, 0, 1, 4.0)
+
+    assert result["value"] == 4.0
+    assert result["display"] == "1/16"
 
 
 def test_device_active_set_toggles_device_on_parameter() -> None:

@@ -4,7 +4,6 @@ from typing import Annotated
 
 import typer
 
-from ..errors import AppError, ErrorCode, ExitCode
 from ..refs import (
     DeviceIndexOption,
     DeviceNameOption,
@@ -28,9 +27,6 @@ volume_app = typer.Typer(help="Master volume commands", no_args_is_help=True)
 panning_app = typer.Typer(help="Master panning commands", no_args_is_help=True)
 meter_app = typer.Typer(help="Master output meter commands", no_args_is_help=True)
 devices_app = typer.Typer(help="Master device commands", no_args_is_help=True)
-device_app = typer.Typer(help="Master device write commands", no_args_is_help=True)
-device_parameters_app = typer.Typer(help="Master device parameter listing", no_args_is_help=True)
-device_parameter_app = typer.Typer(help="Master device parameter writes", no_args_is_help=True)
 effect_app = typer.Typer(help="Master effect wrapper commands", no_args_is_help=True)
 
 MASTER_INFO_SPEC = CommandSpec(command_name="master info", client_method="master_info")
@@ -106,122 +102,6 @@ def master_panning_set(
 @devices_app.command("list")
 def master_devices_list(ctx: typer.Context) -> None:
     run_client_command_spec(ctx, spec=MASTER_DEVICES_LIST_SPEC)
-
-
-@device_app.command("load")
-def master_device_load(
-    ctx: typer.Context,
-    target: Annotated[str, typer.Argument(help="Browser uri/path/query target")],
-    position: Annotated[str, typer.Option("--position", help="Insert position")] = "end",
-) -> None:
-    execute_command(
-        ctx,
-        command="master device load",
-        args={"target": target, "position": position},
-        action=lambda: get_client(ctx).master_device_load(target, position),
-    )
-
-
-@device_app.command("move")
-def master_device_move(
-    ctx: typer.Context,
-    device_index: Annotated[int, typer.Option("--device-index", help="Device index")],
-    to_index: Annotated[int, typer.Option("--to-index", help="Destination index")],
-) -> None:
-    execute_command(
-        ctx,
-        command="master device move",
-        args={"device_index": device_index, "to_index": to_index},
-        action=lambda: get_client(ctx).master_device_move(device_index, to_index),
-    )
-
-
-@device_app.command("delete")
-def master_device_delete(
-    ctx: typer.Context,
-    device_index: Annotated[int, typer.Option("--device-index", help="Device index")],
-    yes: Annotated[bool, typer.Option("--yes", help="Confirm device deletion")] = False,
-) -> None:
-    def _action() -> dict[str, object]:
-        if not yes:
-            raise AppError(
-                error_code=ErrorCode.INVALID_ARGUMENT,
-                message="master device delete requires --yes",
-                hint="Pass --yes to confirm deleting a master device.",
-                exit_code=ExitCode.INVALID_ARGUMENT,
-            )
-        return get_client(ctx).master_device_delete(device_index)
-
-    execute_command(
-        ctx,
-        command="master device delete",
-        args={"device_index": device_index, "yes": yes},
-        action=_action,
-    )
-
-
-@device_parameters_app.command("list")
-def master_device_parameters_list(
-    ctx: typer.Context,
-    device_index: DeviceIndexOption = None,
-    device_name: DeviceNameOption = None,
-    device_query: DeviceQueryOption = None,
-    device_ref: DeviceStableRefOption = None,
-) -> None:
-    execute_command(
-        ctx,
-        command="master device parameters list",
-        args={"device_ref": None},
-        resolved_args=lambda: {
-            "device_ref": _device_ref(device_index, device_name, device_query, device_ref)
-        },
-        action=lambda: get_client(ctx).master_device_parameters_list(
-            _device_ref(device_index, device_name, device_query, device_ref)
-        ),
-    )
-
-
-@device_parameter_app.command("set")
-def master_device_parameter_set(
-    ctx: typer.Context,
-    value: Annotated[float, typer.Argument(help="Target parameter value")],
-    device_index: DeviceIndexOption = None,
-    device_name: DeviceNameOption = None,
-    device_query: DeviceQueryOption = None,
-    device_ref: DeviceStableRefOption = None,
-    parameter_index: ParameterIndexOption = None,
-    parameter_name: ParameterNameOption = None,
-    parameter_query: ParameterQueryOption = None,
-    parameter_key: ParameterKeyOption = None,
-    parameter_ref: ParameterStableRefOption = None,
-) -> None:
-    execute_command(
-        ctx,
-        command="master device parameter set",
-        args={"device_ref": None, "parameter_ref": None, "value": value},
-        resolved_args=lambda: {
-            "device_ref": _device_ref(device_index, device_name, device_query, device_ref),
-            "parameter_ref": _parameter_ref(
-                parameter_index,
-                parameter_name,
-                parameter_query,
-                parameter_key,
-                parameter_ref,
-            ),
-            "value": value,
-        },
-        action=lambda: get_client(ctx).master_device_parameter_set(
-            _device_ref(device_index, device_name, device_query, device_ref),
-            _parameter_ref(
-                parameter_index,
-                parameter_name,
-                parameter_query,
-                parameter_key,
-                parameter_ref,
-            ),
-            value,
-        ),
-    )
 
 
 def _build_effect_app(effect_type: str) -> typer.Typer:
@@ -358,9 +238,6 @@ master_app.add_typer(volume_app, name="volume")
 master_app.add_typer(meter_app, name="meter")
 master_app.add_typer(panning_app, name="panning")
 master_app.add_typer(devices_app, name="devices")
-device_app.add_typer(device_parameters_app, name="parameters")
-device_app.add_typer(device_parameter_app, name="parameter")
-master_app.add_typer(device_app, name="device")
 for _effect_type in ("eq8", "limiter", "compressor", "utility"):
     effect_app.add_typer(_build_effect_app(_effect_type), name=_effect_type)
 master_app.add_typer(effect_app, name="effect")

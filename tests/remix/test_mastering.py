@@ -94,5 +94,6 @@ def test_remix_mastering_target_reference_plan_and_qa(tmp_path: Path, monkeypatc
     assert ref["reference"]["id"] == "ref-main"
     assert len(analysis["reports"]) == 3
     assert plan["master_chain_plan"]["status"] == "planned"
-    assert [step["name"] for step in dry_run["steps"]][0] == "master_device_load"
+    assert [step["name"] for step in dry_run["steps"]][0] == "device_insert"
+    assert dry_run["steps"][0]["args"]["track_ref"] == {"mode": "main"}
     assert qa["ok"] is True

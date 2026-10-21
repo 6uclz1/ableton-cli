@@ -81,7 +81,7 @@ uv run ableton-cli tracks list
 uv run ableton-cli track volume get --track-index 0
 uv run ableton-cli track meter get --track-index 0 --samples 20 --interval-ms 50
 uv run ableton-cli track volume set 0.7 --track-index 0
-uv run ableton-cli track panning set -- -0.25 --track-index 0
+uv run ableton-cli track panning set --track-index 0 -- -0.25
 uv run ableton-cli track send set 1 0.6 --track-index 0
 uv run ableton-cli track routing input get --selected-track
 uv run ableton-cli track routing output set --type Master --channel 3/4 --track-name "Bass"
@@ -91,8 +91,8 @@ uv run ableton-cli return-track meter get 0 --samples 20
 uv run ableton-cli master info
 uv run ableton-cli master meter get --samples 20 --interval-ms 50
 uv run ableton-cli master devices list
-uv run ableton-cli master device load query:Audio\ Effects#Utility --position end
-uv run ableton-cli master device parameter set --device-index 0 --parameter-key gain -- -1.5
+uv run ableton-cli device insert Utility --main
+uv run ableton-cli device parameter set-display --main --device-name "Glue Compressor" --parameter-name Threshold -- -10
 uv run ableton-cli audio loudness analyze --path ./renders/remix.wav --engine ffmpeg
 uv run ableton-cli audio spectrum analyze --path ./renders/remix.wav --profile anime-club
 uv run ableton-cli audio transient analyze --path ./loops/drum-break.wav --bpm 174 --max-slices 16
@@ -123,7 +123,7 @@ uv run ableton-cli browser load-drum-kit 0 <rack-uri-from-search> --kit-uri <kit
 uv run ableton-cli batch run --steps-file ./steps.json
 uv run ableton-cli device parameter set 0.25 --track-index 0 --device-index 0 --parameter-index 0
 uv run ableton-cli device parameters list --track-name Vox --device-name "Auto Shift"
-uv run ableton-cli device parameter set-display -- -18 --track-name Bass --device-name Compressor --parameter-name Threshold
+uv run ableton-cli device parameter set-display --track-name Bass --device-name Compressor --parameter-name Threshold -- -18
 uv run ableton-cli device parameter select RMS --track-name Bass --device-name Compressor --parameter-name Model
 uv run ableton-cli device sidechain set --type "1-Kick" --channel "Post FX" --track-name Bass --device-name Compressor
 uv run ableton-cli device insert Compressor --track-name Bass
@@ -151,12 +151,20 @@ Ref-aware track, device, and parameter commands now use mutually exclusive selec
 Track selectors: `--track-index`, `--track-name`, `--selected-track`, `--track-query`, `--track-ref`.
 `device` commands also accept `--return-track-index` and `--return-track-name`, so return-track
 devices (reverbs, delays) are reachable; their results report `"track": {"kind": "return", "index": N}`.
+`--main` targets the main (master) track the same way and reports `"track": {"kind": "main"}`.
+Main-track devices are edited only through `device ... --main`; `master devices list` lists them
+and `master effect <type>` keeps the typed wrappers.
 `track meter get`, `return-track meter get` and `master meter get` read Live's output meters
 (`left`, `right`, `level`) on Live's 0.0-1.0 meter scale, not dB. They take `--samples`
 readings `--interval-ms` apart and report each channel's `peak` and `mean`, plus `is_playing`:
 meters read 0.0 while the transport is stopped.
 Device selectors: `--device-index`, `--device-name`, `--selected-device`, `--device-query`, `--device-ref`.
 Parameter selectors: `--parameter-index`, `--parameter-name`, `--parameter-query`, `--parameter-key`, `--parameter-ref`.
+`device parameters list` reports `value_items` for choice parameters and `step_labels` for
+stepped parameters (Live reports Beat Repeat Grid or Glue Compressor Ratio as non-quantized,
+but each integer raw value has its own label such as `1/32` or `4`). Set either kind by label
+with `device parameter select`; use `device parameter set-display` for continuous parameters.
+A display value Live rejects fails with `INVALID_ARGUMENT`.
 `tracks list`, `track info`, synth/effect device discovery, and parameter listings emit `stable_ref` fields so later commands can reuse exact session-local objects.
 
 Complete command coverage:
@@ -436,6 +444,28 @@ A step that fails with `TIMEOUT` and is not retried reports
 - `false` — the command was cancelled before it ran and can be resent safely
 - `null` — no structured answer reached the CLI; assume it may have been applied
 
+### Batch step failures
+
+By default a batch stops at the first failing step and keeps that step's error
+code (and therefore its exit code). `error.details` always locates the failure:
+
+- `step_index` / `step_name` — the step that failed
+- `completed_steps` — how many steps succeeded before it
+- `results` — the results of those completed steps (Live state they changed is not rolled back)
+
+`--continue-on-error` (on both `batch run` and `batch stream`) runs every step
+regardless of failures. Each `results[]` entry then carries `ok` plus either
+`result` or `error`. If any step failed, the whole batch still fails with
+`BATCH_STEP_FAILED` (exit code `20`), and the per-step entries are in
+`error.details.results` together with `failed_step_indices`. Assertion failures
+count as step failures: a failing `previous` assertion skips the step without
+executing it, a failing `current` assertion marks the already-executed step as
+failed, and the step after any failed step sees no `previous` payload.
+
+```bash
+uv run ableton-cli --output json batch run --continue-on-error --steps-file ./steps.json
+```
+
 ## Exit Codes
 
 - `0` success
@@ -486,6 +516,13 @@ the Remote Script and file access on its own.
   --points-json <json>`: write one arrangement automation lane, replacing any lane for
   the same parameter. This is the path for arrangement automation, which the Remote
   Script cannot write (the Live API only exposes session clip envelopes).
+  - Choosing the path: clip-level changes go into a session clip with
+    `clip envelope set|shape`. Live 12 refuses clip envelopes on arrangement clips
+    ("Not a session clip"), and `arrangement from-session` copies notes into new
+    clips without their envelopes. Track-wide arrangement automation needs the Set
+    saved by hand in Live and then `set automation write`: `song save` and
+    `song export audio` fail with `not_supported_by_live_api`, because Live exposes
+    no save or export to scripts.
   - Selector: exactly one of `--track-index`, `--track-name`, `--return-track-index`,
     `--main`.
   - Target: `mixer.volume`, `mixer.pan`, `mixer.tempo` (`--main` only),

@@ -42,11 +42,13 @@
     },
     "steps": [
       {
-        "name": "master_device_load",
+        "name": "device_insert",
         "args": {
-          "device_type": "utility",
-          "uri": "query:Audio Effects#Utility",
-          "position": "end"
+          "track_ref": {
+            "mode": "main"
+          },
+          "device_name": "Utility",
+          "index": -1
         }
       }
     ]

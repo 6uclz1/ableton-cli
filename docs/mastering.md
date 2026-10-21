@@ -30,18 +30,20 @@ demo presets such as `anime-club-demo`.
 ```bash
 uv run ableton-cli --output json master volume set 0.85
 uv run ableton-cli --output json master panning set -- 0.0
-uv run ableton-cli --output json master device load query:Audio\ Effects#Utility --position end
-uv run ableton-cli --output json master device move --device-index 2 --to-index 0
-uv run ableton-cli --output json master device delete --device-index 3 --yes
-uv run ableton-cli --output json master device parameters list --device-index 0
-uv run ableton-cli --output json master device parameter set --device-index 0 --parameter-key gain -- -1.5
+uv run ableton-cli --output json device insert Utility --main
+uv run ableton-cli --output json device move --to-index 0 --main --device-index 2
+uv run ableton-cli --output json device delete --main --device-index 3
+uv run ableton-cli --output json device parameters list --main --device-index 0
+uv run ableton-cli --output json device parameter set-display --main --device-name Utility --parameter-name Gain -- -1.5
 uv run ableton-cli --output json master effect limiter set 0.4 --device-query "Limiter" --parameter-key ceiling
 ```
 
-Device targets should come from `browser search` output. The CLI does not assume fixed
-Browser URIs because packs, locale, Live version, and User Library contents vary.
+Main-track devices are edited with the `device` commands and `--main`; results report
+`"track": {"kind": "main"}`. `device insert` takes native Live device names and needs
+Live 12.3+. `remix mastering apply` inserts its planned chain with `device_insert` on the
+main track, so it needs Live 12.3+ as well.
 
-Destructive master device deletion requires `--yes`. Live API unsupported operations fail
+`device delete` is destructive. Live API unsupported operations fail
 with `not_supported_by_live_api`; the CLI does not add fallback execution paths.
 
 ## Judgment rules

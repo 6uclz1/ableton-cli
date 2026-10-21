@@ -1,4 +1,7 @@
-"""Device commands address return-track devices with --return-track-index/--return-track-name."""
+"""Device commands reach return-track and main-track devices.
+
+Return tracks use --return-track-index/--return-track-name; the main track uses --main.
+"""
 
 from __future__ import annotations
 
@@ -30,6 +33,7 @@ _RESULTS: dict[str, dict[str, Any]] = {
         "device_stable_ref": "device:9",
         "parameter_stable_ref": "parameter:9",
         "value": 0.5,
+        "display": "0.5",
     }
 }
 
@@ -66,20 +70,55 @@ _DEVICE_COMMANDS: list[tuple[list[str], bool]] = [
 ]
 
 
+_TRACK_KIND_SELECTORS: list[tuple[list[str], dict[str, Any]]] = [
+    (["--return-track-index", "1"], _RETURN_INDEX),
+    (["--main"], {"mode": "main"}),
+]
+
+
+@pytest.mark.parametrize(("selector_args", "track_ref"), _TRACK_KIND_SELECTORS)
 @pytest.mark.parametrize(("args", "needs_device"), _DEVICE_COMMANDS)
-def test_every_device_command_accepts_a_return_track_index(
-    runner, cli_app, client, args: list[str], needs_device: bool
+def test_every_device_command_accepts_return_and_main_selectors(
+    runner,
+    cli_app,
+    client,
+    args: list[str],
+    needs_device: bool,
+    selector_args: list[str],
+    track_ref: dict[str, Any],
 ) -> None:
     device_args = ["--device-index", "0"] if needs_device else []
 
     result = runner.invoke(
         cli_app,
-        ["--output", "json", "device", *args, "--return-track-index", "1", *device_args],
+        ["--output", "json", "device", *args, *selector_args, *device_args],
     )
 
     assert result.exit_code == 0, result.output
     [(_, kwargs)] = client.calls
-    assert kwargs["track_ref"] == _RETURN_INDEX
+    assert kwargs["track_ref"] == track_ref
+
+
+def test_main_and_regular_selectors_are_exclusive(runner, cli_app, client) -> None:
+    result = runner.invoke(
+        cli_app,
+        [
+            "--output",
+            "json",
+            "device",
+            "parameters",
+            "list",
+            "--main",
+            "--track-index",
+            "0",
+            "--device-index",
+            "0",
+        ],
+    )
+
+    assert result.exit_code == 2
+    assert "--main" in json.loads(result.stdout)["error"]["hint"]
+    assert client.calls == []
 
 
 def test_return_track_name_selector(runner, cli_app, client) -> None:

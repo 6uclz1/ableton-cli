@@ -329,9 +329,15 @@ accepted names, `result.stream` is `true`) and then pushes one line per event:
   against a hostile user on the same machine.
 - `install-remote-script` copies the Remote Script directory with `copytree`; a
   `remote_config.json` already present in the installed source tree is preserved, but
-  reinstalling/updating overwrites the installed `AbletonCliRemote` directory (a timestamped
-  backup is kept), so re-apply `remote_config.json` after updates if it lives only at the
-  install target.
+  reinstalling/updating overwrites the installed `AbletonCliRemote` directory, so re-apply
+  `remote_config.json` after updates if it lives only at the install target.
+- Before an update, the previous `AbletonCliRemote` directory is moved to
+  `User Library/Remote Script Backups/AbletonCliRemote.backup-<YYYYMMDDHHMMSS>` (reported in the
+  `backup`/`backups` JSON fields). Backups are kept outside `Remote Scripts/` because Live
+  tries to import every folder there as a control surface. Backups are never deleted
+  automatically; remove old ones by hand. Older releases left `AbletonCliRemote.backup-*`
+  folders inside `Remote Scripts/`, which log a `SyntaxError` import error in Live's `Log.txt`
+  on every launch; delete or move those manually.
 - Treat write and destructive commands as equivalent to direct user operation in Ableton Live.
 - Prefer `--read-only` for inspection and agent preflight.
 - Use `--plan` or `--dry-run` to inspect the side effect and target payload before dispatch.

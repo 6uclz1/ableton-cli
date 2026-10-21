@@ -156,6 +156,16 @@ class LiveBackendDeviceControlMixin:
             "display": parameter_display(target, after),
         }
 
+    @staticmethod
+    def _display_value_rejected(value: float, parameter: int, exc: Exception) -> Exception:
+        return _invalid_argument(
+            message=f"Live rejected display value {value} for parameter {parameter}: {exc}",
+            hint=(
+                "Use 'device parameter select' with a label from step_labels/value_items, "
+                "or 'device parameter set' with a raw value."
+            ),
+        )
+
     def device_parameter_display_set(
         self,
         track: int,
@@ -165,25 +175,27 @@ class LiveBackendDeviceControlMixin:
     ) -> dict[str, Any]:
         target = self._ctx._parameter_at(track, device, parameter)
         self._require_enabled_parameter(target, parameter)
-        if not hasattr(target, "display_value"):
+        # Checked on the class: for some parameters (Auto Pan-Tremolo Rate) even
+        # reading display_value raises, which an instance hasattr would let escape.
+        if not hasattr(type(target), "display_value"):
             raise _not_supported_by_live_api(
                 message="DeviceParameter.display_value is not available in Live API",
                 hint="Use 'device parameter set' with the raw value instead.",
             )
         before = float(target.value)
+        # Live signals "Invalid display value" with a Boost.Python exception type
+        # that scripts cannot import, so its calls are guarded broadly. The read
+        # comes first: where reading fails (Auto Pan-Tremolo Rate), a write would
+        # still clamp the raw value to max before failing, so none is attempted.
+        try:
+            float(target.display_value)
+        except Exception as exc:  # noqa: BLE001
+            raise self._display_value_rejected(value, parameter, exc) from exc
         try:
             target.display_value = float(value)
-        # Live rejects a display value with a Boost.Python exception type that
-        # scripts cannot import ("Invalid display value"), so the single Live
-        # call is guarded broadly and reported as the caller's mistake.
+            display_value = float(target.display_value)
         except Exception as exc:  # noqa: BLE001
-            raise _invalid_argument(
-                message=f"Live rejected display value {value} for parameter {parameter}: {exc}",
-                hint=(
-                    "Use 'device parameter select' with a label from step_labels/value_items, "
-                    "or 'device parameter set' with a raw value."
-                ),
-            ) from exc
+            raise self._display_value_rejected(value, parameter, exc) from exc
         after = float(target.value)
         return {
             "track": self._ctx._track_field(track),
@@ -192,7 +204,7 @@ class LiveBackendDeviceControlMixin:
             "name": str(getattr(target, "name", "")),
             "before": before,
             "after": after,
-            "display_value": float(target.display_value),
+            "display_value": display_value,
             "display": parameter_display(target, after),
         }
 

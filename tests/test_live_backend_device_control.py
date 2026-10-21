@@ -60,7 +60,9 @@ class _SteppedParameter:
     Live reports Beat Repeat Grid or Glue Compressor Ratio this way:
     ``is_quantized`` is False and ``value_items`` is empty, but every integer
     raw value has its own label and values in between snap to a neighbour.
-    Live rejects some ``display_value`` writes for these parameters (Auto Pan Rate).
+    For some of them (Auto Pan-Tremolo Rate) reading ``display_value`` raises
+    "Invalid display value", while writing it silently clamps the raw value to
+    ``max``, so a write must never be attempted for them.
     """
 
     def __init__(self, name: str, labels: list[str], value: float = 0.0) -> None:
@@ -79,11 +81,11 @@ class _SteppedParameter:
 
     @property
     def display_value(self) -> float:
-        return self.value
+        raise _LiveArgumentError("Invalid display value")
 
     @display_value.setter
     def display_value(self, value: float) -> None:
-        raise _LiveArgumentError("Invalid display value")
+        self.value = self.max
 
 
 _GRID_LABELS = ["1/4", "1/6", "1/8", "1/12", "1/16", "1/24", "1/32"]

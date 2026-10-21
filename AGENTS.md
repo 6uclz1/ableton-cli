@@ -16,7 +16,6 @@ Keep this file stable and operational. Do not duplicate the full command catalog
 - **DRY:** do not duplicate command logic, validation, tests, fixtures, or documentation.
 - **SOLID:** keep modules focused; make dependencies explicit and injectable where practical.
 - **No silent degradation:** fail explicitly with the correct error code and hint.
-- **No fallback execution paths:** do not add alternate analyzers, alternate transports, or best-effort branches that hide missing prerequisites.
 - **No compatibility shims:** do not add deprecated aliases, dual-path behavior, or legacy adapters unless explicitly requested. If a public contract changes, update the contract artifacts instead of preserving both behaviors.
 
 ## Source of Truth

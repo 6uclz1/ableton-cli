@@ -9,7 +9,7 @@ This repo controls Ableton Live via a local Remote Script.
 
 ## Non-negotiable principles
 - TDD: red -> green -> refactor.
-- DRY, SOLID; no fallbacks; no backward compatibility shims.
+- DRY, SOLID; no backward compatibility shims.
 - Fail explicitly; never silently degrade.
 
 ## Authoritative references

@@ -85,6 +85,7 @@ def test_ref_contract_accepts_parameter_key_mode() -> None:
             "device_stable_ref": "device:0",
             "parameter_stable_ref": "parameter:0",
             "value": 0.5,
+            "display": None,
         },
     )
 

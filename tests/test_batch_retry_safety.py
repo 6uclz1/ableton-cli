@@ -199,3 +199,173 @@ def test_step_timeout_without_remote_signal_reports_unknown(
 
     payload = json.loads(result.stdout)
     assert payload["error"]["details"]["may_have_executed"] is None
+
+
+def _invalid_argument_error() -> AppError:
+    return AppError(
+        error_code="INVALID_ARGUMENT",
+        message="track out of range",
+        hint="Use a valid track index.",
+        exit_code=ExitCode.INVALID_ARGUMENT,
+    )
+
+
+def _three_steps() -> list[dict[str, Any]]:
+    return [
+        {"name": "tracks_list", "args": {}},
+        {"name": "set_track_volume", "args": {"track": 99, "value": 0.5}},
+        {"name": "song_info", "args": {}},
+    ]
+
+
+def test_mid_batch_failure_reports_step_and_completed_results(
+    runner, cli_app, client: _StepClientStub
+) -> None:
+    client.set_responses("set_track_volume", [_invalid_argument_error()])
+
+    result = _run_batch(runner, cli_app, _three_steps())
+
+    assert result.exit_code == ExitCode.INVALID_ARGUMENT.value
+    payload = json.loads(result.stdout)
+    assert payload["error"]["code"] == "INVALID_ARGUMENT"
+    details = payload["error"]["details"]
+    assert details["step_index"] == 1
+    assert details["step_name"] == "set_track_volume"
+    assert details["completed_steps"] == 1
+    assert [item["name"] for item in details["results"]] == ["tracks_list"]
+    assert [name for name, _args in client.calls] == ["tracks_list", "set_track_volume"]
+
+
+def test_assert_failure_reports_completed_results(runner, cli_app, client: _StepClientStub) -> None:
+    client.set_responses("song_info", [{"tempo": 100.0}])
+
+    result = _run_batch(
+        runner,
+        cli_app,
+        [
+            {"name": "tracks_list", "args": {}},
+            {
+                "name": "song_info",
+                "args": {},
+                "assert": {"source": "current", "path": "tempo", "op": "gte", "value": 120},
+            },
+        ],
+    )
+
+    assert result.exit_code == ExitCode.EXECUTION_FAILED.value
+    details = json.loads(result.stdout)["error"]["details"]
+    assert details["step_index"] == 1
+    assert details["step_name"] == "song_info"
+    assert details["completed_steps"] == 1
+    assert details["reason"] == "comparison failed"
+
+
+def test_continue_on_error_runs_every_step_and_fails_overall(
+    runner, cli_app, client: _StepClientStub
+) -> None:
+    client.set_responses("set_track_volume", [_invalid_argument_error()])
+
+    result = runner.invoke(
+        cli_app,
+        [
+            "--output",
+            "json",
+            "batch",
+            "run",
+            "--continue-on-error",
+            "--steps-json",
+            json.dumps({"steps": _three_steps()}),
+        ],
+    )
+
+    assert result.exit_code == ExitCode.EXECUTION_FAILED.value
+    payload = json.loads(result.stdout)
+    assert payload["ok"] is False
+    assert payload["error"]["code"] == "BATCH_STEP_FAILED"
+    details = payload["error"]["details"]
+    assert details["step_count"] == 3
+    assert details["completed_steps"] == 2
+    assert details["failed_step_indices"] == [1]
+    assert [item["ok"] for item in details["results"]] == [True, False, True]
+    assert details["results"][1]["error"]["code"] == "INVALID_ARGUMENT"
+    assert details["results"][1]["result"] is None
+    assert [name for name, _args in client.calls] == [
+        "tracks_list",
+        "set_track_volume",
+        "song_info",
+    ]
+
+
+def test_continue_on_error_skips_step_whose_previous_assert_fails(
+    runner, cli_app, client: _StepClientStub
+) -> None:
+    client.set_responses("set_track_volume", [_invalid_argument_error()])
+    steps = _three_steps()
+    steps[2]["assert"] = {"source": "previous", "path": "ok", "op": "eq", "value": True}
+
+    result = runner.invoke(
+        cli_app,
+        [
+            "--output",
+            "json",
+            "batch",
+            "run",
+            "--continue-on-error",
+            "--steps-json",
+            json.dumps({"steps": steps}),
+        ],
+    )
+
+    details = json.loads(result.stdout)["error"]["details"]
+    assert details["failed_step_indices"] == [1, 2]
+    assert details["results"][2]["error"]["code"] == "BATCH_ASSERT_FAILED"
+    assert details["results"][2]["error"]["details"]["reason"] == "previous payload is missing"
+    assert [name for name, _args in client.calls] == ["tracks_list", "set_track_volume"]
+
+
+def test_continue_on_error_success_marks_every_step_ok(
+    runner, cli_app, client: _StepClientStub
+) -> None:
+    result = runner.invoke(
+        cli_app,
+        [
+            "--output",
+            "json",
+            "batch",
+            "run",
+            "--continue-on-error",
+            "--steps-json",
+            json.dumps({"steps": _three_steps()}),
+        ],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert [item["ok"] for item in payload["result"]["results"]] == [True, True, True]
+
+
+def test_batch_stream_reports_failed_step_details(runner, cli_app, client: _StepClientStub) -> None:
+    client.set_responses("set_track_volume", [_invalid_argument_error()])
+    line = json.dumps({"id": "a", "steps": _three_steps()})
+
+    result = runner.invoke(cli_app, ["batch", "stream"], input=f"{line}\n")
+
+    emitted = json.loads(result.stdout.strip())
+    assert emitted["ok"] is False
+    assert emitted["error"]["code"] == "INVALID_ARGUMENT"
+    assert emitted["error"]["details"]["step_index"] == 1
+    assert emitted["error"]["details"]["completed_steps"] == 1
+
+
+def test_batch_stream_continue_on_error_reports_every_step(
+    runner, cli_app, client: _StepClientStub
+) -> None:
+    client.set_responses("set_track_volume", [_invalid_argument_error()])
+    line = json.dumps({"id": "a", "steps": _three_steps()})
+
+    result = runner.invoke(cli_app, ["batch", "stream", "--continue-on-error"], input=f"{line}\n")
+
+    emitted = json.loads(result.stdout.strip())
+    assert emitted["ok"] is False
+    assert emitted["error"]["code"] == "BATCH_STEP_FAILED"
+    assert [item["ok"] for item in emitted["error"]["details"]["results"]] == [True, False, True]

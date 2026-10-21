@@ -610,7 +610,7 @@ STABLE_ACTION_MAPPINGS: tuple[StableActionMapping, ...] = (
         action="execute_batch",
         command=(
             "uv run ableton-cli --output json batch run (--steps-file <path> | --steps-"
-            "json '<json>' | --steps-stdin)"
+            "json '<json>' | --steps-stdin) [--continue-on-error]"
         ),
         capability="Execute multiple remote commands atomically from JSON input.",
     ),

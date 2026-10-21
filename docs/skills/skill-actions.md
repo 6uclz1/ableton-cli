@@ -101,7 +101,7 @@ Stable action names and CLI mappings for automation wrappers.
 | `lint_live_set` | `uv run ableton-cli --output json set lint --path <set.als>` | Check a Live Set file offline for ID integrity errors and missing samples. |
 | `diff_live_set` | `uv run ableton-cli --output json set diff --from <a.als> --to <b.als>` | Compute semantic added/removed/changed deltas between two Live Set files. |
 | `write_live_set_automation` | `uv run ableton-cli --output json set automation write --path <set.als> --out <new.als> --track-index <track> --target <target> --points-json '<json>'` | Write one arrangement automation lane into a new Live Set file. |
-| `execute_batch` | `uv run ableton-cli --output json batch run (--steps-file <path> | --steps-json '<json>' | --steps-stdin)` | Execute multiple remote commands atomically from JSON input. |
+| `execute_batch` | `uv run ableton-cli --output json batch run (--steps-file <path> | --steps-json '<json>' | --steps-stdin) [--continue-on-error]` | Execute multiple remote commands atomically from JSON input. |
 
 ## CLI-only commands (not stable actions)
 
@@ -149,7 +149,7 @@ Operational note: run `uv run ableton-cli doctor` to validate protocol/capabilit
 
 Operational note: ref-aware commands use selectors, not positional track/device/parameter indexes. Track selectors: `--track-index|--track-name|--selected-track|--track-query|--track-ref`. Device selectors: `--device-index|--device-name|--selected-device|--device-query|--device-ref`. Parameter selectors: `--parameter-index|--parameter-name|--parameter-query|--parameter-key|--parameter-ref`.
 
-Operational note: when passing a negative positional value, use `--` before the value (for example, `track panning set -- -0.25 --track-index 0`, `effect parameter set -- -2.0 --track-index 0 --device-index 0 --parameter-index 7`).
+Operational note: when passing a negative positional value, put every option first and `--` right before the value; options after `--` are read as positional arguments (for example, `track panning set --track-index 0 -- -0.25`, `effect parameter set --track-index 0 --device-index 0 --parameter-index 7 -- -2.0`).
 
 Operational note: standard wrapper commands (`synth <type> ...`, `effect <type> ...`) intentionally fail if required parameter-name keys are missing. If you see `Missing required standard ... keys`, switch to generic indexed commands:
 - `uv run ableton-cli --output json effect parameters list --track-index <track> --device-index <device>`

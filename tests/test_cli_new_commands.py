@@ -87,6 +87,7 @@ class _ClientStub:
             "device_stable_ref": _stable_ref("device", device_index),
             "parameter_stable_ref": _stable_ref("parameter", parameter_index),
             "value": value,
+            "display": f"{value:.2f}",
         }
 
     def create_midi_track(self, index: int):  # noqa: ANN201
@@ -1210,6 +1211,7 @@ def test_device_parameter_set_outputs_json_envelope(runner, cli_app, monkeypatch
         "device_stable_ref": "device:2",
         "parameter_stable_ref": "parameter:3",
         "value": 0.75,
+        "display": "0.75",
     }
 
 

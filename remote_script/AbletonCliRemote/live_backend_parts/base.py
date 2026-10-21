@@ -29,10 +29,13 @@ from ..synth_specs import (
 # for a device reached by descending into rack chains.
 DeviceLocator = int | tuple[int, ...]
 
-# A regular track index, or ("return", return_track_index) for a return track.
-# Only device-group commands resolve return tracks (``resolve_device_track_ref``).
-TrackLocator = int | tuple[str, int]
+# A regular track index, ("return", return_track_index) for a return track, or
+# ("main", None) for the main track. Only device-group commands resolve return
+# and main tracks (``resolve_device_track_ref``).
+TrackLocator = int | tuple[str, int | None]
 RETURN_TRACK = "return"
+MAIN_TRACK = "main"
+MAIN_TRACK_LOCATOR: TrackLocator = (MAIN_TRACK, None)
 
 
 def _invalid_argument(
@@ -144,9 +147,20 @@ class LiveBackendContext:
             )
         return app
 
+    def _main_track(self) -> Any:
+        master = getattr(self._song(), "master_track", None)
+        if master is None:
+            raise _not_supported_by_live_api(
+                message="Master track API is not available in Live API",
+                hint="Use a Live version exposing song.master_track.",
+            )
+        return master
+
     def _track_at(self, index: TrackLocator) -> Any:
         if isinstance(index, tuple):
-            return self._return_track_at(index[1])
+            if index[0] == MAIN_TRACK:
+                return self._main_track()
+            return self._return_track_at(int(index[1]))
         tracks = list(self._song().tracks)
         if index < 0 or index >= len(tracks):
             raise _invalid_argument(
@@ -349,11 +363,14 @@ class LiveBackendContext:
             locator = ("track", track_index, device_index)
         return self._stable_ref("device", device, locator=locator)
 
-    def _device_locator_for(self, track: int, device: DeviceLocator) -> tuple[Any, ...]:
+    def _device_locator_for(self, track: TrackLocator, device: DeviceLocator) -> tuple[Any, ...]:
+        # Main-track devices keep the ("master", ...) locators that
+        # ``_device_locator`` derives, so both paths share one stable_ref.
+        prefix: tuple[Any, ...] = ("master",) if track == MAIN_TRACK_LOCATOR else ("track", track)
         if isinstance(device, int):
-            return ("track", track, device)
+            return (*prefix, device)
         top_index, *rest = device
-        return ("track", track, top_index, "chain", *rest)
+        return (*prefix, top_index, "chain", *rest)
 
     def _device_stable_ref_for(self, track: int, device: DeviceLocator) -> str:
         device_obj = self._device_at(track, device)
@@ -372,6 +389,24 @@ class LiveBackendContext:
         if track_index is not None and device_index is not None and parameter_index is not None:
             locator = ("track", track_index, device_index, parameter_index)
         return self._stable_ref("parameter", parameter, locator=locator)
+
+    def _parameter_stable_ref_for(
+        self,
+        parameter: Any,
+        track: TrackLocator,
+        device: DeviceLocator,
+        index: int,
+    ) -> str:
+        if not isinstance(device, int):
+            return self._stable_ref("parameter", parameter, locator=None)
+        if track == MAIN_TRACK_LOCATOR:
+            return self._stable_ref("parameter", parameter, locator=("master", device, index))
+        return self._parameter_stable_ref(
+            parameter,
+            track_index=track,
+            device_index=device,
+            parameter_index=index,
+        )
 
     def _resolve_by_name_or_query(
         self,
@@ -521,8 +556,11 @@ class LiveBackendContext:
         raise AssertionError(f"unsupported track mode: {mode}")
 
     def resolve_device_track_ref(self, track_ref: dict[str, Any]) -> TrackLocator:
-        """Resolve a device-group track selector, which may name a return track."""
+        """Resolve a device-group track selector, which may name a return or main track."""
         mode = str(track_ref["mode"])
+        if mode == MAIN_TRACK:
+            self._main_track()
+            return MAIN_TRACK_LOCATOR
         return_tracks = list(getattr(self._song(), "return_tracks", []))
         if mode == "return_index":
             index = int(track_ref["index"])
@@ -551,6 +589,8 @@ class LiveBackendContext:
     @staticmethod
     def _track_field(track: TrackLocator) -> int | dict[str, Any]:
         """The ``track`` value reported in device-group results."""
+        if track == MAIN_TRACK_LOCATOR:
+            return {"kind": MAIN_TRACK}
         if isinstance(track, tuple):
             return {"kind": RETURN_TRACK, "index": track[1]}
         return track

@@ -79,7 +79,7 @@ def _track_ref_schema() -> dict[str, Any]:
 
 
 def _device_track_ref_schema() -> dict[str, Any]:
-    """Track selector of the ``device`` group, which also reaches return tracks."""
+    """Track selector of the ``device`` group, which also reaches return and main tracks."""
     schema = _track_ref_schema()
     schema["oneOf"].extend(
         [
@@ -91,12 +91,14 @@ def _device_track_ref_schema() -> dict[str, Any]:
                 mode="return_name",
                 selector_schema={"name": {"type": "string", "minLength": 1}},
             ),
+            _selector_ref_schema(mode="main"),
         ]
     )
     return schema
 
 
-#: ``track`` in a ``device`` group result: a regular track index, or a return track.
+#: ``track`` in a ``device`` group result: a regular track index, a return
+#: track, or the main track.
 _DEVICE_TRACK_FIELD_SCHEMA: dict[str, Any] = {
     "oneOf": [
         {"type": "integer"},
@@ -107,6 +109,12 @@ _DEVICE_TRACK_FIELD_SCHEMA: dict[str, Any] = {
                 "kind": {"type": "string", "const": "return"},
                 "index": {"type": "integer", "minimum": 0},
             },
+            "additional_properties": False,
+        },
+        {
+            "type": "object",
+            "required": ["kind"],
+            "properties": {"kind": {"type": "string", "const": "main"}},
             "additional_properties": False,
         },
     ]
@@ -1025,6 +1033,7 @@ _DETAILED_CONTRACTS.update(
                     "device_stable_ref",
                     "parameter_stable_ref",
                     "value",
+                    "display",
                 ],
                 "properties": {
                     "track": _DEVICE_TRACK_FIELD_SCHEMA,
@@ -1034,6 +1043,7 @@ _DETAILED_CONTRACTS.update(
                     "device_stable_ref": {"type": "string"},
                     "parameter_stable_ref": {"type": "string"},
                     "value": {"type": "number"},
+                    "display": {"type": ["string", "null"]},
                 },
                 "additional_properties": False,
             },

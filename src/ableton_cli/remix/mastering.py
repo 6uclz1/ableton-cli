@@ -346,11 +346,11 @@ def _plan_steps(plan: dict[str, Any]) -> list[dict[str, Any]]:
         device_type = device["type"]
         steps.append(
             {
-                "name": "master_device_load",
+                "name": "device_insert",
                 "args": {
-                    "device_type": device_type,
-                    "uri": _device_query(device_type),
-                    "position": "end",
+                    "track_ref": {"mode": "main"},
+                    "device_name": _device_display_name(device_type),
+                    "index": -1,
                 },
             }
         )
@@ -385,15 +385,6 @@ def _limiter_ceiling_native_value(value: Any) -> float:
     # Ableton Limiter exposes Ceiling as a native 0..1 parameter. The approximate
     # display range is -35 dB to 0 dB, so -1 dB maps near Live's default 0.97 value.
     return round(max(0.0, min(1.0, (float(value) + 35.0) / 35.0)), 6)
-
-
-def _device_query(device_type: str) -> str:
-    return {
-        "utility": "query:AudioFx#Utility",
-        "eq8": "query:AudioFx#EQ%20Eight",
-        "compressor": "query:AudioFx#Compressor",
-        "limiter": "query:AudioFx#Limiter",
-    }[device_type]
 
 
 def _device_display_name(device_type: str) -> str:

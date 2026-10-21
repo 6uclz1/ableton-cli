@@ -168,6 +168,9 @@ def test_remix_mastering_cli_flow_outputs_json(
     assert qa.exit_code == 0, qa.stdout
     assert remix_qa.exit_code == 0, remix_qa.stdout
     assert _payload(analyze.stdout)["result"]["reports"][0]["kind"] == "loudness"  # type: ignore[index]
-    assert _payload(apply.stdout)["result"]["steps"][0]["name"] == "master_device_load"  # type: ignore[index]
+    assert _payload(apply.stdout)["result"]["steps"][0] == {  # type: ignore[index]
+        "name": "device_insert",
+        "args": {"track_ref": {"mode": "main"}, "device_name": "Utility", "index": -1},
+    }
     assert _payload(qa.stdout)["result"]["ok"] is True  # type: ignore[index]
     assert "mastering" in _payload(remix_qa.stdout)["result"]  # type: ignore[operator]

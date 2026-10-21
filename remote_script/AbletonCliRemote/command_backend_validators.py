@@ -573,7 +573,7 @@ def _ref_object(name: str, value: Any, *, allowed_modes: set[str]) -> dict[str, 
     if mode in {"name", "return_name"}:
         require_keys({"mode", "name"})
         return {"mode": mode, "name": _non_empty_string(f"{name}.name", value.get("name"))}
-    if mode == "selected":
+    if mode in {"selected", "main"}:
         require_keys({"mode"})
         return {"mode": mode}
     if mode == "query":
@@ -600,7 +600,7 @@ def _track_ref(value: Any) -> dict[str, Any]:
 
 
 def _device_track_ref(value: Any) -> dict[str, Any]:
-    """Track selector of the device command group, which also reaches return tracks."""
+    """Track selector of the device command group, which also reaches return/main tracks."""
     return _ref_object(
         "track_ref",
         value,
@@ -612,6 +612,7 @@ def _device_track_ref(value: Any) -> dict[str, Any]:
             "stable_ref",
             "return_index",
             "return_name",
+            "main",
         },
     )
 

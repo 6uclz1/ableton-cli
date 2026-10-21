@@ -17,17 +17,61 @@ from .routing import apply_routing, routing_state
 _DEVICE_ON_PARAMETER = "Device On"
 _SIDECHAIN_DIRECTION = "input"
 _SIDECHAIN_SUBJECT = "device sidechain"
+# Upper bound on integer steps probed when detecting a stepped parameter, so a
+# wide continuous range never costs hundreds of str_for_value calls.
+_MAX_PARAMETER_STEPS = 128
+
+
+def parameter_display(parameter: Any, value: float) -> str | None:
+    str_for_value = getattr(parameter, "str_for_value", None)
+    if not callable(str_for_value):
+        return None
+    return str(str_for_value(value))
+
+
+def parameter_step_labels(parameter: Any) -> list[str] | None:
+    """Labels of a non-quantized parameter whose display snaps to integer steps.
+
+    Live reports parameters such as Beat Repeat Grid or Glue Compressor Ratio
+    with ``is_quantized`` False and no ``value_items``, yet each integer raw
+    value has its own label ("1/32", "4"). A parameter counts as stepped only
+    when all of these hold:
+
+    - ``min`` and ``max`` are integers at most ``_MAX_PARAMETER_STEPS`` apart;
+    - every integer raw value in range has a distinct display label;
+    - every midpoint ``n + 0.5`` displays the label of ``n`` or ``n + 1``.
+
+    The midpoint rule keeps continuous parameters (Dry/Wet, Volume in dB) out:
+    their midpoints display a value of their own.
+    """
+    if bool(getattr(parameter, "is_quantized", False)):
+        return None
+    if not callable(getattr(parameter, "str_for_value", None)):
+        return None
+    try:
+        minimum = float(parameter.min)
+        maximum = float(parameter.max)
+    except (AttributeError, TypeError, ValueError):
+        return None
+    if not (minimum.is_integer() and maximum.is_integer()):
+        return None
+    step_count = int(maximum) - int(minimum)
+    if step_count < 1 or step_count > _MAX_PARAMETER_STEPS:
+        return None
+    labels = [
+        parameter_display(parameter, float(step)) for step in range(int(minimum), int(maximum) + 1)
+    ]
+    if len(set(labels)) != len(labels):
+        return None
+    for offset in range(step_count):
+        midpoint = parameter_display(parameter, minimum + offset + 0.5)
+        if midpoint not in (labels[offset], labels[offset + 1]):
+            return None
+    return [str(label) for label in labels]
 
 
 class LiveBackendDeviceControlMixin:
     # -- parameters ---------------------------------------------------------
-
-    @staticmethod
-    def _parameter_display(parameter: Any, value: float) -> str | None:
-        str_for_value = getattr(parameter, "str_for_value", None)
-        if not callable(str_for_value):
-            return None
-        return str(str_for_value(value))
 
     @staticmethod
     def _parameter_value_items(parameter: Any) -> list[str] | None:
@@ -38,18 +82,6 @@ class LiveBackendDeviceControlMixin:
             return None
         return [str(item) for item in list(items)]
 
-    def _parameter_stable_ref_for(
-        self, parameter: Any, track: int, device: DeviceLocator, index: int
-    ) -> str:
-        if isinstance(device, int):
-            return self._ctx._parameter_stable_ref(
-                parameter,
-                track_index=track,
-                device_index=device,
-                parameter_index=index,
-            )
-        return self._ctx._stable_ref("parameter", parameter, locator=None)
-
     def device_parameters_list(self, track: int, device: DeviceLocator) -> dict[str, Any]:
         target_device = self._ctx._device_at(track, device)
         parameters = []
@@ -58,15 +90,18 @@ class LiveBackendDeviceControlMixin:
             parameters.append(
                 {
                     "index": index,
-                    "stable_ref": self._parameter_stable_ref_for(parameter, track, device, index),
+                    "stable_ref": self._ctx._parameter_stable_ref_for(
+                        parameter, track, device, index
+                    ),
                     "name": str(getattr(parameter, "name", f"Parameter {index}")),
                     "value": value,
-                    "display": self._parameter_display(parameter, value),
+                    "display": parameter_display(parameter, value),
                     "min": self._ctx._safe_float(getattr(parameter, "min", None)),
                     "max": self._ctx._safe_float(getattr(parameter, "max", None)),
                     "is_enabled": bool(getattr(parameter, "is_enabled", True)),
                     "is_quantized": bool(getattr(parameter, "is_quantized", False)),
                     "value_items": self._parameter_value_items(parameter),
+                    "step_labels": parameter_step_labels(parameter),
                 }
             )
         return {
@@ -96,8 +131,10 @@ class LiveBackendDeviceControlMixin:
         self._require_enabled_parameter(target, parameter)
         items = self._parameter_value_items(target)
         if items is None:
+            items = parameter_step_labels(target)
+        if items is None:
             raise _invalid_argument(
-                message=f"Parameter at index {parameter} is not a choice parameter",
+                message=f"Parameter at index {parameter} is not a choice or stepped parameter",
                 hint="Use 'device parameter set' or 'device parameter set-display' instead.",
             )
         if item not in items:
@@ -116,8 +153,18 @@ class LiveBackendDeviceControlMixin:
             "item": item,
             "before": before,
             "after": after,
-            "display": self._parameter_display(target, after),
+            "display": parameter_display(target, after),
         }
+
+    @staticmethod
+    def _display_value_rejected(value: float, parameter: int, exc: Exception) -> Exception:
+        return _invalid_argument(
+            message=f"Live rejected display value {value} for parameter {parameter}: {exc}",
+            hint=(
+                "Use 'device parameter select' with a label from step_labels/value_items, "
+                "or 'device parameter set' with a raw value."
+            ),
+        )
 
     def device_parameter_display_set(
         self,
@@ -128,13 +175,27 @@ class LiveBackendDeviceControlMixin:
     ) -> dict[str, Any]:
         target = self._ctx._parameter_at(track, device, parameter)
         self._require_enabled_parameter(target, parameter)
-        if not hasattr(target, "display_value"):
+        # Checked on the class: for some parameters (Auto Pan-Tremolo Rate) even
+        # reading display_value raises, which an instance hasattr would let escape.
+        if not hasattr(type(target), "display_value"):
             raise _not_supported_by_live_api(
                 message="DeviceParameter.display_value is not available in Live API",
                 hint="Use 'device parameter set' with the raw value instead.",
             )
         before = float(target.value)
-        target.display_value = float(value)
+        # Live signals "Invalid display value" with a Boost.Python exception type
+        # that scripts cannot import, so its calls are guarded broadly. The read
+        # comes first: where reading fails (Auto Pan-Tremolo Rate), a write would
+        # still clamp the raw value to max before failing, so none is attempted.
+        try:
+            float(target.display_value)
+        except Exception as exc:  # noqa: BLE001
+            raise self._display_value_rejected(value, parameter, exc) from exc
+        try:
+            target.display_value = float(value)
+            display_value = float(target.display_value)
+        except Exception as exc:  # noqa: BLE001
+            raise self._display_value_rejected(value, parameter, exc) from exc
         after = float(target.value)
         return {
             "track": self._ctx._track_field(track),
@@ -143,8 +204,8 @@ class LiveBackendDeviceControlMixin:
             "name": str(getattr(target, "name", "")),
             "before": before,
             "after": after,
-            "display_value": float(target.display_value),
-            "display": self._parameter_display(target, after),
+            "display_value": display_value,
+            "display": parameter_display(target, after),
         }
 
     # -- on/off ---------------------------------------------------------------

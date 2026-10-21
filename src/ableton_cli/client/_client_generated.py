@@ -348,28 +348,6 @@ class _AbletonClientGeneratedMixin:
             "list_synth_parameters", {"track_ref": track_ref, "device_ref": device_ref}
         )
 
-    def master_device_delete(self, device_index: int) -> dict[str, Any]:
-        return self._call("master_device_delete", {"device_index": device_index})
-
-    def master_device_load(self, target: str, position: str) -> dict[str, Any]:
-        return self._call("master_device_load", {"target": target, "position": position})
-
-    def master_device_move(self, device_index: int, to_index: int) -> dict[str, Any]:
-        return self._call(
-            "master_device_move", {"device_index": device_index, "to_index": to_index}
-        )
-
-    def master_device_parameter_set(
-        self, device_ref: dict[str, Any], parameter_ref: dict[str, Any], value: float
-    ) -> dict[str, Any]:
-        return self._call(
-            "master_device_parameter_set",
-            {"device_ref": device_ref, "parameter_ref": parameter_ref, "value": value},
-        )
-
-    def master_device_parameters_list(self, device_ref: dict[str, Any]) -> dict[str, Any]:
-        return self._call("master_device_parameters_list", {"device_ref": device_ref})
-
     def master_devices_list(self) -> dict[str, Any]:
         return self._call("master_devices_list")
 

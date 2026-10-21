@@ -46,6 +46,12 @@ uv run ableton-cli song undo
 uv run ableton-cli song redo
 uv run ableton-cli song save --path /tmp/demo.als
 uv run ableton-cli song export audio --path /tmp/demo.wav
+```
+
+`song save` and `song export audio` fail with `not_supported_by_live_api` on current Live
+versions (Live exposes no save/export to scripts); save and export from Live itself.
+
+```bash
 uv run ableton-cli song scale get
 uv run ableton-cli song scale set --root A --name Minor --mode
 uv run ableton-cli session info
@@ -186,7 +192,20 @@ are counted in `result.media` as unchecked, not verified. `set inspect` reports 
 effective tempo, which follows arrangement tempo automation over the manual value.
 
 `set automation write` is the way to write arrangement automation; the Remote Script can
-only write session clip envelopes. It writes a new set (`--out` must not exist and its
+only write session clip envelopes.
+
+Automation in a composition workflow:
+
+- Clip-level changes (a filter sweep inside one clip): `clip envelope set|shape` on a
+  session clip. Live 12 refuses clip envelopes on arrangement clips
+  (`create_automation_envelope` raises "Not a session clip"), and
+  `arrangement from-session` copies notes into new clips, so session envelopes do not
+  carry over to the arrangement.
+- Arrangement automation: save the Set in Live by hand, then `set automation write`.
+  `song save` and `song export audio` always fail with `not_supported_by_live_api`,
+  because Live exposes no save or export to scripts.
+
+`set automation write` writes a new set (`--out` must not exist and its
 directory must exist; save the open set in Live first, then open the output in Live).
 Pass exactly one of `--track-index`, `--track-name`, `--return-track-index`, `--main`.
 Targets: `mixer.volume`, `mixer.pan`, `mixer.tempo` (`--main` only), `send.<return index>`,
@@ -211,7 +230,7 @@ uv run ableton-cli track solo set true --track-index 0
 uv run ableton-cli track arm get --track-index 0
 uv run ableton-cli track arm set false --track-index 0
 uv run ableton-cli track panning get --track-index 0
-uv run ableton-cli track panning set -- -0.25 --track-index 0
+uv run ableton-cli track panning set --track-index 0 -- -0.25
 uv run ableton-cli track meter get --track-index 0 --samples 20 --interval-ms 50
 uv run ableton-cli track send get 1 --track-index 0
 uv run ableton-cli track send set 1 0.6 --track-index 0
@@ -253,11 +272,12 @@ uv run ableton-cli master panning get
 uv run ableton-cli master panning set -- 0.0
 uv run ableton-cli master meter get --samples 20 --interval-ms 50
 uv run ableton-cli master devices list
-uv run ableton-cli master device load query:Audio\ Effects#Utility --position end
-uv run ableton-cli master device move --device-index 2 --to-index 0
-uv run ableton-cli master device delete --device-index 3 --yes
-uv run ableton-cli master device parameters list --device-index 0
-uv run ableton-cli master device parameter set --device-index 0 --parameter-key gain -- -1.5
+uv run ableton-cli device insert Limiter --main
+uv run ableton-cli device parameters list --main --device-name "Glue Compressor"
+uv run ableton-cli device parameter set-display --main --device-name "Glue Compressor" --parameter-name Threshold -- -10
+uv run ableton-cli device parameter select 4 --main --device-name "Glue Compressor" --parameter-name Ratio
+uv run ableton-cli device move --to-index 0 --main --device-index 2
+uv run ableton-cli device delete --main --device-index 3
 uv run ableton-cli master effect eq8 keys
 uv run ableton-cli master effect eq8 set 0.42 --device-query "EQ Eight" --parameter-key band1_gain
 uv run ableton-cli master effect eq8 observe --device-query "EQ Eight"
@@ -378,6 +398,7 @@ to select exact `uri` or `path` values from the active Live browser catalog befo
 
 ```bash
 uv run ableton-cli batch run --steps-file ./steps.json
+uv run ableton-cli batch run --continue-on-error --steps-file ./steps.json
 uv run ableton-cli batch run --steps-json '{"steps":[{"name":"song_info","args":{}}]}'
 echo '{"steps":[{"name":"song_info","args":{}}]}' | uv run ableton-cli batch run --steps-stdin
 uv run ableton-cli batch stream
@@ -393,8 +414,9 @@ uv run ableton-cli device macro list --track-index 0 --device-index 0
 uv run ableton-cli device macro set 0 64.0 --track-index 0 --device-index 0
 uv run ableton-cli device parameter set 0.5 --track-index 0 --device-ref device:12 --parameter-index 0
 uv run ableton-cli device parameters list --track-name Vox --device-name "Auto Shift"
-uv run ableton-cli device parameter set-display -- -18 --track-name Bass --device-name Compressor --parameter-name Threshold
+uv run ableton-cli device parameter set-display --track-name Bass --device-name Compressor --parameter-name Threshold -- -18
 uv run ableton-cli device parameter select RMS --track-name Bass --device-name Compressor --parameter-name Model
+uv run ableton-cli device parameter select 1/32 --track-name Drums --device-name "Beat Repeat" --parameter-name Grid
 uv run ableton-cli device active get --track-index 0 --device-index 1
 uv run ableton-cli device active set false --track-index 0 --device-index 1
 uv run ableton-cli device preset list --track-name Vox --device-index 0
@@ -411,13 +433,22 @@ uv run ableton-cli device parameter set-display 4.5 --return-track-index 0 --dev
 ```
 
 Every `device` command also takes `--return-track-index` or `--return-track-name` in place of
-the track selector, to reach devices on return tracks. Results then report
-`"track": {"kind": "return", "index": N}` instead of an integer.
+the track selector, to reach devices on return tracks, or `--main` for the main (master) track.
+Results then report `"track": {"kind": "return", "index": N}` or `"track": {"kind": "main"}`
+instead of an integer. Main-track devices have no separate `master device ...` commands: use
+`device ... --main` (plus `master devices list` and the typed `master effect <type>` wrappers).
 
 `device parameters list` works on any device, including VST/AU plug-ins and Max for Live
-devices: it reports each parameter's `display` string and, for choice parameters,
-`value_items`. Prefer `device parameter set-display` (dB, Hz, ms, %) and
-`device parameter select` (choice by name) over raw normalized values.
+devices: it reports each parameter's `display` string, `value_items` for choice parameters
+(`is_quantized: true`), and `step_labels` for stepped parameters. Pick the write command by
+what the listing reports:
+
+- `value_items` or `step_labels` present -> `device parameter select <label>`. Stepped
+  parameters (Beat Repeat Grid/Interval/Gate, Glue Compressor Ratio/Attack/Release, Auto Pan
+  Rate) are not quantized in Live, but every integer raw value has its own label (`1/32`, `4`);
+  Live rejects `set-display` for them, which fails with `INVALID_ARGUMENT`.
+- Otherwise (continuous) -> `device parameter set-display` in display units (dB, Hz, ms, %).
+- `device parameter set` writes the raw value; every write result reports the new `display`.
 `device sidechain` works on Compressor only, because Live exposes sidechain routing to
 scripts for that device alone; take `--type`/`--channel` exactly from `device sidechain get`.
 `device insert` needs Live 12.3+ and accepts native Live device names only; use
@@ -450,7 +481,7 @@ uv run ableton-cli effect find
 uv run ableton-cli effect find --track 0 --type eq8
 uv run ableton-cli effect parameters list --track-index 0 --device-index 0
 uv run ableton-cli effect parameter set 0.5 --track-index 0 --device-index 0 --parameter-index 0
-uv run ableton-cli effect parameter set -- -2.0 --track-index 0 --device-index 0 --parameter-index 7
+uv run ableton-cli effect parameter set --track-index 0 --device-index 0 --parameter-index 7 -- -2.0
 uv run ableton-cli effect observe --track-index 0 --device-index 0
 uv run ableton-cli effect eq8 keys
 uv run ableton-cli effect eq8 set 0.6 --track-index 0 --device-index 0 --parameter-key band1_freq
@@ -490,17 +521,20 @@ uv run ableton-cli --show-completion
   `--samples` times `--interval-ms` apart, and report `peak`/`mean` per channel. Meters read 0.0
   while stopped, so check `is_playing` in the result before treating a reading as silence.
 
-- For positional numeric arguments that begin with `-`, insert `--` before the value.
-  - Example: `uv run ableton-cli track panning set -- -0.25 --track-index 0`
-  - Example: `uv run ableton-cli effect parameter set -- -2.0 --track-index 0 --device-index 0 --parameter-index 7`
+- For positional numeric arguments that begin with `-`, put all options first and insert `--` right before the value (options after `--` are read as positional arguments).
+  - Example: `uv run ableton-cli track panning set --track-index 0 -- -0.25`
+  - Example: `uv run ableton-cli effect parameter set --track-index 0 --device-index 0 --parameter-index 7 -- -2.0`
 - For low-latency repeated automation operations, prefer `uv run ableton-cli batch stream`.
 - Capability and compatibility checks are explicit through `uv run ableton-cli ping` and `uv run ableton-cli doctor`.
 - Batch steps run once unless the step declares `retry`. `retry.on` defaults to `["REMOTE_BUSY"]`.
   - A retrying step carries one `meta.idempotency_key` across every attempt, so the Remote Script replays its stored response instead of applying the command twice. Adding `TIMEOUT` to `retry.on` is therefore safe for write commands too.
   - A replayed response is marked with `idempotent_replay: true` in `result` (or in `error.details` for a replayed failure).
   - A `TIMEOUT` step failure that is not retried reports `error.details.may_have_executed` (`true` / `false` / `null` when unknown). Inspect the set with a read command before resending anything other than `false`.
+- A failing batch step keeps its own error code and adds `error.details.step_index`, `step_name`, `completed_steps`, and `results` (completed steps are not rolled back).
+  - `batch run --continue-on-error` / `batch stream --continue-on-error` execute every step; each `results[]` entry has `ok` plus `result` or `error`. Any failure still fails the batch with `BATCH_STEP_FAILED` (exit 20) and the entries move to `error.details.results` with `failed_step_indices`.
+  - Assertion failures count as step failures: a failing `previous` assert skips the step, a failing `current` assert marks the executed step failed, and the step after a failure has no `previous` payload.
 - Protocol version 3 is required. On `PROTOCOL_VERSION_MISMATCH`, run `uv run ableton-cli install-remote-script --yes`, restart Ableton Live, and re-select `AbletonCliRemote`.
-- Destructive master device deletion requires `--yes`. Live API unsupported operations fail explicitly with `not_supported_by_live_api`.
+- `device delete` (including `--main`) is destructive. Live API unsupported operations fail explicitly with `not_supported_by_live_api`.
 - Standard wrapper commands (`synth <type> ...`, `effect <type> ...`) are strict and intentionally fail if required parameter names are missing.
   - If you get `Missing required standard ... keys`, use generic commands instead:
     - `uv run ableton-cli --output json effect parameters list --track-index <track> --device-index <device>`
@@ -658,7 +692,7 @@ uv run ableton-cli --output json ping
 - `lint_live_set` -> `uv run ableton-cli --output json set lint --path <set.als>`
 - `diff_live_set` -> `uv run ableton-cli --output json set diff --from <a.als> --to <b.als>`
 - `write_live_set_automation` -> `uv run ableton-cli --output json set automation write --path <set.als> --out <new.als> --track-index <track> --target <target> --points-json '<json>'`
-- `execute_batch` -> `uv run ableton-cli --output json batch run (--steps-file <path> | --steps-json '<json>' | --steps-stdin)`
+- `execute_batch` -> `uv run ableton-cli --output json batch run (--steps-file <path> | --steps-json '<json>' | --steps-stdin) [--continue-on-error]`
 
 ## Examples
 

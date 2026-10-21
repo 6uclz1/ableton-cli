@@ -6,9 +6,9 @@ It is designed for both humans and automation (Skills/agents), with stable JSON 
 ## Prerequisites
 
 - Ableton Live 12+ (the Remote Script uses dataclass `slots=True`, which requires the
-  Python 3.10+ interpreter bundled with Live 12; Live 11 ships Python 3.7 and cannot
+  Python 3.11 interpreter bundled with Live 12; Live 11 ships Python 3.7 and cannot
   load this Remote Script)
-- Python 3.10+
+- Python 3.14+
 - [uv](https://docs.astral.sh/uv/)
 
 ## Install

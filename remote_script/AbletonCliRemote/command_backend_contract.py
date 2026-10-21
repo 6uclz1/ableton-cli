@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 from typing import Any, Protocol
 
 from .note_fields import NOTE_FIELD_SPECS
@@ -23,7 +23,7 @@ NOTE_VELOCITY_MAX = int(_NOTE_SPECS_BY_NAME["velocity"].maximum)  # type: ignore
 NOTE_KEYS = frozenset(spec.name for spec in NOTE_FIELD_SPECS if spec.required)
 
 
-class RemoteErrorCode(str, Enum):
+class RemoteErrorCode(StrEnum):
     INVALID_ARGUMENT = "INVALID_ARGUMENT"
     UNAUTHORIZED = "UNAUTHORIZED"
     PROTOCOL_VERSION_MISMATCH = "PROTOCOL_VERSION_MISMATCH"
@@ -33,7 +33,7 @@ class RemoteErrorCode(str, Enum):
     INTERNAL_ERROR = "INTERNAL_ERROR"
 
 
-class RemoteErrorReason(str, Enum):
+class RemoteErrorReason(StrEnum):
     NOT_SUPPORTED_BY_LIVE_API = "not_supported_by_live_api"
 
 

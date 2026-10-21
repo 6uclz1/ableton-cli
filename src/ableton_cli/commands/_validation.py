@@ -107,7 +107,7 @@ def require_float_in_range(
     return value
 
 
-def require_track_and_value(track: int, value: TValue) -> tuple[int, TValue]:
+def require_track_and_value[TValue](track: int, value: TValue) -> tuple[int, TValue]:
     return require_track_index(track), value
 
 
@@ -121,7 +121,7 @@ def require_track_and_device(track: int, device: int) -> tuple[int, int]:
     return require_track_index(track), require_device_index(device)
 
 
-def require_scene_and_value(scene: int, value: TValue) -> tuple[int, TValue]:
+def require_scene_and_value[TValue](scene: int, value: TValue) -> tuple[int, TValue]:
     return require_scene_index(scene), value
 
 

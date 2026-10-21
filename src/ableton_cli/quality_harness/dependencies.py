@@ -101,7 +101,7 @@ def _collect_import_candidates(info: _ModuleInfo) -> set[str]:
     try:
         source = info.path.read_text(encoding="utf-8")
         tree = ast.parse(source)
-    except (OSError, SyntaxError):
+    except OSError, SyntaxError:
         return candidates
 
     for node in ast.walk(tree):

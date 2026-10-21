@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 
+import pytest
+
 
 def test_tempo_set_rejects_out_of_range_value(runner, cli_app) -> None:
     result = runner.invoke(cli_app, ["--output", "json", "transport", "tempo", "set", "10"])
@@ -1474,6 +1476,103 @@ def test_arrangement_clip_delete_requires_exactly_one_mode(runner, cli_app) -> N
     assert json.loads(missing_mode.stdout)["error"]["code"] == "INVALID_ARGUMENT"
     assert json.loads(multiple_modes.stdout)["error"]["code"] == "INVALID_ARGUMENT"
     assert json.loads(incomplete_range.stdout)["error"]["code"] == "INVALID_ARGUMENT"
+
+
+@pytest.mark.parametrize(
+    ("argv", "message", "hint"),
+    [
+        (
+            ["delete", "0", "--end", "4"],
+            "--start and --end must be provided together for range delete mode",
+            "Use both --start and --end, or use index/--all mode.",
+        ),
+        (
+            ["delete", "0", "1", "--start", "0", "--end", "4"],
+            "Exactly one delete mode must be selected: index, range, or --all",
+            "Use one of: <index> | --start/--end | --all.",
+        ),
+        (
+            ["delete", "0", "--start=-1", "--end", "4"],
+            "start must be >= 0, got -1.0",
+            "Use a non-negative --start value in beats.",
+        ),
+        (
+            ["delete", "0", "--start", "8", "--end", "8"],
+            "end must be greater than start (start=8.0, end=8.0)",
+            "Use a valid [start, end) range with end > start.",
+        ),
+        (
+            ["create", "0", "--start", "0", "--length", "4", "--audio-path", "/tmp/a.wav"]
+            + ["--notes-json", "[]"],
+            "--audio-path and --notes-json/--notes-file/--pattern are mutually exclusive",
+            "Use notes options for MIDI clips or --audio-path for audio clips.",
+        ),
+    ],
+)
+def test_arrangement_clip_validation_errors_report_message_and_hint(
+    runner, cli_app, argv, message, hint
+) -> None:
+    result = runner.invoke(cli_app, ["--output", "json", "arrangement", "clip", *argv])
+
+    assert result.exit_code == 2
+    error = json.loads(result.stdout)["error"]
+    assert error["code"] == "INVALID_ARGUMENT"
+    assert error["message"] == message
+    assert error["hint"] == hint
+
+
+@pytest.mark.parametrize(
+    ("argv", "method", "expected_kwargs"),
+    [
+        (
+            ["create", "1", "--start", "8", "--length", "4", "--audio-path", "/tmp/a.wav"],
+            "arrangement_clip_create",
+            {
+                "track": 1,
+                "start_time": 8.0,
+                "length": 4.0,
+                "audio_path": "/tmp/a.wav",
+                "notes": None,
+            },
+        ),
+        (
+            ["list"],
+            "arrangement_clip_list",
+            {"track": None},
+        ),
+        (
+            ["delete", "2", "--start", "8", "--end", "16"],
+            "arrangement_clip_delete",
+            {"track": 2, "index": None, "start": 8.0, "end": 16.0, "delete_all": False},
+        ),
+        (
+            ["delete", "2", "--all"],
+            "arrangement_clip_delete",
+            {"track": 2, "index": None, "start": None, "end": None, "delete_all": True},
+        ),
+    ],
+)
+def test_arrangement_clip_commands_send_validated_kwargs(
+    runner, cli_app, monkeypatch, argv, method, expected_kwargs
+) -> None:
+    from ableton_cli.commands import arrangement
+
+    calls: list[tuple[str, dict[str, object]]] = []
+
+    class _RecordingClient:
+        def __getattr__(self, name: str):  # noqa: ANN204
+            def _record(**kwargs: object) -> dict[str, object]:
+                calls.append((name, kwargs))
+                return {}
+
+            return _record
+
+    monkeypatch.setattr(arrangement, "get_client", lambda ctx: _RecordingClient())
+
+    result = runner.invoke(cli_app, ["--output", "json", "arrangement", "clip", *argv])
+
+    assert result.exit_code == 0, result.stdout
+    assert calls == [(method, expected_kwargs)]
 
 
 def test_arrangement_from_session_rejects_invalid_scenes_csv(runner, cli_app) -> None:

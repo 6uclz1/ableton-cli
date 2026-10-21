@@ -141,7 +141,7 @@ quality-harness:
     - uses: actions/checkout@v4
     - uses: actions/setup-python@v5
       with:
-        python-version: \"3.11\"
+        python-version: \"3.14\"
     - uses: astral-sh/setup-uv@v4
     - run: uv sync --dev
     - run: uv run python tools/quality_harness.py --config .quality-harness.yml --report quality-harness-report.json

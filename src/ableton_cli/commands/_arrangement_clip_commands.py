@@ -33,6 +33,59 @@ CLIP_DELETE_SPEC = ArrangementCommandSpec(
 )
 
 
+def _clip_delete_kwargs(
+    *,
+    track: int,
+    index: int | None,
+    start: float | None,
+    end: float | None,
+    all_: bool,
+) -> dict[str, object]:
+    valid_track = require_track_index(track)
+    valid_index = require_arrangement_clip_index(index) if index is not None else None
+    has_range_value = start is not None or end is not None
+    if has_range_value and (start is None or end is None):
+        raise invalid_argument(
+            message="--start and --end must be provided together for range delete mode",
+            hint="Use both --start and --end, or use index/--all mode.",
+        )
+    mode_count = int(valid_index is not None) + int(has_range_value) + int(all_)
+    if mode_count != 1:
+        raise invalid_argument(
+            message="Exactly one delete mode must be selected: index, range, or --all",
+            hint="Use one of: <index> | --start/--end | --all.",
+        )
+
+    valid_start = None
+    valid_end = None
+    if has_range_value:
+        assert start is not None
+        assert end is not None
+        valid_start = require_non_negative_float(
+            "start",
+            start,
+            hint="Use a non-negative --start value in beats.",
+        )
+        valid_end = require_non_negative_float(
+            "end",
+            end,
+            hint="Use a non-negative --end value in beats.",
+        )
+        if valid_end <= valid_start:
+            raise invalid_argument(
+                message=f"end must be greater than start (start={valid_start}, end={valid_end})",
+                hint="Use a valid [start, end) range with end > start.",
+            )
+
+    return {
+        "track": valid_track,
+        "index": valid_index,
+        "start": valid_start,
+        "end": valid_end,
+        "delete_all": all_,
+    }
+
+
 def register_commands(
     clip_app: typer.Typer,
     *,
@@ -198,56 +251,11 @@ def register_commands(
             typer.Option("--all", help="Delete all arrangement clips on the track"),
         ] = False,
     ) -> None:
-        def _method_kwargs() -> dict[str, object]:
-            valid_track = require_track_index(track)
-            valid_index = require_arrangement_clip_index(index) if index is not None else None
-            has_range_value = start is not None or end is not None
-            if has_range_value and (start is None or end is None):
-                raise invalid_argument(
-                    message="--start and --end must be provided together for range delete mode",
-                    hint="Use both --start and --end, or use index/--all mode.",
-                )
-            mode_count = int(valid_index is not None) + int(has_range_value) + int(all_)
-            if mode_count != 1:
-                raise invalid_argument(
-                    message="Exactly one delete mode must be selected: index, range, or --all",
-                    hint="Use one of: <index> | --start/--end | --all.",
-                )
-
-            valid_start = None
-            valid_end = None
-            if has_range_value:
-                assert start is not None
-                assert end is not None
-                valid_start = require_non_negative_float(
-                    "start",
-                    start,
-                    hint="Use a non-negative --start value in beats.",
-                )
-                valid_end = require_non_negative_float(
-                    "end",
-                    end,
-                    hint="Use a non-negative --end value in beats.",
-                )
-                if valid_end <= valid_start:
-                    raise invalid_argument(
-                        message=(
-                            f"end must be greater than start (start={valid_start}, end={valid_end})"
-                        ),
-                        hint="Use a valid [start, end) range with end > start.",
-                    )
-
-            return {
-                "track": valid_track,
-                "index": valid_index,
-                "start": valid_start,
-                "end": valid_end,
-                "delete_all": all_,
-            }
-
         run_client_command_spec(
             ctx,
             spec=CLIP_DELETE_SPEC,
             args={"track": track, "index": index, "start": start, "end": end, "all": all_},
-            method_kwargs=_method_kwargs,
+            method_kwargs=lambda: _clip_delete_kwargs(
+                track=track, index=index, start=start, end=end, all_=all_
+            ),
         )

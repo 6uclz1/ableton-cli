@@ -86,7 +86,7 @@ def _clip_delete_kwargs(
     }
 
 
-def register_commands(
+def _register_create_command(
     clip_app: typer.Typer,
     *,
     run_client_command_spec: Callable[..., None],
@@ -208,6 +208,12 @@ def register_commands(
             method_kwargs=_method_kwargs,
         )
 
+
+def _register_list_command(
+    clip_app: typer.Typer,
+    *,
+    run_client_command_spec: Callable[..., None],
+) -> None:
     @clip_app.command("list")
     def arrangement_clip_list(
         ctx: typer.Context,
@@ -230,6 +236,12 @@ def register_commands(
             method_kwargs=_method_kwargs,
         )
 
+
+def _register_delete_command(
+    clip_app: typer.Typer,
+    *,
+    run_client_command_spec: Callable[..., None],
+) -> None:
     @clip_app.command("delete")
     def arrangement_clip_delete(
         ctx: typer.Context,
@@ -259,3 +271,13 @@ def register_commands(
                 track=track, index=index, start=start, end=end, all_=all_
             ),
         )
+
+
+def register_commands(
+    clip_app: typer.Typer,
+    *,
+    run_client_command_spec: Callable[..., None],
+) -> None:
+    _register_create_command(clip_app, run_client_command_spec=run_client_command_spec)
+    _register_list_command(clip_app, run_client_command_spec=run_client_command_spec)
+    _register_delete_command(clip_app, run_client_command_spec=run_client_command_spec)

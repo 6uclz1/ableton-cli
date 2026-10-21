@@ -10,6 +10,9 @@ from .errors import AppError, ErrorCode, ExitCode
 from .platform_paths import PlatformPaths
 
 REMOTE_SCRIPT_DIR_NAME = "AbletonCliRemote"
+# Sibling of "Remote Scripts": Live imports every folder inside "Remote Scripts" as a
+# control surface, so backups placed there fail to import on every launch.
+REMOTE_SCRIPT_BACKUP_DIR_NAME = "Remote Script Backups"
 SKILL_DIR_NAME = "ableton-cli"
 SKILL_FILE_NAME = "SKILL.md"
 CODEX_HOME_ENV_VAR = "CODEX_HOME"
@@ -83,12 +86,17 @@ def install_remote_script(
         if target.exists():
             action = "update"
             timestamp = datetime.now(UTC).strftime("%Y%m%d%H%M%S")
-            backup_path = target_root / f"{REMOTE_SCRIPT_DIR_NAME}.backup-{timestamp}"
+            backup_path = (
+                target_root.parent
+                / REMOTE_SCRIPT_BACKUP_DIR_NAME
+                / f"{REMOTE_SCRIPT_DIR_NAME}.backup-{timestamp}"
+            )
             backups.append(str(backup_path))
 
         if not dry_run:
             target_root.mkdir(parents=True, exist_ok=True)
             if target.exists() and backup_path is not None:
+                backup_path.parent.mkdir(parents=True, exist_ok=True)
                 shutil.move(str(target), str(backup_path))
             shutil.copytree(source, target, ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
 

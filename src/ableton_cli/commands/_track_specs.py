@@ -2,9 +2,8 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Generic
 
-from ._track_shared import TValue, ValueValidator
+from ._track_shared import ValueValidator
 
 
 @dataclass(frozen=True)
@@ -14,7 +13,7 @@ class TrackCommandSpec:
 
 
 @dataclass(frozen=True)
-class TrackValueCommandSpec(Generic[TValue]):
+class TrackValueCommandSpec[TValue]:
     command_name: str
     client_method: str
     value_name: str = "value"

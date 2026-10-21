@@ -98,7 +98,7 @@ def _warp_mode_matches(actual: Any, expected_mode: str) -> bool:
         return True
     try:
         return int(actual) == expected_value
-    except (TypeError, ValueError):
+    except TypeError, ValueError:
         return False
 
 

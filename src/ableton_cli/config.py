@@ -2,11 +2,11 @@ from __future__ import annotations
 
 import json
 import os
+import tomllib
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
-import tomli
 from platformdirs import user_config_dir
 
 from .errors import AppError, ErrorCode, ExitCode
@@ -79,8 +79,8 @@ def _load_file_values(path: Path) -> dict[str, Any]:
         return {}
 
     try:
-        raw = tomli.loads(path.read_text(encoding="utf-8"))
-    except (tomli.TOMLDecodeError, OSError) as exc:
+        raw = tomllib.loads(path.read_text(encoding="utf-8"))
+    except (tomllib.TOMLDecodeError, OSError) as exc:
         raise AppError(
             error_code=ErrorCode.CONFIG_INVALID,
             message=f"Failed to read config file: {path}",

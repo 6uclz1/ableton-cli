@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
-from typing import Annotated, Generic, TypeVar, cast
+from typing import Annotated, TypeVar, cast
 
 import typer
 
@@ -37,7 +37,7 @@ class SceneCommandSpec:
 
 
 @dataclass(frozen=True)
-class SceneValueCommandSpec(Generic[TValue]):
+class SceneValueCommandSpec[TValue]:
     command_name: str
     client_method: str
     value_name: str = "value"
@@ -76,7 +76,7 @@ def run_scene_command(
     )
 
 
-def run_scene_value_command(
+def run_scene_value_command[TValue](
     ctx: typer.Context,
     *,
     command_name: str,
@@ -149,7 +149,7 @@ def run_scene_command_spec(
     )
 
 
-def run_scene_value_command_spec(
+def run_scene_value_command_spec[TValue](
     ctx: typer.Context,
     *,
     spec: SceneValueCommandSpec[TValue],

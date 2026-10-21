@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from enum import Enum, IntEnum
+from enum import IntEnum, StrEnum
 from typing import Any
 
 
@@ -17,7 +17,7 @@ class ExitCode(IntEnum):
     INTERNAL_ERROR = 99
 
 
-class ErrorCode(str, Enum):
+class ErrorCode(StrEnum):
     INVALID_ARGUMENT = "INVALID_ARGUMENT"
     CONFIG_INVALID = "CONFIG_INVALID"
     ABLETON_NOT_REACHABLE = "ABLETON_NOT_REACHABLE"
@@ -47,7 +47,7 @@ class ErrorCode(str, Enum):
     INTERNAL_ERROR = "INTERNAL_ERROR"
 
 
-class ErrorDetailReason(str, Enum):
+class ErrorDetailReason(StrEnum):
     NOT_SUPPORTED_BY_LIVE_API = "not_supported_by_live_api"
     CONTRACT_VALIDATION_FAILED = "contract_validation_failed"
     NOT_IMPLEMENTED = "not_implemented"

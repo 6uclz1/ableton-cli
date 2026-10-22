@@ -29,7 +29,7 @@ def test_audio_loudness_analyze_reports_peak_rms_and_crest(
     runner,
     cli_app,
     tmp_path: Path,
-    fake_ffmpeg_loudness,
+    fake_ffmpeg,
 ) -> None:
     audio_path = tmp_path / "tone.wav"
     report_path = tmp_path / "loudness.json"
@@ -101,6 +101,7 @@ def test_audio_spectrum_analyze_reports_bands_and_stereo(
     runner,
     cli_app,
     tmp_path: Path,
+    real_ffmpeg,
 ) -> None:
     audio_path = tmp_path / "bass.wav"
     _write_sine(audio_path, freq=80.0, amp=0.4)
@@ -131,7 +132,7 @@ def test_audio_reference_compare_reports_metric_deltas(
     runner,
     cli_app,
     tmp_path: Path,
-    fake_ffmpeg_loudness,
+    fake_ffmpeg,
 ) -> None:
     candidate = tmp_path / "candidate.wav"
     reference = tmp_path / "reference.wav"

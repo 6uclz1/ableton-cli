@@ -41,7 +41,7 @@ def test_manifest_schema_v1_migrates_to_mastering_v2(tmp_path: Path) -> None:
     assert migrated["master_chain_plan"] is None
 
 
-def test_remix_mastering_target_reference_plan_and_qa(tmp_path: Path, fake_ffmpeg_loudness) -> None:
+def test_remix_mastering_target_reference_plan_and_qa(tmp_path: Path, fake_ffmpeg) -> None:
     from ableton_cli.remix.manifest import init_manifest, load_manifest
     from ableton_cli.remix.mastering import (
         add_reference,

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 
 
 class _FakeCaptureClient:
@@ -101,7 +102,8 @@ def test_session_capture_requires_start(runner, cli_app) -> None:
     )
 
     assert result.exit_code == 2
-    assert "--start" in result.output
+    # CI renders the usage error with ANSI colors that split the option name.
+    assert "--start" in re.sub(r"\x1b\[[0-9;]*m", "", result.output)
 
 
 def test_session_capture_rejects_non_positive_bars(runner, cli_app, monkeypatch) -> None:

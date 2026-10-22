@@ -28,6 +28,10 @@ def register(spectrum_app: typer.Typer) -> None:
             action=lambda: analyze_spectrum(path, profile=profile, report_out=report_out),
         )
 
+    _register_shares(spectrum_app)
+
+
+def _register_shares(spectrum_app: typer.Typer) -> None:
     @spectrum_app.command("shares")
     def audio_spectrum_shares(
         ctx: typer.Context,

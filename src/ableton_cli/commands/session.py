@@ -7,8 +7,9 @@ from typing import Annotated
 
 import typer
 
-from ..capture import capture_session, capture_tracks
+from ..capture import ShareAnalysis, capture_session, capture_tracks
 from ..client.events import EventStream
+from ..errors import read_only_violation
 from ..runtime import execute_command, get_client, get_runtime
 from ..session_diff import compute_session_diff
 from ..watch import WATCH_SCOPES, run_watch_loop
@@ -244,20 +245,22 @@ def session_capture_tracks(
     tracks = track_indexes or []
 
     def _run() -> dict[str, object]:
-        valid_tracks = [require_track_index(track) for track in tracks]
-        valid_bars = require_positive_float("bars", bars, hint="Use a positive --bars value.")
-        valid_start = require_non_negative_float(
-            "start", start, hint="Use a non-negative --start value in beats."
-        )
+        if get_runtime(ctx).read_only:
+            # Checked up front: the first client call is a read, and the capture writes.
+            raise read_only_violation("session capture-tracks")
+        if focus is not None and not analyze:
+            raise invalid_argument(
+                message="--focus requires --analyze", hint="Add --analyze, or drop --focus."
+            )
         return capture_tracks(
             get_client(ctx),
-            tracks=valid_tracks,
-            bars=valid_bars,
-            start=valid_start,
+            tracks=[require_track_index(track) for track in tracks],
+            bars=require_positive_float("bars", bars, hint="Use a positive --bars value."),
+            start=require_non_negative_float(
+                "start", start, hint="Use a non-negative --start value in beats."
+            ),
             bypass_main_devices=bypass_main_devices,
-            analyze=analyze,
-            resolution=resolution,
-            focus=focus,
+            analysis=ShareAnalysis(resolution=resolution, focus=focus) if analyze else None,
         )
 
     execute_command(

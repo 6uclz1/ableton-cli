@@ -16,7 +16,9 @@ step name in the error details (no fallback paths, no partial retries).
 from __future__ import annotations
 
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager
+from dataclasses import dataclass
 from typing import Any
 
 from .audio_analysis import analyze_loudness, analyze_spectrum, spectrum_shares
@@ -177,52 +179,40 @@ def capture_session(
 _MAIN_TRACK = {"mode": "main"}
 
 
+@dataclass(frozen=True, slots=True)
+class ShareAnalysis:
+    """Band-share analysis to run on the captures (``spectrum_shares`` arguments)."""
+
+    resolution: str = "bands"
+    focus: str | None = None
+
+
 def capture_tracks(
     client: Any,
     *,
     tracks: list[int],
     bars: float,
-    start: float = 0.0,
+    start: float,
     bypass_main_devices: bool = False,
-    analyze: bool = False,
-    resolution: str = "bands",
-    focus: str | None = None,
+    analysis: ShareAnalysis | None = None,
     wait_fn: Callable[[float], None] | None = None,
 ) -> dict[str, Any]:
-    if focus is not None and not analyze:
-        raise _invalid_argument(
-            message="--focus requires --analyze",
-            hint="Add --analyze, or drop --focus.",
-            step="validate_focus",
-        )
-    if analyze and resolution not in RESOLUTIONS:
-        raise _invalid_argument(
-            message=f"unsupported spectrum resolution: {resolution}",
-            hint=f"Use one of: {', '.join(RESOLUTIONS)}.",
-            step="validate_resolution",
-        )
+    _validate_analysis(analysis)
     names = _validate_capture_tracks(client, tracks)
     labels = _track_labels(tracks, names)
 
-    bypassed: list[int] = []
-    captures: list[dict[str, Any]] = []
-    try:
-        if bypass_main_devices:
-            _bypass_active_main_devices(client, bypassed)
-        for track in tracks:
-            captures.append(
-                {
-                    "track_index": track,
-                    "track_name": names[track],
-                    "label": labels[track],
-                    "file_path": _capture_soloed(
-                        client, track=track, bars=bars, start=start, wait_fn=wait_fn
-                    ),
-                }
-            )
-    finally:
-        for index in bypassed:
-            client.device_active_set(_MAIN_TRACK, {"mode": "index", "index": index}, True)
+    with _main_devices_bypassed(client, enabled=bypass_main_devices) as bypassed:
+        captures = [
+            {
+                "track_index": track,
+                "track_name": names[track],
+                "label": labels[track],
+                "file_path": _capture_soloed(
+                    client, track=track, bars=bars, start=start, wait_fn=wait_fn
+                ),
+            }
+            for track in tracks
+        ]
 
     result: dict[str, Any] = {
         "start": start,
@@ -230,17 +220,32 @@ def capture_tracks(
         "bypassed_main_devices": bypassed,
         "captures": captures,
     }
-    if analyze:
+    if analysis is not None:
         result["shares"] = spectrum_shares(
             [(capture["label"], capture["file_path"]) for capture in captures],
-            resolution=resolution,
-            focus=focus,
+            resolution=analysis.resolution,
+            focus=analysis.focus,
         )
     return result
 
 
-def _bypass_active_main_devices(client: Any, bypassed: list[int]) -> None:
-    """Turn off each active main device, recording it in ``bypassed`` as soon as it is off."""
+@contextmanager
+def _main_devices_bypassed(client: Any, *, enabled: bool) -> Iterator[list[int]]:
+    """Turn off each active main device for the block, then turn them back on.
+
+    A device is recorded as soon as it is off, so a failure part-way still restores it.
+    """
+    bypassed: list[int] = []
+    try:
+        if enabled:
+            _turn_off_active_main_devices(client, bypassed)
+        yield bypassed
+    finally:
+        for index in bypassed:
+            client.device_active_set(_MAIN_TRACK, {"mode": "index", "index": index}, True)
+
+
+def _turn_off_active_main_devices(client: Any, bypassed: list[int]) -> None:
     for device in client.master_devices_list().get("devices", []):
         device_ref = {"mode": "index", "index": device["index"]}
         if client.device_active_get(_MAIN_TRACK, device_ref).get("active"):
@@ -248,20 +253,17 @@ def _bypass_active_main_devices(client: Any, bypassed: list[int]) -> None:
             bypassed.append(device["index"])
 
 
-def _validate_capture_tracks(client: Any, tracks: list[int]) -> dict[int, str]:
-    if not tracks:
+def _validate_analysis(analysis: ShareAnalysis | None) -> None:
+    if analysis is not None and analysis.resolution not in RESOLUTIONS:
         raise _invalid_argument(
-            message="capture-tracks needs at least one --track-index",
-            hint="Pass --track-index once per track to capture.",
-            step="validate_tracks",
+            message=f"unsupported spectrum resolution: {analysis.resolution}",
+            hint=f"Use one of: {', '.join(RESOLUTIONS)}.",
+            step="validate_resolution",
         )
-    for track in tracks:
-        if tracks.count(track) > 1:
-            raise _invalid_argument(
-                message=f"duplicate track index: {track}",
-                hint="Pass each --track-index once.",
-                step="validate_tracks",
-            )
+
+
+def _validate_capture_tracks(client: Any, tracks: list[int]) -> dict[int, str]:
+    _require_unique_tracks(tracks)
     listing = client.tracks_list().get("tracks", [])
     names = {int(item["index"]): str(item["name"]) for item in listing}
     for track in tracks:
@@ -280,6 +282,22 @@ def _validate_capture_tracks(client: Any, tracks: list[int]) -> dict[int, str]:
             soloed_tracks=soloed,
         )
     return names
+
+
+def _require_unique_tracks(tracks: list[int]) -> None:
+    if not tracks:
+        raise _invalid_argument(
+            message="capture-tracks needs at least one --track-index",
+            hint="Pass --track-index once per track to capture.",
+            step="validate_tracks",
+        )
+    for track in tracks:
+        if tracks.count(track) > 1:
+            raise _invalid_argument(
+                message=f"duplicate track index: {track}",
+                hint="Pass each --track-index once.",
+                step="validate_tracks",
+            )
 
 
 def _track_labels(tracks: list[int], names: dict[int, str]) -> dict[int, str]:

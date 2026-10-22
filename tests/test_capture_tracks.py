@@ -4,7 +4,7 @@ from typing import Any
 
 import pytest
 
-from ableton_cli.capture import capture_tracks
+from ableton_cli.capture import ShareAnalysis, capture_tracks
 from ableton_cli.errors import AppError
 
 MAIN = {"mode": "main"}
@@ -166,9 +166,7 @@ def test_capture_tracks_analyze_reports_band_shares_by_label(monkeypatch) -> Non
         tracks=[0, 1],
         bars=4.0,
         start=0.0,
-        analyze=True,
-        resolution="third-octave",
-        focus="Lead",
+        analysis=ShareAnalysis(resolution="third-octave", focus="Lead"),
     )
 
     assert calls == [
@@ -211,15 +209,25 @@ def test_capture_tracks_refuses_when_a_track_is_already_soloed(monkeypatch) -> N
     assert live.calls == []
 
 
-def test_capture_tracks_rejects_focus_without_analyze(monkeypatch) -> None:
-    live = _FakeLive(tracks=[("Kick", False)])
-    _fake_capture(monkeypatch, live)
+def test_session_capture_tracks_rejects_focus_without_analyze(runner, cli_app) -> None:
+    result = runner.invoke(
+        cli_app,
+        [
+            "--output",
+            "json",
+            "session",
+            "capture-tracks",
+            "--track-index",
+            "0",
+            "--start",
+            "8",
+            "--focus",
+            "Kick",
+        ],
+    )
 
-    with pytest.raises(AppError) as exc_info:
-        capture_tracks(live, tracks=[0], bars=4.0, start=0.0, focus="Kick")
-
-    assert "--focus requires --analyze" in exc_info.value.message
-    assert live.calls == []
+    assert result.exit_code == 2, result.stdout
+    assert "--focus requires --analyze" in result.stdout
 
 
 def test_session_capture_tracks_is_blocked_in_read_only_mode(runner, cli_app) -> None:
@@ -249,7 +257,9 @@ def test_capture_tracks_rejects_unknown_resolution_before_capturing(monkeypatch)
     _fake_capture(monkeypatch, live)
 
     with pytest.raises(AppError) as exc_info:
-        capture_tracks(live, tracks=[0], bars=4.0, start=0.0, analyze=True, resolution="octave")
+        capture_tracks(
+            live, tracks=[0], bars=4.0, start=0.0, analysis=ShareAnalysis(resolution="octave")
+        )
 
     assert "unsupported spectrum resolution: octave" in exc_info.value.message
     assert live.calls == []

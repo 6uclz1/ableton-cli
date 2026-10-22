@@ -6,7 +6,15 @@ from pathlib import Path
 from typing import Any
 
 from .ffmpeg import Runner, ffmpeg_output_error, run_ffmpeg
-from .io import audio_error, read_wav, require_ffmpeg_engine, rms_dbfs, wav_channels, write_report
+from .io import (
+    audio_error,
+    read_wav,
+    require_existing_audio_path,
+    require_ffmpeg_engine,
+    rms_dbfs,
+    wav_channels,
+    write_report,
+)
 
 Band = tuple[str, float, float]
 
@@ -133,11 +141,27 @@ def measure_band_levels(
     bands: tuple[Band, ...] = BANDS,
     run: Runner | None = None,
 ) -> dict[str, float]:
-    """Return each band's RMS level (dBFS) of the mono downmix over the whole file.
+    """Return each band's RMS level (dBFS) of the mono downmix over the whole file."""
+    command = [
+        "ffmpeg",
+        "-nostdin",
+        "-nostats",
+        "-hide_banner",
+        "-i",
+        str(path),
+        "-filter_complex",
+        _band_filter_graph(channels, bands),
+        "-map",
+        "[out]",
+        "-f",
+        "null",
+        "-",
+    ]
+    return _parse_band_levels(run_ffmpeg(command, run=run, hint=_HINT), bands)
 
-    One ffmpeg pass splits the downmix into a branch per band; each branch's astats
-    instance is named ``b<index>`` so its reading can be found in the log.
-    """
+
+def _band_filter_graph(channels: int, bands: tuple[Band, ...]) -> str:
+    """One pass: split the downmix into a branch per band, each read by ``astats@b<index>``."""
     downmix = "+".join(f"{1 / channels:g}*c{index}" for index in range(channels))
     branches = "".join(f"[s{index}]" for index in range(len(bands)))
     graph = [f"[0:a]pan=mono|c0={downmix},asplit={len(bands)}{branches}"]
@@ -150,22 +174,11 @@ def measure_band_levels(
         )
     outputs = "".join(f"[o{index}]" for index in range(len(bands)))
     graph.append(f"{outputs}amix=inputs={len(bands)}[out]")
-    command = [
-        "ffmpeg",
-        "-nostdin",
-        "-nostats",
-        "-hide_banner",
-        "-i",
-        str(path),
-        "-filter_complex",
-        ";".join(graph),
-        "-map",
-        "[out]",
-        "-f",
-        "null",
-        "-",
-    ]
-    log = run_ffmpeg(command, run=run, hint=_HINT)
+    return ";".join(graph)
+
+
+def _parse_band_levels(log: str, bands: tuple[Band, ...]) -> dict[str, float]:
+    # ffmpeg prints each named astats instance at uninit, in no guaranteed order.
     levels: dict[str, float] = {}
     for index, (name, _low, _high) in enumerate(bands):
         match = re.search(
@@ -216,7 +229,6 @@ def _shares_result(
         name: {label: 10 ** (levels[name] / 10.0) for label, _path, levels in measured}
         for name, _low, _high in bands
     }
-    totals = {name: sum(by_label.values()) for name, by_label in powers.items()}
     return {
         "resolution": resolution,
         "bands": [
@@ -231,22 +243,29 @@ def _shares_result(
             }
             for label, path, levels in measured
         ],
-        "band_totals_dbfs": {
-            name: round(10.0 * math.log10(total), 3) if total > 0 else float("-inf")
-            for name, total in totals.items()
-        },
-        "shares_pct": {
-            name: {
-                label: round(100.0 * power / totals[name], 1) if totals[name] > 0 else 0.0
-                for label, power in by_label.items()
-            }
-            for name, by_label in powers.items()
-        },
-        "dominant": {
-            name: max(by_label, key=by_label.__getitem__) if totals[name] > 0 else None
-            for name, by_label in powers.items()
-        },
+        "band_totals_dbfs": {name: _power_dbfs(sum(p.values())) for name, p in powers.items()},
+        "shares_pct": {name: _shares_pct(by_label) for name, by_label in powers.items()},
+        "dominant": {name: _dominant(by_label) for name, by_label in powers.items()},
     }
+
+
+def _power_dbfs(power: float) -> float:
+    return round(10.0 * math.log10(power), 3) if power > 0 else float("-inf")
+
+
+def _shares_pct(by_label: dict[str, float]) -> dict[str, float]:
+    total = sum(by_label.values())
+    return {
+        label: round(100.0 * power / total, 1) if total > 0 else 0.0
+        for label, power in by_label.items()
+    }
+
+
+def _dominant(by_label: dict[str, float]) -> str | None:
+    """The stem with the most energy in the band, or None when the band is silent."""
+    if sum(by_label.values()) <= 0:
+        return None
+    return max(by_label, key=by_label.__getitem__)
 
 
 def _validate_shares_request(
@@ -269,6 +288,8 @@ def _validate_shares_request(
                 message=f"duplicate stem label: {label}",
                 hint="Give every --stem a unique LABEL.",
             )
+    for _label, path in stems:
+        require_existing_audio_path(path)
     if focus is not None and focus not in labels:
         raise audio_error(
             message=f"focus label is not a stem: {focus}",

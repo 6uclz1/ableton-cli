@@ -547,6 +547,21 @@ uv run ableton-cli --show-completion
     - `uv run ableton-cli --output json effect parameter set <value> --track-index <track> --device-index <device> --parameter-index <parameter>`
   - Use this path for locale/device-variant differences to avoid workflow stalls.
 
+## Computer Use fallback
+
+Some results cannot be produced through the CLI because Live does not expose them to scripts:
+
+- plug-in presets and sound design (Serum and other VST/AU plug-ins list only `Device On` until configured)
+- Configure (exposing plug-in parameters to Live)
+- modulator mapping (`Map` on LFO / Shaper)
+- arrangement automation in the open set
+- saving the set
+
+For these steps, use Computer Use following `docs/computer-use/README.md` in the ableton-cli
+repository, then return to the CLI. After a plug-in parameter has been exposed with Configure,
+it appears in `device parameters list` and accepts `device parameter set`. Use the CLI first, fall
+back only for documented gaps, and report each step that ran through the GUI.
+
 ## Global options
 
 - `--host`

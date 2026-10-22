@@ -29,6 +29,7 @@ Use these repository-relative documents before changing behavior:
 - `docs/skills/examples/*.json` — machine-oriented examples.
 - `.cursor/rules/ableton-cli.mdc` — Cursor-specific conventions mirroring this file.
 - `.quality-harness.yml` and `docs/quality-harness-phase2.md` — quality harness thresholds and limits.
+- `docs/computer-use/README.md` — Computer Use fallback policy and GUI playbooks for operations the CLI cannot perform.
 
 ## Repository Map
 
@@ -39,6 +40,7 @@ Use these repository-relative documents before changing behavior:
 - `tests/snapshots/public_contract_snapshot.json` — public contract snapshot; update only for intentional public contract changes.
 - `tools/` — generators and maintenance scripts, including public contract snapshot and skill-doc generation.
 - `skills/ableton-cli/` and `docs/skills/` — automation-facing skill docs and action mappings.
+- `docs/computer-use/` — Computer Use playbooks: CLI gap list, Live GUI procedures, per-plug-in pages under `plugins/`.
 
 ## Working Rules
 
@@ -103,6 +105,17 @@ Commands can mutate a user's Live Set. For agent-driven operation or manual veri
 - Use `--plan` or `--dry-run` where supported before write/destructive operations.
 - Use explicit selectors such as `--track-index`, `--track-name`, `--selected-track`, `--track-query`, or `--track-ref`; do not rely on the current selection unless the task requires it.
 - Treat `song new`, `tracks delete`, clip deletion, file replacement, routing changes, export, save, and mastering apply operations as destructive or user-visible.
+
+## Computer Use Fallback
+
+When a requested musical result needs something the CLI cannot do, fall back to Computer Use for that step instead of dropping it or settling for defaults. Examples: plug-in presets and sound design (Serum and other VST/AU), Configure, modulator mapping, arrangement automation in the open set, and saving.
+
+- Use the CLI first. Native Live device parameters are fully settable through `device parameter set-display` / `select`, so do not leave them at defaults for lack of a GUI.
+- Fall back only for gaps listed in `docs/computer-use/cli-gaps.md`, or for a step that the CLI reports as `not_supported_by_live_api` or does not expose at all.
+- Follow the playbooks in `docs/computer-use/`. Prefer making a parameter CLI-reachable (Configure), then continue on the CLI.
+- Report every step that ran through the GUI and why. A fallback is explicit, never silent.
+- When you find a new gap or GUI procedure, update `docs/computer-use/` in the same change, and link each new page from its README.
+- This is an agent workflow rule only. Do not add GUI automation or Computer Use fallbacks to the CLI or Remote Script code paths.
 
 ## Audio Analysis Rules
 

@@ -117,10 +117,10 @@ def test_computer_use_docs_are_linked_from_index() -> None:
     index = _read(REPO_ROOT / COMPUTER_USE_INDEX)
     pages = sorted((REPO_ROOT / "docs" / "computer-use").rglob("*.md"))
     unlinked = [
-        str(page.relative_to(REPO_ROOT))
+        page.relative_to(REPO_ROOT).as_posix()
         for page in pages
         if page.name != "README.md"
-        and str(page.relative_to(REPO_ROOT / "docs" / "computer-use")) not in index
+        and page.relative_to(REPO_ROOT / "docs" / "computer-use").as_posix() not in index
     ]
 
     assert unlinked == []

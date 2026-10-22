@@ -6,9 +6,11 @@ from pathlib import Path
 from typing import Any
 
 from .ffmpeg import Runner, ffmpeg_output_error, run_ffmpeg
-from .io import read_wav, require_ffmpeg_engine, rms_dbfs, write_report
+from .io import audio_error, read_wav, require_ffmpeg_engine, rms_dbfs, wav_channels, write_report
 
-BANDS: tuple[tuple[str, float, float], ...] = (
+Band = tuple[str, float, float]
+
+BANDS: tuple[Band, ...] = (
     ("sub_20_60_hz", 20.0, 60.0),
     ("bass_60_120_hz", 60.0, 120.0),
     ("low_mid_120_400_hz", 120.0, 400.0),
@@ -18,11 +20,34 @@ BANDS: tuple[tuple[str, float, float], ...] = (
     ("air_10000_18000_hz", 10000.0, 18000.0),
 )
 
+_THIRD_OCTAVE_NOMINAL_HZ = (
+    "25", "31.5", "40", "50", "63", "80", "100", "125", "160", "200",
+    "250", "315", "400", "500", "630", "800", "1000", "1250", "1600", "2000",
+    "2500", "3150", "4000", "5000", "6300", "8000", "10000", "12500", "16000",
+)  # fmt: skip
+
+
+def _third_octave_bands() -> tuple[Band, ...]:
+    # Base-2 ISO centers 1000 * 2^(k/3) named by their nominal frequency; adjacent bands
+    # share an exact edge.
+    first = _THIRD_OCTAVE_NOMINAL_HZ.index("1000")
+    edges = [
+        1000.0 * 2 ** ((index - first - 0.5) / 3)
+        for index in range(len(_THIRD_OCTAVE_NOMINAL_HZ) + 1)
+    ]
+    return tuple(
+        (f"{nominal}_hz", edges[index], edges[index + 1])
+        for index, nominal in enumerate(_THIRD_OCTAVE_NOMINAL_HZ)
+    )
+
+
+THIRD_OCTAVE_BANDS: tuple[Band, ...] = _third_octave_bands()
+RESOLUTIONS: dict[str, tuple[Band, ...]] = {"bands": BANDS, "third-octave": THIRD_OCTAVE_BANDS}
+
 # Bands are cut brick-wall in the FFT domain: biquad slopes sag inside one-octave bands.
-# 8192 points at 48 kHz gives 5.9 Hz bins, fine enough for the 20-60 Hz band.
-_FFT_WINDOW = 8192
-_RMS_PATTERN = re.compile(r"RMS level dB:\s*(-?\d+(?:\.\d+)?|-inf)")
-_HINT = "Check that ffmpeg provides the highpass, lowpass, and astats filters."
+# 16384 points at 48 kHz gives 2.9 Hz bins, enough for the 22-28 Hz third-octave band.
+_FFT_WINDOW = 16384
+_HINT = "Check that ffmpeg provides the asplit, afftfilt, astats, and amix filters."
 
 # Each band's expected share of the file's full-band (20 Hz-18 kHz) level, in dB. The
 # anime-club-balanced shape integrates a spectrum whose energy per octave falls 1.5 dB per
@@ -105,34 +130,47 @@ def measure_band_levels(
     path: str | Path,
     *,
     channels: int,
+    bands: tuple[Band, ...] = BANDS,
     run: Runner | None = None,
 ) -> dict[str, float]:
-    """Return each band's RMS level (dBFS) of the mono downmix over the whole file."""
+    """Return each band's RMS level (dBFS) of the mono downmix over the whole file.
+
+    One ffmpeg pass splits the downmix into a branch per band; each branch's astats
+    instance is named ``b<index>`` so its reading can be found in the log.
+    """
     downmix = "+".join(f"{1 / channels:g}*c{index}" for index in range(channels))
-    levels: dict[str, float] = {}
-    for name, low, high in BANDS:
+    branches = "".join(f"[s{index}]" for index in range(len(bands)))
+    graph = [f"[0:a]pan=mono|c0={downmix},asplit={len(bands)}{branches}"]
+    for index, (_name, low, high) in enumerate(bands):
         in_band = f"between(b*sr/(2*(nb-1)),{low:g},{high:g})"
-        band_filter = (
-            f"afftfilt=real='re*{in_band}':imag='im*{in_band}':win_size={_FFT_WINDOW}:overlap=0.75"
+        graph.append(
+            f"[s{index}]afftfilt=real='re*{in_band}':imag='im*{in_band}'"
+            f":win_size={_FFT_WINDOW}:overlap=0.75,"
+            f"astats@b{index}=measure_perchannel=none:measure_overall=RMS_level[o{index}]"
         )
-        graph = (
-            f"pan=mono|c0={downmix},{band_filter},"
-            "astats=measure_perchannel=none:measure_overall=RMS_level"
+    outputs = "".join(f"[o{index}]" for index in range(len(bands)))
+    graph.append(f"{outputs}amix=inputs={len(bands)}[out]")
+    command = [
+        "ffmpeg",
+        "-nostdin",
+        "-nostats",
+        "-hide_banner",
+        "-i",
+        str(path),
+        "-filter_complex",
+        ";".join(graph),
+        "-map",
+        "[out]",
+        "-f",
+        "null",
+        "-",
+    ]
+    log = run_ffmpeg(command, run=run, hint=_HINT)
+    levels: dict[str, float] = {}
+    for index, (name, _low, _high) in enumerate(bands):
+        match = re.search(
+            rf"\[astats@b{index} @ [^\]]*\] RMS level dB:\s*(-?\d+(?:\.\d+)?|-inf)", log
         )
-        command = [
-            "ffmpeg",
-            "-nostdin",
-            "-nostats",
-            "-hide_banner",
-            "-i",
-            str(path),
-            "-af",
-            graph,
-            "-f",
-            "null",
-            "-",
-        ]
-        match = _RMS_PATTERN.search(run_ffmpeg(command, run=run, hint=_HINT))
         if match is None:
             raise ffmpeg_output_error(
                 message=f"ffmpeg astats output has no RMS level for {name}",
@@ -141,6 +179,118 @@ def measure_band_levels(
             )
         levels[name] = float(match.group(1))
     return levels
+
+
+def spectrum_shares(
+    stems: list[tuple[str, str | Path]],
+    *,
+    resolution: str = "bands",
+    focus: str | None = None,
+    report_out: str | Path | None = None,
+) -> dict[str, Any]:
+    """Split each band's energy between stems, e.g. solo captures of a mix's tracks."""
+    bands = _validate_shares_request(stems, resolution=resolution, focus=focus)
+    require_ffmpeg_engine("ffmpeg")
+    measured = [
+        (
+            label,
+            Path(path).expanduser(),
+            measure_band_levels(path, channels=wav_channels(path), bands=bands),
+        )
+        for label, path in stems
+    ]
+    result = _shares_result(measured, bands, resolution=resolution)
+    if focus is not None:
+        result["focus"] = {"label": focus, "margin_db": _focus_margins(measured, focus, bands)}
+    write_report(report_out, result)
+    return result
+
+
+def _shares_result(
+    measured: list[tuple[str, Path, dict[str, float]]],
+    bands: tuple[Band, ...],
+    *,
+    resolution: str,
+) -> dict[str, Any]:
+    powers = {
+        name: {label: 10 ** (levels[name] / 10.0) for label, _path, levels in measured}
+        for name, _low, _high in bands
+    }
+    totals = {name: sum(by_label.values()) for name, by_label in powers.items()}
+    return {
+        "resolution": resolution,
+        "bands": [
+            {"name": name, "low_hz": round(low, 1), "high_hz": round(high, 1)}
+            for name, low, high in bands
+        ],
+        "stems": [
+            {
+                "label": label,
+                "path": str(path),
+                "levels": {name: round(level, 3) for name, level in levels.items()},
+            }
+            for label, path, levels in measured
+        ],
+        "band_totals_dbfs": {
+            name: round(10.0 * math.log10(total), 3) if total > 0 else float("-inf")
+            for name, total in totals.items()
+        },
+        "shares_pct": {
+            name: {
+                label: round(100.0 * power / totals[name], 1) if totals[name] > 0 else 0.0
+                for label, power in by_label.items()
+            }
+            for name, by_label in powers.items()
+        },
+        "dominant": {
+            name: max(by_label, key=by_label.__getitem__) if totals[name] > 0 else None
+            for name, by_label in powers.items()
+        },
+    }
+
+
+def _validate_shares_request(
+    stems: list[tuple[str, str | Path]], *, resolution: str, focus: str | None
+) -> tuple[Band, ...]:
+    if resolution not in RESOLUTIONS:
+        raise audio_error(
+            message=f"unsupported spectrum resolution: {resolution}",
+            hint=f"Use one of: {', '.join(RESOLUTIONS)}.",
+        )
+    if not stems:
+        raise audio_error(
+            message="spectrum shares needs at least one stem",
+            hint="Pass --stem LABEL=PATH once per stem.",
+        )
+    labels = [label for label, _path in stems]
+    for label in labels:
+        if labels.count(label) > 1:
+            raise audio_error(
+                message=f"duplicate stem label: {label}",
+                hint="Give every --stem a unique LABEL.",
+            )
+    if focus is not None and focus not in labels:
+        raise audio_error(
+            message=f"focus label is not a stem: {focus}",
+            hint=f"Use one of: {', '.join(labels)}.",
+        )
+    return RESOLUTIONS[resolution]
+
+
+def _focus_margins(
+    measured: list[tuple[str, Path, dict[str, float]]], focus: str, bands: tuple[Band, ...]
+) -> dict[str, float | None]:
+    """Focus stem level minus the loudest other stem; None when either side is silent."""
+    margins: dict[str, float | None] = {}
+    for name, _low, _high in bands:
+        focus_level = next(levels[name] for label, _path, levels in measured if label == focus)
+        others = [levels[name] for label, _path, levels in measured if label != focus]
+        loudest_other = max(others, default=float("-inf"))
+        if math.isinf(focus_level) or math.isinf(loudest_other):
+            margins[name] = None
+        else:
+            margins[name] = round(focus_level - loudest_other, 3)
+    return margins
 
 
 def _stereo_metrics(data: Any) -> dict[str, Any]:

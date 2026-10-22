@@ -95,6 +95,8 @@ uv run ableton-cli device insert Utility --main
 uv run ableton-cli device parameter set-display --main --device-name "Glue Compressor" --parameter-name Threshold -- -10
 uv run ableton-cli audio loudness analyze --path ./renders/remix.wav --engine ffmpeg
 uv run ableton-cli audio spectrum analyze --path ./renders/remix.wav --profile anime-club
+uv run ableton-cli audio spectrum shares --stem Kick=./caps/kick.wav --stem Lead=./caps/lead.wav --focus Lead
+uv run ableton-cli session capture-tracks --track-index 0 --track-index 9 --start 304 --bars 8 --bypass-main-devices --analyze
 uv run ableton-cli audio transient analyze --path ./loops/drum-break.wav --bpm 174 --max-slices 16
 uv run ableton-cli remix mastering target set --project ./proj/remix_project.json --profile anime-club-demo
 uv run ableton-cli remix mastering analyze --project ./proj/remix_project.json --render ./renders/remix.wav

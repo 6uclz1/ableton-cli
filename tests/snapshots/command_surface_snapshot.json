@@ -3760,6 +3760,7 @@
         "\u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f",
         "\u256d\u2500 Commands \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e",
         "\u2502 analyze                                                                                          \u2502",
+        "\u2502 shares                                                                                           \u2502",
         "\u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f"
       ],
       "hidden": false,
@@ -3772,7 +3773,8 @@
       ],
       "short_help": null,
       "subcommands": [
-        "analyze"
+        "analyze",
+        "shares"
       ]
     },
     "audio spectrum analyze": {
@@ -3876,6 +3878,137 @@
         "audio",
         "spectrum",
         "analyze"
+      ],
+      "short_help": null
+    },
+    "audio spectrum shares": {
+      "deprecated": false,
+      "help": null,
+      "help_text": [
+        "",
+        " Usage: shares [OPTIONS]",
+        "",
+        "\u256d\u2500 Options \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e",
+        "\u2502 --stem              TEXT  Stem as LABEL=PATH (repeatable), e.g. a solo capture of one track      \u2502",
+        "\u2502 --resolution        TEXT  Band set: bands or third-octave [default: bands]                       \u2502",
+        "\u2502 --focus             TEXT  Stem label to compare against the loudest other stem per band          \u2502",
+        "\u2502 --report-out        PATH  Write JSON report to this path                                         \u2502",
+        "\u2502 --help                    Show this message and exit.                                            \u2502",
+        "\u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f"
+      ],
+      "hidden": false,
+      "kind": "command",
+      "no_args_is_help": false,
+      "params": [
+        {
+          "count": false,
+          "default": null,
+          "envvar": null,
+          "expose_value": true,
+          "flag_value": null,
+          "help": "Stem as LABEL=PATH (repeatable), e.g. a solo capture of one track",
+          "hidden": false,
+          "is_flag": false,
+          "kind": "option",
+          "metavar": null,
+          "multiple": true,
+          "name": "stems",
+          "nargs": 1,
+          "opts": [
+            "--stem"
+          ],
+          "prompt": null,
+          "required": false,
+          "secondary_opts": [],
+          "show_default": true,
+          "type": {
+            "class": "StringParamType",
+            "name": "text"
+          }
+        },
+        {
+          "count": false,
+          "default": "bands",
+          "envvar": null,
+          "expose_value": true,
+          "flag_value": null,
+          "help": "Band set: bands or third-octave",
+          "hidden": false,
+          "is_flag": false,
+          "kind": "option",
+          "metavar": null,
+          "multiple": false,
+          "name": "resolution",
+          "nargs": 1,
+          "opts": [
+            "--resolution"
+          ],
+          "prompt": null,
+          "required": false,
+          "secondary_opts": [],
+          "show_default": true,
+          "type": {
+            "class": "StringParamType",
+            "name": "text"
+          }
+        },
+        {
+          "count": false,
+          "default": null,
+          "envvar": null,
+          "expose_value": true,
+          "flag_value": null,
+          "help": "Stem label to compare against the loudest other stem per band",
+          "hidden": false,
+          "is_flag": false,
+          "kind": "option",
+          "metavar": null,
+          "multiple": false,
+          "name": "focus",
+          "nargs": 1,
+          "opts": [
+            "--focus"
+          ],
+          "prompt": null,
+          "required": false,
+          "secondary_opts": [],
+          "show_default": true,
+          "type": {
+            "class": "StringParamType",
+            "name": "text"
+          }
+        },
+        {
+          "count": false,
+          "default": null,
+          "envvar": null,
+          "expose_value": true,
+          "flag_value": null,
+          "help": "Write JSON report to this path",
+          "hidden": false,
+          "is_flag": false,
+          "kind": "option",
+          "metavar": null,
+          "multiple": false,
+          "name": "report_out",
+          "nargs": 1,
+          "opts": [
+            "--report-out"
+          ],
+          "prompt": null,
+          "required": false,
+          "secondary_opts": [],
+          "show_default": true,
+          "type": {
+            "class": "TyperPath",
+            "name": "path"
+          }
+        }
+      ],
+      "path": [
+        "audio",
+        "spectrum",
+        "shares"
       ],
       "short_help": null
     },
@@ -33517,6 +33650,7 @@
         "\u2502 snapshot                                                                                         \u2502",
         "\u2502 diff                                                                                             \u2502",
         "\u2502 capture                                                                                          \u2502",
+        "\u2502 capture-tracks                                                                                   \u2502",
         "\u2502 watch                                                                                            \u2502",
         "\u2502 events          Stream events pushed by Live instead of polling for diffs.                       \u2502",
         "\u2502 stop-all-clips                                                                                   \u2502",
@@ -33535,6 +33669,7 @@
         "snapshot",
         "diff",
         "capture",
+        "capture-tracks",
         "watch",
         "events",
         "stop-all-clips"
@@ -33552,7 +33687,9 @@
         "\u2502 *  --slot               INTEGER  Empty session clip slot index (0-based) to record into          \u2502",
         "\u2502                                  [required]                                                      \u2502",
         "\u2502 *  --bars               FLOAT    Number of bars to capture [required]                            \u2502",
-        "\u2502    --start              FLOAT    Transport start position in beats [default: 0.0]                \u2502",
+        "\u2502 *  --start              FLOAT    Beat where recording begins; needs one bar of pre-roll (>= one  \u2502",
+        "\u2502                                  bar)                                                            \u2502",
+        "\u2502                                  [required]                                                      \u2502",
         "\u2502    --set-routing                 Set the track's input routing to Resampling automatically       \u2502",
         "\u2502    --analyze                     Run loudness/spectrum analysis on the captured file             \u2502",
         "\u2502    --qa-project         TEXT     Run remix mastering QA against this project file                \u2502",
@@ -33643,11 +33780,11 @@
         },
         {
           "count": false,
-          "default": 0.0,
+          "default": null,
           "envvar": null,
           "expose_value": true,
           "flag_value": null,
-          "help": "Transport start position in beats",
+          "help": "Beat where recording begins; needs one bar of pre-roll (>= one bar)",
           "hidden": false,
           "is_flag": false,
           "kind": "option",
@@ -33659,7 +33796,7 @@
             "--start"
           ],
           "prompt": null,
-          "required": false,
+          "required": true,
           "secondary_opts": [],
           "show_default": true,
           "type": {
@@ -33749,6 +33886,221 @@
       "path": [
         "session",
         "capture"
+      ],
+      "short_help": null
+    },
+    "session capture-tracks": {
+      "deprecated": false,
+      "help": null,
+      "help_text": [
+        "",
+        " Usage: capture-tracks [OPTIONS]",
+        "",
+        "\u256d\u2500 Options \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e",
+        "\u2502 *  --start                      FLOAT    Beat where recording begins; needs one bar of pre-roll  \u2502",
+        "\u2502                                          (>= one bar)                                            \u2502",
+        "\u2502                                          [required]                                              \u2502",
+        "\u2502    --track-index                INTEGER  Track index (0-based) to solo and capture; repeatable   \u2502",
+        "\u2502    --bars                       FLOAT    Number of bars to capture [default: 8.0]                \u2502",
+        "\u2502    --bypass-main-devices                 Turn off active main-track devices while capturing,     \u2502",
+        "\u2502                                          then restore them                                       \u2502",
+        "\u2502    --analyze                             Report each band's share per captured track             \u2502",
+        "\u2502    --resolution                 TEXT     Band set for --analyze: bands or third-octave           \u2502",
+        "\u2502                                          [default: bands]                                        \u2502",
+        "\u2502    --focus                      TEXT     Track label to compare against the loudest other track  \u2502",
+        "\u2502    --help                                Show this message and exit.                             \u2502",
+        "\u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f"
+      ],
+      "hidden": false,
+      "kind": "command",
+      "no_args_is_help": false,
+      "params": [
+        {
+          "count": false,
+          "default": null,
+          "envvar": null,
+          "expose_value": true,
+          "flag_value": null,
+          "help": "Beat where recording begins; needs one bar of pre-roll (>= one bar)",
+          "hidden": false,
+          "is_flag": false,
+          "kind": "option",
+          "metavar": null,
+          "multiple": false,
+          "name": "start",
+          "nargs": 1,
+          "opts": [
+            "--start"
+          ],
+          "prompt": null,
+          "required": true,
+          "secondary_opts": [],
+          "show_default": true,
+          "type": {
+            "class": "FloatParamType",
+            "name": "float"
+          }
+        },
+        {
+          "count": false,
+          "default": null,
+          "envvar": null,
+          "expose_value": true,
+          "flag_value": null,
+          "help": "Track index (0-based) to solo and capture; repeatable",
+          "hidden": false,
+          "is_flag": false,
+          "kind": "option",
+          "metavar": null,
+          "multiple": true,
+          "name": "track_indexes",
+          "nargs": 1,
+          "opts": [
+            "--track-index"
+          ],
+          "prompt": null,
+          "required": false,
+          "secondary_opts": [],
+          "show_default": true,
+          "type": {
+            "class": "IntParamType",
+            "name": "integer"
+          }
+        },
+        {
+          "count": false,
+          "default": 8.0,
+          "envvar": null,
+          "expose_value": true,
+          "flag_value": null,
+          "help": "Number of bars to capture",
+          "hidden": false,
+          "is_flag": false,
+          "kind": "option",
+          "metavar": null,
+          "multiple": false,
+          "name": "bars",
+          "nargs": 1,
+          "opts": [
+            "--bars"
+          ],
+          "prompt": null,
+          "required": false,
+          "secondary_opts": [],
+          "show_default": true,
+          "type": {
+            "class": "FloatParamType",
+            "name": "float"
+          }
+        },
+        {
+          "count": false,
+          "default": false,
+          "envvar": null,
+          "expose_value": true,
+          "flag_value": true,
+          "help": "Turn off active main-track devices while capturing, then restore them",
+          "hidden": false,
+          "is_flag": true,
+          "kind": "option",
+          "metavar": null,
+          "multiple": false,
+          "name": "bypass_main_devices",
+          "nargs": 1,
+          "opts": [
+            "--bypass-main-devices"
+          ],
+          "prompt": null,
+          "required": false,
+          "secondary_opts": [],
+          "show_default": true,
+          "type": {
+            "class": "BoolParamType",
+            "name": "boolean"
+          }
+        },
+        {
+          "count": false,
+          "default": false,
+          "envvar": null,
+          "expose_value": true,
+          "flag_value": true,
+          "help": "Report each band's share per captured track",
+          "hidden": false,
+          "is_flag": true,
+          "kind": "option",
+          "metavar": null,
+          "multiple": false,
+          "name": "analyze",
+          "nargs": 1,
+          "opts": [
+            "--analyze"
+          ],
+          "prompt": null,
+          "required": false,
+          "secondary_opts": [],
+          "show_default": true,
+          "type": {
+            "class": "BoolParamType",
+            "name": "boolean"
+          }
+        },
+        {
+          "count": false,
+          "default": "bands",
+          "envvar": null,
+          "expose_value": true,
+          "flag_value": null,
+          "help": "Band set for --analyze: bands or third-octave",
+          "hidden": false,
+          "is_flag": false,
+          "kind": "option",
+          "metavar": null,
+          "multiple": false,
+          "name": "resolution",
+          "nargs": 1,
+          "opts": [
+            "--resolution"
+          ],
+          "prompt": null,
+          "required": false,
+          "secondary_opts": [],
+          "show_default": true,
+          "type": {
+            "class": "StringParamType",
+            "name": "text"
+          }
+        },
+        {
+          "count": false,
+          "default": null,
+          "envvar": null,
+          "expose_value": true,
+          "flag_value": null,
+          "help": "Track label to compare against the loudest other track",
+          "hidden": false,
+          "is_flag": false,
+          "kind": "option",
+          "metavar": null,
+          "multiple": false,
+          "name": "focus",
+          "nargs": 1,
+          "opts": [
+            "--focus"
+          ],
+          "prompt": null,
+          "required": false,
+          "secondary_opts": [],
+          "show_default": true,
+          "type": {
+            "class": "StringParamType",
+            "name": "text"
+          }
+        }
+      ],
+      "path": [
+        "session",
+        "capture-tracks"
       ],
       "short_help": null
     },

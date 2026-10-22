@@ -35,6 +35,42 @@ each band over the whole file: `sub_20_60_hz`, `bass_60_120_hz`, `low_mid_120_40
 the command needs ffmpeg and fails with `CONFIG_INVALID` without it. To compare sections
 or tracks, capture each one (`session capture`) and analyze the captures.
 
+### Per-track band diagnosis
+
+```bash
+uv run ableton-cli --output json session capture-tracks --track-index 0 --track-index 4 --track-index 9 --start 304 --bars 8 --bypass-main-devices --analyze --resolution third-octave --focus Lead
+uv run ableton-cli --output json audio spectrum shares --stem Kick=./caps/kick.wav --stem Bass=./caps/bass.wav --resolution bands
+```
+
+`session capture-tracks` solos each listed track in turn and records the main output into a
+temporary audio track (input Resampling, volume 0), which it deletes afterwards. The recorded
+files stay in the Set's `Samples/Recorded` folder and are listed in `captures`. With
+`--bypass-main-devices` it turns off every active main-track device first, so the master
+chain does not color the measurement. Solos, the temporary track, and bypassed devices are
+restored even when a capture fails. It refuses to start while any track is soloed, because
+that track would leak into every capture. Captures run in real time: one bar of pre-roll
+plus `--bars` at the Set's tempo, per track.
+
+Both capture commands record from exactly `--start`. Live ignores a playhead moved while
+stopped, and firing a clip from a stopped transport restarts the song at beat 0, so the
+capture starts playback, moves the playhead one bar before `--start`, and fires the clip:
+Live's launch quantization (1 Bar) begins the recording at `--start`. `--start` must
+therefore be at least one bar. Each capture reports `recorded_start_beat` (the stop position
+minus the file's length) and fails with `step: verify_recorded_start` when the recording
+began more than half a beat away from `--start`, e.g. under another launch quantization.
+
+`audio spectrum shares` (and `--analyze`) measures every stem in each band and reports:
+
+- `shares_pct`: each stem's share of the band's summed energy over the whole window. A stem
+  that rests for part of the window reads low, so check its level while it plays.
+- `dominant`: the stem with the largest share (`null` when the band is silent).
+- `band_totals_dbfs`: the summed level, ignoring phase between stems.
+- `focus.margin_db` with `--focus LABEL`: the focus stem's level minus the loudest other
+  stem's, so a negative value is the gap to close. It is `null` where either side is silent.
+
+`--resolution third-octave` uses the 29 ISO third-octave bands from 25 Hz to 16 kHz (named
+like `1250_hz`) to place an EQ move; `bands` uses the seven analysis bands above.
+
 Spectrum warnings judge tonal balance, not loudness: each band is compared, relative to
 the file's full-band level, with the profile's expected share. A band more than 6 dB above
 its share is `<band>_hot` and one more than 8 dB below is `<band>_low`; a file with no

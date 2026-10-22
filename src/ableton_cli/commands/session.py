@@ -7,7 +7,7 @@ from typing import Annotated
 
 import typer
 
-from ..capture import capture_session
+from ..capture import capture_session, capture_tracks
 from ..client.events import EventStream
 from ..runtime import execute_command, get_client, get_runtime
 from ..session_diff import compute_session_diff
@@ -154,8 +154,12 @@ def session_capture(
     ],
     bars: Annotated[float, typer.Option("--bars", help="Number of bars to capture")],
     start: Annotated[
-        float, typer.Option("--start", help="Transport start position in beats")
-    ] = 0.0,
+        float,
+        typer.Option(
+            "--start",
+            help="Beat where recording begins; needs one bar of pre-roll (>= one bar)",
+        ),
+    ],
     set_routing: Annotated[
         bool,
         typer.Option(
@@ -199,6 +203,74 @@ def session_capture(
             "set_routing": set_routing,
             "analyze": analyze,
             "qa_project": qa_project,
+        },
+        action=_run,
+    )
+
+
+@session_app.command("capture-tracks")
+def session_capture_tracks(
+    ctx: typer.Context,
+    start: Annotated[
+        float,
+        typer.Option(
+            "--start",
+            help="Beat where recording begins; needs one bar of pre-roll (>= one bar)",
+        ),
+    ],
+    track_indexes: Annotated[
+        list[int] | None,
+        typer.Option("--track-index", help="Track index (0-based) to solo and capture; repeatable"),
+    ] = None,
+    bars: Annotated[float, typer.Option("--bars", help="Number of bars to capture")] = 8.0,
+    bypass_main_devices: Annotated[
+        bool,
+        typer.Option(
+            "--bypass-main-devices",
+            help="Turn off active main-track devices while capturing, then restore them",
+        ),
+    ] = False,
+    analyze: Annotated[
+        bool, typer.Option("--analyze", help="Report each band's share per captured track")
+    ] = False,
+    resolution: Annotated[
+        str, typer.Option("--resolution", help="Band set for --analyze: bands or third-octave")
+    ] = "bands",
+    focus: Annotated[
+        str | None,
+        typer.Option("--focus", help="Track label to compare against the loudest other track"),
+    ] = None,
+) -> None:
+    tracks = track_indexes or []
+
+    def _run() -> dict[str, object]:
+        valid_tracks = [require_track_index(track) for track in tracks]
+        valid_bars = require_positive_float("bars", bars, hint="Use a positive --bars value.")
+        valid_start = require_non_negative_float(
+            "start", start, hint="Use a non-negative --start value in beats."
+        )
+        return capture_tracks(
+            get_client(ctx),
+            tracks=valid_tracks,
+            bars=valid_bars,
+            start=valid_start,
+            bypass_main_devices=bypass_main_devices,
+            analyze=analyze,
+            resolution=resolution,
+            focus=focus,
+        )
+
+    execute_command(
+        ctx,
+        command="session capture-tracks",
+        args={
+            "track_indexes": tracks,
+            "bars": bars,
+            "start": start,
+            "bypass_main_devices": bypass_main_devices,
+            "analyze": analyze,
+            "resolution": resolution,
+            "focus": focus,
         },
         action=_run,
     )

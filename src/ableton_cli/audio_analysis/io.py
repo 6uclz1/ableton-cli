@@ -66,6 +66,32 @@ def require_ffmpeg_engine(engine: str) -> str:
     return parsed
 
 
+def wav_channels(path: str | Path) -> int:
+    """Read only the channel count of a PCM WAV file, without decoding its samples."""
+    audio_path = require_existing_audio_path(path)
+    try:
+        with wave.open(str(audio_path), "rb") as wav:
+            return wav.getnchannels()
+    except wave.Error as exc:
+        raise audio_error(
+            message=f"unsupported audio format for builtin analysis: {audio_path}",
+            hint="Use PCM WAV for deterministic offline analysis.",
+        ) from exc
+
+
+def wav_duration_sec(path: str | Path) -> float:
+    """Read a PCM WAV file's duration from its header, without decoding its samples."""
+    audio_path = require_existing_audio_path(path)
+    try:
+        with wave.open(str(audio_path), "rb") as wav:
+            return wav.getnframes() / wav.getframerate()
+    except wave.Error as exc:
+        raise audio_error(
+            message=f"unsupported audio format for builtin analysis: {audio_path}",
+            hint="Use PCM WAV for deterministic offline analysis.",
+        ) from exc
+
+
 def read_wav(path: str | Path) -> AudioData:
     audio_path = require_existing_audio_path(path)
     try:

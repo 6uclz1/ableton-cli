@@ -305,13 +305,16 @@ class LiveBackendTransportMixerMixin:
             song.stop_playing()
             expected = False
         else:
-            song.start_playing()
+            song.continue_playing()
             expected = True
         return {"is_playing": self._wait_for_transport_state(expected=expected)}
 
     def start_playback(self) -> dict[str, Any]:
+        # Live ignores a playhead moved while stopped (and a re-write in the same
+        # tick); the CLI re-applies it once playback runs. continue_playing() at
+        # least resumes from the last stop rather than the start marker.
         song = self._ctx._song()
-        song.start_playing()
+        song.continue_playing()
         return {"is_playing": self._wait_for_transport_state(expected=True)}
 
     def stop_playback(self) -> dict[str, Any]:

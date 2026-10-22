@@ -17,6 +17,7 @@ from ..refs import (
 from ..runtime import execute_command, get_client
 from ._meter_commands import MeterIntervalOption, MeterSamplesOption, run_meter_command
 from ._track_facets import register_track_facets
+from ._track_routing_commands import ROUTING_CHANNEL_HINT, ROUTING_TYPE_HINT
 from ._track_routing_commands import register_commands as register_routing_commands
 from ._track_send_commands import register_commands as register_send_commands
 from ._track_shared import (
@@ -26,6 +27,7 @@ from ._track_shared import (
     ValueValidator,
 )
 from ._track_specs import TrackCommandSpec, TrackValueCommandSpec
+from ._validation import require_non_empty_string
 
 
 def _resolve_track_ref(track_ref: RefPayload | Callable[[], RefPayload]) -> RefPayload:
@@ -324,14 +326,21 @@ def run_track_routing_set(
     command_name: str,
     track_ref: RefPayload | Callable[[], RefPayload],
     routing_type: str,
-    routing_channel: str,
+    routing_channel: str | None,
     fn_name: str,
 ) -> None:
     def _run() -> dict[str, object]:
+        valid_type = require_non_empty_string("type", routing_type, hint=ROUTING_TYPE_HINT)
+        # None keeps Live's auto-selected channel (Resampling only offers "").
+        valid_channel = (
+            None
+            if routing_channel is None
+            else require_non_empty_string("channel", routing_channel, hint=ROUTING_CHANNEL_HINT)
+        )
         client = get_client(ctx)
         return cast(
             dict[str, object],
-            getattr(client, fn_name)(_resolve_track_ref(track_ref), routing_type, routing_channel),
+            getattr(client, fn_name)(_resolve_track_ref(track_ref), valid_type, valid_channel),
         )
 
     execute_kwargs: dict[str, object] = {

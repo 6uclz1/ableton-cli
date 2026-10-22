@@ -20734,7 +20734,10 @@
         "additional_properties": false,
         "properties": {
           "routing_channel": {
-            "type": "string"
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "routing_type": {
             "type": "string"
@@ -21054,7 +21057,10 @@
         "additional_properties": false,
         "properties": {
           "routing_channel": {
-            "type": "string"
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "routing_type": {
             "type": "string"

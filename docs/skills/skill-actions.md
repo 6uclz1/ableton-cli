@@ -14,11 +14,11 @@ Stable action names and CLI mappings for automation wrappers.
 | `song_export_audio` | `uv run ableton-cli --output json song export audio --path <wav>` | Export session audio to a target path when supported. |
 | `get_session_info` | `uv run ableton-cli --output json session info` | Read session view state and structure information. |
 | `get_track_info` | `uv run ableton-cli --output json track info --track-index <track>` | Read one track details by selector. |
-| `play` | `uv run ableton-cli --output json transport play` | Start transport playback. |
+| `play` | `uv run ableton-cli --output json transport play` | Start transport playback from the current playhead position. |
 | `stop` | `uv run ableton-cli --output json transport stop` | Stop transport playback. |
 | `set_tempo` | `uv run ableton-cli --output json transport tempo set <bpm>` | Update song tempo in BPM. |
 | `transport_position_get` | `uv run ableton-cli --output json transport position get` | Read current transport beat/time position. |
-| `transport_position_set` | `uv run ableton-cli --output json transport position set <beats>` | Move transport playhead to a beat position. |
+| `transport_position_set` | `uv run ableton-cli --output json transport position set <beats>` | Move transport playhead to a beat position, verified by read-back. |
 | `transport_rewind` | `uv run ableton-cli --output json transport rewind` | Rewind transport playhead to beat 0. |
 | `arrangement_record_start` | `uv run ableton-cli --output json arrangement record start` | Start arrangement recording when supported by Live API. |
 | `arrangement_record_stop` | `uv run ableton-cli --output json arrangement record stop` | Stop arrangement recording when supported by Live API. |
@@ -47,7 +47,7 @@ Stable action names and CLI mappings for automation wrappers.
 | `set_mixer_crossfader` | `uv run ableton-cli --output json mixer crossfader set <value>` | Update mixer crossfader position in range -1.0 to 1.0. |
 | `set_mixer_cue_routing` | `uv run ableton-cli --output json mixer cue-routing set <routing>` | Update cue routing using an exact routing name. |
 | `get_track_routing_input` | `uv run ableton-cli --output json track routing input get --track-index <track>` | Read current and available input routing for one track. |
-| `set_track_routing_output` | `uv run ableton-cli --output json track routing output set --track-index <track> --type <routing-type> --channel <routing-channel>` | Update output routing using exact type and channel names. |
+| `set_track_routing_output` | `uv run ableton-cli --output json track routing output set --track-index <track> --type <routing-type> [--channel <routing-channel>]` | Update output routing using exact type and channel names. |
 | `create_clip` | `uv run ableton-cli --output json clip create <track> <clip> --length <beats>` | Create a clip in a slot with a target beat length. |
 | `add_notes_to_clip` | `uv run ableton-cli --output json clip notes add <track> <clip> (--notes-json '<json-array>' | --notes-file <path>)` | Add MIDI notes to an existing clip slot. |
 | `get_clip_notes` | `uv run ableton-cli --output json clip notes get <track> <clip> [--start-time <beats>] [--end-time <beats>] [--pitch <midi>]` | Read clip notes with optional time/pitch filters. |

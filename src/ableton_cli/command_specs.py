@@ -30,7 +30,7 @@ TRANSPORT_COMMAND_SPECS: tuple[TransportSurfaceSpec, ...] = (
         remote_command="transport_play",
         action_name="play",
         action_command="uv run ableton-cli --output json transport play",
-        capability="Start transport playback.",
+        capability="Start transport playback from the current playhead position.",
     ),
     TransportSurfaceSpec(
         command_name="transport stop",
@@ -72,7 +72,7 @@ TRANSPORT_COMMAND_SPECS: tuple[TransportSurfaceSpec, ...] = (
         remote_command="transport_position_set",
         action_name="transport_position_set",
         action_command="uv run ableton-cli --output json transport position set <beats>",
-        capability="Move transport playhead to a beat position.",
+        capability="Move transport playhead to a beat position, verified by read-back.",
     ),
     TransportSurfaceSpec(
         command_name="transport rewind",

@@ -229,7 +229,7 @@ STABLE_ACTION_MAPPINGS: tuple[StableActionMapping, ...] = (
         action="set_track_routing_output",
         command=(
             "uv run ableton-cli --output json track routing output set --track-index <track> "
-            "--type <routing-type> --channel <routing-channel>"
+            "--type <routing-type> [--channel <routing-channel>]"
         ),
         capability="Update output routing using exact type and channel names.",
     ),

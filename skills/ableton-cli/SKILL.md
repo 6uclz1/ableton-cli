@@ -117,6 +117,12 @@ uv run ableton-cli arrangement clip file replace 0 0 --audio-path /tmp/replaceme
 uv run ableton-cli arrangement from-session --scenes "0:24,1:48"
 ```
 
+To chop a slice out of an audio file, create the clip, then `loop set` the slice range
+(the arrangement clip length follows the loop), then `marker set` the same range. Live
+ignores a start marker past the loop end, so `marker set` before `loop set` fails with
+`INVALID_ARGUMENT`; `marker set` and `loop set` read their values back and fail the same
+way whenever Live does not apply the requested range.
+
 ### Remix / Audio Workflow
 
 ```bash
@@ -541,6 +547,21 @@ uv run ableton-cli --show-completion
     - `uv run ableton-cli --output json effect parameter set <value> --track-index <track> --device-index <device> --parameter-index <parameter>`
   - Use this path for locale/device-variant differences to avoid workflow stalls.
 
+## Computer Use fallback
+
+Some results cannot be produced through the CLI because Live does not expose them to scripts:
+
+- plug-in presets and sound design (Serum and other VST/AU plug-ins list only `Device On` until configured)
+- Configure (exposing plug-in parameters to Live)
+- modulator mapping (`Map` on LFO / Shaper)
+- arrangement automation in the open set
+- saving the set
+
+For these steps, use Computer Use following `docs/computer-use/README.md` in the ableton-cli
+repository, then return to the CLI. After a plug-in parameter has been exposed with Configure,
+it appears in `device parameters list` and accepts `device parameter set`. Use the CLI first, fall
+back only for documented gaps, and report each step that ran through the GUI.
+
 ## Global options
 
 - `--host`
@@ -638,7 +659,7 @@ uv run ableton-cli --output json ping
 - `set_mixer_crossfader` -> `uv run ableton-cli --output json mixer crossfader set <value>`
 - `set_mixer_cue_routing` -> `uv run ableton-cli --output json mixer cue-routing set <routing>`
 - `get_track_routing_input` -> `uv run ableton-cli --output json track routing input get --track-index <track>`
-- `set_track_routing_output` -> `uv run ableton-cli --output json track routing output set --track-index <track> --type <routing-type> --channel <routing-channel>`
+- `set_track_routing_output` -> `uv run ableton-cli --output json track routing output set --track-index <track> --type <routing-type> [--channel <routing-channel>]`
 - `create_clip` -> `uv run ableton-cli --output json clip create <track> <clip> --length <beats>`
 - `add_notes_to_clip` -> `uv run ableton-cli --output json clip notes add <track> <clip> (--notes-json '<json-array>' | --notes-file <path>)`
 - `get_clip_notes` -> `uv run ableton-cli --output json clip notes get <track> <clip> [--start-time <beats>] [--end-time <beats>] [--pitch <midi>]`

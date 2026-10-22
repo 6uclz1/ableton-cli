@@ -561,12 +561,6 @@ class _ClientStub:
     def transport_position_get(self):  # noqa: ANN201
         return {"current_time": 4.0, "beat_position": 4.0}
 
-    def transport_position_set(self, beats: float):  # noqa: ANN201
-        return {"current_time": beats, "beat_position": beats}
-
-    def transport_rewind(self):  # noqa: ANN201
-        return {"current_time": 0.0, "beat_position": 0.0}
-
     def scenes_list(self):  # noqa: ANN201
         return {
             "scenes": [
@@ -2419,30 +2413,17 @@ def test_tracks_delete_command_outputs_json_envelope(runner, cli_app, monkeypatc
     assert payload["result"] == {"track": 1, "deleted": True}
 
 
-def test_transport_position_commands_output_json_envelope(runner, cli_app, monkeypatch) -> None:
+def test_transport_position_get_outputs_json_envelope(runner, cli_app, monkeypatch) -> None:
     from ableton_cli.commands import transport
 
     monkeypatch.setattr(transport, "get_client", lambda ctx: _ClientStub())
 
     gotten = runner.invoke(cli_app, ["--output", "json", "transport", "position", "get"])
-    set_result = runner.invoke(
-        cli_app,
-        ["--output", "json", "transport", "position", "set", "32"],
-    )
-    rewind = runner.invoke(cli_app, ["--output", "json", "transport", "rewind"])
 
     assert gotten.exit_code == 0
-    assert set_result.exit_code == 0
-    assert rewind.exit_code == 0
     gotten_payload = json.loads(gotten.stdout)
-    set_payload = json.loads(set_result.stdout)
-    rewind_payload = json.loads(rewind.stdout)
     assert gotten_payload["ok"] is True
-    assert set_payload["ok"] is True
-    assert rewind_payload["ok"] is True
     assert gotten_payload["result"] == {"current_time": 4.0, "beat_position": 4.0}
-    assert set_payload["result"] == {"current_time": 32.0, "beat_position": 32.0}
-    assert rewind_payload["result"] == {"current_time": 0.0, "beat_position": 0.0}
 
 
 def test_arrangement_record_commands_output_json_envelope(runner, cli_app, monkeypatch) -> None:

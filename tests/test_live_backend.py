@@ -69,16 +69,82 @@ class _Chain:
 class _DrumPad:
     def __init__(self, index: int) -> None:
         self.index = int(index)
-        self.loaded_slices: list[dict[str, Any]] = []
 
-    def load_audio_slice(self, source_ref: str, start_beat: float, end_beat: float) -> None:
-        self.loaded_slices.append(
-            {
-                "source_ref": str(source_ref),
-                "start_beat": float(start_beat),
-                "end_beat": float(end_beat),
-            }
-        )
+
+# Every fake sample file holds this many frames (10 s at 48 kHz).
+_FAKE_SAMPLE_FRAMES = 480_000
+
+
+class _Sample:
+    """Live rejects markers outside 0..length-1 ("Cannot set marker outside of the sample")."""
+
+    def __init__(self, file_path: str) -> None:
+        self.file_path = file_path
+        self.length = _FAKE_SAMPLE_FRAMES
+        self.sample_rate = 48_000
+        self._start_marker = 0
+        self._end_marker = _FAKE_SAMPLE_FRAMES - 1
+
+    def _checked(self, value: int) -> int:
+        if not 0 <= value < self.length:
+            raise RuntimeError("Cannot set marker outside of the sample")
+        return value
+
+    @property
+    def start_marker(self) -> int:
+        return self._start_marker
+
+    @start_marker.setter
+    def start_marker(self, value: int) -> None:
+        self._start_marker = self._checked(value)
+
+    @property
+    def end_marker(self) -> int:
+        return self._end_marker
+
+    @end_marker.setter
+    def end_marker(self, value: int) -> None:
+        self._end_marker = self._checked(value)
+
+
+class _Simpler:
+    def __init__(self) -> None:
+        self.name = "Simpler"
+        self.class_name = "OriginalSimpler"
+        self.parameters: list[_Parameter] = []
+        self.sample: _Sample | None = None
+
+    def replace_sample(self, file_path: str) -> None:
+        self.sample = _Sample(file_path)
+
+
+class _DrumChain:
+    """Mirrors Live 12.3+ DrumChain: in_note picks the pad, insert_device adds devices."""
+
+    def __init__(self) -> None:
+        self.name = "Chain"
+        self.in_note = -1
+        self.devices: list[Any] = []
+
+    def insert_device(self, device_name: str, target_index: int = -1) -> None:
+        if device_name != "Simpler":
+            raise RuntimeError(f"unknown device {device_name!r}")
+        self.devices.append(_Simpler())
+
+
+class _DrumRack:
+    def __init__(self) -> None:
+        self.name = "Drum Rack"
+        self.class_name = "DrumGroupDevice"
+        self.class_display_name = "Drum Rack"
+        self.parameters = [_Parameter("Macro 1", 0.5)]
+        self.can_have_drum_pads = True
+        self.can_have_chains = True
+        self.drum_pads = [_DrumPad(index) for index in range(128)]
+        self.chains: list[_DrumChain] = []
+
+    def insert_chain(self, index: int | None = None) -> None:
+        self.chains.append(_DrumChain())
 
 
 @dataclass(slots=True)
@@ -532,8 +598,19 @@ class _Song:
         self.stop_all_clips_calls = 0
         self.cue_routing = "Master"
         self.available_cue_routings = ["Master", "Ext. Out"]
+        self.playback_calls: list[str] = []
+        self.last_stop_time = 0.0
 
     def start_playing(self) -> None:
+        self.playback_calls.append("start_playing")
+        self.is_playing = True
+
+    def continue_playing(self) -> None:
+        # Live resumes from where playback last stopped, ignoring a playhead
+        # moved while stopped.
+        self.playback_calls.append("continue_playing")
+        if not self.is_playing:
+            self.current_song_time = self.last_stop_time
         self.is_playing = True
 
     def stop_playing(self) -> None:
@@ -793,6 +870,10 @@ class _EventuallyConsistentSong(_Song):
         self._actual_is_playing = True
         self._stale_reads_remaining = 1
 
+    def continue_playing(self) -> None:
+        self._actual_is_playing = True
+        self._stale_reads_remaining = 1
+
     def stop_playing(self) -> None:
         self._actual_is_playing = False
         self._stale_reads_remaining = 1
@@ -931,6 +1012,9 @@ def _set_audio_source_clip(
         end_marker=length,
         file_path=file_path,
     )
+    slot.clip.warping = True
+    # A warped 4-beat loop spanning the whole fake sample file.
+    slot.clip.beat_to_sample_time = lambda beat: beat * _FAKE_SAMPLE_FRAMES / length
 
 
 def _note() -> dict[str, Any]:
@@ -1124,6 +1208,22 @@ def test_live_backend_transport_waits_for_committed_state() -> None:
 
     assert backend.transport_play()["is_playing"] is True
     assert backend.transport_stop()["is_playing"] is False
+
+
+def test_live_backend_transport_play_resumes_with_continue_playing() -> None:
+    surface = _SurfaceStub()
+    backend = LiveBackend(surface)
+
+    assert backend.transport_play()["is_playing"] is True
+    assert surface._song_obj.playback_calls == ["continue_playing"]
+
+
+def test_live_backend_transport_toggle_resumes_with_continue_playing() -> None:
+    surface = _SurfaceStub()
+    backend = LiveBackend(surface)
+
+    assert backend.transport_toggle()["is_playing"] is True
+    assert surface._song_obj.playback_calls == ["continue_playing"]
 
 
 def test_live_backend_transport_position_get_set_and_rewind() -> None:
@@ -2681,8 +2781,41 @@ def test_live_backend_load_drum_kit_requires_explicit_selection() -> None:
     assert exc_info_both.value.code == "INVALID_ARGUMENT"
 
 
-def test_live_backend_clip_cut_to_drum_rack_creates_target_track_and_loads_slices() -> None:
+@dataclass(slots=True)
+class _Live123Track(_Track):
+    """A track on Live 12.3+, where Track.insert_device exists."""
+
+    def insert_device(self, device_name: str, target_index: int = -1) -> None:
+        if device_name != "Drum Rack":
+            raise RuntimeError(f"unknown device {device_name!r}")
+        self.devices.append(_DrumRack())  # type: ignore[arg-type]
+
+
+def _live_12_3_surface() -> _SurfaceStub:
     surface = _SurfaceStub()
+    song = surface.song()
+    for track in song.tracks:
+        track.__class__ = _Live123Track
+    create_midi_track = song.create_midi_track
+
+    def _create_live_12_3_midi_track(index: int) -> None:
+        create_midi_track(index)
+        song.tracks[index].__class__ = _Live123Track
+
+    song.create_midi_track = _create_live_12_3_midi_track
+    return surface
+
+
+def _slice_layout(drum_rack: Any) -> list[tuple[int, str, int, int]]:
+    layout = []
+    for chain in drum_rack.chains:
+        sample = chain.devices[0].sample
+        layout.append((chain.in_note, sample.file_path, sample.start_marker, sample.end_marker))
+    return layout
+
+
+def test_live_backend_clip_cut_to_drum_rack_creates_target_track_and_loads_slices() -> None:
+    surface = _live_12_3_surface()
     _set_audio_source_clip(
         surface.song(),
         track=1,
@@ -2701,7 +2834,7 @@ def test_live_backend_clip_cut_to_drum_rack_creates_target_track_and_loads_slice
         source_file_duration_beats=None,
         target_track=None,
         grid=None,
-        slice_count=8,
+        slice_count=4,
         slice_ranges=None,
         start_pad=0,
         create_trigger_clip=False,
@@ -2710,50 +2843,78 @@ def test_live_backend_clip_cut_to_drum_rack_creates_target_track_and_loads_slice
 
     assert result["created_target_track"] is True
     assert result["created_drum_rack"] is True
-    assert result["slice_count"] == 8
-    assert result["assigned_count"] == 8
-    target_track = surface.song().tracks[result["target_track"]]
-    drum_rack = target_track.devices[-1]
-    assert drum_rack.can_have_drum_pads is True
-    assert len(drum_rack.drum_pads[0].loaded_slices) == 1
-    assert drum_rack.drum_pads[0].loaded_slices[0]["source_ref"] == "/tmp/Bass Loop.wav"
+    assert result["assigned_count"] == 4
+    drum_rack = surface.song().tracks[result["target_track"]].devices[-1]
+    assert isinstance(drum_rack, _DrumRack)
+    assert _slice_layout(drum_rack) == [
+        (36, "/tmp/Bass Loop.wav", 0, 120_000),
+        (37, "/tmp/Bass Loop.wav", 120_000, 240_000),
+        (38, "/tmp/Bass Loop.wav", 240_000, 360_000),
+        (39, "/tmp/Bass Loop.wav", 360_000, 479_999),
+    ]
+    assert result["assignments"][1] == {
+        "pad": 1,
+        "note": 37,
+        "slice_start": 1.0,
+        "slice_end": 2.0,
+        "sample_start": 120_000,
+        "sample_end": 240_000,
+    }
 
 
-def test_live_backend_clip_cut_to_drum_rack_supports_browser_source_and_trigger_clip() -> None:
+def test_live_backend_clip_cut_to_drum_rack_reuses_existing_drum_rack() -> None:
     surface = _SurfaceStub()
+    rack = _DrumRack()
+    surface.song().tracks[0].devices.append(rack)  # type: ignore[arg-type]
     backend = LiveBackend(surface)
 
     result = backend.clip_cut_to_drum_rack(
         source_track=None,
         source_clip=None,
         source_uri=None,
-        source_path="sounds/Bass Loop.wav",
-        source_file=None,
-        source_file_duration_beats=None,
+        source_path=None,
+        source_file="/tmp/source.wav",
+        source_file_duration_beats=8.0,
         target_track=0,
-        grid=1.0,
+        grid=4.0,
         slice_count=None,
         slice_ranges=None,
-        start_pad=2,
-        create_trigger_clip=True,
-        trigger_clip_slot=1,
+        start_pad=0,
+        create_trigger_clip=False,
+        trigger_clip_slot=None,
     )
 
-    assert result["target_track"] == 0
-    assert result["slice_count"] == 4
-    assert result["trigger_clip_created"] is True
-    trigger_notes = backend.get_clip_notes(
-        track=0,
-        clip=1,
-        start_time=None,
-        end_time=None,
-        pitch=None,
-    )
-    assert trigger_notes["note_count"] == 4
+    assert result["created_drum_rack"] is False
+    assert len(surface.song().tracks[0].devices) == 2
+    assert [chain.in_note for chain in rack.chains] == [36, 37]
+
+
+def test_live_backend_clip_cut_to_drum_rack_rejects_browser_source() -> None:
+    backend = LiveBackend(_SurfaceStub())
+
+    with pytest.raises(CommandError) as exc_info:
+        backend.clip_cut_to_drum_rack(
+            source_track=None,
+            source_clip=None,
+            source_uri=None,
+            source_path="sounds/Bass Loop.wav",
+            source_file=None,
+            source_file_duration_beats=None,
+            target_track=0,
+            grid=1.0,
+            slice_count=None,
+            slice_ranges=None,
+            start_pad=0,
+            create_trigger_clip=False,
+            trigger_clip_slot=None,
+        )
+
+    assert exc_info.value.code == "INVALID_ARGUMENT"
+    assert exc_info.value.details == {"reason": "not_supported_by_live_api"}
 
 
 def test_live_backend_clip_cut_to_drum_rack_uses_file_slice_ranges_for_slices_and_trigger() -> None:
-    surface = _SurfaceStub()
+    surface = _live_12_3_surface()
     backend = LiveBackend(surface)
 
     result = backend.clip_cut_to_drum_rack(
@@ -2780,13 +2941,11 @@ def test_live_backend_clip_cut_to_drum_rack_uses_file_slice_ranges_for_slices_an
     assert result["source_file_duration_beats"] == 8.0
     assert result["range_start"] == 1.0
     assert result["range_end"] == 5.0
-    target_track = surface.song().tracks[0]
-    drum_rack = target_track.devices[-1]
-    assert drum_rack.drum_pads[2].loaded_slices == [
-        {"source_ref": "/tmp/source.wav", "start_beat": 1.0, "end_beat": 2.25}
-    ]
-    assert drum_rack.drum_pads[3].loaded_slices == [
-        {"source_ref": "/tmp/source.wav", "start_beat": 3.0, "end_beat": 5.0}
+    drum_rack = surface.song().tracks[0].devices[-1]
+    # 480,000 frames over 8 beats -> 60,000 frames per beat.
+    assert _slice_layout(drum_rack) == [
+        (38, "/tmp/source.wav", 60_000, 135_000),
+        (39, "/tmp/source.wav", 180_000, 300_000),
     ]
     trigger_notes = backend.get_clip_notes(
         track=0,
@@ -2822,7 +2981,7 @@ def test_live_backend_clip_cut_to_drum_rack_uses_file_slice_ranges_for_slices_an
 
 
 def test_live_backend_clip_cut_to_drum_rack_rejects_pad_overflow() -> None:
-    surface = _SurfaceStub()
+    surface = _live_12_3_surface()
     _set_audio_source_clip(
         surface.song(),
         track=1,
@@ -2831,6 +2990,7 @@ def test_live_backend_clip_cut_to_drum_rack_rejects_pad_overflow() -> None:
         file_path="/tmp/Bass Loop.wav",
     )
     backend = LiveBackend(surface)
+    track_count = len(surface.song().tracks)
 
     with pytest.raises(CommandError) as exc_info:
         backend.clip_cut_to_drum_rack(
@@ -2850,6 +3010,9 @@ def test_live_backend_clip_cut_to_drum_rack_rejects_pad_overflow() -> None:
         )
 
     assert exc_info.value.code == "INVALID_ARGUMENT"
+    assert "exceeds available drum pads" in exc_info.value.message
+    assert len(surface.song().tracks) == track_count
+    assert not any(isinstance(device, _DrumRack) for device in surface.song().tracks[0].devices)
 
 
 def test_live_backend_clip_cut_to_drum_rack_rejects_unsupported_audio_format() -> None:

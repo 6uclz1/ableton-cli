@@ -43,35 +43,62 @@ def test_bands_cover_20_hz_to_18_khz_without_gaps() -> None:
     assert "brilliance_6000_10000_hz" in [name for name, _low, _high in BANDS]
 
 
-def test_measure_band_levels_filters_each_band_over_the_whole_file(tmp_path: Path) -> None:
+def _astats_log(levels: list[str]) -> str:
+    # ffmpeg prints each named astats instance at uninit, in no guaranteed order.
+    return "".join(
+        f"[astats@b{index} @ 0x1] Overall\n[astats@b{index} @ 0x1] RMS level dB: {level}\n"
+        for index, level in reversed(list(enumerate(levels)))
+    )
+
+
+def test_measure_band_levels_measures_every_band_in_one_ffmpeg_pass(tmp_path: Path) -> None:
     from ableton_cli.audio_analysis.spectrum import BANDS, measure_band_levels
 
     commands: list[list[str]] = []
+    readings = [f"-{20 + index}.5" for index in range(len(BANDS))]
 
     def run(command: list[str]) -> subprocess.CompletedProcess[str]:
         commands.append(command)
-        stderr = "[Parsed_astats_6 @ 0x1] Overall\n[Parsed_astats_6 @ 0x1] RMS level dB: -21.5\n"
-        return subprocess.CompletedProcess(args=command, returncode=0, stdout="", stderr=stderr)
+        return subprocess.CompletedProcess(
+            args=command, returncode=0, stdout="", stderr=_astats_log(readings)
+        )
 
     audio_path = tmp_path / "mix.wav"
     levels = measure_band_levels(audio_path, channels=2, run=run)
 
-    assert levels == {name: -21.5 for name, _low, _high in BANDS}
-    assert len(commands) == len(BANDS)
-    for command, (_name, low, high) in zip(commands, BANDS, strict=True):
-        assert str(audio_path) in command
-        assert "-ss" not in command and "-t" not in command
-        graph = command[command.index("-af") + 1]
-        assert graph.startswith("pan=mono|c0=0.5*c0+0.5*c1,")
+    assert levels == {name: float(readings[i]) for i, (name, _low, _high) in enumerate(BANDS)}
+    [command] = commands
+    assert str(audio_path) in command
+    assert "-ss" not in command and "-t" not in command
+    graph = command[command.index("-filter_complex") + 1]
+    assert graph.startswith(f"[0:a]pan=mono|c0=0.5*c0+0.5*c1,asplit={len(BANDS)}")
+    for index, (_name, low, high) in enumerate(BANDS):
         assert graph.count(f"between(b*sr/(2*(nb-1)),{low:g},{high:g})") == 2
+        assert f"astats@b{index}=" in graph
+
+
+def test_measure_band_levels_measures_custom_bands(tmp_path: Path) -> None:
+    from ableton_cli.audio_analysis.spectrum import measure_band_levels
+
+    bands = (("low", 50.0, 100.0), ("high", 1000.0, 2000.0))
+
+    def run(command: list[str]) -> subprocess.CompletedProcess[str]:
+        return subprocess.CompletedProcess(
+            args=command, returncode=0, stdout="", stderr=_astats_log(["-30.0", "-40.0"])
+        )
+
+    levels = measure_band_levels(tmp_path / "mix.wav", channels=1, bands=bands, run=run)
+
+    assert levels == {"low": -30.0, "high": -40.0}
 
 
 def test_measure_band_levels_reads_silent_band_as_negative_infinity(tmp_path: Path) -> None:
-    from ableton_cli.audio_analysis.spectrum import measure_band_levels
+    from ableton_cli.audio_analysis.spectrum import BANDS, measure_band_levels
 
     def run(command: list[str]) -> subprocess.CompletedProcess[str]:
-        stderr = "[Parsed_astats_4 @ 0x1] RMS level dB: -inf\n"
-        return subprocess.CompletedProcess(args=command, returncode=0, stdout="", stderr=stderr)
+        return subprocess.CompletedProcess(
+            args=command, returncode=0, stdout="", stderr=_astats_log(["-inf"] * len(BANDS))
+        )
 
     levels = measure_band_levels(tmp_path / "mix.wav", channels=1, run=run)
 
@@ -79,10 +106,13 @@ def test_measure_band_levels_reads_silent_band_as_negative_infinity(tmp_path: Pa
 
 
 def test_measure_band_levels_fails_without_rms_reading(tmp_path: Path) -> None:
-    from ableton_cli.audio_analysis.spectrum import measure_band_levels
+    from ableton_cli.audio_analysis.spectrum import BANDS, measure_band_levels
 
     def run(command: list[str]) -> subprocess.CompletedProcess[str]:
-        return subprocess.CompletedProcess(args=command, returncode=0, stdout="", stderr="")
+        log = _astats_log(["-20.0"] * len(BANDS)).replace(
+            "[astats@b0 @ 0x1] RMS level dB: -20.0\n", ""
+        )
+        return subprocess.CompletedProcess(args=command, returncode=0, stdout="", stderr=log)
 
     with pytest.raises(AppError) as exc_info:
         measure_band_levels(tmp_path / "mix.wav", channels=2, run=run)

@@ -60,7 +60,8 @@ uv run ableton-cli session diff --from ./snapshot-before.json --to ./snapshot-af
 uv run ableton-cli session watch --interval-ms 500 --scope all --count 5
 uv run ableton-cli session events --events tempo,is_playing --count 5
 uv run ableton-cli session events --idle-timeout-ms 5000
-uv run ableton-cli session capture --track-index 0 --slot 0 --bars 8 --set-routing --analyze
+uv run ableton-cli session capture --track-index 0 --slot 0 --bars 8 --start 32 --set-routing --analyze
+uv run ableton-cli session capture-tracks --track-index 0 --track-index 3 --start 304 --bars 8 --bypass-main-devices --analyze --focus Lead
 uv run ableton-cli session stop-all-clips
 ```
 
@@ -137,6 +138,7 @@ uv run ableton-cli audio beatgrid import --project ./proj/remix_project.json --d
 uv run ableton-cli audio analyze --project ./proj/remix_project.json --detect bpm,key --manual-bpm 172 --manual-key "A minor"
 uv run ableton-cli audio loudness analyze --path ./renders/remix.wav --engine ffmpeg --report-out ./proj/reports/loudness.json
 uv run ableton-cli audio spectrum analyze --path ./renders/remix.wav --profile anime-club --report-out ./proj/reports/spectrum.json
+uv run ableton-cli audio spectrum shares --stem Kick=./caps/kick.wav --stem Lead=./caps/lead.wav --resolution third-octave --focus Lead
 uv run ableton-cli audio reference compare --candidate ./renders/remix.wav --reference ./refs/reference.wav --metrics loudness,spectrum,stereo
 uv run ableton-cli remix set-target --project ./proj/remix_project.json --bpm 174 --key "F minor"
 uv run ableton-cli remix plan --project ./proj/remix_project.json --style anime-club
@@ -174,6 +176,17 @@ Mastering workflow is measurement-first:
 - Run `audio reference compare` when a reference track is registered.
 - Do not chase LUFS by increasing limiter pressure when true peak is close to ceiling.
 - Treat large spectrum deltas as mix/stem issues before using master EQ compensation.
+- To find which track owns a band, run `session capture-tracks` per section (it solos each
+  track into a temporary capture track and restores solos, the temporary track, and any
+  bypassed main devices even on failure), then read `shares.shares_pct` and
+  `shares.focus.margin_db`. A negative margin means another track is louder there.
+  Shares average the whole window, so a track that rests for part of it reads low; check
+  its level while it plays before raising it.
+- `session capture` and `session capture-tracks` need `--start` (in beats) at least one bar
+  in: playback starts first, the playhead moves one bar before `--start`, and launch
+  quantization begins the recording at `--start`. The result reports `recorded_start_beat`;
+  a recording that began elsewhere (launch quantization other than 1 Bar) fails with
+  `step: verify_recorded_start`.
 - Run `remix mastering apply --dry-run` before `--yes`.
 - Pick device/preset targets from `browser search`; do not assume fixed URI availability.
 - If a standard effect wrapper fails on locale/device-variant parameter names, switch to generic parameter list/set commands.

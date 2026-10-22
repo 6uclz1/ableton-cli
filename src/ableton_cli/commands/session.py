@@ -7,8 +7,9 @@ from typing import Annotated
 
 import typer
 
-from ..capture import capture_session
+from ..capture import ShareAnalysis, capture_session, capture_tracks
 from ..client.events import EventStream
+from ..errors import read_only_violation
 from ..runtime import execute_command, get_client, get_runtime
 from ..session_diff import compute_session_diff
 from ..watch import WATCH_SCOPES, run_watch_loop
@@ -154,8 +155,12 @@ def session_capture(
     ],
     bars: Annotated[float, typer.Option("--bars", help="Number of bars to capture")],
     start: Annotated[
-        float, typer.Option("--start", help="Transport start position in beats")
-    ] = 0.0,
+        float,
+        typer.Option(
+            "--start",
+            help="Beat where recording begins; needs one bar of pre-roll (>= one bar)",
+        ),
+    ],
     set_routing: Annotated[
         bool,
         typer.Option(
@@ -199,6 +204,76 @@ def session_capture(
             "set_routing": set_routing,
             "analyze": analyze,
             "qa_project": qa_project,
+        },
+        action=_run,
+    )
+
+
+@session_app.command("capture-tracks")
+def session_capture_tracks(
+    ctx: typer.Context,
+    start: Annotated[
+        float,
+        typer.Option(
+            "--start",
+            help="Beat where recording begins; needs one bar of pre-roll (>= one bar)",
+        ),
+    ],
+    track_indexes: Annotated[
+        list[int] | None,
+        typer.Option("--track-index", help="Track index (0-based) to solo and capture; repeatable"),
+    ] = None,
+    bars: Annotated[float, typer.Option("--bars", help="Number of bars to capture")] = 8.0,
+    bypass_main_devices: Annotated[
+        bool,
+        typer.Option(
+            "--bypass-main-devices",
+            help="Turn off active main-track devices while capturing, then restore them",
+        ),
+    ] = False,
+    analyze: Annotated[
+        bool, typer.Option("--analyze", help="Report each band's share per captured track")
+    ] = False,
+    resolution: Annotated[
+        str, typer.Option("--resolution", help="Band set for --analyze: bands or third-octave")
+    ] = "bands",
+    focus: Annotated[
+        str | None,
+        typer.Option("--focus", help="Track label to compare against the loudest other track"),
+    ] = None,
+) -> None:
+    tracks = track_indexes or []
+
+    def _run() -> dict[str, object]:
+        if get_runtime(ctx).read_only:
+            # Checked up front: the first client call is a read, and the capture writes.
+            raise read_only_violation("session capture-tracks")
+        if focus is not None and not analyze:
+            raise invalid_argument(
+                message="--focus requires --analyze", hint="Add --analyze, or drop --focus."
+            )
+        return capture_tracks(
+            get_client(ctx),
+            tracks=[require_track_index(track) for track in tracks],
+            bars=require_positive_float("bars", bars, hint="Use a positive --bars value."),
+            start=require_non_negative_float(
+                "start", start, hint="Use a non-negative --start value in beats."
+            ),
+            bypass_main_devices=bypass_main_devices,
+            analysis=ShareAnalysis(resolution=resolution, focus=focus) if analyze else None,
+        )
+
+    execute_command(
+        ctx,
+        command="session capture-tracks",
+        args={
+            "track_indexes": tracks,
+            "bars": bars,
+            "start": start,
+            "bypass_main_devices": bypass_main_devices,
+            "analyze": analyze,
+            "resolution": resolution,
+            "focus": focus,
         },
         action=_run,
     )

@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 import json
+import re
 
 
 class _FakeCaptureClient:
+    stopped = False
+
     def get_track_info(self, track_ref):  # noqa: ANN001, ANN201
         return {"is_audio_track": True, "is_midi_track": False}
 
@@ -29,12 +32,18 @@ class _FakeCaptureClient:
         return {}
 
     def song_info(self):  # noqa: ANN201
-        return {"tempo": 120.0}
+        # Stopped two bars after start (beat 8) once the transport stops.
+        return {
+            "tempo": 120.0,
+            "current_time": 16.0 if self.stopped else 0.0,
+            "signature": {"numerator": 4, "denominator": 4},
+        }
 
     def stop_clip(self, track, clip):  # noqa: ANN001, ANN201
         return {}
 
     def transport_stop(self):  # noqa: ANN201
+        self.stopped = True
         return {}
 
     def clip_file_path_get(self, track, clip):  # noqa: ANN001, ANN201
@@ -46,7 +55,36 @@ def test_session_capture_calls_through_and_returns_file_path(runner, cli_app, mo
 
     monkeypatch.setattr(session, "get_client", lambda ctx: _FakeCaptureClient())
     monkeypatch.setattr("ableton_cli.capture.time.sleep", lambda _seconds: None)
+    # 8 beats at 120 BPM: the recording began at beat 8.
+    monkeypatch.setattr("ableton_cli.capture.wav_duration_sec", lambda _path: 4.0)
 
+    result = runner.invoke(
+        cli_app,
+        [
+            "--output",
+            "json",
+            "session",
+            "capture",
+            "--track-index",
+            "0",
+            "--slot",
+            "0",
+            "--bars",
+            "4",
+            "--start",
+            "8",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.stdout)
+    assert payload["ok"] is True
+    assert payload["result"]["file_path"] == "/tmp/capture/Track 1.wav"
+    assert payload["result"]["wait_seconds"] == 8.0
+    assert payload["result"]["recorded_start_beat"] == 8.0
+
+
+def test_session_capture_requires_start(runner, cli_app) -> None:
     result = runner.invoke(
         cli_app,
         [
@@ -63,11 +101,9 @@ def test_session_capture_calls_through_and_returns_file_path(runner, cli_app, mo
         ],
     )
 
-    assert result.exit_code == 0, result.output
-    payload = json.loads(result.stdout)
-    assert payload["ok"] is True
-    assert payload["result"]["file_path"] == "/tmp/capture/Track 1.wav"
-    assert payload["result"]["wait_seconds"] == 8.0
+    assert result.exit_code == 2
+    # CI renders the usage error with ANSI colors that split the option name.
+    assert "--start" in re.sub(r"\x1b\[[0-9;]*m", "", result.output)
 
 
 def test_session_capture_rejects_non_positive_bars(runner, cli_app, monkeypatch) -> None:
@@ -88,6 +124,8 @@ def test_session_capture_rejects_non_positive_bars(runner, cli_app, monkeypatch)
             "0",
             "--bars",
             "0",
+            "--start",
+            "8",
         ],
     )
 

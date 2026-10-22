@@ -43,8 +43,8 @@ def fake_ffmpeg(monkeypatch) -> None:
             short_term_lufs_max=round(peak_dbfs - 3.0, 1),
         )
 
-    def measure_bands(path: str | Path, *, channels: int) -> dict[str, float]:
-        return {name: -20.0 for name, _low, _high in BANDS}
+    def measure_bands(path: str | Path, *, channels: int, bands: tuple = BANDS) -> dict[str, float]:
+        return {name: -20.0 for name, _low, _high in bands}
 
     for module in ("loudness", "spectrum"):
         monkeypatch.setattr(

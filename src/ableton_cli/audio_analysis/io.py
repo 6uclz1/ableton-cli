@@ -144,13 +144,3 @@ def amplitude_dbfs(value: float) -> float:
     if value <= 0:
         return float("-inf")
     return 20.0 * math.log10(value)
-
-
-def interleaved_mono(data: AudioData, *, limit: int | None = None) -> tuple[float, ...]:
-    if not data.samples:
-        return ()
-    frame_count = len(data.samples[0]) if limit is None else min(len(data.samples[0]), limit)
-    mono: list[float] = []
-    for index in range(frame_count):
-        mono.append(sum(channel[index] for channel in data.samples) / data.channels)
-    return tuple(mono)

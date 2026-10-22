@@ -8,12 +8,10 @@ fails explicitly when a summary value is missing.
 from __future__ import annotations
 
 import re
-import subprocess
-from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
-from ..errors import AppError, ErrorCode, ExitCode
+from .ffmpeg import Runner, ffmpeg_output_error, run_ffmpeg
 
 FFMPEG_FILTER = "ebur128=peak=true:framelog=info"
 
@@ -24,9 +22,7 @@ _SUMMARY_PATTERNS = {
     "True peak": re.compile(rf"^\s+Peak:\s+{_NUMBER} dBFS\s*$", re.MULTILINE),
 }
 _FRAME_PATTERN = re.compile(rf"\bM:\s*{_NUMBER}\s+S:\s*{_NUMBER}")
-_STDERR_TAIL_LINES = 5
-
-Runner = Callable[[list[str]], subprocess.CompletedProcess[str]]
+_HINT = "Check that ffmpeg provides the ebur128 filter ('ffmpeg -filters')."
 
 
 @dataclass(frozen=True, slots=True)
@@ -52,14 +48,7 @@ def measure_ebur128(path: str | Path, *, run: Runner | None = None) -> Ebur128Me
         "null",
         "-",
     ]
-    completed = (run or _run_ffmpeg)(command)
-    if completed.returncode != 0:
-        raise _measurement_error(
-            message=f"ffmpeg ebur128 measurement failed with exit code {completed.returncode}",
-            returncode=completed.returncode,
-            stderr_tail=completed.stderr.strip().splitlines()[-_STDERR_TAIL_LINES:],
-        )
-    return parse_ebur128_log(completed.stderr)
+    return parse_ebur128_log(run_ffmpeg(command, run=run, hint=_HINT))
 
 
 def parse_ebur128_log(log: str) -> Ebur128Measurement:
@@ -69,12 +58,16 @@ def parse_ebur128_log(log: str) -> Ebur128Measurement:
     for label, pattern in _SUMMARY_PATTERNS.items():
         match = pattern.search(summary)
         if match is None:
-            raise _measurement_error(message=f"ffmpeg ebur128 summary has no {label} value")
+            raise ffmpeg_output_error(
+                hint=_HINT, message=f"ffmpeg ebur128 summary has no {label} value"
+            )
         values[label] = float(match.group(1))
 
     frames = [(float(m), float(s)) for m, s in _FRAME_PATTERN.findall(log[:summary_start])]
     if not frames:
-        raise _measurement_error(message="ffmpeg ebur128 log has no per-frame loudness values")
+        raise ffmpeg_output_error(
+            hint=_HINT, message="ffmpeg ebur128 log has no per-frame loudness values"
+        )
 
     return Ebur128Measurement(
         integrated_lufs=values["Integrated loudness"],
@@ -82,18 +75,4 @@ def parse_ebur128_log(log: str) -> Ebur128Measurement:
         true_peak_dbtp=values["True peak"],
         momentary_lufs_max=max(momentary for momentary, _ in frames),
         short_term_lufs_max=max(short_term for _, short_term in frames),
-    )
-
-
-def _run_ffmpeg(command: list[str]) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(command, capture_output=True, text=True, check=False)
-
-
-def _measurement_error(*, message: str, **details: object) -> AppError:
-    return AppError(
-        error_code=ErrorCode.INTERNAL_ERROR,
-        message=message,
-        hint="Check that ffmpeg provides the ebur128 filter ('ffmpeg -filters').",
-        exit_code=ExitCode.INTERNAL_ERROR,
-        details=dict(details),
     )

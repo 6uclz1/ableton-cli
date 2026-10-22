@@ -28,7 +28,7 @@ def test_remix_mastering_cli_flow_outputs_json(
     runner,
     cli_app,
     tmp_path: Path,
-    fake_ffmpeg_loudness,
+    fake_ffmpeg,
 ) -> None:
     source = tmp_path / "source.wav"
     render = tmp_path / "render.wav"

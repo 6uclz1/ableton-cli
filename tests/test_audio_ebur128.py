@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import math
-import shutil
 import struct
 import subprocess
 import wave
@@ -118,14 +117,7 @@ def _sine(*, freq: float, amp: float, seconds: float, phase: float = 0.0) -> lis
     ]
 
 
-requires_ffmpeg = pytest.mark.skipif(
-    shutil.which("ffmpeg") is None or shutil.which("ffprobe") is None,
-    reason="ffmpeg and ffprobe are required for EBU R128 measurement",
-)
-
-
-@requires_ffmpeg
-def test_analyze_loudness_reports_inter_sample_true_peak(tmp_path: Path) -> None:
+def test_analyze_loudness_reports_inter_sample_true_peak(tmp_path: Path, real_ffmpeg) -> None:
     from ableton_cli.audio_analysis import analyze_loudness
 
     # A quarter-sample-rate sine sampled 45 degrees off its crest never hits its peak on
@@ -141,8 +133,9 @@ def test_analyze_loudness_reports_inter_sample_true_peak(tmp_path: Path) -> None
     assert math.isclose(result["true_peak_dbtp"], -6.02, abs_tol=0.75)
 
 
-@requires_ffmpeg
-def test_analyze_loudness_gates_silence_out_of_integrated_loudness(tmp_path: Path) -> None:
+def test_analyze_loudness_gates_silence_out_of_integrated_loudness(
+    tmp_path: Path, real_ffmpeg
+) -> None:
     from ableton_cli.audio_analysis import analyze_loudness
 
     tone = _sine(freq=997.0, amp=0.5, seconds=4.0)

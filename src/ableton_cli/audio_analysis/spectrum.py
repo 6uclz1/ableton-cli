@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import math
+import re
 from pathlib import Path
 from typing import Any
 
-from .io import amplitude_dbfs, interleaved_mono, read_wav, rms_dbfs, write_report
+from .ffmpeg import Runner, ffmpeg_output_error, run_ffmpeg
+from .io import read_wav, require_ffmpeg_engine, rms_dbfs, write_report
 
 BANDS: tuple[tuple[str, float, float], ...] = (
     ("sub_20_60_hz", 20.0, 60.0),
@@ -12,49 +14,65 @@ BANDS: tuple[tuple[str, float, float], ...] = (
     ("low_mid_120_400_hz", 120.0, 400.0),
     ("mid_400_2000_hz", 400.0, 2000.0),
     ("presence_2000_6000_hz", 2000.0, 6000.0),
+    ("brilliance_6000_10000_hz", 6000.0, 10000.0),
     ("air_10000_18000_hz", 10000.0, 18000.0),
 )
 
+# Bands are cut brick-wall in the FFT domain: biquad slopes sag inside one-octave bands.
+# 8192 points at 48 kHz gives 5.9 Hz bins, fine enough for the 20-60 Hz band.
+_FFT_WINDOW = 8192
+_RMS_PATTERN = re.compile(r"RMS level dB:\s*(-?\d+(?:\.\d+)?|-inf)")
+_HINT = "Check that ffmpeg provides the highpass, lowpass, and astats filters."
+
+# Each band's expected share of the file's full-band (20 Hz-18 kHz) level, in dB. The
+# anime-club-balanced shape integrates a spectrum whose energy per octave falls 1.5 dB per
+# octave around 1 kHz (the -4.5 dB/octave slope of a per-Hz analyzer); the other profiles
+# keep their character as offsets from it. Relative values judge tonal balance, not loudness.
 PROFILE_BASELINES: dict[str, dict[str, float]] = {
     "anime-club": {
-        "sub_20_60_hz": -26.0,
-        "bass_60_120_hz": -18.0,
-        "low_mid_120_400_hz": -20.0,
-        "mid_400_2000_hz": -19.0,
-        "presence_2000_6000_hz": -18.0,
-        "air_10000_18000_hz": -24.0,
+        "sub_20_60_hz": -2.6,
+        "bass_60_120_hz": -6.6,
+        "low_mid_120_400_hz": -6.2,
+        "mid_400_2000_hz": -8.9,
+        "presence_2000_6000_hz": -13.6,
+        "brilliance_6000_10000_hz": -19.2,
+        "air_10000_18000_hz": -20.3,
     },
     "anime-club-balanced": {
-        "sub_20_60_hz": -27.0,
-        "bass_60_120_hz": -19.0,
-        "low_mid_120_400_hz": -21.0,
-        "mid_400_2000_hz": -19.0,
-        "presence_2000_6000_hz": -18.0,
-        "air_10000_18000_hz": -23.0,
+        "sub_20_60_hz": -3.6,
+        "bass_60_120_hz": -7.6,
+        "low_mid_120_400_hz": -7.2,
+        "mid_400_2000_hz": -8.9,
+        "presence_2000_6000_hz": -13.6,
+        "brilliance_6000_10000_hz": -18.7,
+        "air_10000_18000_hz": -19.3,
     },
     "anime-vocal-forward": {
-        "sub_20_60_hz": -28.0,
-        "bass_60_120_hz": -20.0,
-        "low_mid_120_400_hz": -21.0,
-        "mid_400_2000_hz": -18.0,
-        "presence_2000_6000_hz": -16.5,
-        "air_10000_18000_hz": -22.0,
+        "sub_20_60_hz": -4.6,
+        "bass_60_120_hz": -8.6,
+        "low_mid_120_400_hz": -7.2,
+        "mid_400_2000_hz": -7.9,
+        "presence_2000_6000_hz": -12.1,
+        "brilliance_6000_10000_hz": -17.4,
+        "air_10000_18000_hz": -18.3,
     },
     "club-preview": {
-        "sub_20_60_hz": -25.0,
-        "bass_60_120_hz": -17.5,
-        "low_mid_120_400_hz": -21.0,
-        "mid_400_2000_hz": -20.0,
-        "presence_2000_6000_hz": -19.0,
-        "air_10000_18000_hz": -24.0,
+        "sub_20_60_hz": -1.6,
+        "bass_60_120_hz": -6.1,
+        "low_mid_120_400_hz": -7.2,
+        "mid_400_2000_hz": -9.9,
+        "presence_2000_6000_hz": -14.6,
+        "brilliance_6000_10000_hz": -19.7,
+        "air_10000_18000_hz": -20.3,
     },
     "broadcast-r128": {
-        "sub_20_60_hz": -31.0,
-        "bass_60_120_hz": -24.0,
-        "low_mid_120_400_hz": -23.0,
-        "mid_400_2000_hz": -22.0,
-        "presence_2000_6000_hz": -22.0,
-        "air_10000_18000_hz": -28.0,
+        "sub_20_60_hz": -3.8,
+        "bass_60_120_hz": -8.8,
+        "low_mid_120_400_hz": -5.4,
+        "mid_400_2000_hz": -8.1,
+        "presence_2000_6000_hz": -13.8,
+        "brilliance_6000_10000_hz": -19.4,
+        "air_10000_18000_hz": -20.5,
     },
 }
 
@@ -65,11 +83,11 @@ def analyze_spectrum(
     profile: str = "anime-club",
     report_out: str | Path | None = None,
 ) -> dict[str, Any]:
+    require_ffmpeg_engine("ffmpeg")
     data = read_wav(path)
-    mono = interleaved_mono(data, limit=min(data.sample_rate * 4, 131072))
     bands = {
-        band_name: round(_band_level(mono, data.sample_rate, low, high), 3)
-        for band_name, low, high in BANDS
+        name: round(level, 3)
+        for name, level in measure_band_levels(data.path, channels=data.channels).items()
     }
     stereo = _stereo_metrics(data)
     result = {
@@ -83,31 +101,46 @@ def analyze_spectrum(
     return result
 
 
-def _band_level(samples: tuple[float, ...], sample_rate: int, low: float, high: float) -> float:
-    if not samples:
-        return float("-inf")
-    centers = _band_centers(low, high)
-    powers = [_goertzel_power(samples, sample_rate, freq) for freq in centers]
-    mean_power = sum(powers) / len(powers)
-    return amplitude_dbfs(math.sqrt(max(mean_power, 0.0)) * 2.0)
-
-
-def _band_centers(low: float, high: float) -> tuple[float, ...]:
-    ratio = (high / low) ** 0.25
-    return tuple(low * (ratio**index) for index in range(1, 4))
-
-
-def _goertzel_power(samples: tuple[float, ...], sample_rate: int, freq: float) -> float:
-    normalized = freq / sample_rate
-    coeff = 2.0 * math.cos(2.0 * math.pi * normalized)
-    prev = 0.0
-    prev2 = 0.0
-    for sample in samples:
-        value = sample + coeff * prev - prev2
-        prev2 = prev
-        prev = value
-    power = prev2 * prev2 + prev * prev - coeff * prev * prev2
-    return power / (len(samples) * len(samples))
+def measure_band_levels(
+    path: str | Path,
+    *,
+    channels: int,
+    run: Runner | None = None,
+) -> dict[str, float]:
+    """Return each band's RMS level (dBFS) of the mono downmix over the whole file."""
+    downmix = "+".join(f"{1 / channels:g}*c{index}" for index in range(channels))
+    levels: dict[str, float] = {}
+    for name, low, high in BANDS:
+        in_band = f"between(b*sr/(2*(nb-1)),{low:g},{high:g})"
+        band_filter = (
+            f"afftfilt=real='re*{in_band}':imag='im*{in_band}':win_size={_FFT_WINDOW}:overlap=0.75"
+        )
+        graph = (
+            f"pan=mono|c0={downmix},{band_filter},"
+            "astats=measure_perchannel=none:measure_overall=RMS_level"
+        )
+        command = [
+            "ffmpeg",
+            "-nostdin",
+            "-nostats",
+            "-hide_banner",
+            "-i",
+            str(path),
+            "-af",
+            graph,
+            "-f",
+            "null",
+            "-",
+        ]
+        match = _RMS_PATTERN.search(run_ffmpeg(command, run=run, hint=_HINT))
+        if match is None:
+            raise ffmpeg_output_error(
+                message=f"ffmpeg astats output has no RMS level for {name}",
+                hint=_HINT,
+                band=name,
+            )
+        levels[name] = float(match.group(1))
+    return levels
 
 
 def _stereo_metrics(data: Any) -> dict[str, Any]:
@@ -150,12 +183,17 @@ def _profile_warnings(
 ) -> list[dict[str, str]]:
     baseline = PROFILE_BASELINES.get(profile, PROFILE_BASELINES["anime-club"])
     warnings: list[dict[str, str]] = []
-    for key, value in bands.items():
-        delta = value - baseline.get(key, value)
-        if delta > 6.0:
-            warnings.append({"code": f"{key}_hot", "message": f"{key} is high for {profile}"})
-        elif delta < -8.0:
-            warnings.append({"code": f"{key}_low", "message": f"{key} is low for {profile}"})
+    total_power = sum(10 ** (value / 10.0) for value in bands.values())
+    if total_power <= 0:
+        warnings.append({"code": "silent", "message": "No signal in any band; balance not judged"})
+    else:
+        full_band_db = 10.0 * math.log10(total_power)
+        for key, value in bands.items():
+            delta = (value - full_band_db) - baseline[key]
+            if delta > 6.0:
+                warnings.append({"code": f"{key}_hot", "message": f"{key} is high for {profile}"})
+            elif delta < -8.0:
+                warnings.append({"code": f"{key}_low", "message": f"{key} is low for {profile}"})
     if stereo["mono_low_end_risk"]:
         warnings.append(
             {

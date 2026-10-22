@@ -21,6 +21,13 @@ uv run ableton-cli --output json audio reference compare --candidate ./renders/r
 `audio loudness analyze` reports integrated LUFS, true peak, sample peak, RMS, crest
 factor, clipping count, and DC offset.
 
+`integrated_lufs`, `lra_lu`, `true_peak_dbtp`, `momentary_lufs_max`, and
+`short_term_lufs_max` come from ffmpeg's `ebur128` filter (ITU-R BS.1770 K-weighting and
+gating, 4x-oversampled true peak). `sample_peak_dbfs`, `rms_dbfs`, `crest_db`,
+`clipping_sample_count`, and `dc_offset` are computed from the PCM samples. True peak can
+sit several dB above sample peak, so check `true_peak_dbtp` against the ceiling. If ffmpeg
+fails or its output has no EBU R128 summary, the command fails with `INTERNAL_ERROR`.
+
 Spectrum profiles are diagnostic presets, not platform specifications. `broadcast-r128`
 uses the EBU R128 programme loudness target of -23.0 LUFS and is separate from music
 demo presets such as `anime-club-demo`.

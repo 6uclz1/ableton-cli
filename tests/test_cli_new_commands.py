@@ -2994,9 +2994,9 @@ def test_wait_ready_times_out_when_ping_never_recovers(runner, cli_app, monkeypa
 
 
 def test_synth_foundation_commands_output_json_envelope(runner, cli_app, monkeypatch) -> None:
-    from ableton_cli.commands import synth
+    from ableton_cli.commands import _device_family
 
-    monkeypatch.setattr(synth, "get_client", lambda ctx: _ClientStub())
+    monkeypatch.setattr(_device_family, "get_client", lambda ctx: _ClientStub())
 
     found = runner.invoke(
         cli_app,
@@ -3054,9 +3054,9 @@ def test_synth_foundation_commands_output_json_envelope(runner, cli_app, monkeyp
 
 
 def test_synth_standard_wrapper_commands_output_json_envelope(runner, cli_app, monkeypatch) -> None:
-    from ableton_cli.commands import synth
+    from ableton_cli.commands import _device_family
 
-    monkeypatch.setattr(synth, "get_client", lambda ctx: _ClientStub())
+    monkeypatch.setattr(_device_family, "get_client", lambda ctx: _ClientStub())
 
     keys = runner.invoke(
         cli_app,
@@ -3108,9 +3108,9 @@ def test_synth_standard_wrapper_commands_output_json_envelope(runner, cli_app, m
 
 
 def test_effect_foundation_commands_output_json_envelope(runner, cli_app, monkeypatch) -> None:
-    from ableton_cli.commands import effect
+    from ableton_cli.commands import _device_family
 
-    monkeypatch.setattr(effect, "get_client", lambda ctx: _ClientStub())
+    monkeypatch.setattr(_device_family, "get_client", lambda ctx: _ClientStub())
 
     found = runner.invoke(
         cli_app,
@@ -3170,9 +3170,9 @@ def test_effect_foundation_commands_output_json_envelope(runner, cli_app, monkey
 def test_effect_standard_wrapper_commands_output_json_envelope(
     runner, cli_app, monkeypatch
 ) -> None:
-    from ableton_cli.commands import effect
+    from ableton_cli.commands import _device_family
 
-    monkeypatch.setattr(effect, "get_client", lambda ctx: _ClientStub())
+    monkeypatch.setattr(_device_family, "get_client", lambda ctx: _ClientStub())
 
     keys = runner.invoke(
         cli_app,

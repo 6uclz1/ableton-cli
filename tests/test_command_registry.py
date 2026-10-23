@@ -130,6 +130,20 @@ def test_only_read_commands_are_reachable_under_read_only() -> None:
     assert read_only.isdisjoint(writable_remote_commands)
 
 
+def test_browser_inspection_commands_are_reachable_under_read_only() -> None:
+    from ableton_cli.command_registry import descriptor_for
+    from ableton_cli.command_specs import read_only_remote_command_names
+
+    read_only = read_only_remote_command_names()
+
+    for command_name, remote_command in (
+        ("browser search", "search_browser_items"),
+        ("browser tree", "get_browser_tree"),
+    ):
+        assert descriptor_for(command_name).side_effect.kind == "read"
+        assert remote_command in read_only
+
+
 def test_generated_command_families_are_declared_individually() -> None:
     """The synth/effect/master-effect families get one row each, not a pattern.
 

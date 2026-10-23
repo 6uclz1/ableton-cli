@@ -9,6 +9,7 @@ from .baseline import ViolationSignature, compare_against_baseline, violation_si
 from .config import load_config
 from .dependencies import analyze_dependencies
 from .duplication import detect_duplicate_groups
+from .globs import expand_globstar
 from .metrics import analyze_python_files
 from .models import Config, RunResult, Violation
 from .reporting import build_report, write_report
@@ -125,28 +126,9 @@ def _is_excluded(path: Path, *, root_dir: Path, exclude_patterns: list[str]) -> 
         relative = absolute_path.as_posix()
 
     for pattern in exclude_patterns:
-        for variant in _expand_globstar(pattern):
+        for variant in expand_globstar(pattern):
             if fnmatch(relative, variant):
                 return True
             if fnmatch(absolute_path.as_posix(), variant):
                 return True
     return False
-
-
-def _expand_globstar(pattern: str) -> set[str]:
-    variants = {pattern}
-    queue = [pattern]
-    while queue:
-        current = queue.pop()
-        next_variants = {
-            current.replace("/**/", "/", 1),
-            current.replace("**/", "", 1),
-            current.replace("/**", "", 1),
-        }
-        for candidate in next_variants:
-            if candidate == current:
-                continue
-            if "**" in current and candidate not in variants:
-                variants.add(candidate)
-                queue.append(candidate)
-    return variants

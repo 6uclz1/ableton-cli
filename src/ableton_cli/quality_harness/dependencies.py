@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from fnmatch import fnmatch
 from pathlib import Path, PurePosixPath
 
+from .globs import expand_globstar
 from .models import (
     DependencyAnalysis,
     DependencyCycle,
@@ -318,31 +319,12 @@ def _map_path_to_layer(
     relative_path_obj = PurePosixPath(relative_path)
     for index, layer in enumerate(layers):
         for pattern in layer.include:
-            for variant in _expand_globstar(pattern):
+            for variant in expand_globstar(pattern):
                 if relative_path_obj.match(variant) or fnmatch(relative_path, variant):
                     return index, layer.name
                 if fnmatch(absolute_path, variant):
                     return index, layer.name
     return None
-
-
-def _expand_globstar(pattern: str) -> set[str]:
-    variants = {pattern}
-    queue = [pattern]
-    while queue:
-        current = queue.pop()
-        next_variants = {
-            current.replace("/**/", "/", 1),
-            current.replace("**/", "", 1),
-            current.replace("/**", "", 1),
-        }
-        for candidate in next_variants:
-            if candidate == current:
-                continue
-            if "**" in current and candidate not in variants:
-                variants.add(candidate)
-                queue.append(candidate)
-    return variants
 
 
 def _to_relative_path(*, path: Path, root_dir: Path) -> str:

@@ -17,13 +17,8 @@ class _AbletonClientTracksClipsMixin:
         end_time: float | None,
         pitch: int | None,
     ) -> dict[str, Any]:
-        args = self._build_clip_note_args(
-            track=track,
-            clip=clip,
-            notes=None,
-            start_time=start_time,
-            end_time=end_time,
-            pitch=pitch,
+        args = self._note_args(
+            {"track": track, "clip": clip}, start_time=start_time, end_time=end_time, pitch=pitch
         )
         args.update(extra_args)
         return self._call(command_name, args)
@@ -34,14 +29,7 @@ class _AbletonClientTracksClipsMixin:
         clip: int,
         notes: list[dict[str, Any]],
     ) -> dict[str, Any]:
-        args = self._build_clip_note_args(
-            track=track,
-            clip=clip,
-            notes=notes,
-            start_time=None,
-            end_time=None,
-            pitch=None,
-        )
+        args = self._note_args({"track": track, "clip": clip}, notes=notes)
         return self._call("add_notes_to_clip", args)
 
     def update_clip_notes(
@@ -50,14 +38,7 @@ class _AbletonClientTracksClipsMixin:
         clip: int,
         notes: list[dict[str, Any]],
     ) -> dict[str, Any]:
-        args = self._build_clip_note_args(
-            track=track,
-            clip=clip,
-            notes=notes,
-            start_time=None,
-            end_time=None,
-            pitch=None,
-        )
+        args = self._note_args({"track": track, "clip": clip}, notes=notes)
         return self._call("update_clip_notes", args)
 
     def get_clip_notes(
@@ -68,13 +49,8 @@ class _AbletonClientTracksClipsMixin:
         end_time: float | None,
         pitch: int | None,
     ) -> dict[str, Any]:
-        args = self._build_clip_note_args(
-            track=track,
-            clip=clip,
-            notes=None,
-            start_time=start_time,
-            end_time=end_time,
-            pitch=pitch,
+        args = self._note_args(
+            {"track": track, "clip": clip}, start_time=start_time, end_time=end_time, pitch=pitch
         )
         return self._call("get_clip_notes", args)
 
@@ -86,13 +62,8 @@ class _AbletonClientTracksClipsMixin:
         end_time: float | None,
         pitch: int | None,
     ) -> dict[str, Any]:
-        args = self._build_clip_note_args(
-            track=track,
-            clip=clip,
-            notes=None,
-            start_time=start_time,
-            end_time=end_time,
-            pitch=pitch,
+        args = self._note_args(
+            {"track": track, "clip": clip}, start_time=start_time, end_time=end_time, pitch=pitch
         )
         return self._call("clear_clip_notes", args)
 
@@ -105,9 +76,8 @@ class _AbletonClientTracksClipsMixin:
         end_time: float | None,
         pitch: int | None,
     ) -> dict[str, Any]:
-        args = self._build_clip_note_args(
-            track=track,
-            clip=clip,
+        args = self._note_args(
+            {"track": track, "clip": clip},
             notes=notes,
             start_time=start_time,
             end_time=end_time,

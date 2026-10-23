@@ -487,8 +487,47 @@ class _AbletonClientGeneratedMixin:
     def set_clip_name(self, track: int, clip: int, name: str) -> dict[str, Any]:
         return self._call("set_clip_name", {"track": track, "clip": clip, "name": name})
 
+    def set_device_parameter(
+        self, track_ref: RefPayload, device_ref: RefPayload, parameter_ref: RefPayload, value: float
+    ) -> dict[str, Any]:
+        return self._call(
+            "set_device_parameter",
+            {
+                "track_ref": track_ref,
+                "device_ref": device_ref,
+                "parameter_ref": parameter_ref,
+                "value": value,
+            },
+        )
+
+    def set_effect_parameter_safe(
+        self, track_ref: RefPayload, device_ref: RefPayload, parameter_ref: RefPayload, value: float
+    ) -> dict[str, Any]:
+        return self._call(
+            "set_effect_parameter_safe",
+            {
+                "track_ref": track_ref,
+                "device_ref": device_ref,
+                "parameter_ref": parameter_ref,
+                "value": value,
+            },
+        )
+
     def set_scene_name(self, scene: int, name: str) -> dict[str, Any]:
         return self._call("set_scene_name", {"scene": scene, "name": name})
+
+    def set_synth_parameter_safe(
+        self, track_ref: RefPayload, device_ref: RefPayload, parameter_ref: RefPayload, value: float
+    ) -> dict[str, Any]:
+        return self._call(
+            "set_synth_parameter_safe",
+            {
+                "track_ref": track_ref,
+                "device_ref": device_ref,
+                "parameter_ref": parameter_ref,
+                "value": value,
+            },
+        )
 
     def set_tempo(self, tempo: float) -> dict[str, object]:
         return self._call("set_tempo", {"tempo": tempo})

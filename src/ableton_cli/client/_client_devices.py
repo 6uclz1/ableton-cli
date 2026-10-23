@@ -6,21 +6,6 @@ from ..refs import RefPayload
 
 
 class _AbletonClientDevicesMixin:
-    def set_device_parameter(
-        self,
-        track_ref: RefPayload,
-        device_ref: RefPayload,
-        parameter_ref: RefPayload,
-        value: float,
-    ) -> dict[str, Any]:
-        return self._call_parameter_command(
-            "set_device_parameter",
-            track_ref=track_ref,
-            device_ref=device_ref,
-            parameter_ref=parameter_ref,
-            value=value,
-        )
-
     def find_synth_devices(
         self,
         track: int | None = None,
@@ -30,21 +15,6 @@ class _AbletonClientDevicesMixin:
         self._add_if_not_none(args, "track", track)
         self._add_if_not_none(args, "synth_type", synth_type)
         return self._call("find_synth_devices", args)
-
-    def set_synth_parameter_safe(
-        self,
-        track_ref: RefPayload,
-        device_ref: RefPayload,
-        parameter_ref: RefPayload,
-        value: float,
-    ) -> dict[str, Any]:
-        return self._call_parameter_command(
-            "set_synth_parameter_safe",
-            track_ref=track_ref,
-            device_ref=device_ref,
-            parameter_ref=parameter_ref,
-            value=value,
-        )
 
     def set_standard_synth_parameter_safe(
         self,
@@ -78,21 +48,6 @@ class _AbletonClientDevicesMixin:
         self._add_if_not_none(args, "track", track)
         self._add_if_not_none(args, "effect_type", effect_type)
         return self._call("find_effect_devices", args)
-
-    def set_effect_parameter_safe(
-        self,
-        track_ref: RefPayload,
-        device_ref: RefPayload,
-        parameter_ref: RefPayload,
-        value: float,
-    ) -> dict[str, Any]:
-        return self._call_parameter_command(
-            "set_effect_parameter_safe",
-            track_ref=track_ref,
-            device_ref=device_ref,
-            parameter_ref=parameter_ref,
-            value=value,
-        )
 
     def set_standard_effect_parameter_safe(
         self,

@@ -4,6 +4,7 @@ from typing import Annotated
 
 import typer
 
+from .._params import ClipArgument, TrackArgument
 from ._shared import (
     execute_clip_command,
     execute_track_clip_command,
@@ -19,8 +20,8 @@ def register_active_commands(active_app: typer.Typer) -> None:
 
 def clip_active_get(
     ctx: typer.Context,
-    track: Annotated[int, typer.Argument(help="Track index (0-based)")],
-    clip: Annotated[int, typer.Argument(help="Clip slot index (0-based)")],
+    track: TrackArgument,
+    clip: ClipArgument,
 ) -> None:
     execute_track_clip_command(
         ctx,
@@ -36,8 +37,8 @@ def clip_active_get(
 
 def clip_active_set(
     ctx: typer.Context,
-    track: Annotated[int, typer.Argument(help="Track index (0-based)")],
-    clip: Annotated[int, typer.Argument(help="Clip slot index (0-based)")],
+    track: TrackArgument,
+    clip: ClipArgument,
     value: Annotated[bool, typer.Argument(help="Active value: true|false")],
 ) -> None:
     def _run() -> dict[str, object]:

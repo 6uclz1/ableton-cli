@@ -11,6 +11,14 @@ from ._arrangement_shared import (
     require_track_index,
 )
 from ._arrangement_specs import ArrangementCommandSpec
+from ._params import (
+    EndTimeFilterOption,
+    NotesFileOption,
+    NotesJsonOption,
+    PitchFilterOption,
+    StartTimeFilterOption,
+    TrackArgument,
+)
 from ._validation import (
     invalid_argument,
     parse_notes_input,
@@ -94,16 +102,10 @@ def _register_add_command(
     @notes_app.command("add")
     def arrangement_clip_notes_add(
         ctx: typer.Context,
-        track: Annotated[int, typer.Argument(help="Track index (0-based)")],
+        track: TrackArgument,
         index: Annotated[int, typer.Argument(help="Arrangement clip index from list output")],
-        notes_json: Annotated[
-            str | None,
-            typer.Option("--notes-json", help="JSON array of note objects"),
-        ] = None,
-        notes_file: Annotated[
-            str | None,
-            typer.Option("--notes-file", help="Path to JSON file containing note array"),
-        ] = None,
+        notes_json: NotesJsonOption = None,
+        notes_file: NotesFileOption = None,
     ) -> None:
         def _method_kwargs() -> dict[str, object]:
             return {
@@ -120,28 +122,23 @@ def _register_add_command(
         )
 
 
-def _register_get_command(
+def _register_filter_command(
     notes_app: typer.Typer,
+    name: str,
     *,
+    spec: ArrangementCommandSpec,
     run_client_command_spec: RunClientCommandSpec,
 ) -> None:
-    @notes_app.command("get")
-    def arrangement_clip_notes_get(
+    """Register a notes command that takes only a clip and the note filters."""
+
+    @notes_app.command(name)
+    def _command(
         ctx: typer.Context,
-        track: Annotated[int, typer.Argument(help="Track index (0-based)")],
+        track: TrackArgument,
         index: Annotated[int, typer.Argument(help="Arrangement clip index from list output")],
-        start_time: Annotated[
-            float | None,
-            typer.Option("--start-time", help="Inclusive start time filter in beats"),
-        ] = None,
-        end_time: Annotated[
-            float | None,
-            typer.Option("--end-time", help="Exclusive end time filter in beats"),
-        ] = None,
-        pitch: Annotated[
-            int | None,
-            typer.Option("--pitch", help="Exact MIDI pitch filter"),
-        ] = None,
+        start_time: StartTimeFilterOption = None,
+        end_time: EndTimeFilterOption = None,
+        pitch: PitchFilterOption = None,
     ) -> None:
         def _method_kwargs() -> dict[str, object]:
             return _note_filter_method_kwargs(
@@ -154,53 +151,7 @@ def _register_get_command(
 
         run_client_command_spec(
             ctx,
-            spec=NOTES_GET_SPEC,
-            args=filters_payload(
-                track=track,
-                index=index,
-                start_time=start_time,
-                end_time=end_time,
-                pitch=pitch,
-            ),
-            method_kwargs=_method_kwargs,
-        )
-
-
-def _register_clear_command(
-    notes_app: typer.Typer,
-    *,
-    run_client_command_spec: RunClientCommandSpec,
-) -> None:
-    @notes_app.command("clear")
-    def arrangement_clip_notes_clear(
-        ctx: typer.Context,
-        track: Annotated[int, typer.Argument(help="Track index (0-based)")],
-        index: Annotated[int, typer.Argument(help="Arrangement clip index from list output")],
-        start_time: Annotated[
-            float | None,
-            typer.Option("--start-time", help="Inclusive start time filter in beats"),
-        ] = None,
-        end_time: Annotated[
-            float | None,
-            typer.Option("--end-time", help="Exclusive end time filter in beats"),
-        ] = None,
-        pitch: Annotated[
-            int | None,
-            typer.Option("--pitch", help="Exact MIDI pitch filter"),
-        ] = None,
-    ) -> None:
-        def _method_kwargs() -> dict[str, object]:
-            return _note_filter_method_kwargs(
-                track=track,
-                index=index,
-                start_time=start_time,
-                end_time=end_time,
-                pitch=pitch,
-            )
-
-        run_client_command_spec(
-            ctx,
-            spec=NOTES_CLEAR_SPEC,
+            spec=spec,
             args=filters_payload(
                 track=track,
                 index=index,
@@ -220,28 +171,13 @@ def _register_replace_command(
     @notes_app.command("replace")
     def arrangement_clip_notes_replace(
         ctx: typer.Context,
-        track: Annotated[int, typer.Argument(help="Track index (0-based)")],
+        track: TrackArgument,
         index: Annotated[int, typer.Argument(help="Arrangement clip index from list output")],
-        notes_json: Annotated[
-            str | None,
-            typer.Option("--notes-json", help="JSON array of note objects"),
-        ] = None,
-        notes_file: Annotated[
-            str | None,
-            typer.Option("--notes-file", help="Path to JSON file containing note array"),
-        ] = None,
-        start_time: Annotated[
-            float | None,
-            typer.Option("--start-time", help="Inclusive start time filter in beats"),
-        ] = None,
-        end_time: Annotated[
-            float | None,
-            typer.Option("--end-time", help="Exclusive end time filter in beats"),
-        ] = None,
-        pitch: Annotated[
-            int | None,
-            typer.Option("--pitch", help="Exact MIDI pitch filter"),
-        ] = None,
+        notes_json: NotesJsonOption = None,
+        notes_file: NotesFileOption = None,
+        start_time: StartTimeFilterOption = None,
+        end_time: EndTimeFilterOption = None,
+        pitch: PitchFilterOption = None,
     ) -> None:
         def _method_kwargs() -> dict[str, object]:
             payload = _note_filter_method_kwargs(
@@ -276,7 +212,7 @@ def _register_import_browser_command(
     @notes_app.command("import-browser")
     def arrangement_clip_notes_import_browser(
         ctx: typer.Context,
-        track: Annotated[int, typer.Argument(help="Track index (0-based)")],
+        track: TrackArgument,
         index: Annotated[int, typer.Argument(help="Arrangement clip index from list output")],
         target: Annotated[str, typer.Argument(help="Browser target (URI or path to .alc)")],
         mode: Annotated[
@@ -333,7 +269,11 @@ def register_commands(
     run_client_command_spec: RunClientCommandSpec,
 ) -> None:
     _register_add_command(notes_app, run_client_command_spec=run_client_command_spec)
-    _register_get_command(notes_app, run_client_command_spec=run_client_command_spec)
-    _register_clear_command(notes_app, run_client_command_spec=run_client_command_spec)
+    _register_filter_command(
+        notes_app, "get", spec=NOTES_GET_SPEC, run_client_command_spec=run_client_command_spec
+    )
+    _register_filter_command(
+        notes_app, "clear", spec=NOTES_CLEAR_SPEC, run_client_command_spec=run_client_command_spec
+    )
     _register_replace_command(notes_app, run_client_command_spec=run_client_command_spec)
     _register_import_browser_command(notes_app, run_client_command_spec=run_client_command_spec)

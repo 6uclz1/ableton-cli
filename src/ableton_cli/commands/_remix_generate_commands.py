@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from pathlib import Path
 from typing import Annotated, Any
 
 import typer
@@ -10,9 +9,9 @@ from ..pattern_library import bass_patterns, drum_styles
 from ..remix.generators import apply_steps, generate_bass, generate_chords, generate_drums
 from ..runtime import execute_command
 from ..runtime import get_client as _runtime_get_client
+from ._params import ProjectOption
 from ._validation import invalid_argument
 
-ProjectOption = Annotated[Path, typer.Option("--project", help="Manifest path")]
 SectionOption = Annotated[
     str | None,
     typer.Option("--section", help="Planned section name; its length sets the bar count"),

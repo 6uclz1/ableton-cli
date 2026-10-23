@@ -8,6 +8,7 @@ import typer
 from ..runtime import execute_command, get_client
 from ._client_command_runner import CommandSpec
 from ._client_command_runner import run_client_command_spec as run_client_command_spec_shared
+from ._params import TrackArgument
 from ._validation import (
     invalid_argument,
     require_non_empty_string,
@@ -246,7 +247,7 @@ def browser_search(
 @browser_app.command("load")
 def browser_load(
     ctx: typer.Context,
-    track: Annotated[int, typer.Argument(help="Track index (0-based)")],
+    track: TrackArgument,
     target: Annotated[str, typer.Argument(help="Browser target (URI or path)")],
     target_track_mode: Annotated[
         str,
@@ -364,7 +365,7 @@ def browser_load(
 @browser_app.command("load-drum-kit")
 def browser_load_drum_kit(
     ctx: typer.Context,
-    track: Annotated[int, typer.Argument(help="Track index (0-based)")],
+    track: TrackArgument,
     rack_uri: Annotated[str, typer.Argument(help="URI for drum rack item")],
     kit_uri: Annotated[str | None, typer.Option("--kit-uri", help="URI for drum kit item")] = None,
     kit_path: Annotated[

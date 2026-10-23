@@ -6,6 +6,7 @@ from typing import Annotated
 import typer
 
 from ...audio_analysis.transient import analyze_transients
+from .._params import ClipArgument, TrackArgument
 from .._validation import invalid_argument, require_non_negative, require_positive_float
 from ._parsers import (
     parse_cut_to_drum_rack_slice_spec,
@@ -33,8 +34,8 @@ def register_clip_root_commands(clip_app: typer.Typer) -> None:
 
 def clip_create(
     ctx: typer.Context,
-    track: Annotated[int, typer.Argument(help="Track index (0-based)")],
-    clip: Annotated[int, typer.Argument(help="Clip slot index (0-based)")],
+    track: TrackArgument,
+    clip: ClipArgument,
     length: Annotated[
         float,
         typer.Option("--length", help="Clip length in beats"),
@@ -59,8 +60,8 @@ def clip_create(
 
 def clip_fire(
     ctx: typer.Context,
-    track: Annotated[int, typer.Argument(help="Track index (0-based)")],
-    clip: Annotated[int, typer.Argument(help="Clip slot index (0-based)")],
+    track: TrackArgument,
+    clip: ClipArgument,
 ) -> None:
     execute_track_clip_command(
         ctx,
@@ -73,8 +74,8 @@ def clip_fire(
 
 def clip_stop(
     ctx: typer.Context,
-    track: Annotated[int, typer.Argument(help="Track index (0-based)")],
-    clip: Annotated[int, typer.Argument(help="Clip slot index (0-based)")],
+    track: TrackArgument,
+    clip: ClipArgument,
 ) -> None:
     execute_track_clip_command(
         ctx,
@@ -87,7 +88,7 @@ def clip_stop(
 
 def clip_duplicate(
     ctx: typer.Context,
-    track: Annotated[int, typer.Argument(help="Track index (0-based)")],
+    track: TrackArgument,
     src_clip: Annotated[int, typer.Argument(help="Source clip slot index (0-based)")],
     dst_clip: Annotated[
         int | None,
@@ -131,7 +132,7 @@ def clip_duplicate(
 
 def clip_duplicate_many(
     ctx: typer.Context,
-    track: Annotated[int, typer.Argument(help="Track index (0-based)")],
+    track: TrackArgument,
     src_clip: Annotated[int, typer.Argument(help="Source clip slot index (0-based)")],
     to: Annotated[
         str,
@@ -171,7 +172,7 @@ def clip_duplicate_many(
 
 def clip_place_pattern(
     ctx: typer.Context,
-    track: Annotated[int, typer.Argument(help="Track index (0-based)")],
+    track: TrackArgument,
     clip: Annotated[
         int,
         typer.Option("--clip", help="Source clip slot index to place (0-based)"),

@@ -30,6 +30,7 @@ from ..remix.unsupported import fail_unsupported
 from ..remix.vocal_chop import build_vocal_chop
 from ..runtime import execute_command
 from ..runtime import get_client as _runtime_get_client
+from ._params import ProjectOption
 from ._remix_generate_commands import register_commands as register_generate_commands
 
 remix_app = typer.Typer(help="Remix project workflow commands", no_args_is_help=True)
@@ -74,7 +75,7 @@ def remix_init(
 @remix_app.command("inspect")
 def remix_inspect(
     ctx: typer.Context,
-    project: Annotated[Path, typer.Option("--project", help="Manifest path")],
+    project: ProjectOption,
 ) -> None:
     execute_command(
         ctx,
@@ -87,7 +88,7 @@ def remix_inspect(
 @remix_app.command("set-target")
 def remix_set_target(
     ctx: typer.Context,
-    project: Annotated[Path, typer.Option("--project", help="Manifest path")],
+    project: ProjectOption,
     bpm: Annotated[float | None, typer.Option("--bpm", help="Target BPM")] = None,
     key: Annotated[str | None, typer.Option("--key", help="Target key")] = None,
 ) -> None:
@@ -102,7 +103,7 @@ def remix_set_target(
 @remix_app.command("plan")
 def remix_plan(
     ctx: typer.Context,
-    project: Annotated[Path, typer.Option("--project", help="Manifest path")],
+    project: ProjectOption,
     style: Annotated[
         str, typer.Option("--style", help="Arrangement template style")
     ] = "anime-club",
@@ -120,7 +121,7 @@ def remix_plan(
 @remix_app.command("arrange")
 def remix_arrange(
     ctx: typer.Context,
-    project: Annotated[Path, typer.Option("--project", help="Manifest path")],
+    project: ProjectOption,
     form: Annotated[str, typer.Option("--form", help="Arrangement form")] = "anime-club",
     length: Annotated[str, typer.Option("--length", help="Arrangement length mode")] = "full",
     bars: Annotated[str | None, typer.Option("--bars", help="Explicit section bars")] = None,
@@ -136,7 +137,7 @@ def remix_arrange(
 @remix_app.command("apply")
 def remix_apply(
     ctx: typer.Context,
-    project: Annotated[Path, typer.Option("--project", help="Manifest path")],
+    project: ProjectOption,
     dry_run: Annotated[
         bool, typer.Option("--dry-run", help="Return planned batch steps only")
     ] = False,
@@ -163,7 +164,7 @@ def remix_apply(
 @remix_app.command("import-assets")
 def remix_import_assets(
     ctx: typer.Context,
-    project: Annotated[Path, typer.Option("--project", help="Manifest path")],
+    project: ProjectOption,
     to_arrangement: Annotated[
         bool,
         typer.Option("--to-arrangement", help="Build arrangement import steps"),
@@ -188,7 +189,7 @@ def remix_import_assets(
 @remix_app.command("vocal-chop")
 def remix_vocal_chop(
     ctx: typer.Context,
-    project: Annotated[Path, typer.Option("--project", help="Manifest path")],
+    project: ProjectOption,
     source: Annotated[str, typer.Option("--source", help="Source asset role")] = "vocal",
     section: Annotated[str, typer.Option("--section", help="Source section name")] = "chorus",
     slice_grid: Annotated[str, typer.Option("--slice", help="Slice grid")] = "1/8",
@@ -225,7 +226,7 @@ def remix_vocal_chop(
 @remix_app.command("qa")
 def remix_qa(
     ctx: typer.Context,
-    project: Annotated[Path, typer.Option("--project", help="Manifest path")],
+    project: ProjectOption,
     include_mastering: Annotated[
         bool,
         typer.Option("--include-mastering", help="Include mastering QA checks"),
@@ -261,7 +262,7 @@ def remix_qa(
 @remix_app.command("export-plan")
 def remix_export_plan(
     ctx: typer.Context,
-    project: Annotated[Path, typer.Option("--project", help="Manifest path")],
+    project: ProjectOption,
     target: Annotated[Path, typer.Option("--target", help="Absolute export target path")],
 ) -> None:
     execute_command(
@@ -275,7 +276,7 @@ def remix_export_plan(
 @remix_app.command("setup-sound")
 def remix_setup_sound(
     ctx: typer.Context,
-    project: Annotated[Path, typer.Option("--project", help="Manifest path")],
+    project: ProjectOption,
     kit: Annotated[str | None, typer.Option("--kit", help="Drum kit search query")] = None,
     bass: Annotated[str | None, typer.Option("--bass", help="Bass search query")] = None,
     lead: Annotated[str | None, typer.Option("--lead", help="Lead search query")] = None,
@@ -291,7 +292,7 @@ def remix_setup_sound(
 @remix_app.command("mix-macro")
 def remix_mix_macro(
     ctx: typer.Context,
-    project: Annotated[Path, typer.Option("--project", help="Manifest path")],
+    project: ProjectOption,
     preset: Annotated[str, typer.Option("--preset", help="Mix macro preset")] = "anime-club-basic",
 ) -> None:
     execute_command(
@@ -305,7 +306,7 @@ def remix_mix_macro(
 @remix_app.command("setup-mix")
 def remix_setup_mix(
     ctx: typer.Context,
-    project: Annotated[Path, typer.Option("--project", help="Manifest path")],
+    project: ProjectOption,
 ) -> None:
     execute_command(
         ctx,
@@ -318,7 +319,7 @@ def remix_setup_mix(
 @remix_app.command("setup-returns")
 def remix_setup_returns(
     ctx: typer.Context,
-    project: Annotated[Path, typer.Option("--project", help="Manifest path")],
+    project: ProjectOption,
 ) -> None:
     execute_command(
         ctx,
@@ -331,7 +332,7 @@ def remix_setup_returns(
 @remix_app.command("setup-sidechain")
 def remix_setup_sidechain(
     ctx: typer.Context,
-    project: Annotated[Path, typer.Option("--project", help="Manifest path")],
+    project: ProjectOption,
 ) -> None:
     execute_command(
         ctx,
@@ -371,7 +372,7 @@ def remix_mastering_profile_list(ctx: typer.Context) -> None:
 @mastering_target_app.command("set")
 def remix_mastering_target_set(
     ctx: typer.Context,
-    project: Annotated[Path, typer.Option("--project", help="Manifest path")],
+    project: ProjectOption,
     profile: Annotated[str, typer.Option("--profile", help="Mastering target profile")],
     integrated_lufs: Annotated[
         float | None,
@@ -424,7 +425,7 @@ def remix_mastering_target_set(
 @mastering_reference_app.command("add")
 def remix_mastering_reference_add(
     ctx: typer.Context,
-    project: Annotated[Path, typer.Option("--project", help="Manifest path")],
+    project: ProjectOption,
     path: Annotated[Path, typer.Option("--path", help="Reference audio path")],
     role: Annotated[str, typer.Option("--role", help="Reference role")],
     reference_id: Annotated[str, typer.Option("--id", help="Reference id")],
@@ -462,7 +463,7 @@ def remix_mastering_reference_add(
 @mastering_reference_app.command("list")
 def remix_mastering_reference_list(
     ctx: typer.Context,
-    project: Annotated[Path, typer.Option("--project", help="Manifest path")],
+    project: ProjectOption,
 ) -> None:
     execute_command(
         ctx,
@@ -475,7 +476,7 @@ def remix_mastering_reference_list(
 @mastering_reference_app.command("remove")
 def remix_mastering_reference_remove(
     ctx: typer.Context,
-    project: Annotated[Path, typer.Option("--project", help="Manifest path")],
+    project: ProjectOption,
     reference_id: Annotated[str, typer.Option("--id", help="Reference id")],
 ) -> None:
     execute_command(
@@ -489,7 +490,7 @@ def remix_mastering_reference_remove(
 @mastering_app.command("analyze")
 def remix_mastering_analyze(
     ctx: typer.Context,
-    project: Annotated[Path, typer.Option("--project", help="Manifest path")],
+    project: ProjectOption,
     render: Annotated[Path, typer.Option("--render", help="Rendered audio path")],
     reference: Annotated[
         str | None,
@@ -521,7 +522,7 @@ def remix_mastering_analyze(
 @mastering_app.command("plan")
 def remix_mastering_plan(
     ctx: typer.Context,
-    project: Annotated[Path, typer.Option("--project", help="Manifest path")],
+    project: ProjectOption,
     target: Annotated[
         str | None,
         typer.Option("--target", help="Mastering target profile"),
@@ -542,7 +543,7 @@ def remix_mastering_plan(
 @mastering_app.command("apply")
 def remix_mastering_apply(
     ctx: typer.Context,
-    project: Annotated[Path, typer.Option("--project", help="Manifest path")],
+    project: ProjectOption,
     dry_run: Annotated[
         bool, typer.Option("--dry-run", help="Return planned batch steps only")
     ] = False,
@@ -575,7 +576,7 @@ def remix_mastering_apply(
 @mastering_app.command("qa")
 def remix_mastering_qa(
     ctx: typer.Context,
-    project: Annotated[Path, typer.Option("--project", help="Manifest path")],
+    project: ProjectOption,
     render: Annotated[
         Path | None,
         typer.Option("--render", help="Rendered audio path"),

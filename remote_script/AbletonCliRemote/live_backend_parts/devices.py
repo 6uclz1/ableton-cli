@@ -3,13 +3,12 @@ from __future__ import annotations
 from collections.abc import Callable, Iterable, Iterator
 from typing import Any
 
+from ..device_families import EFFECT_FAMILY, SYNTH_FAMILY, DeviceFamily
 from ..effect_specs import (
-    SUPPORTED_EFFECT_TYPES,
     canonicalize_effect_type,
     resolve_standard_effect_key_indexes,
     standard_effect_keys,
 )
-from ..synth_specs import SUPPORTED_SYNTH_TYPES, canonicalize_synth_type, standard_synth_keys
 from .base import DeviceLocator, _invalid_argument
 from .device_control import parameter_display
 
@@ -95,7 +94,7 @@ class LiveBackendDeviceSharedMixin:
             )
         if mode == "key":
             key_indexes, _ = self._resolved_master_standard_effect_key_indexes(
-                effect_type=str(self._ctx._effect_type_for_device(target_device)),
+                effect_type=str(EFFECT_FAMILY.detect(target_device)),
                 device=device,
             )
             key = str(parameter_ref["key"])
@@ -380,7 +379,7 @@ class LiveBackendDeviceSharedMixin:
     ) -> tuple[dict[str, int], str]:
         parsed_type = canonicalize_effect_type(effect_type)
         target_device = self._master_device_at(device)
-        detected_type = self._ctx._effect_type_for_device(target_device)
+        detected_type = EFFECT_FAMILY.detect(target_device)
         if detected_type != parsed_type:
             raise _invalid_argument(
                 message=(
@@ -408,241 +407,171 @@ class LiveBackendDeviceSharedMixin:
         return key_indexes, parsed_type
 
 
-class LiveBackendSynthDevicesMixin:
-    def find_synth_devices(
-        self,
-        track: int | None,
-        synth_type: str | None,
+class LiveBackendFamilyDevicesMixin:
+    """The synth and effect surfaces: one implementation, one thin entry point per command."""
+
+    def _find_family_devices(
+        self, family: DeviceFamily, track: int | None, device_type: str | None
     ) -> dict[str, Any]:
         parsed_type = self._canonicalize_optional_type(
-            value=synth_type,
-            kind="synth_type",
-            canonicalize=canonicalize_synth_type,
-            supported_types=SUPPORTED_SYNTH_TYPES,
+            value=device_type,
+            kind=family.type_arg,
+            canonicalize=family.canonicalize,
+            supported_types=family.supported_types,
         )
         devices = self._find_devices(
             track=track,
             requested_type=parsed_type,
-            detector=self._ctx._synth_type_for_device,
-            payload_builder=self._ctx._synth_device_payload,
+            detector=family.detect,
+            payload_builder=self._ctx._device_payload,
         )
         return {
             "track": track,
-            "synth_type": parsed_type,
+            family.type_arg: parsed_type,
             "count": len(devices),
             "devices": devices,
         }
+
+    def _set_family_parameter_safe(
+        self, family: DeviceFamily, track: int, device: int, parameter: int, value: float
+    ) -> dict[str, Any]:
+        return self._set_parameter_safe(
+            track=track,
+            device=device,
+            parameter=parameter,
+            value=value,
+            require_supported_device=lambda track_index, device_index: (
+                self._ctx._require_supported_device(family, track_index, device_index)
+            ),
+        )
+
+    def _list_standard_family_keys(self, family: DeviceFamily, device_type: str) -> dict[str, Any]:
+        try:
+            parsed_type = family.canonicalize(device_type)
+        except ValueError as exc:
+            raise _invalid_argument(
+                message=f"Unsupported {family.type_arg}: {device_type}",
+                hint=f"Use one of: {', '.join(family.supported_types)}.",
+            ) from exc
+        keys = family.standard_keys(parsed_type)
+        return {
+            family.type_arg: parsed_type,
+            "key_count": len(keys),
+            "keys": keys,
+        }
+
+    def _set_standard_family_parameter_safe(
+        self,
+        family: DeviceFamily,
+        *,
+        device_type: str,
+        track: int,
+        device: int,
+        key: str,
+        value: float,
+    ) -> dict[str, Any]:
+        key_indexes, parsed_type = self._ctx._resolved_standard_key_indexes(
+            family,
+            device_type=device_type,
+            track=track,
+            device=device,
+        )
+        if key not in key_indexes:
+            raise _invalid_argument(
+                message=f"Unsupported key for {parsed_type}: {key}",
+                hint=f"Use one of: {', '.join(family.standard_keys(parsed_type))}.",
+            )
+
+        parameter_index = key_indexes[key]
+        result = self._set_family_parameter_safe(family, track, device, parameter_index, value)
+        return {
+            **result,
+            family.type_arg: parsed_type,
+            "key": key,
+            "resolved_parameter": parameter_index,
+        }
+
+    def _observe_standard_family_state(
+        self, family: DeviceFamily, *, device_type: str, track: int, device: int
+    ) -> dict[str, Any]:
+        key_indexes, parsed_type = self._ctx._resolved_standard_key_indexes(
+            family,
+            device_type=device_type,
+            track=track,
+            device=device,
+        )
+        observed = self._ctx._list_parameters_payload(family, track, device)
+        parameters = observed["parameters"]
+        state = {key: float(parameters[index]["value"]) for key, index in key_indexes.items()}
+        return {
+            family.type_arg: parsed_type,
+            "track": track,
+            "device": device,
+            "track_stable_ref": observed["track_stable_ref"],
+            "device_stable_ref": observed["device_stable_ref"],
+            "key_count": len(state),
+            "keys": family.standard_keys(parsed_type),
+            "state": state,
+        }
+
+    def find_synth_devices(self, track: int | None, synth_type: str | None) -> dict[str, Any]:
+        return self._find_family_devices(SYNTH_FAMILY, track, synth_type)
 
     def list_synth_parameters(self, track: int, device: int) -> dict[str, Any]:
-        return self._ctx._list_synth_parameters_payload(track, device)
+        return self._ctx._list_parameters_payload(SYNTH_FAMILY, track, device)
 
     def set_synth_parameter_safe(
-        self,
-        track: int,
-        device: int,
-        parameter: int,
-        value: float,
+        self, track: int, device: int, parameter: int, value: float
     ) -> dict[str, Any]:
-        return self._set_parameter_safe(
-            track=track,
-            device=device,
-            parameter=parameter,
-            value=value,
-            require_supported_device=self._ctx._require_supported_synth_device,
-        )
+        return self._set_family_parameter_safe(SYNTH_FAMILY, track, device, parameter, value)
 
     def observe_synth_parameters(self, track: int, device: int) -> dict[str, Any]:
-        return self._ctx._list_synth_parameters_payload(track, device)
+        return self._ctx._list_parameters_payload(SYNTH_FAMILY, track, device)
 
     def list_standard_synth_keys(self, synth_type: str) -> dict[str, Any]:
-        try:
-            parsed_type = canonicalize_synth_type(synth_type)
-        except ValueError as exc:
-            raise _invalid_argument(
-                message=f"Unsupported synth_type: {synth_type}",
-                hint=f"Use one of: {', '.join(SUPPORTED_SYNTH_TYPES)}.",
-            ) from exc
-        keys = standard_synth_keys(parsed_type)
-        return {
-            "synth_type": parsed_type,
-            "key_count": len(keys),
-            "keys": keys,
-        }
+        return self._list_standard_family_keys(SYNTH_FAMILY, synth_type)
 
     def set_standard_synth_parameter_safe(
-        self,
-        synth_type: str,
-        track: int,
-        device: int,
-        key: str,
-        value: float,
+        self, synth_type: str, track: int, device: int, key: str, value: float
     ) -> dict[str, Any]:
-        key_indexes, parsed_type = self._ctx._resolved_standard_synth_key_indexes(
-            synth_type=synth_type,
-            track=track,
-            device=device,
+        return self._set_standard_family_parameter_safe(
+            SYNTH_FAMILY, device_type=synth_type, track=track, device=device, key=key, value=value
         )
-        if key not in key_indexes:
-            raise _invalid_argument(
-                message=f"Unsupported key for {parsed_type}: {key}",
-                hint=f"Use one of: {', '.join(standard_synth_keys(parsed_type))}.",
-            )
-
-        parameter_index = key_indexes[key]
-        result = self.set_synth_parameter_safe(
-            track=track,
-            device=device,
-            parameter=parameter_index,
-            value=value,
-        )
-        return {
-            **result,
-            "synth_type": parsed_type,
-            "key": key,
-            "resolved_parameter": parameter_index,
-        }
 
     def observe_standard_synth_state(
-        self,
-        synth_type: str,
-        track: int,
-        device: int,
+        self, synth_type: str, track: int, device: int
     ) -> dict[str, Any]:
-        key_indexes, parsed_type = self._ctx._resolved_standard_synth_key_indexes(
-            synth_type=synth_type,
-            track=track,
-            device=device,
+        return self._observe_standard_family_state(
+            SYNTH_FAMILY, device_type=synth_type, track=track, device=device
         )
-        observed = self.observe_synth_parameters(track, device)
-        parameters = observed["parameters"]
-        state = {key: float(parameters[index]["value"]) for key, index in key_indexes.items()}
-        return {
-            "synth_type": parsed_type,
-            "track": track,
-            "device": device,
-            "track_stable_ref": observed["track_stable_ref"],
-            "device_stable_ref": observed["device_stable_ref"],
-            "key_count": len(state),
-            "keys": standard_synth_keys(parsed_type),
-            "state": state,
-        }
 
-
-class LiveBackendEffectDevicesMixin:
-    def find_effect_devices(
-        self,
-        track: int | None,
-        effect_type: str | None,
-    ) -> dict[str, Any]:
-        parsed_type = self._canonicalize_optional_type(
-            value=effect_type,
-            kind="effect_type",
-            canonicalize=canonicalize_effect_type,
-            supported_types=SUPPORTED_EFFECT_TYPES,
-        )
-        devices = self._find_devices(
-            track=track,
-            requested_type=parsed_type,
-            detector=self._ctx._effect_type_for_device,
-            payload_builder=self._ctx._effect_device_payload,
-        )
-        return {
-            "track": track,
-            "effect_type": parsed_type,
-            "count": len(devices),
-            "devices": devices,
-        }
+    def find_effect_devices(self, track: int | None, effect_type: str | None) -> dict[str, Any]:
+        return self._find_family_devices(EFFECT_FAMILY, track, effect_type)
 
     def list_effect_parameters(self, track: int, device: int) -> dict[str, Any]:
-        return self._ctx._list_effect_parameters_payload(track, device)
+        return self._ctx._list_parameters_payload(EFFECT_FAMILY, track, device)
 
     def set_effect_parameter_safe(
-        self,
-        track: int,
-        device: int,
-        parameter: int,
-        value: float,
+        self, track: int, device: int, parameter: int, value: float
     ) -> dict[str, Any]:
-        return self._set_parameter_safe(
-            track=track,
-            device=device,
-            parameter=parameter,
-            value=value,
-            require_supported_device=self._ctx._require_supported_effect_device,
-        )
+        return self._set_family_parameter_safe(EFFECT_FAMILY, track, device, parameter, value)
 
     def observe_effect_parameters(self, track: int, device: int) -> dict[str, Any]:
-        return self._ctx._list_effect_parameters_payload(track, device)
+        return self._ctx._list_parameters_payload(EFFECT_FAMILY, track, device)
 
     def list_standard_effect_keys(self, effect_type: str) -> dict[str, Any]:
-        try:
-            parsed_type = canonicalize_effect_type(effect_type)
-        except ValueError as exc:
-            raise _invalid_argument(
-                message=f"Unsupported effect_type: {effect_type}",
-                hint=f"Use one of: {', '.join(SUPPORTED_EFFECT_TYPES)}.",
-            ) from exc
-        keys = standard_effect_keys(parsed_type)
-        return {
-            "effect_type": parsed_type,
-            "key_count": len(keys),
-            "keys": keys,
-        }
+        return self._list_standard_family_keys(EFFECT_FAMILY, effect_type)
 
     def set_standard_effect_parameter_safe(
-        self,
-        effect_type: str,
-        track: int,
-        device: int,
-        key: str,
-        value: float,
+        self, effect_type: str, track: int, device: int, key: str, value: float
     ) -> dict[str, Any]:
-        key_indexes, parsed_type = self._ctx._resolved_standard_effect_key_indexes(
-            effect_type=effect_type,
-            track=track,
-            device=device,
+        return self._set_standard_family_parameter_safe(
+            EFFECT_FAMILY, device_type=effect_type, track=track, device=device, key=key, value=value
         )
-        if key not in key_indexes:
-            raise _invalid_argument(
-                message=f"Unsupported key for {parsed_type}: {key}",
-                hint=f"Use one of: {', '.join(standard_effect_keys(parsed_type))}.",
-            )
-
-        parameter_index = key_indexes[key]
-        result = self.set_effect_parameter_safe(
-            track=track,
-            device=device,
-            parameter=parameter_index,
-            value=value,
-        )
-        return {
-            **result,
-            "effect_type": parsed_type,
-            "key": key,
-            "resolved_parameter": parameter_index,
-        }
 
     def observe_standard_effect_state(
-        self,
-        effect_type: str,
-        track: int,
-        device: int,
+        self, effect_type: str, track: int, device: int
     ) -> dict[str, Any]:
-        key_indexes, parsed_type = self._ctx._resolved_standard_effect_key_indexes(
-            effect_type=effect_type,
-            track=track,
-            device=device,
+        return self._observe_standard_family_state(
+            EFFECT_FAMILY, device_type=effect_type, track=track, device=device
         )
-        observed = self.observe_effect_parameters(track, device)
-        parameters = observed["parameters"]
-        state = {key: float(parameters[index]["value"]) for key, index in key_indexes.items()}
-        return {
-            "effect_type": parsed_type,
-            "track": track,
-            "device": device,
-            "track_stable_ref": observed["track_stable_ref"],
-            "device_stable_ref": observed["device_stable_ref"],
-            "key_count": len(state),
-            "keys": standard_effect_keys(parsed_type),
-            "state": state,
-        }

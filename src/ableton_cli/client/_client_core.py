@@ -5,7 +5,6 @@ from typing import Any
 from ..capabilities import read_only_remote_commands
 from ..config import Settings
 from ..errors import AppError, ErrorCode, ExitCode, read_only_violation
-from ..refs import RefPayload
 from .backends import ClientBackend, LiveBackendClient, RecordingClient, ReplayClient
 
 
@@ -80,38 +79,18 @@ class _AbletonClientCore:
         if value is not None:
             args[key] = value
 
-    def _build_clip_note_args(
+    def _note_args(
         self,
+        location: dict[str, int],
         *,
-        track: int,
-        clip: int,
-        notes: list[dict[str, Any]] | None,
-        start_time: float | None,
-        end_time: float | None,
-        pitch: int | None,
+        notes: list[dict[str, Any]] | None = None,
+        start_time: float | None = None,
+        end_time: float | None = None,
+        pitch: int | None = None,
     ) -> dict[str, Any]:
-        args: dict[str, Any] = {"track": track, "clip": clip}
+        args: dict[str, Any] = dict(location)
         self._add_if_not_none(args, "notes", notes)
         self._add_if_not_none(args, "start_time", start_time)
         self._add_if_not_none(args, "end_time", end_time)
         self._add_if_not_none(args, "pitch", pitch)
         return args
-
-    def _call_parameter_command(
-        self,
-        command_name: str,
-        *,
-        track_ref: RefPayload,
-        device_ref: RefPayload,
-        parameter_ref: RefPayload,
-        value: float,
-    ) -> dict[str, Any]:
-        return self._call(
-            command_name,
-            {
-                "track_ref": track_ref,
-                "device_ref": device_ref,
-                "parameter_ref": parameter_ref,
-                "value": value,
-            },
-        )

@@ -4,23 +4,6 @@ from typing import Any
 
 
 class _AbletonClientBrowserScenesMixin:
-    def _build_arrangement_clip_note_args(
-        self,
-        *,
-        track: int,
-        index: int,
-        notes: list[dict[str, Any]] | None,
-        start_time: float | None,
-        end_time: float | None,
-        pitch: int | None,
-    ) -> dict[str, Any]:
-        args: dict[str, Any] = {"track": track, "index": index}
-        self._add_if_not_none(args, "notes", notes)
-        self._add_if_not_none(args, "start_time", start_time)
-        self._add_if_not_none(args, "end_time", end_time)
-        self._add_if_not_none(args, "pitch", pitch)
-        return args
-
     def load_instrument_or_effect(
         self,
         track: int,
@@ -113,14 +96,7 @@ class _AbletonClientBrowserScenesMixin:
         index: int,
         notes: list[dict[str, Any]],
     ) -> dict[str, Any]:
-        args = self._build_arrangement_clip_note_args(
-            track=track,
-            index=index,
-            notes=notes,
-            start_time=None,
-            end_time=None,
-            pitch=None,
-        )
+        args = self._note_args({"track": track, "index": index}, notes=notes)
         return self._call("arrangement_clip_notes_add", args)
 
     def arrangement_clip_notes_get(
@@ -131,13 +107,8 @@ class _AbletonClientBrowserScenesMixin:
         end_time: float | None,
         pitch: int | None,
     ) -> dict[str, Any]:
-        args = self._build_arrangement_clip_note_args(
-            track=track,
-            index=index,
-            notes=None,
-            start_time=start_time,
-            end_time=end_time,
-            pitch=pitch,
+        args = self._note_args(
+            {"track": track, "index": index}, start_time=start_time, end_time=end_time, pitch=pitch
         )
         return self._call("arrangement_clip_notes_get", args)
 
@@ -149,13 +120,8 @@ class _AbletonClientBrowserScenesMixin:
         end_time: float | None,
         pitch: int | None,
     ) -> dict[str, Any]:
-        args = self._build_arrangement_clip_note_args(
-            track=track,
-            index=index,
-            notes=None,
-            start_time=start_time,
-            end_time=end_time,
-            pitch=pitch,
+        args = self._note_args(
+            {"track": track, "index": index}, start_time=start_time, end_time=end_time, pitch=pitch
         )
         return self._call("arrangement_clip_notes_clear", args)
 
@@ -168,9 +134,8 @@ class _AbletonClientBrowserScenesMixin:
         end_time: float | None,
         pitch: int | None,
     ) -> dict[str, Any]:
-        args = self._build_arrangement_clip_note_args(
-            track=track,
-            index=index,
+        args = self._note_args(
+            {"track": track, "index": index},
             notes=notes,
             start_time=start_time,
             end_time=end_time,

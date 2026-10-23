@@ -20,6 +20,7 @@ from ...refs import (
     build_device_ref,
     build_parameter_ref,
 )
+from .._params import ClipArgument, TrackArgument
 from .._validation import invalid_argument, parse_envelope_points_json
 from ._shared import execute_clip_command, resolve_client, validate_track_and_clip
 
@@ -68,8 +69,8 @@ def _parameter_ref_options(
 
 def clip_envelope_set(
     ctx: typer.Context,
-    track: Annotated[int, typer.Argument(help="Track index (0-based)")],
-    clip: Annotated[int, typer.Argument(help="Clip slot index (0-based)")],
+    track: TrackArgument,
+    clip: ClipArgument,
     points_json: Annotated[
         str, typer.Option("--points-json", help='JSON array of {"time","value"} breakpoints')
     ],
@@ -128,8 +129,8 @@ def clip_envelope_set(
 
 def clip_envelope_shape(
     ctx: typer.Context,
-    track: Annotated[int, typer.Argument(help="Track index (0-based)")],
-    clip: Annotated[int, typer.Argument(help="Clip slot index (0-based)")],
+    track: TrackArgument,
+    clip: ClipArgument,
     shape: Annotated[str, typer.Option("--shape", help=f"One of {', '.join(_ENVELOPE_SHAPES)}")],
     from_value: Annotated[float, typer.Option("--from", help="Starting value")],
     to_value: Annotated[float, typer.Option("--to", help="Ending/target value")],
@@ -217,8 +218,8 @@ def clip_envelope_shape(
 
 def clip_envelope_clear(
     ctx: typer.Context,
-    track: Annotated[int, typer.Argument(help="Track index (0-based)")],
-    clip: Annotated[int, typer.Argument(help="Clip slot index (0-based)")],
+    track: TrackArgument,
+    clip: ClipArgument,
     all_envelopes: Annotated[
         bool, typer.Option("--all", help="Clear every envelope on the clip")
     ] = False,

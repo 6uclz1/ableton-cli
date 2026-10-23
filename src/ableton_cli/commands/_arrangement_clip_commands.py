@@ -7,6 +7,7 @@ import typer
 
 from ._arrangement_shared import require_arrangement_clip_index, require_track_index
 from ._arrangement_specs import ArrangementCommandSpec
+from ._params import TrackArgument
 from ._validation import (
     invalid_argument,
     parse_notes_input,
@@ -94,7 +95,7 @@ def register_commands(
     @clip_app.command("create")
     def arrangement_clip_create(
         ctx: typer.Context,
-        track: Annotated[int, typer.Argument(help="Track index (0-based)")],
+        track: TrackArgument,
         start: Annotated[
             float,
             typer.Option(
@@ -233,7 +234,7 @@ def register_commands(
     @clip_app.command("delete")
     def arrangement_clip_delete(
         ctx: typer.Context,
-        track: Annotated[int, typer.Argument(help="Track index (0-based)")],
+        track: TrackArgument,
         index: Annotated[
             int | None,
             typer.Argument(help="Arrangement clip index to delete", show_default=False),

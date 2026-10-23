@@ -13,8 +13,7 @@ from .clip_envelopes import LiveBackendClipEnvelopesMixin
 from .clip_notes import LiveBackendClipNotesMixin
 from .devices import (
     LiveBackendDeviceSharedMixin,
-    LiveBackendEffectDevicesMixin,
-    LiveBackendSynthDevicesMixin,
+    LiveBackendFamilyDevicesMixin,
 )
 from .devices_racks import LiveBackendDeviceRacksMixin
 from .scenes_arrangement import LiveBackendScenesArrangementMixin
@@ -38,7 +37,6 @@ __all__ = [
     "LiveBackendBrowserSearchMixin",
     "LiveBackendDeviceSharedMixin",
     "LiveBackendDeviceRacksMixin",
-    "LiveBackendSynthDevicesMixin",
-    "LiveBackendEffectDevicesMixin",
+    "LiveBackendFamilyDevicesMixin",
     "LiveBackendScenesArrangementMixin",
 ]

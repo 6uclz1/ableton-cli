@@ -4,6 +4,15 @@ from typing import Annotated
 
 import typer
 
+from .._params import (
+    ClipArgument,
+    EndTimeFilterOption,
+    NotesFileOption,
+    NotesJsonOption,
+    PitchFilterOption,
+    StartTimeFilterOption,
+    TrackArgument,
+)
 from .._validation import (
     invalid_argument,
     parse_notes_input,
@@ -26,8 +35,8 @@ from ._shared import (
 
 def register_notes_commands(notes_app: typer.Typer) -> None:
     notes_app.command("add")(clip_notes_add)
-    notes_app.command("get")(clip_notes_get)
-    notes_app.command("clear")(clip_notes_clear)
+    _register_filter_command(notes_app, "get", client_method="get_clip_notes")
+    _register_filter_command(notes_app, "clear", client_method="clear_clip_notes")
     notes_app.command("replace")(clip_notes_replace)
     notes_app.command("update")(clip_notes_update)
     notes_app.command("import-browser")(clip_notes_import_browser)
@@ -39,16 +48,10 @@ def register_notes_commands(notes_app: typer.Typer) -> None:
 
 def clip_notes_add(
     ctx: typer.Context,
-    track: Annotated[int, typer.Argument(help="Track index (0-based)")],
-    clip: Annotated[int, typer.Argument(help="Clip slot index (0-based)")],
-    notes_json: Annotated[
-        str | None,
-        typer.Option("--notes-json", help="JSON array of note objects"),
-    ] = None,
-    notes_file: Annotated[
-        str | None,
-        typer.Option("--notes-file", help="Path to JSON file containing note array"),
-    ] = None,
+    track: TrackArgument,
+    clip: ClipArgument,
+    notes_json: NotesJsonOption = None,
+    notes_file: NotesFileOption = None,
     pattern: Annotated[
         str | None,
         typer.Option("--pattern", help="Mini-notation pattern, e.g. 'c3 ~ [e3 g3] c4*2'"),
@@ -87,124 +90,57 @@ def clip_notes_add(
     )
 
 
-def clip_notes_get(
-    ctx: typer.Context,
-    track: Annotated[int, typer.Argument(help="Track index (0-based)")],
-    clip: Annotated[int, typer.Argument(help="Clip slot index (0-based)")],
-    start_time: Annotated[
-        float | None,
-        typer.Option("--start-time", help="Inclusive start time filter in beats"),
-    ] = None,
-    end_time: Annotated[
-        float | None,
-        typer.Option("--end-time", help="Exclusive end time filter in beats"),
-    ] = None,
-    pitch: Annotated[
-        int | None,
-        typer.Option("--pitch", help="Exact MIDI pitch filter"),
-    ] = None,
-) -> None:
-    def _run() -> dict[str, object]:
-        filters = validated_transform_filters(
-            track=track,
-            clip=clip,
-            start_time=start_time,
-            end_time=end_time,
-            pitch=pitch,
-        )
-        return resolve_client(ctx).get_clip_notes(
-            track=track,
-            clip=clip,
-            start_time=filters["start_time"],
-            end_time=filters["end_time"],
-            pitch=filters["pitch"],
-        )
+def _register_filter_command(notes_app: typer.Typer, name: str, *, client_method: str) -> None:
+    """Register a notes command that takes only a clip and the note filters."""
 
-    execute_clip_command(
-        ctx,
-        command="clip notes get",
-        args={
-            "track": track,
-            "clip": clip,
-            "start_time": start_time,
-            "end_time": end_time,
-            "pitch": pitch,
-        },
-        action=_run,
-    )
+    @notes_app.command(name)
+    def _command(
+        ctx: typer.Context,
+        track: TrackArgument,
+        clip: ClipArgument,
+        start_time: StartTimeFilterOption = None,
+        end_time: EndTimeFilterOption = None,
+        pitch: PitchFilterOption = None,
+    ) -> None:
+        def _run() -> dict[str, object]:
+            filters = validated_transform_filters(
+                track=track,
+                clip=clip,
+                start_time=start_time,
+                end_time=end_time,
+                pitch=pitch,
+            )
+            return getattr(resolve_client(ctx), client_method)(
+                track=track,
+                clip=clip,
+                start_time=filters["start_time"],
+                end_time=filters["end_time"],
+                pitch=filters["pitch"],
+            )
 
-
-def clip_notes_clear(
-    ctx: typer.Context,
-    track: Annotated[int, typer.Argument(help="Track index (0-based)")],
-    clip: Annotated[int, typer.Argument(help="Clip slot index (0-based)")],
-    start_time: Annotated[
-        float | None,
-        typer.Option("--start-time", help="Inclusive start time filter in beats"),
-    ] = None,
-    end_time: Annotated[
-        float | None,
-        typer.Option("--end-time", help="Exclusive end time filter in beats"),
-    ] = None,
-    pitch: Annotated[
-        int | None,
-        typer.Option("--pitch", help="Exact MIDI pitch filter"),
-    ] = None,
-) -> None:
-    def _run() -> dict[str, object]:
-        filters = validated_transform_filters(
-            track=track,
-            clip=clip,
-            start_time=start_time,
-            end_time=end_time,
-            pitch=pitch,
+        execute_clip_command(
+            ctx,
+            command=f"clip notes {name}",
+            args={
+                "track": track,
+                "clip": clip,
+                "start_time": start_time,
+                "end_time": end_time,
+                "pitch": pitch,
+            },
+            action=_run,
         )
-        return resolve_client(ctx).clear_clip_notes(
-            track=track,
-            clip=clip,
-            start_time=filters["start_time"],
-            end_time=filters["end_time"],
-            pitch=filters["pitch"],
-        )
-
-    execute_clip_command(
-        ctx,
-        command="clip notes clear",
-        args={
-            "track": track,
-            "clip": clip,
-            "start_time": start_time,
-            "end_time": end_time,
-            "pitch": pitch,
-        },
-        action=_run,
-    )
 
 
 def clip_notes_replace(
     ctx: typer.Context,
-    track: Annotated[int, typer.Argument(help="Track index (0-based)")],
-    clip: Annotated[int, typer.Argument(help="Clip slot index (0-based)")],
-    notes_json: Annotated[
-        str | None,
-        typer.Option("--notes-json", help="JSON array of note objects"),
-    ] = None,
-    notes_file: Annotated[
-        str | None,
-        typer.Option("--notes-file", help="Path to JSON file containing note array"),
-    ] = None,
-    start_time: Annotated[
-        float | None,
-        typer.Option("--start-time", help="Inclusive start time filter in beats"),
-    ] = None,
-    end_time: Annotated[
-        float | None,
-        typer.Option("--end-time", help="Exclusive end time filter in beats"),
-    ] = None,
-    pitch: Annotated[
-        int | None,
-        typer.Option("--pitch", help="Exact MIDI pitch filter"),
-    ] = None,
+    track: TrackArgument,
+    clip: ClipArgument,
+    notes_json: NotesJsonOption = None,
+    notes_file: NotesFileOption = None,
+    start_time: StartTimeFilterOption = None,
+    end_time: EndTimeFilterOption = None,
+    pitch: PitchFilterOption = None,
 ) -> None:
     def _run() -> dict[str, object]:
         notes = parse_notes_input(notes_json=notes_json, notes_file=notes_file)
@@ -240,8 +176,8 @@ def clip_notes_replace(
 
 def clip_notes_update(
     ctx: typer.Context,
-    track: Annotated[int, typer.Argument(help="Track index (0-based)")],
-    clip: Annotated[int, typer.Argument(help="Clip slot index (0-based)")],
+    track: TrackArgument,
+    clip: ClipArgument,
     notes_json: Annotated[
         str | None,
         typer.Option(
@@ -273,7 +209,7 @@ def clip_notes_update(
 
 def clip_notes_import_browser(
     ctx: typer.Context,
-    track: Annotated[int, typer.Argument(help="Track index (0-based)")],
+    track: TrackArgument,
     clip: Annotated[int, typer.Argument(help="Destination clip slot index (0-based)")],
     target: Annotated[str, typer.Argument(help="Browser target (URI or path to .alc)")],
     mode: Annotated[
@@ -344,8 +280,8 @@ def clip_notes_import_browser(
 
 def clip_notes_quantize(
     ctx: typer.Context,
-    track: Annotated[int, typer.Argument(help="Track index (0-based)")],
-    clip: Annotated[int, typer.Argument(help="Clip slot index (0-based)")],
+    track: TrackArgument,
+    clip: ClipArgument,
     grid: Annotated[
         str,
         typer.Option("--grid", help="Quantize grid as fraction (for example 1/16) or beats"),
@@ -354,18 +290,9 @@ def clip_notes_quantize(
         float,
         typer.Option("--strength", help="Quantize strength in [0.0, 1.0]"),
     ] = 1.0,
-    start_time: Annotated[
-        float | None,
-        typer.Option("--start-time", help="Inclusive start time filter in beats"),
-    ] = None,
-    end_time: Annotated[
-        float | None,
-        typer.Option("--end-time", help="Exclusive end time filter in beats"),
-    ] = None,
-    pitch: Annotated[
-        int | None,
-        typer.Option("--pitch", help="Exact MIDI pitch filter"),
-    ] = None,
+    start_time: StartTimeFilterOption = None,
+    end_time: EndTimeFilterOption = None,
+    pitch: PitchFilterOption = None,
 ) -> None:
     def _run() -> dict[str, object]:
         filters = validated_transform_filters(
@@ -415,8 +342,8 @@ def clip_notes_quantize(
 
 def clip_notes_humanize(
     ctx: typer.Context,
-    track: Annotated[int, typer.Argument(help="Track index (0-based)")],
-    clip: Annotated[int, typer.Argument(help="Clip slot index (0-based)")],
+    track: TrackArgument,
+    clip: ClipArgument,
     timing: Annotated[
         float,
         typer.Option("--timing", help="Maximum timing shift in beats (>= 0)"),
@@ -425,18 +352,9 @@ def clip_notes_humanize(
         int,
         typer.Option("--velocity", help="Maximum velocity shift amount (0-127)"),
     ],
-    start_time: Annotated[
-        float | None,
-        typer.Option("--start-time", help="Inclusive start time filter in beats"),
-    ] = None,
-    end_time: Annotated[
-        float | None,
-        typer.Option("--end-time", help="Exclusive end time filter in beats"),
-    ] = None,
-    pitch: Annotated[
-        int | None,
-        typer.Option("--pitch", help="Exact MIDI pitch filter"),
-    ] = None,
+    start_time: StartTimeFilterOption = None,
+    end_time: EndTimeFilterOption = None,
+    pitch: PitchFilterOption = None,
 ) -> None:
     def _run() -> dict[str, object]:
         filters = validated_transform_filters(
@@ -486,8 +404,8 @@ def clip_notes_humanize(
 
 def clip_notes_velocity_scale(
     ctx: typer.Context,
-    track: Annotated[int, typer.Argument(help="Track index (0-based)")],
-    clip: Annotated[int, typer.Argument(help="Clip slot index (0-based)")],
+    track: TrackArgument,
+    clip: ClipArgument,
     scale: Annotated[
         float,
         typer.Option("--scale", help="Velocity multiplier (>= 0)"),
@@ -496,18 +414,9 @@ def clip_notes_velocity_scale(
         int,
         typer.Option("--offset", help="Velocity offset (can be negative)"),
     ],
-    start_time: Annotated[
-        float | None,
-        typer.Option("--start-time", help="Inclusive start time filter in beats"),
-    ] = None,
-    end_time: Annotated[
-        float | None,
-        typer.Option("--end-time", help="Exclusive end time filter in beats"),
-    ] = None,
-    pitch: Annotated[
-        int | None,
-        typer.Option("--pitch", help="Exact MIDI pitch filter"),
-    ] = None,
+    start_time: StartTimeFilterOption = None,
+    end_time: EndTimeFilterOption = None,
+    pitch: PitchFilterOption = None,
 ) -> None:
     def _run() -> dict[str, object]:
         filters = validated_transform_filters(
@@ -550,24 +459,15 @@ def clip_notes_velocity_scale(
 
 def clip_notes_transpose(
     ctx: typer.Context,
-    track: Annotated[int, typer.Argument(help="Track index (0-based)")],
-    clip: Annotated[int, typer.Argument(help="Clip slot index (0-based)")],
+    track: TrackArgument,
+    clip: ClipArgument,
     semitones: Annotated[
         int,
         typer.Option("--semitones", help="Semitone offset (can be negative)"),
     ],
-    start_time: Annotated[
-        float | None,
-        typer.Option("--start-time", help="Inclusive start time filter in beats"),
-    ] = None,
-    end_time: Annotated[
-        float | None,
-        typer.Option("--end-time", help="Exclusive end time filter in beats"),
-    ] = None,
-    pitch: Annotated[
-        int | None,
-        typer.Option("--pitch", help="Exact MIDI pitch filter"),
-    ] = None,
+    start_time: StartTimeFilterOption = None,
+    end_time: EndTimeFilterOption = None,
+    pitch: PitchFilterOption = None,
 ) -> None:
     def _run() -> dict[str, object]:
         filters = validated_transform_filters(

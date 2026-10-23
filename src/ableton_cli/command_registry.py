@@ -671,7 +671,34 @@ CLIENT_METHOD_SPECS: tuple[ClientMethodSpec, ...] = (
     _m("scenes_move", (_p("from_index", "int", key="from"), _p("to_index", "int", key="to"))),
     _m("session_snapshot", (), returns="dict[str, object]"),
     _m("set_clip_name", (_p("track", "int"), _p("clip", "int"), _p("name", "str"))),
+    _m(
+        "set_device_parameter",
+        (
+            _p("track_ref", "RefPayload"),
+            _p("device_ref", "RefPayload"),
+            _p("parameter_ref", "RefPayload"),
+            _p("value", "float"),
+        ),
+    ),
+    _m(
+        "set_effect_parameter_safe",
+        (
+            _p("track_ref", "RefPayload"),
+            _p("device_ref", "RefPayload"),
+            _p("parameter_ref", "RefPayload"),
+            _p("value", "float"),
+        ),
+    ),
     _m("set_scene_name", (_p("scene", "int"), _p("name", "str"))),
+    _m(
+        "set_synth_parameter_safe",
+        (
+            _p("track_ref", "RefPayload"),
+            _p("device_ref", "RefPayload"),
+            _p("parameter_ref", "RefPayload"),
+            _p("value", "float"),
+        ),
+    ),
     _m("set_tempo", (_p("tempo", "float"),), returns="dict[str, object]"),
     _m("set_track_name", (_p("track_ref", "RefPayload"), _p("name", "str"))),
     _m("song_export_audio", (_p("path", "str"),), returns="dict[str, object]"),
@@ -731,17 +758,3 @@ CLIENT_METHOD_SPECS: tuple[ClientMethodSpec, ...] = (
     _m("transport_tempo_set", (_p("bpm", "float"),), returns="dict[str, object]"),
     _m("transport_toggle", (), returns="dict[str, object]"),
 )
-
-
-def _build_client_method_map() -> dict[str, ClientMethodSpec]:
-    by_name: dict[str, ClientMethodSpec] = {}
-    for spec in CLIENT_METHOD_SPECS:
-        if spec.remote_command in by_name:
-            raise AssertionError(
-                f"duplicate client method spec for {spec.remote_command!r} in CLIENT_METHOD_SPECS"
-            )
-        by_name[spec.remote_command] = spec
-    return by_name
-
-
-CLIENT_METHOD_SPEC_BY_NAME: dict[str, ClientMethodSpec] = _build_client_method_map()

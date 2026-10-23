@@ -17,6 +17,7 @@ from . import (
     _audio_spectrum_commands,
     _audio_transient_commands,
 )
+from ._params import ProjectOption
 
 audio_app = typer.Typer(help="Audio asset and analysis commands", no_args_is_help=True)
 asset_app = typer.Typer(help="Audio asset registry commands", no_args_is_help=True)
@@ -33,7 +34,7 @@ groove_app = typer.Typer(help="Offline groove extraction commands", no_args_is_h
 @asset_app.command("add")
 def audio_asset_add(
     ctx: typer.Context,
-    project: Annotated[Path, typer.Option("--project", help="Manifest path")],
+    project: ProjectOption,
     role: Annotated[str, typer.Option("--role", help="Asset role")],
     path: Annotated[Path, typer.Option("--path", help="Absolute audio path")],
 ) -> None:
@@ -57,7 +58,7 @@ def add_asset_result(project: Path) -> dict[str, object]:
 @asset_app.command("list")
 def audio_asset_list(
     ctx: typer.Context,
-    project: Annotated[Path, typer.Option("--project", help="Manifest path")],
+    project: ProjectOption,
 ) -> None:
     execute_command(
         ctx,
@@ -74,7 +75,7 @@ def audio_asset_list(
 @asset_app.command("remove")
 def audio_asset_remove(
     ctx: typer.Context,
-    project: Annotated[Path, typer.Option("--project", help="Manifest path")],
+    project: ProjectOption,
     role: Annotated[str, typer.Option("--role", help="Asset role")],
     path: Annotated[Path, typer.Option("--path", help="Absolute audio path")],
 ) -> None:
@@ -89,7 +90,7 @@ def audio_asset_remove(
 @sections_app.command("import")
 def audio_sections_import(
     ctx: typer.Context,
-    project: Annotated[Path, typer.Option("--project", help="Manifest path")],
+    project: ProjectOption,
     sections: Annotated[str, typer.Option("--sections", help="Section specs")],
 ) -> None:
     execute_command(
@@ -103,7 +104,7 @@ def audio_sections_import(
 @beatgrid_app.command("import")
 def audio_beatgrid_import(
     ctx: typer.Context,
-    project: Annotated[Path, typer.Option("--project", help="Manifest path")],
+    project: ProjectOption,
     downbeats: Annotated[str, typer.Option("--downbeats", help="Comma-separated downbeat times")],
 ) -> None:
     execute_command(
@@ -117,7 +118,7 @@ def audio_beatgrid_import(
 @audio_app.command("analyze")
 def audio_analyze(
     ctx: typer.Context,
-    project: Annotated[Path, typer.Option("--project", help="Manifest path")],
+    project: ProjectOption,
     detect: Annotated[
         str, typer.Option("--detect", help="Comma-separated detectors")
     ] = "bpm,key,downbeats,sections",
@@ -145,7 +146,7 @@ def audio_analyze(
 @stems_app.command("split")
 def audio_stems_split(
     ctx: typer.Context,
-    project: Annotated[Path, typer.Option("--project", help="Manifest path")],
+    project: ProjectOption,
     provider: Annotated[str, typer.Option("--provider", help="Stem provider")] = "manual",
     out: Annotated[
         Path | None,
@@ -164,7 +165,7 @@ def audio_stems_split(
 @stems_app.command("list")
 def audio_stems_list(
     ctx: typer.Context,
-    project: Annotated[Path, typer.Option("--project", help="Manifest path")],
+    project: ProjectOption,
 ) -> None:
     execute_command(
         ctx,

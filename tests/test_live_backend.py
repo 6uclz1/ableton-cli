@@ -1030,8 +1030,8 @@ def _note() -> dict[str, Any]:
 def _synth_parameters_for(synth_type: str) -> list[_Parameter]:
     if synth_type == "wavetable":
         return [
-            _Parameter("Filter 1 Freq", 0.5, min=0.0, max=1.0),
-            _Parameter("Filter 1 Res", 0.2, min=0.0, max=1.0),
+            _Parameter("Flt 1 Freq", 0.5, min=0.0, max=1.0),
+            _Parameter("Flt 1 Res", 0.2, min=0.0, max=1.0),
             _Parameter("Amp Attack", 0.1, min=0.0, max=1.0),
             _Parameter("Amp Decay", 0.2, min=0.0, max=1.0),
             _Parameter("Amp Sustain", 0.8, min=0.0, max=1.0),
@@ -1043,7 +1043,7 @@ def _synth_parameters_for(synth_type: str) -> list[_Parameter]:
     if synth_type == "drift":
         return [
             _Parameter("LP Freq", 0.5, min=0.0, max=1.0),
-            _Parameter("LP Reso", 0.2, min=0.0, max=1.0),
+            _Parameter("LP Res", 0.2, min=0.0, max=1.0),
             _Parameter("Env 1 Attack", 0.1, min=0.0, max=1.0),
             _Parameter("Env 1 Decay", 0.2, min=0.0, max=1.0),
             _Parameter("Env 1 Sustain", 0.8, min=0.0, max=1.0),
@@ -1119,12 +1119,12 @@ def _effect_parameters_for(effect_type: str) -> list[_Parameter]:
             _Parameter("Decay Time", 0.6, min=0.0, max=1.0),
             _Parameter("PreDelay", 0.1, min=0.0, max=1.0),
             _Parameter("Size", 0.5, min=0.0, max=1.0),
-            _Parameter("LowCut", 0.2, min=0.0, max=1.0),
-            _Parameter("HighCut", 0.8, min=0.0, max=1.0),
+            _Parameter("Input Freq", 0.2, min=0.0, max=1.0),
+            _Parameter("Input Width", 0.8, min=0.0, max=1.0),
         ]
     if effect_type == "utility":
         return [
-            _Parameter("Gain", 0.5, min=0.0, max=1.0),
+            _Parameter("Output", 0.5, min=0.0, max=1.0),
             _Parameter("Width", 0.7, min=0.0, max=1.0),
             _Parameter("Balance", 0.5, min=0.0, max=1.0),
             _Parameter("Bass Mono", 1.0, min=0.0, max=1.0, is_quantized=True),

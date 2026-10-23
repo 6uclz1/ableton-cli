@@ -1843,8 +1843,8 @@
         "type": "object"
       },
       "side_effect": {
-        "idempotent": false,
-        "kind": "write",
+        "idempotent": true,
+        "kind": "read",
         "requires_confirmation": false
       }
     },
@@ -1887,8 +1887,8 @@
         "type": "object"
       },
       "side_effect": {
-        "idempotent": false,
-        "kind": "write",
+        "idempotent": true,
+        "kind": "read",
         "requires_confirmation": false
       }
     },

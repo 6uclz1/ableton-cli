@@ -20,11 +20,7 @@ from .browser_search_index import LiveBackendBrowserSearchIndexMixin
 from .clip_envelopes import LiveBackendClipEnvelopesMixin
 from .clip_notes import LiveBackendClipNotesMixin
 from .device_control import LiveBackendDeviceControlMixin
-from .devices import (
-    LiveBackendDeviceSharedMixin,
-    LiveBackendEffectDevicesMixin,
-    LiveBackendSynthDevicesMixin,
-)
+from .devices import LiveBackendDeviceSharedMixin, LiveBackendFamilyDevicesMixin
 from .devices_racks import LiveBackendDeviceRacksMixin
 from .scenes_arrangement import LiveBackendScenesArrangementMixin
 from .service import LiveBackendService
@@ -69,8 +65,7 @@ class ScenesArrangementService(LiveBackendService, LiveBackendScenesArrangementM
 class DevicesService(
     LiveBackendService,
     LiveBackendDeviceSharedMixin,
-    LiveBackendSynthDevicesMixin,
-    LiveBackendEffectDevicesMixin,
+    LiveBackendFamilyDevicesMixin,
     LiveBackendDeviceControlMixin,
 ):
     """Device listing/parameters, the standard synth/effect surfaces and generic

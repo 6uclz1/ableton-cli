@@ -11,18 +11,7 @@ from ..command_backend import (
     RemoteErrorReason,
     details_with_reason,
 )
-from ..effect_specs import (
-    SUPPORTED_EFFECT_TYPES,
-    canonicalize_effect_type,
-    detect_effect_type,
-    resolve_standard_effect_key_indexes,
-)
-from ..synth_specs import (
-    SUPPORTED_SYNTH_TYPES,
-    canonicalize_synth_type,
-    detect_synth_type,
-    resolve_standard_synth_key_indexes,
-)
+from ..device_families import DEVICE_FAMILIES, DeviceFamily
 
 # A flat device index (top-level device on a track), or a chain-nested path:
 # (top_device_index, chain_index, device_index, [chain_index, device_index, ...])
@@ -677,19 +666,13 @@ class LiveBackendContext:
             )
         if mode == "key":
             key = str(parameter_ref["key"])
-            detected_synth_type = self._synth_type_for_device(target_device)
-            if detected_synth_type is not None:
-                key_indexes, _ = self._resolved_standard_synth_key_indexes(
-                    synth_type=detected_synth_type,
-                    track=track,
-                    device=device,
-                )
-                if key in key_indexes:
-                    return key_indexes[key]
-            detected_effect_type = self._effect_type_for_device(target_device)
-            if detected_effect_type is not None:
-                key_indexes, _ = self._resolved_standard_effect_key_indexes(
-                    effect_type=detected_effect_type,
+            for family in DEVICE_FAMILIES:
+                detected_type = family.detect(target_device)
+                if detected_type is None:
+                    continue
+                key_indexes, _ = self._resolved_standard_key_indexes(
+                    family,
+                    device_type=detected_type,
                     track=track,
                     device=device,
                 )
@@ -772,35 +755,18 @@ class LiveBackendContext:
             payload.append(serialized)
         return payload
 
-    def _synth_type_for_device(self, device: Any) -> str | None:
-        return detect_synth_type(device)
-
-    def _effect_type_for_device(self, device: Any) -> str | None:
-        return detect_effect_type(device)
-
-    def _require_supported_synth_device(self, track: int, device: int) -> tuple[Any, str]:
+    def _require_supported_device(
+        self, family: DeviceFamily, track: int, device: int
+    ) -> tuple[Any, str]:
         target_device = self._device_at(track, device)
-        detected_type = self._synth_type_for_device(target_device)
+        detected_type = family.detect(target_device)
         if detected_type is None:
             raise _invalid_argument(
                 message=(
-                    "Device is not a supported synth "
-                    f"(supported: {', '.join(SUPPORTED_SYNTH_TYPES)})"
+                    f"Device is not a supported {family.name} "
+                    f"(supported: {', '.join(family.supported_types)})"
                 ),
-                hint="Choose a Wavetable, Drift, or Meld device.",
-            )
-        return target_device, detected_type
-
-    def _require_supported_effect_device(self, track: int, device: int) -> tuple[Any, str]:
-        target_device = self._device_at(track, device)
-        detected_type = self._effect_type_for_device(target_device)
-        if detected_type is None:
-            raise _invalid_argument(
-                message=(
-                    "Device is not a supported effect "
-                    f"(supported: {', '.join(SUPPORTED_EFFECT_TYPES)})"
-                ),
-                hint="Choose one of the supported audio effects.",
+                hint=family.unsupported_device_hint,
             )
         return target_device, detected_type
 
@@ -827,38 +793,10 @@ class LiveBackendContext:
             "detected_type": detected_type,
         }
 
-    def _synth_device_payload(
-        self,
-        *,
-        track: int,
-        device_index: int,
-        device: Any,
-        detected_type: str,
+    def _list_parameters_payload(
+        self, family: DeviceFamily, track: int, device: int
     ) -> dict[str, Any]:
-        return self._device_payload(
-            track=track,
-            device_index=device_index,
-            device=device,
-            detected_type=detected_type,
-        )
-
-    def _effect_device_payload(
-        self,
-        *,
-        track: int,
-        device_index: int,
-        device: Any,
-        detected_type: str,
-    ) -> dict[str, Any]:
-        return self._device_payload(
-            track=track,
-            device_index=device_index,
-            device=device,
-            detected_type=detected_type,
-        )
-
-    def _list_synth_parameters_payload(self, track: int, device: int) -> dict[str, Any]:
-        target_device, detected_type = self._require_supported_synth_device(track, device)
+        target_device, detected_type = self._require_supported_device(family, track, device)
         serialized_parameters = [
             self._serialize_parameter(
                 parameter,
@@ -884,98 +822,37 @@ class LiveBackendContext:
             "parameters": serialized_parameters,
         }
 
-    def _resolved_standard_synth_key_indexes(
+    def _resolved_standard_key_indexes(
         self,
+        family: DeviceFamily,
         *,
-        synth_type: str,
+        device_type: str,
         track: int,
         device: int,
     ) -> tuple[dict[str, int], str]:
-        parsed_type = canonicalize_synth_type(synth_type)
-        target_device, detected_type = self._require_supported_synth_device(track, device)
+        parsed_type = family.canonicalize(device_type)
+        target_device, detected_type = self._require_supported_device(family, track, device)
         if detected_type != parsed_type:
             raise _invalid_argument(
                 message=(
-                    f"Device synth type mismatch: requested={parsed_type}, detected={detected_type}"
-                ),
-                hint="Select a device that matches the requested synth type.",
-            )
-
-        parameter_names = [
-            str(getattr(parameter, "name", ""))
-            for parameter in list(getattr(target_device, "parameters", []))
-        ]
-        key_indexes, missing_keys = resolve_standard_synth_key_indexes(parameter_names, parsed_type)
-        if missing_keys:
-            raise _invalid_argument(
-                message=(
-                    f"Missing required standard synth keys for {parsed_type}: "
-                    f"{', '.join(missing_keys)}"
-                ),
-                hint="Use the exact English standard synth parameter names.",
-            )
-        return key_indexes, parsed_type
-
-    def _list_effect_parameters_payload(self, track: int, device: int) -> dict[str, Any]:
-        target_device, detected_type = self._require_supported_effect_device(track, device)
-        serialized_parameters = [
-            self._serialize_parameter(
-                parameter,
-                index,
-                track_index=track,
-                device_index=device,
-            )
-            for index, parameter in enumerate(list(getattr(target_device, "parameters", [])))
-        ]
-        return {
-            "track": track,
-            "device": device,
-            "track_stable_ref": self._track_stable_ref(self._track_at(track), index=track),
-            "device_stable_ref": self._device_stable_ref(
-                target_device,
-                track_index=track,
-                device_index=device,
-            ),
-            "device_name": str(getattr(target_device, "name", "")),
-            "class_name": str(getattr(target_device, "class_name", "")),
-            "detected_type": detected_type,
-            "parameter_count": len(serialized_parameters),
-            "parameters": serialized_parameters,
-        }
-
-    def _resolved_standard_effect_key_indexes(
-        self,
-        *,
-        effect_type: str,
-        track: int,
-        device: int,
-    ) -> tuple[dict[str, int], str]:
-        parsed_type = canonicalize_effect_type(effect_type)
-        target_device, detected_type = self._require_supported_effect_device(track, device)
-        if detected_type != parsed_type:
-            raise _invalid_argument(
-                message=(
-                    f"Device effect type mismatch: requested={parsed_type}, "
+                    f"Device {family.name} type mismatch: requested={parsed_type}, "
                     f"detected={detected_type}"
                 ),
-                hint="Select a device that matches the requested effect type.",
+                hint=f"Select a device that matches the requested {family.name} type.",
             )
 
         parameter_names = [
             str(getattr(parameter, "name", ""))
             for parameter in list(getattr(target_device, "parameters", []))
         ]
-        key_indexes, missing_keys = resolve_standard_effect_key_indexes(
-            parameter_names,
-            parsed_type,
-        )
+        key_indexes, missing_keys = family.resolve_key_indexes(parameter_names, parsed_type)
         if missing_keys:
             raise _invalid_argument(
                 message=(
-                    f"Missing required standard effect keys for {parsed_type}: "
+                    f"Missing required standard {family.name} keys for {parsed_type}: "
                     f"{', '.join(missing_keys)}"
                 ),
-                hint="Use the exact English standard effect parameter names.",
+                hint=f"Use the exact English standard {family.name} parameter names.",
             )
         return key_indexes, parsed_type
 

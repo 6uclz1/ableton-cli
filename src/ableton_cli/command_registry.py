@@ -731,17 +731,3 @@ CLIENT_METHOD_SPECS: tuple[ClientMethodSpec, ...] = (
     _m("transport_tempo_set", (_p("bpm", "float"),), returns="dict[str, object]"),
     _m("transport_toggle", (), returns="dict[str, object]"),
 )
-
-
-def _build_client_method_map() -> dict[str, ClientMethodSpec]:
-    by_name: dict[str, ClientMethodSpec] = {}
-    for spec in CLIENT_METHOD_SPECS:
-        if spec.remote_command in by_name:
-            raise AssertionError(
-                f"duplicate client method spec for {spec.remote_command!r} in CLIENT_METHOD_SPECS"
-            )
-        by_name[spec.remote_command] = spec
-    return by_name
-
-
-CLIENT_METHOD_SPEC_BY_NAME: dict[str, ClientMethodSpec] = _build_client_method_map()

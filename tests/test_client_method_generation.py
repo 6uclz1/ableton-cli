@@ -51,6 +51,13 @@ def test_every_generated_method_names_a_real_remote_command() -> None:
     assert unknown == []
 
 
+def test_each_remote_command_has_one_client_method_spec() -> None:
+    names = [spec.remote_command for spec in CLIENT_METHOD_SPECS]
+    duplicates = sorted({name for name in names if names.count(name) > 1})
+
+    assert duplicates == []
+
+
 def test_generated_methods_are_reachable_on_the_client() -> None:
     for spec in CLIENT_METHOD_SPECS:
         method = getattr(AbletonClient, spec.remote_command, None)

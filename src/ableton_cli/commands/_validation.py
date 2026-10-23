@@ -69,10 +69,6 @@ def require_scene_index(value: int, *, hint: str = SCENE_INDEX_HINT) -> int:
     return require_non_negative("scene", value, hint=hint)
 
 
-def require_parameter_index(value: int, *, hint: str) -> int:
-    return require_non_negative("parameter", value, hint=hint)
-
-
 def require_minus_one_or_non_negative(name: str, value: int, *, hint: str) -> int:
     if value < -1:
         raise invalid_argument(message=f"{name} must be >= -1, got {value}", hint=hint)
@@ -107,28 +103,14 @@ def require_float_in_range(
     return value
 
 
-def require_track_and_value[TValue](track: int, value: TValue) -> tuple[int, TValue]:
-    return require_track_index(track), value
-
-
 def require_optional_track_index(track: int | None) -> int | None:
     if track is None:
         return None
     return require_track_index(track)
 
 
-def require_track_and_device(track: int, device: int) -> tuple[int, int]:
-    return require_track_index(track), require_device_index(device)
-
-
 def require_scene_and_value[TValue](scene: int, value: TValue) -> tuple[int, TValue]:
     return require_scene_index(scene), value
-
-
-def require_track_and_name(track: int, value: str) -> tuple[int, str]:
-    valid_track = require_track_index(track)
-    valid_name = require_non_empty_string("name", value, hint=TRACK_NAME_HINT)
-    return valid_track, valid_name
 
 
 def require_scene_and_name(scene: int, value: str) -> tuple[int, str]:
@@ -147,18 +129,6 @@ def require_scene_insert_index(index: int) -> int:
     return require_minus_one_or_non_negative("index", index, hint=SCENE_INSERT_INDEX_HINT)
 
 
-def require_track_and_volume(track: int, value: float) -> tuple[int, float]:
-    valid_track = require_track_index(track)
-    valid_value = require_float_in_range(
-        "value",
-        value,
-        minimum=0.0,
-        maximum=1.0,
-        hint=VOLUME_VALUE_HINT,
-    )
-    return valid_track, valid_value
-
-
 def require_volume_value(value: float) -> float:
     return require_float_in_range(
         "value",
@@ -167,18 +137,6 @@ def require_volume_value(value: float) -> float:
         maximum=1.0,
         hint=VOLUME_VALUE_HINT,
     )
-
-
-def require_track_and_pan(track: int, value: float) -> tuple[int, float]:
-    valid_track = require_track_index(track)
-    valid_value = require_float_in_range(
-        "value",
-        value,
-        minimum=-1.0,
-        maximum=1.0,
-        hint=PAN_VALUE_HINT,
-    )
-    return valid_track, valid_value
 
 
 def require_pan_value(value: float) -> float:
@@ -193,18 +151,6 @@ def require_pan_value(value: float) -> float:
 
 def require_track_send(track: int, send: int) -> tuple[int, int]:
     return require_track_index(track), require_send_index(send)
-
-
-def require_track_send_and_volume(track: int, send: int, value: float) -> tuple[int, int, float]:
-    valid_track, valid_send = require_track_send(track, send)
-    valid_value = require_float_in_range(
-        "value",
-        value,
-        minimum=0.0,
-        maximum=1.0,
-        hint=VOLUME_VALUE_HINT,
-    )
-    return valid_track, valid_send, valid_value
 
 
 def require_non_empty_string(name: str, value: str, *, hint: str) -> str:

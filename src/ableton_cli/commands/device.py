@@ -222,104 +222,88 @@ def _device_target_refs(
     )
 
 
-@chains_app.command("list")
-def device_chains_list(
+def _run_device_target_command(
     ctx: typer.Context,
-    track_index: TrackIndexOption = None,
-    track_name: TrackNameOption = None,
-    selected_track: SelectedTrackOption = False,
-    track_query: TrackQueryOption = None,
-    track_ref: TrackStableRefOption = None,
-    return_track_index: ReturnTrackIndexOption = None,
-    return_track_name: ReturnTrackNameOption = None,
-    main: MainTrackOption = False,
-    device_index: DeviceIndexOption = None,
-    device_name: DeviceNameOption = None,
-    selected_device: SelectedDeviceOption = False,
-    device_query: DeviceQueryOption = None,
-    device_ref: DeviceStableRefOption = None,
+    *,
+    spec: DeviceCommandSpec,
+    refs: Callable[[], tuple[dict[str, object], dict[str, object]]],
+    extra: dict[str, object] | None = None,
 ) -> None:
-    def _resolved_refs() -> tuple[dict[str, object], dict[str, object]]:
-        return _device_target_refs(
-            track_index=track_index,
-            track_name=track_name,
-            selected_track=selected_track,
-            track_query=track_query,
-            track_ref=track_ref,
-            return_track_index=return_track_index,
-            return_track_name=return_track_name,
-            main=main,
-            device_index=device_index,
-            device_name=device_name,
-            selected_device=selected_device,
-            device_query=device_query,
-            device_ref=device_ref,
-        )
+    """Run a command addressed by track+device selectors plus plain arguments."""
+    extra_args = dict(extra or {})
 
-    def _method_kwargs() -> dict[str, object]:
-        resolved_track_ref, resolved_device_ref = _resolved_refs()
-        return {"track_ref": resolved_track_ref, "device_ref": resolved_device_ref}
+    def _resolved() -> dict[str, object]:
+        resolved_track_ref, resolved_device_ref = refs()
+        return {"track_ref": resolved_track_ref, "device_ref": resolved_device_ref, **extra_args}
 
     run_client_command_spec(
         ctx,
-        spec=DEVICE_CHAINS_LIST_SPEC,
-        args={"track_ref": None, "device_ref": None},
-        method_kwargs=_method_kwargs,
-        resolved_args=lambda: {
-            "track_ref": _resolved_refs()[0],
-            "device_ref": _resolved_refs()[1],
-        },
+        spec=spec,
+        args={"track_ref": None, "device_ref": None, **extra_args},
+        method_kwargs=_resolved,
+        resolved_args=_resolved,
     )
 
 
-@macro_app.command("list")
-def device_macro_list(
-    ctx: typer.Context,
-    track_index: TrackIndexOption = None,
-    track_name: TrackNameOption = None,
-    selected_track: SelectedTrackOption = False,
-    track_query: TrackQueryOption = None,
-    track_ref: TrackStableRefOption = None,
-    return_track_index: ReturnTrackIndexOption = None,
-    return_track_name: ReturnTrackNameOption = None,
-    main: MainTrackOption = False,
-    device_index: DeviceIndexOption = None,
-    device_name: DeviceNameOption = None,
-    selected_device: SelectedDeviceOption = False,
-    device_query: DeviceQueryOption = None,
-    device_ref: DeviceStableRefOption = None,
+def _register_device_target_command(
+    app: typer.Typer,
+    name: str,
+    *,
+    spec: DeviceCommandSpec,
+    help_text: str | None = None,
 ) -> None:
-    def _resolved_refs() -> tuple[dict[str, object], dict[str, object]]:
-        return _device_target_refs(
-            track_index=track_index,
-            track_name=track_name,
-            selected_track=selected_track,
-            track_query=track_query,
-            track_ref=track_ref,
-            return_track_index=return_track_index,
-            return_track_name=return_track_name,
-            main=main,
-            device_index=device_index,
-            device_name=device_name,
-            selected_device=selected_device,
-            device_query=device_query,
-            device_ref=device_ref,
+    """Register a command whose only arguments are the track and device selectors."""
+
+    @app.command(name, help=help_text)
+    def _command(
+        ctx: typer.Context,
+        track_index: TrackIndexOption = None,
+        track_name: TrackNameOption = None,
+        selected_track: SelectedTrackOption = False,
+        track_query: TrackQueryOption = None,
+        track_ref: TrackStableRefOption = None,
+        return_track_index: ReturnTrackIndexOption = None,
+        return_track_name: ReturnTrackNameOption = None,
+        main: MainTrackOption = False,
+        device_index: DeviceIndexOption = None,
+        device_name: DeviceNameOption = None,
+        selected_device: SelectedDeviceOption = False,
+        device_query: DeviceQueryOption = None,
+        device_ref: DeviceStableRefOption = None,
+    ) -> None:
+        _run_device_target_command(
+            ctx,
+            spec=spec,
+            refs=lambda: _device_target_refs(
+                track_index=track_index,
+                track_name=track_name,
+                selected_track=selected_track,
+                track_query=track_query,
+                track_ref=track_ref,
+                return_track_index=return_track_index,
+                return_track_name=return_track_name,
+                main=main,
+                device_index=device_index,
+                device_name=device_name,
+                selected_device=selected_device,
+                device_query=device_query,
+                device_ref=device_ref,
+            ),
         )
 
-    def _method_kwargs() -> dict[str, object]:
-        resolved_track_ref, resolved_device_ref = _resolved_refs()
-        return {"track_ref": resolved_track_ref, "device_ref": resolved_device_ref}
 
-    run_client_command_spec(
-        ctx,
-        spec=DEVICE_MACRO_LIST_SPEC,
-        args={"track_ref": None, "device_ref": None},
-        method_kwargs=_method_kwargs,
-        resolved_args=lambda: {
-            "track_ref": _resolved_refs()[0],
-            "device_ref": _resolved_refs()[1],
-        },
-    )
+_register_device_target_command(
+    chains_app,
+    "list",
+    spec=DEVICE_CHAINS_LIST_SPEC,
+)
+
+
+_register_device_target_command(
+    macro_app,
+    "list",
+    spec=DEVICE_MACRO_LIST_SPEC,
+)
 
 
 @macro_app.command("set")
@@ -341,8 +325,10 @@ def device_macro_set(
     device_query: DeviceQueryOption = None,
     device_ref: DeviceStableRefOption = None,
 ) -> None:
-    def _resolved_refs() -> tuple[dict[str, object], dict[str, object]]:
-        return _device_target_refs(
+    _run_device_target_command(
+        ctx,
+        spec=DEVICE_MACRO_SET_SPEC,
+        refs=lambda: _device_target_refs(
             track_index=track_index,
             track_name=track_name,
             selected_track=selected_track,
@@ -356,56 +342,8 @@ def device_macro_set(
             selected_device=selected_device,
             device_query=device_query,
             device_ref=device_ref,
-        )
-
-    def _method_kwargs() -> dict[str, object]:
-        resolved_track_ref, resolved_device_ref = _resolved_refs()
-        return {
-            "track_ref": resolved_track_ref,
-            "device_ref": resolved_device_ref,
-            "macro_index": macro_index,
-            "value": value,
-        }
-
-    run_client_command_spec(
-        ctx,
-        spec=DEVICE_MACRO_SET_SPEC,
-        args={
-            "track_ref": None,
-            "device_ref": None,
-            "macro_index": macro_index,
-            "value": value,
-        },
-        method_kwargs=_method_kwargs,
-        resolved_args=lambda: {
-            "track_ref": _resolved_refs()[0],
-            "device_ref": _resolved_refs()[1],
-            "macro_index": macro_index,
-            "value": value,
-        },
-    )
-
-
-def _run_device_target_command(
-    ctx: typer.Context,
-    *,
-    spec: DeviceCommandSpec,
-    refs: Callable[[], tuple[dict[str, object], dict[str, object]]],
-    extra: dict[str, object] | None = None,
-) -> None:
-    """Run a command addressed by track+device selectors plus plain arguments."""
-    extra_args = dict(extra or {})
-
-    def _resolved() -> dict[str, object]:
-        resolved_track_ref, resolved_device_ref = refs()
-        return {"track_ref": resolved_track_ref, "device_ref": resolved_device_ref, **extra_args}
-
-    run_client_command_spec(
-        ctx,
-        spec=spec,
-        args={"track_ref": None, "device_ref": None, **extra_args},
-        method_kwargs=_resolved,
-        resolved_args=_resolved,
+        ),
+        extra={"macro_index": macro_index, "value": value},
     )
 
 
@@ -469,43 +407,12 @@ DEVICE_DELETE_SPEC = DeviceCommandSpec(command_name="device delete", client_meth
 DEVICE_MOVE_SPEC = DeviceCommandSpec(command_name="device move", client_method="device_move")
 
 
-@parameters_app.command("list")
-def device_parameters_list(
-    ctx: typer.Context,
-    track_index: TrackIndexOption = None,
-    track_name: TrackNameOption = None,
-    selected_track: SelectedTrackOption = False,
-    track_query: TrackQueryOption = None,
-    track_ref: TrackStableRefOption = None,
-    return_track_index: ReturnTrackIndexOption = None,
-    return_track_name: ReturnTrackNameOption = None,
-    main: MainTrackOption = False,
-    device_index: DeviceIndexOption = None,
-    device_name: DeviceNameOption = None,
-    selected_device: SelectedDeviceOption = False,
-    device_query: DeviceQueryOption = None,
-    device_ref: DeviceStableRefOption = None,
-) -> None:
-    """List every parameter of any device, with display strings and choice items."""
-    _run_device_target_command(
-        ctx,
-        spec=DEVICE_PARAMETERS_LIST_SPEC,
-        refs=lambda: _device_target_refs(
-            track_index=track_index,
-            track_name=track_name,
-            selected_track=selected_track,
-            track_query=track_query,
-            track_ref=track_ref,
-            return_track_index=return_track_index,
-            return_track_name=return_track_name,
-            main=main,
-            device_index=device_index,
-            device_name=device_name,
-            selected_device=selected_device,
-            device_query=device_query,
-            device_ref=device_ref,
-        ),
-    )
+_register_device_target_command(
+    parameters_app,
+    "list",
+    spec=DEVICE_PARAMETERS_LIST_SPEC,
+    help_text="List every parameter of any device, with display strings and choice items.",
+)
 
 
 @parameter_app.command("select")
@@ -614,43 +521,12 @@ def device_parameter_set_display(
     )
 
 
-@active_app.command("get")
-def device_active_get(
-    ctx: typer.Context,
-    track_index: TrackIndexOption = None,
-    track_name: TrackNameOption = None,
-    selected_track: SelectedTrackOption = False,
-    track_query: TrackQueryOption = None,
-    track_ref: TrackStableRefOption = None,
-    return_track_index: ReturnTrackIndexOption = None,
-    return_track_name: ReturnTrackNameOption = None,
-    main: MainTrackOption = False,
-    device_index: DeviceIndexOption = None,
-    device_name: DeviceNameOption = None,
-    selected_device: SelectedDeviceOption = False,
-    device_query: DeviceQueryOption = None,
-    device_ref: DeviceStableRefOption = None,
-) -> None:
-    """Read whether a device is switched on."""
-    _run_device_target_command(
-        ctx,
-        spec=DEVICE_ACTIVE_GET_SPEC,
-        refs=lambda: _device_target_refs(
-            track_index=track_index,
-            track_name=track_name,
-            selected_track=selected_track,
-            track_query=track_query,
-            track_ref=track_ref,
-            return_track_index=return_track_index,
-            return_track_name=return_track_name,
-            main=main,
-            device_index=device_index,
-            device_name=device_name,
-            selected_device=selected_device,
-            device_query=device_query,
-            device_ref=device_ref,
-        ),
-    )
+_register_device_target_command(
+    active_app,
+    "get",
+    spec=DEVICE_ACTIVE_GET_SPEC,
+    help_text="Read whether a device is switched on.",
+)
 
 
 @active_app.command("set")
@@ -694,43 +570,12 @@ def device_active_set(
     )
 
 
-@preset_app.command("list")
-def device_preset_list(
-    ctx: typer.Context,
-    track_index: TrackIndexOption = None,
-    track_name: TrackNameOption = None,
-    selected_track: SelectedTrackOption = False,
-    track_query: TrackQueryOption = None,
-    track_ref: TrackStableRefOption = None,
-    return_track_index: ReturnTrackIndexOption = None,
-    return_track_name: ReturnTrackNameOption = None,
-    main: MainTrackOption = False,
-    device_index: DeviceIndexOption = None,
-    device_name: DeviceNameOption = None,
-    selected_device: SelectedDeviceOption = False,
-    device_query: DeviceQueryOption = None,
-    device_ref: DeviceStableRefOption = None,
-) -> None:
-    """List a plug-in device's presets."""
-    _run_device_target_command(
-        ctx,
-        spec=DEVICE_PRESET_LIST_SPEC,
-        refs=lambda: _device_target_refs(
-            track_index=track_index,
-            track_name=track_name,
-            selected_track=selected_track,
-            track_query=track_query,
-            track_ref=track_ref,
-            return_track_index=return_track_index,
-            return_track_name=return_track_name,
-            main=main,
-            device_index=device_index,
-            device_name=device_name,
-            selected_device=selected_device,
-            device_query=device_query,
-            device_ref=device_ref,
-        ),
-    )
+_register_device_target_command(
+    preset_app,
+    "list",
+    spec=DEVICE_PRESET_LIST_SPEC,
+    help_text="List a plug-in device's presets.",
+)
 
 
 @preset_app.command("set")
@@ -774,43 +619,12 @@ def device_preset_set(
     )
 
 
-@sidechain_app.command("get")
-def device_sidechain_get(
-    ctx: typer.Context,
-    track_index: TrackIndexOption = None,
-    track_name: TrackNameOption = None,
-    selected_track: SelectedTrackOption = False,
-    track_query: TrackQueryOption = None,
-    track_ref: TrackStableRefOption = None,
-    return_track_index: ReturnTrackIndexOption = None,
-    return_track_name: ReturnTrackNameOption = None,
-    main: MainTrackOption = False,
-    device_index: DeviceIndexOption = None,
-    device_name: DeviceNameOption = None,
-    selected_device: SelectedDeviceOption = False,
-    device_query: DeviceQueryOption = None,
-    device_ref: DeviceStableRefOption = None,
-) -> None:
-    """Read a Compressor's sidechain source and the available sources."""
-    _run_device_target_command(
-        ctx,
-        spec=DEVICE_SIDECHAIN_GET_SPEC,
-        refs=lambda: _device_target_refs(
-            track_index=track_index,
-            track_name=track_name,
-            selected_track=selected_track,
-            track_query=track_query,
-            track_ref=track_ref,
-            return_track_index=return_track_index,
-            return_track_name=return_track_name,
-            main=main,
-            device_index=device_index,
-            device_name=device_name,
-            selected_device=selected_device,
-            device_query=device_query,
-            device_ref=device_ref,
-        ),
-    )
+_register_device_target_command(
+    sidechain_app,
+    "get",
+    spec=DEVICE_SIDECHAIN_GET_SPEC,
+    help_text="Read a Compressor's sidechain source and the available sources.",
+)
 
 
 @sidechain_app.command("set")
@@ -860,43 +674,12 @@ def device_sidechain_set(
     )
 
 
-@device_app.command("delete")
-def device_delete(
-    ctx: typer.Context,
-    track_index: TrackIndexOption = None,
-    track_name: TrackNameOption = None,
-    selected_track: SelectedTrackOption = False,
-    track_query: TrackQueryOption = None,
-    track_ref: TrackStableRefOption = None,
-    return_track_index: ReturnTrackIndexOption = None,
-    return_track_name: ReturnTrackNameOption = None,
-    main: MainTrackOption = False,
-    device_index: DeviceIndexOption = None,
-    device_name: DeviceNameOption = None,
-    selected_device: SelectedDeviceOption = False,
-    device_query: DeviceQueryOption = None,
-    device_ref: DeviceStableRefOption = None,
-) -> None:
-    """Delete a top-level device from a track."""
-    _run_device_target_command(
-        ctx,
-        spec=DEVICE_DELETE_SPEC,
-        refs=lambda: _device_target_refs(
-            track_index=track_index,
-            track_name=track_name,
-            selected_track=selected_track,
-            track_query=track_query,
-            track_ref=track_ref,
-            return_track_index=return_track_index,
-            return_track_name=return_track_name,
-            main=main,
-            device_index=device_index,
-            device_name=device_name,
-            selected_device=selected_device,
-            device_query=device_query,
-            device_ref=device_ref,
-        ),
-    )
+_register_device_target_command(
+    device_app,
+    "delete",
+    spec=DEVICE_DELETE_SPEC,
+    help_text="Delete a top-level device from a track.",
+)
 
 
 @device_app.command("move")

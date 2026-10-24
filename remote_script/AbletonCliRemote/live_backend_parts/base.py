@@ -69,6 +69,7 @@ class LiveBackendContext:
         self._stable_ref_counter = 0
         self._stable_ref_by_locator: dict[Any, str] = {}
         self._stable_ref_by_object: dict[Any, str] = {}
+        self._stable_ref_by_live_ptr: dict[Any, str] = {}
         self._stable_ref_entries: dict[str, Any] = {}
         self.services: Any = None
 
@@ -82,6 +83,8 @@ class LiveBackendContext:
             self._stable_ref_by_locator = {}
         if not hasattr(self, "_stable_ref_by_object"):
             self._stable_ref_by_object = {}
+        if not hasattr(self, "_stable_ref_by_live_ptr"):
+            self._stable_ref_by_live_ptr = {}
         if not hasattr(self, "_stable_ref_entries"):
             self._stable_ref_entries = {}
 
@@ -89,8 +92,21 @@ class LiveBackendContext:
     def _unwrap_live_object(target: Any) -> Any:
         return getattr(target, "_target", target)
 
+    @classmethod
+    def _live_ptr(cls, target: Any) -> int | None:
+        # Live hands out a new Python wrapper on every access, so ``is`` never
+        # matches the same track or device twice; ``_live_ptr`` is the address
+        # of the underlying Live object and stays the same across wrappers.
+        ptr = getattr(cls._unwrap_live_object(target), "_live_ptr", None)
+        return ptr if isinstance(ptr, int) else None
+
     def _same_live_object(self, left: Any, right: Any) -> bool:
-        return self._unwrap_live_object(left) is self._unwrap_live_object(right)
+        left = self._unwrap_live_object(left)
+        right = self._unwrap_live_object(right)
+        if left is right:
+            return True
+        left_ptr = self._live_ptr(left)
+        return left_ptr is not None and left_ptr == self._live_ptr(right)
 
     @staticmethod
     def _is_callable_attribute(target: Any, name: str) -> bool:
@@ -319,13 +335,20 @@ class LiveBackendContext:
         canonical_target = self._unwrap_live_object(target)
         if locator is None:
             locator = self._stable_ref_locator(kind, target)
+        # A ref follows its Live object. Only an object without ``_live_ptr``
+        # cannot be recognised again, and falls back to its position.
+        live_ptr = self._live_ptr(canonical_target)
         token = None
-        if locator is not None:
+        if live_ptr is not None:
+            token = self._stable_ref_by_live_ptr.get((kind, live_ptr))
+        elif locator is not None:
             token = self._stable_ref_by_locator.get((kind, locator))
         else:
             token = self._stable_ref_by_object.get((kind, id(canonical_target)))
         if token is None:
             token = self._next_stable_ref(kind)
+        if live_ptr is not None:
+            self._stable_ref_by_live_ptr[(kind, live_ptr)] = token
         if locator is not None:
             self._stable_ref_by_locator[(kind, locator)] = token
         self._stable_ref_by_object[(kind, id(canonical_target))] = token
@@ -443,7 +466,10 @@ class LiveBackendContext:
             if self._same_live_object(candidate, target):
                 return index
         locator = entry["locator"]
-        if locator_matcher is not None and locator is not None:
+        # An object Live can identify is gone from these candidates; whatever
+        # now sits at its old position is a different object.
+        recognisable = self._live_ptr(target) is not None
+        if locator_matcher is not None and locator is not None and not recognisable:
             index = locator_matcher(locator)
             if index is not None:
                 return index

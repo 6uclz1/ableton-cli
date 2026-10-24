@@ -62,6 +62,11 @@ _WRITE = SideEffectSpec(kind="write", idempotent=False, requires_confirmation=Fa
 _DESTRUCTIVE = SideEffectSpec(kind="destructive", idempotent=False, requires_confirmation=True)
 
 
+def command_roots() -> frozenset[str]:
+    """Top-level command names; plugins may not take any of them."""
+    return frozenset(descriptor.command_name.split()[0] for descriptor in COMMAND_DESCRIPTORS)
+
+
 def _d(command_name: str, remote_command: str | None, side_effect: SideEffectSpec):
     return CommandDescriptor(
         command_name=command_name,
@@ -241,6 +246,12 @@ COMMAND_DESCRIPTORS: tuple[CommandDescriptor, ...] = (
     _d("mixer cue-volume get", "mixer_cue_volume_get", _READ),
     _d("mixer cue-volume set", "mixer_cue_volume_set", _WRITE),
     _d("ping", "ping", _READ),
+    _d("plugins info", None, _READ),
+    _d("plugins install", None, _DESTRUCTIVE),
+    _d("plugins list", None, _READ),
+    _d("plugins sync", None, _DESTRUCTIVE),
+    _d("plugins uninstall", None, _DESTRUCTIVE),
+    _d("plugins update", None, _DESTRUCTIVE),
     _d("remix apply", None, _WRITE),
     _d("remix arrange", None, _WRITE),
     _d("remix device-chain apply", None, _WRITE),

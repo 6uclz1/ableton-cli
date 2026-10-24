@@ -9,6 +9,7 @@ from ableton_cli.config import Settings
 from ableton_cli.errors import AppError, ExitCode
 from ableton_cli.output import OutputMode
 from ableton_cli.platform_paths import PosixPlatformPaths
+from ableton_cli.plugins.model import PluginLoadReport
 
 
 def test_build_runtime_context_resolves_dependencies_and_configures_logging(
@@ -61,6 +62,7 @@ def test_build_runtime_context_resolves_dependencies_and_configures_logging(
         replay=None,
         read_only=True,
         compact=True,
+        plugins=PluginLoadReport(enabled=False),
     )
 
     assert runtime.settings is settings
@@ -116,6 +118,35 @@ def test_build_runtime_context_propagates_bootstrap_errors(monkeypatch) -> None:
             replay=None,
             read_only=False,
             compact=False,
+            plugins=PluginLoadReport(enabled=False),
+        )
+
+    assert exc_info.value is expected
+
+
+def test_build_runtime_context_fails_with_a_misconfigured_plugin_switch() -> None:
+    expected = AppError(
+        error_code="CONFIG_INVALID",
+        message="Invalid ABLETON_CLI_PLUGINS value: 'yes'",
+        exit_code=ExitCode.CONFIG_INVALID,
+    )
+
+    with pytest.raises(AppError) as exc_info:
+        bootstrap.build_runtime_context(
+            host=None,
+            port=None,
+            timeout_ms=None,
+            protocol_version=None,
+            output=OutputMode.HUMAN,
+            verbose=False,
+            log_file=None,
+            config=None,
+            no_color=False,
+            quiet=False,
+            record=None,
+            replay=None,
+            read_only=False,
+            plugins=PluginLoadReport(enabled=False, error=expected),
         )
 
     assert exc_info.value is expected

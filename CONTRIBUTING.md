@@ -20,6 +20,9 @@ The following are treated as public/stable contracts:
 - fixed CLI exit codes and documented error codes
 - TCP JSONL protocol request/response envelope and protocol versioning rules
 - `tests/snapshots/public_contract_snapshot.json`
+- the plugin API: everything exported by `ableton_cli.plugin_api` and `ableton_cli.plugin_api.testing`, the `ableton_cli.plugins` entry-point group and `PLUGIN_API_VERSION` (see `docs/plugins.md`); an incompatible change bumps `PLUGIN_API_VERSION`
+
+The core test suite runs with `ABLETON_CLI_PLUGINS=off` (set in `tests/conftest.py`), and the snapshot tools build the app without plugins, so plugins installed in a dev environment never leak into snapshots.
 
 Before merge, regenerate snapshot only when you intentionally change a public contract:
 

@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import os
 import shutil
+from collections.abc import Sequence
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -171,6 +173,14 @@ def _resolve_skill_home(
     )
 
 
+@dataclass(frozen=True, slots=True)
+class PluginSkill:
+    """A skill directory shipped by a loaded plugin; installed next to the core skill."""
+
+    plugin: str
+    path: Path
+
+
 def install_skill(
     *,
     dry_run: bool,
@@ -180,6 +190,7 @@ def install_skill(
     codex_home: Path | None = None,
     claude_home: Path | None = None,
     cursor_home: Path | None = None,
+    plugin_skills: Sequence[PluginSkill] = (),
 ) -> dict[str, Any]:
     del yes  # reserved for explicit confirmation flows; command stays non-interactive.
 
@@ -200,11 +211,20 @@ def install_skill(
         cursor_home=cursor_home,
     )
     target_path = resolved_home / "skills" / SKILL_DIR_NAME / SKILL_FILE_NAME
-    action = "update" if target_path.exists() else "install"
-
-    if not dry_run:
-        target_path.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(source, target_path)
+    action = _copy_skill(source, target_path, dry_run=dry_run)
+    plugin_results = [
+        {
+            "plugin": skill.plugin,
+            "source": str(skill.path / SKILL_FILE_NAME),
+            "target": str(resolved_home / "skills" / skill.path.name / SKILL_FILE_NAME),
+            "action": _copy_skill(
+                skill.path / SKILL_FILE_NAME,
+                resolved_home / "skills" / skill.path.name / SKILL_FILE_NAME,
+                dry_run=dry_run,
+            ),
+        }
+        for skill in plugin_skills
+    ]
 
     return {
         "action": action,
@@ -213,4 +233,13 @@ def install_skill(
         "source": str(source),
         "target": str(target_path),
         "home": str(resolved_home),
+        "plugin_skills": plugin_results,
     }
+
+
+def _copy_skill(source: Path, target: Path, *, dry_run: bool) -> str:
+    action = "update" if target.exists() else "install"
+    if not dry_run:
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(source, target)
+    return action

@@ -275,38 +275,22 @@ class LiveBackendScenesArrangementMixin:
                     hint="Use a Live version exposing track.create_audio_clip.",
                 )
             create_audio_clip(normalized_audio_path, normalized_start_time)
-            created_clip = self._arrangement_clips(track)[
-                self._created_arrangement_clip_index(track, normalized_start_time)
-            ]
-            length_set = False
-            end_marker_set = False
-            if hasattr(created_clip, "length"):
-                try:
-                    created_clip.length = normalized_length
-                    length_set = True
-                except Exception:  # noqa: BLE001
-                    if hasattr(created_clip, "end_marker"):
-                        created_clip.end_marker = normalized_length
-                        end_marker_set = True
-            actual_length = self._ctx._safe_float(getattr(created_clip, "length", None))
-            result = {
+            created_index = self._created_arrangement_clip_index(track, normalized_start_time)
+            self._set_arrangement_audio_clip_span(
+                self._arrangement_clips(track)[created_index],
+                track=track,
+                index=created_index,
+                length=normalized_length,
+            )
+            return {
                 "track": track,
                 "start_time": normalized_start_time,
-                "length": actual_length if actual_length is not None else normalized_length,
+                "length": normalized_length,
                 "kind": "audio",
                 "audio_path": normalized_audio_path,
                 "arrangement_view_focused": True,
                 "created": True,
             }
-            if not length_set:
-                result.update(
-                    {
-                        "requested_length": normalized_length,
-                        "length_set": length_set,
-                        "end_marker_set": end_marker_set,
-                    }
-                )
-            return result
 
         raise _invalid_argument(
             message=(
@@ -314,6 +298,46 @@ class LiveBackendScenesArrangementMixin:
                 f"(has_midi_input={is_midi_track}, has_audio_input={is_audio_track})"
             ),
             hint="Use a standard MIDI or audio track for arrangement clip creation.",
+        )
+
+    def _set_arrangement_audio_clip_span(
+        self, clip: Any, *, track: int, index: int, length: float
+    ) -> None:
+        # Live sizes a new audio clip to the file's warped length. Its arrangement
+        # length is read-only and follows loop_end - loop_start; end_marker does
+        # not move it.
+        tracks_clips = self._ctx.services.tracks_clips
+        loop_start = self._ctx._safe_float(tracks_clips._safe_clip_attr(clip, "loop_start"))
+        write_error: str | None = None
+        if loop_start is not None:
+            try:
+                clip.loop_end = loop_start + length
+            except Exception as exc:  # noqa: BLE001
+                write_error = str(exc)
+        actual_length = self._ctx._safe_float(tracks_clips._safe_clip_attr(clip, "length"))
+        if actual_length is not None and math.isclose(actual_length, length, abs_tol=1e-6):
+            return
+        details: dict[str, Any] = {
+            "track": track,
+            "index": index,
+            "requested_length": length,
+            "actual_length": actual_length,
+            "warping": bool(tracks_clips._safe_clip_attr(clip, "warping", False)),
+            "looping": bool(tracks_clips._safe_clip_attr(clip, "looping", False)),
+        }
+        if write_error is not None:
+            details["write_error"] = write_error
+        raise _invalid_argument(
+            message=(
+                f"Live did not apply the requested arrangement audio clip length: "
+                f"requested {length} but is {actual_length}"
+            ),
+            hint=(
+                "The clip was created with Live's length. Live measures an unwarped clip's "
+                "loop in seconds: enable warping with 'arrangement clip warp set', then set "
+                "the span with 'arrangement clip loop set', or delete the clip."
+            ),
+            details=details,
         )
 
     def arrangement_clip_list(self, track: int | None) -> dict[str, Any]:

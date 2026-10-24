@@ -6,8 +6,8 @@ SUPPORTED_SYNTH_TYPES: tuple[str, ...] = ("wavetable", "drift", "meld")
 
 _STANDARD_SYNTH_PARAMETER_NAMES: dict[str, dict[str, str]] = {
     "wavetable": {
-        "filter_cutoff": "Filter 1 Freq",
-        "filter_resonance": "Filter 1 Res",
+        "filter_cutoff": "Flt 1 Freq",
+        "filter_resonance": "Flt 1 Res",
         "amp_attack": "Amp Attack",
         "amp_decay": "Amp Decay",
         "amp_sustain": "Amp Sustain",
@@ -18,7 +18,7 @@ _STANDARD_SYNTH_PARAMETER_NAMES: dict[str, dict[str, str]] = {
     },
     "drift": {
         "filter_cutoff": "LP Freq",
-        "filter_resonance": "LP Reso",
+        "filter_resonance": "LP Res",
         "amp_attack": "Env 1 Attack",
         "amp_decay": "Env 1 Decay",
         "amp_sustain": "Env 1 Sustain",

@@ -9,6 +9,7 @@ from ..runtime import execute_command, get_client
 from ._client_command_runner import CommandSpec
 from ._client_command_runner import run_client_command as run_client_command_shared
 from ._client_command_runner import run_client_command_spec as run_client_command_spec_shared
+from ._params import TrackArgument
 from ._validation import require_minus_one_or_non_negative, require_non_negative
 
 tracks_app = typer.Typer(help="Track collection commands", no_args_is_help=True)
@@ -139,7 +140,7 @@ tracks_app.add_typer(create_app, name="create")
 @tracks_app.command("delete")
 def delete_track(
     ctx: typer.Context,
-    track: Annotated[int, typer.Argument(help="Track index (0-based)")],
+    track: TrackArgument,
 ) -> None:
     def _method_kwargs() -> dict[str, object]:
         require_non_negative("track", track, hint="Use a valid track index from 'tracks list'.")

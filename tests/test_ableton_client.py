@@ -17,7 +17,7 @@ def _settings() -> Settings:
         timeout_ms=15000,
         log_level="INFO",
         log_file=None,
-        protocol_version=2,
+        protocol_version=3,
         config_path="/tmp/ableton-cli-test.toml",
     )
 
@@ -53,6 +53,17 @@ def test_client_non_ping_command_sends_single_request_without_preflight(monkeypa
     client.song_info()
 
     assert [request["name"] for request in requests] == ["song_info"]
+
+
+def test_client_socket_deadline_outlives_the_advertised_request_timeout(monkeypatch) -> None:
+    settings = _settings()
+    client = AbletonClient(settings)
+    requests = _capture_requests(monkeypatch, client)
+
+    client.song_info()
+
+    assert requests[0]["meta"]["request_timeout_ms"] == settings.timeout_ms
+    assert client.transport.socket_timeout_s > settings.timeout_ms / 1000
 
 
 def test_client_does_not_retry_read_command_on_timeout(monkeypatch) -> None:
@@ -258,6 +269,19 @@ def test_client_sends_request_timeout_meta(monkeypatch) -> None:
             },
         ),
         (
+            lambda client: client.update_clip_notes(
+                track=5,
+                clip=6,
+                notes=[{"note_id": 3, "velocity": 90, "probability": 0.5}],
+            ),
+            "update_clip_notes",
+            {
+                "track": 5,
+                "clip": 6,
+                "notes": [{"note_id": 3, "velocity": 90, "probability": 0.5}],
+            },
+        ),
+        (
             lambda client: client.search_browser_items(
                 query="drift",
                 path=None,
@@ -432,6 +456,37 @@ def test_client_sends_request_timeout_meta(monkeypatch) -> None:
                 "start_pad": 0,
                 "create_trigger_clip": True,
                 "trigger_clip_slot": 3,
+            },
+        ),
+        (
+            lambda client: client.clip_cut_to_drum_rack(
+                source_track=None,
+                source_clip=None,
+                source_uri=None,
+                source_path=None,
+                target_track=None,
+                grid=None,
+                slice_count=None,
+                start_pad=0,
+                create_trigger_clip=False,
+                trigger_clip_slot=None,
+                source_file="/tmp/source.wav",
+                source_file_duration_beats=8.0,
+                slice_ranges=[
+                    {"slice_start": 0.0, "slice_end": 1.5},
+                    {"slice_start": 1.5, "slice_end": 2.0},
+                ],
+            ),
+            "clip_cut_to_drum_rack",
+            {
+                "source_file": "/tmp/source.wav",
+                "source_file_duration_beats": 8.0,
+                "slice_ranges": [
+                    {"slice_start": 0.0, "slice_end": 1.5},
+                    {"slice_start": 1.5, "slice_end": 2.0},
+                ],
+                "start_pad": 0,
+                "create_trigger_clip": False,
             },
         ),
         (
@@ -725,3 +780,32 @@ def test_client_parameter_commands_share_payload_shape(
         "parameter_ref": {"mode": "index", "index": 2},
         "value": expected_value,
     }
+
+
+def test_retrying_a_command_reuses_the_key_but_not_the_request_id(monkeypatch) -> None:
+    client = AbletonClient(_settings())
+    requests: list[dict[str, Any]] = []
+
+    def _send(request: dict[str, Any]):  # noqa: ANN202
+        requests.append(request)
+        return _ok_response(request, {})
+
+    monkeypatch.setattr(client.transport, "send", _send)
+
+    for _attempt in range(2):
+        client.execute_remote_command("add_notes_to_clip", {}, idempotency_key="step-key")
+
+    assert [request["meta"]["idempotency_key"] for request in requests] == [
+        "step-key",
+        "step-key",
+    ]
+    assert requests[0]["request_id"] != requests[1]["request_id"]
+
+
+def test_command_without_an_idempotency_key_sends_no_key(monkeypatch) -> None:
+    client = AbletonClient(_settings())
+    requests = _capture_requests(monkeypatch, client)
+
+    client.execute_remote_command("add_notes_to_clip", {})
+
+    assert "idempotency_key" not in requests[0]["meta"]

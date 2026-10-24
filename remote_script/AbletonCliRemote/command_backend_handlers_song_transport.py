@@ -7,8 +7,10 @@ from .command_backend_contract import CommandBackend
 from .command_backend_validators import (
     _as_bool,
     _insert_index,
+    _invalid_argument,
     _non_empty_string,
     _non_negative_float,
+    _optional_int,
     _panning,
     _tempo,
     _track_index,
@@ -131,6 +133,18 @@ def _handle_set_tempo(backend: CommandBackend, args: dict[str, Any]) -> dict[str
     return backend.set_tempo(_tempo(args.get("tempo")))
 
 
+def _handle_track_meter_get(backend: CommandBackend, args: dict[str, Any]) -> dict[str, Any]:
+    return backend.track_meter_get(backend.resolve_track_ref(_track_ref(args.get("track_ref"))))
+
+
+def _handle_return_track_meter_get(backend: CommandBackend, args: dict[str, Any]) -> dict[str, Any]:
+    return backend.return_track_meter_get(_track_index("return_track", args.get("return_track")))
+
+
+def _handle_master_meter_get(backend: CommandBackend, _args: dict[str, Any]) -> dict[str, Any]:
+    return backend.master_meter_get()
+
+
 def _handle_track_volume_get(backend: CommandBackend, args: dict[str, Any]) -> dict[str, Any]:
     track = backend.resolve_track_ref(_track_ref(args.get("track_ref")))
     return backend.track_volume_get(track)
@@ -200,6 +214,33 @@ def _handle_return_tracks_list(backend: CommandBackend, _args: dict[str, Any]) -
     return backend.return_tracks_list()
 
 
+def _handle_return_track_create(backend: CommandBackend, _args: dict[str, Any]) -> dict[str, Any]:
+    return backend.return_track_create()
+
+
+def _handle_return_track_delete(backend: CommandBackend, args: dict[str, Any]) -> dict[str, Any]:
+    return_track = _track_index("return_track", args.get("return_track"))
+    return backend.return_track_delete(return_track)
+
+
+def _handle_song_scale_get(backend: CommandBackend, _args: dict[str, Any]) -> dict[str, Any]:
+    return backend.song_scale_get()
+
+
+def _handle_song_scale_set(backend: CommandBackend, args: dict[str, Any]) -> dict[str, Any]:
+    root_note = _optional_int("root_note", args.get("root_note"))
+    raw_name = args.get("scale_name")
+    scale_name = None if raw_name is None else _non_empty_string("scale_name", raw_name)
+    raw_mode = args.get("scale_mode")
+    scale_mode = None if raw_mode is None else _as_bool("scale_mode", raw_mode)
+    if root_note is None and scale_name is None and scale_mode is None:
+        raise _invalid_argument(
+            message="song scale set requires at least one of root_note, scale_name, scale_mode",
+            hint="Pass the scale fields to change.",
+        )
+    return backend.song_scale_set(root_note, scale_name, scale_mode)
+
+
 def _handle_return_track_volume_get(
     backend: CommandBackend,
     args: dict[str, Any],
@@ -246,8 +287,16 @@ def _handle_master_volume_get(backend: CommandBackend, _args: dict[str, Any]) ->
     return backend.master_volume_get()
 
 
+def _handle_master_volume_set(backend: CommandBackend, args: dict[str, Any]) -> dict[str, Any]:
+    return backend.master_volume_set(_volume(args.get("value")))
+
+
 def _handle_master_panning_get(backend: CommandBackend, _args: dict[str, Any]) -> dict[str, Any]:
     return backend.master_panning_get()
+
+
+def _handle_master_panning_set(backend: CommandBackend, args: dict[str, Any]) -> dict[str, Any]:
+    return backend.master_panning_set(_panning(args.get("value")))
 
 
 def _handle_master_devices_list(backend: CommandBackend, _args: dict[str, Any]) -> dict[str, Any]:
@@ -287,13 +336,20 @@ def _handle_track_routing_input_get(
     return backend.track_routing_input_get(track)
 
 
+def _optional_routing_channel(value: Any) -> str | None:
+    # None keeps Live's auto-selected channel for the newly applied routing type.
+    if value is None:
+        return None
+    return _non_empty_string("routing_channel", value)
+
+
 def _handle_track_routing_input_set(
     backend: CommandBackend,
     args: dict[str, Any],
 ) -> dict[str, Any]:
     track = backend.resolve_track_ref(_track_ref(args.get("track_ref")))
     routing_type = _non_empty_string("routing_type", args.get("routing_type"))
-    routing_channel = _non_empty_string("routing_channel", args.get("routing_channel"))
+    routing_channel = _optional_routing_channel(args.get("routing_channel"))
     return backend.track_routing_input_set(track, routing_type, routing_channel)
 
 
@@ -311,7 +367,7 @@ def _handle_track_routing_output_set(
 ) -> dict[str, Any]:
     track = backend.resolve_track_ref(_track_ref(args.get("track_ref")))
     routing_type = _non_empty_string("routing_type", args.get("routing_type"))
-    routing_channel = _non_empty_string("routing_channel", args.get("routing_channel"))
+    routing_channel = _optional_routing_channel(args.get("routing_channel"))
     return backend.track_routing_output_set(track, routing_type, routing_channel)
 
 
@@ -340,6 +396,9 @@ SONG_TRANSPORT_HANDLERS: dict[str, Handler] = {
     "transport_position_set": _handle_transport_position_set,
     "transport_rewind": _handle_transport_rewind,
     "set_tempo": _handle_set_tempo,
+    "track_meter_get": _handle_track_meter_get,
+    "return_track_meter_get": _handle_return_track_meter_get,
+    "master_meter_get": _handle_master_meter_get,
     "track_volume_get": _handle_track_volume_get,
     "track_volume_set": _handle_track_volume_set,
     "track_mute_get": _handle_track_mute_get,
@@ -352,6 +411,10 @@ SONG_TRANSPORT_HANDLERS: dict[str, Handler] = {
     "track_panning_set": _handle_track_panning_set,
     "track_send_get": _handle_track_send_get,
     "track_send_set": _handle_track_send_set,
+    "return_track_create": _handle_return_track_create,
+    "return_track_delete": _handle_return_track_delete,
+    "song_scale_get": _handle_song_scale_get,
+    "song_scale_set": _handle_song_scale_set,
     "return_tracks_list": _handle_return_tracks_list,
     "return_track_volume_get": _handle_return_track_volume_get,
     "return_track_volume_set": _handle_return_track_volume_set,
@@ -361,7 +424,9 @@ SONG_TRANSPORT_HANDLERS: dict[str, Handler] = {
     "return_track_solo_set": _handle_return_track_solo_set,
     "master_info": _handle_master_info,
     "master_volume_get": _handle_master_volume_get,
+    "master_volume_set": _handle_master_volume_set,
     "master_panning_get": _handle_master_panning_get,
+    "master_panning_set": _handle_master_panning_set,
     "master_devices_list": _handle_master_devices_list,
     "mixer_crossfader_get": _handle_mixer_crossfader_get,
     "mixer_crossfader_set": _handle_mixer_crossfader_set,

@@ -1,26 +1,31 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 from typing import Any, Protocol
 
-PROTOCOL_VERSION = 2
-REMOTE_SCRIPT_VERSION = "0.4.0"
+from .note_fields import NOTE_FIELD_SPECS
+
+PROTOCOL_VERSION = 3
+REMOTE_SCRIPT_VERSION = "0.5.0"
 MIN_BPM = 20.0
 MAX_BPM = 999.0
 MIN_VOLUME = 0.0
 MAX_VOLUME = 1.0
 MIN_PANNING = -1.0
 MAX_PANNING = 1.0
-NOTE_PITCH_MIN = 0
-NOTE_PITCH_MAX = 127
-NOTE_VELOCITY_MIN = 1
-NOTE_VELOCITY_MAX = 127
-NOTE_KEYS = frozenset({"pitch", "start_time", "duration", "velocity", "mute"})
+
+_NOTE_SPECS_BY_NAME = {spec.name: spec for spec in NOTE_FIELD_SPECS}
+NOTE_PITCH_MIN = int(_NOTE_SPECS_BY_NAME["pitch"].minimum)  # type: ignore[arg-type]
+NOTE_PITCH_MAX = int(_NOTE_SPECS_BY_NAME["pitch"].maximum)  # type: ignore[arg-type]
+NOTE_VELOCITY_MIN = int(_NOTE_SPECS_BY_NAME["velocity"].minimum)  # type: ignore[arg-type]
+NOTE_VELOCITY_MAX = int(_NOTE_SPECS_BY_NAME["velocity"].maximum)  # type: ignore[arg-type]
+NOTE_KEYS = frozenset(spec.name for spec in NOTE_FIELD_SPECS if spec.required)
 
 
-class RemoteErrorCode(str, Enum):
+class RemoteErrorCode(StrEnum):
     INVALID_ARGUMENT = "INVALID_ARGUMENT"
+    UNAUTHORIZED = "UNAUTHORIZED"
     PROTOCOL_VERSION_MISMATCH = "PROTOCOL_VERSION_MISMATCH"
     TIMEOUT = "TIMEOUT"
     REMOTE_BUSY = "REMOTE_BUSY"
@@ -28,7 +33,7 @@ class RemoteErrorCode(str, Enum):
     INTERNAL_ERROR = "INTERNAL_ERROR"
 
 
-class RemoteErrorReason(str, Enum):
+class RemoteErrorReason(StrEnum):
     NOT_SUPPORTED_BY_LIVE_API = "not_supported_by_live_api"
 
 
@@ -48,6 +53,19 @@ class CommandError(Exception):
 
 
 class _SongTransportBackend(Protocol):
+    def return_track_create(self) -> dict[str, Any]: ...
+
+    def return_track_delete(self, return_track: int) -> dict[str, Any]: ...
+
+    def song_scale_get(self) -> dict[str, Any]: ...
+
+    def song_scale_set(
+        self,
+        root_note: int | None,
+        scale_name: str | None,
+        scale_mode: bool | None,
+    ) -> dict[str, Any]: ...
+
     def ping_info(self) -> dict[str, Any]: ...
 
     def song_info(self) -> dict[str, Any]: ...
@@ -98,6 +116,12 @@ class _SongTransportBackend(Protocol):
 
     def set_tempo(self, tempo: float) -> dict[str, Any]: ...
 
+    def track_meter_get(self, track: int) -> dict[str, Any]: ...
+
+    def return_track_meter_get(self, return_track: int) -> dict[str, Any]: ...
+
+    def master_meter_get(self) -> dict[str, Any]: ...
+
     def track_volume_get(self, track: int) -> dict[str, Any]: ...
 
     def track_volume_set(self, track: int, value: float) -> dict[str, Any]: ...
@@ -140,9 +164,29 @@ class _SongTransportBackend(Protocol):
 
     def master_volume_get(self) -> dict[str, Any]: ...
 
+    def master_volume_set(self, value: float) -> dict[str, Any]: ...
+
     def master_panning_get(self) -> dict[str, Any]: ...
 
+    def master_panning_set(self, value: float) -> dict[str, Any]: ...
+
     def master_devices_list(self) -> dict[str, Any]: ...
+
+    def master_effect_keys(self, effect_type: str) -> dict[str, Any]: ...
+
+    def master_effect_set(
+        self,
+        effect_type: str,
+        device_ref: dict[str, Any],
+        parameter_ref: dict[str, Any],
+        value: float,
+    ) -> dict[str, Any]: ...
+
+    def master_effect_observe(
+        self,
+        effect_type: str,
+        device_ref: dict[str, Any],
+    ) -> dict[str, Any]: ...
 
     def mixer_crossfader_get(self) -> dict[str, Any]: ...
 
@@ -162,7 +206,7 @@ class _SongTransportBackend(Protocol):
         self,
         track: int,
         routing_type: str,
-        routing_channel: str,
+        routing_channel: str | None,
     ) -> dict[str, Any]: ...
 
     def track_routing_output_get(self, track: int) -> dict[str, Any]: ...
@@ -171,7 +215,7 @@ class _SongTransportBackend(Protocol):
         self,
         track: int,
         routing_type: str,
-        routing_channel: str,
+        routing_channel: str | None,
     ) -> dict[str, Any]: ...
 
 
@@ -179,6 +223,13 @@ class _TracksClipsBackend(Protocol):
     def create_clip(self, track: int, clip: int, length: float) -> dict[str, Any]: ...
 
     def add_notes_to_clip(
+        self,
+        track: int,
+        clip: int,
+        notes: list[dict[str, Any]],
+    ) -> dict[str, Any]: ...
+
+    def update_clip_notes(
         self,
         track: int,
         clip: int,
@@ -274,6 +325,68 @@ class _TracksClipsBackend(Protocol):
 
     def clip_active_set(self, track: int, clip: int, value: bool) -> dict[str, Any]: ...
 
+    def clip_props_get(self, track: int, clip: int) -> dict[str, Any]: ...
+
+    def clip_file_path_get(self, track: int, clip: int) -> dict[str, Any]: ...
+
+    def clip_loop_set(
+        self,
+        track: int,
+        clip: int,
+        start: float,
+        end: float,
+        enabled: bool,
+    ) -> dict[str, Any]: ...
+
+    def clip_marker_set(
+        self,
+        track: int,
+        clip: int,
+        start_marker: float,
+        end_marker: float,
+    ) -> dict[str, Any]: ...
+
+    def clip_warp_get(self, track: int, clip: int) -> dict[str, Any]: ...
+
+    def clip_warp_set(
+        self,
+        track: int,
+        clip: int,
+        enabled: bool,
+        mode: str | None,
+    ) -> dict[str, Any]: ...
+
+    def clip_warp_marker_list(self, track: int, clip: int) -> dict[str, Any]: ...
+
+    def clip_warp_marker_add(
+        self,
+        track: int,
+        clip: int,
+        beat_time: float,
+        sample_time: float | None,
+    ) -> dict[str, Any]: ...
+
+    def clip_warp_marker_move(
+        self,
+        track: int,
+        clip: int,
+        beat_time: float,
+        distance: float,
+    ) -> dict[str, Any]: ...
+
+    def clip_warp_marker_remove(
+        self,
+        track: int,
+        clip: int,
+        beat_time: float,
+    ) -> dict[str, Any]: ...
+
+    def clip_gain_set(self, track: int, clip: int, db: float) -> dict[str, Any]: ...
+
+    def clip_transpose_set(self, track: int, clip: int, semitones: int) -> dict[str, Any]: ...
+
+    def clip_file_replace(self, track: int, clip: int, audio_path: str) -> dict[str, Any]: ...
+
     def clip_duplicate(
         self,
         track: int,
@@ -288,9 +401,12 @@ class _TracksClipsBackend(Protocol):
         source_clip: int | None,
         source_uri: str | None,
         source_path: str | None,
+        source_file: str | None,
+        source_file_duration_beats: float | None,
         target_track: int | None,
         grid: float | None,
         slice_count: int | None,
+        slice_ranges: list[dict[str, float]] | None,
         start_pad: int,
         create_trigger_clip: bool,
         trigger_clip_slot: int | None,
@@ -378,9 +494,75 @@ class _TracksClipsBackend(Protocol):
         delete_all: bool,
     ) -> dict[str, Any]: ...
 
+    def arrangement_clip_props_get(self, track: int, index: int) -> dict[str, Any]: ...
+
+    def arrangement_clip_loop_set(
+        self,
+        track: int,
+        index: int,
+        start: float,
+        end: float,
+        enabled: bool,
+    ) -> dict[str, Any]: ...
+
+    def arrangement_clip_marker_set(
+        self,
+        track: int,
+        index: int,
+        start_marker: float,
+        end_marker: float,
+    ) -> dict[str, Any]: ...
+
+    def arrangement_clip_warp_get(self, track: int, index: int) -> dict[str, Any]: ...
+
+    def arrangement_clip_warp_set(
+        self,
+        track: int,
+        index: int,
+        enabled: bool,
+        mode: str | None,
+    ) -> dict[str, Any]: ...
+
+    def arrangement_clip_gain_set(self, track: int, index: int, db: float) -> dict[str, Any]: ...
+
+    def arrangement_clip_transpose_set(
+        self,
+        track: int,
+        index: int,
+        semitones: int,
+    ) -> dict[str, Any]: ...
+
+    def arrangement_clip_file_replace(
+        self,
+        track: int,
+        index: int,
+        audio_path: str,
+    ) -> dict[str, Any]: ...
+
     def arrangement_from_session(self, scenes: list[dict[str, Any]]) -> dict[str, Any]: ...
 
     def tracks_delete(self, track: int) -> dict[str, Any]: ...
+
+
+class _ClipEnvelopesBackend(Protocol):
+    def clip_envelope_set(
+        self,
+        track: int,
+        clip: int,
+        device: int,
+        parameter: int,
+        points: list[dict[str, float]],
+        mode: str,
+    ) -> dict[str, Any]: ...
+
+    def clip_envelope_clear(
+        self,
+        track: int,
+        clip: int,
+        device: int | None,
+        parameter: int | None,
+        clear_all: bool,
+    ) -> dict[str, Any]: ...
 
 
 class _BrowserBackend(Protocol):
@@ -437,7 +619,7 @@ class _DevicesBackend(Protocol):
     def set_device_parameter(
         self,
         track: int,
-        device: int,
+        device: int | tuple[int, ...],
         parameter: int,
         value: float,
     ) -> dict[str, Any]: ...
@@ -515,20 +697,93 @@ class _DevicesBackend(Protocol):
     ) -> dict[str, Any]: ...
 
 
+class _DeviceRacksBackend(Protocol):
+    def device_chains_list(self, track: int, device: int | tuple[int, ...]) -> dict[str, Any]: ...
+
+    def device_macro_list(self, track: int, device: int | tuple[int, ...]) -> dict[str, Any]: ...
+
+    def device_macro_set(
+        self,
+        track: int,
+        device: int | tuple[int, ...],
+        macro_index: int,
+        value: float,
+    ) -> dict[str, Any]: ...
+
+
+class _DeviceControlBackend(Protocol):
+    def device_parameters_list(
+        self, track: int, device: int | tuple[int, ...]
+    ) -> dict[str, Any]: ...
+
+    def device_parameter_select(
+        self,
+        track: int,
+        device: int | tuple[int, ...],
+        parameter: int,
+        item: str,
+    ) -> dict[str, Any]: ...
+
+    def device_parameter_display_set(
+        self,
+        track: int,
+        device: int | tuple[int, ...],
+        parameter: int,
+        value: float,
+    ) -> dict[str, Any]: ...
+
+    def device_active_get(self, track: int, device: int | tuple[int, ...]) -> dict[str, Any]: ...
+
+    def device_active_set(
+        self, track: int, device: int | tuple[int, ...], value: bool
+    ) -> dict[str, Any]: ...
+
+    def device_preset_list(self, track: int, device: int | tuple[int, ...]) -> dict[str, Any]: ...
+
+    def device_preset_set(
+        self, track: int, device: int | tuple[int, ...], preset_index: int
+    ) -> dict[str, Any]: ...
+
+    def device_sidechain_get(self, track: int, device: int | tuple[int, ...]) -> dict[str, Any]: ...
+
+    def device_sidechain_set(
+        self,
+        track: int,
+        device: int | tuple[int, ...],
+        routing_type: str,
+        routing_channel: str | None,
+    ) -> dict[str, Any]: ...
+
+    def device_insert(self, track: int, device_name: str, index: int) -> dict[str, Any]: ...
+
+    def device_delete(self, track: int, device: int | tuple[int, ...]) -> dict[str, Any]: ...
+
+    def device_move(
+        self, track: int, device: int | tuple[int, ...], to_index: int
+    ) -> dict[str, Any]: ...
+
+
 class CommandBackend(
     _SongTransportBackend,
     _TracksClipsBackend,
+    _ClipEnvelopesBackend,
     _BrowserBackend,
     _DevicesBackend,
+    _DeviceRacksBackend,
+    _DeviceControlBackend,
     Protocol,
 ):
     def resolve_track_ref(self, track_ref: dict[str, Any]) -> int: ...
 
-    def resolve_device_ref(self, track: int, device_ref: dict[str, Any]) -> int: ...
+    def resolve_device_track_ref(self, track_ref: dict[str, Any]) -> int | tuple[str, int]: ...
+
+    def resolve_device_ref(
+        self, track: int, device_ref: dict[str, Any]
+    ) -> int | tuple[int, ...]: ...
 
     def resolve_parameter_ref(
         self,
         track: int,
-        device: int,
+        device: int | tuple[int, ...],
         parameter_ref: dict[str, Any],
     ) -> int: ...

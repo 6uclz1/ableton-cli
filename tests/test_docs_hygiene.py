@@ -8,12 +8,16 @@ PROTOCOL_DOC = REPO_ROOT / "docs" / "protocol.md"
 QUALITY_HARNESS_TODO_DOC = REPO_ROOT / "docs" / "quality-harness-todo.md"
 GENERATED_MAN_DOC = REPO_ROOT / "docs" / "man" / "generated" / "ableton-cli.1"
 SKILL_DOC = REPO_ROOT / "skills" / "ableton-cli" / "SKILL.md"
+AGENTS_DOC = REPO_ROOT / "AGENTS.md"
+CURSOR_RULE_DOC = REPO_ROOT / ".cursor" / "rules" / "ableton-cli.mdc"
+COMPUTER_USE_INDEX = "docs/computer-use/README.md"
 ENVIRONMENT_INDEPENDENT_DOC_GLOBS = (
     "AGENTS.md",
     "README.md",
     "CONTRIBUTING.md",
     "skills/ableton-cli/SKILL.md",
     "docs/skills/**/*.md",
+    "docs/computer-use/**/*.md",
     ".cursor/rules/**/*.mdc",
     ".cursor/skills/**/*.md",
 )
@@ -67,6 +71,26 @@ def test_generated_man_uses_stable_command_name() -> None:
     assert "ableton-cli" in man_page
 
 
+def test_no_outdated_live_11_version_floor_references() -> None:
+    outdated_marker = "Live 11+"
+    scan_globs = (
+        "README.md",
+        "docs/**/*.md",
+        "skills/ableton-cli/SKILL.md",
+        "remote_script/**/*.py",
+        "src/**/*.py",
+    )
+    violations = []
+    for pattern in scan_globs:
+        for path in REPO_ROOT.glob(pattern):
+            if not path.is_file() or "__pycache__" in path.parts:
+                continue
+            if outdated_marker in _read(path):
+                violations.append(str(path.relative_to(REPO_ROOT)))
+
+    assert violations == []
+
+
 def test_composition_docs_use_browser_discovery_before_drum_kit_loading() -> None:
     docs = "\n".join(
         [
@@ -79,3 +103,24 @@ def test_composition_docs_use_browser_discovery_before_drum_kit_loading() -> Non
     assert 'browser search "Drum Rack"' in docs
     assert 'browser search "Kit"' in docs
     assert "browser load-drum-kit 0 rack:drums --kit-uri kit:acoustic" not in docs
+
+
+def test_agent_docs_route_cli_gaps_to_computer_use_docs() -> None:
+    assert (REPO_ROOT / COMPUTER_USE_INDEX).is_file()
+    for path in (AGENTS_DOC, CURSOR_RULE_DOC, SKILL_DOC):
+        markdown = _read(path)
+        assert COMPUTER_USE_INDEX in markdown, path.name
+        assert "Computer Use" in markdown, path.name
+
+
+def test_computer_use_docs_are_linked_from_index() -> None:
+    index = _read(REPO_ROOT / COMPUTER_USE_INDEX)
+    pages = sorted((REPO_ROOT / "docs" / "computer-use").rglob("*.md"))
+    unlinked = [
+        page.relative_to(REPO_ROOT).as_posix()
+        for page in pages
+        if page.name != "README.md"
+        and page.relative_to(REPO_ROOT / "docs" / "computer-use").as_posix() not in index
+    ]
+
+    assert unlinked == []

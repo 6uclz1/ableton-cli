@@ -4,6 +4,7 @@ from typing import Annotated
 
 import typer
 
+from .._params import ClipArgument, TrackArgument
 from .._validation import require_non_empty_string
 from ._parsers import parse_clip_name_assignments
 from ._shared import execute_clip_command, resolve_client, validate_track, validate_track_and_clip
@@ -16,8 +17,8 @@ def register_name_commands(name_app: typer.Typer) -> None:
 
 def clip_name_set(
     ctx: typer.Context,
-    track: Annotated[int, typer.Argument(help="Track index (0-based)")],
-    clip: Annotated[int, typer.Argument(help="Clip slot index (0-based)")],
+    track: TrackArgument,
+    clip: ClipArgument,
     name: Annotated[str, typer.Argument(help="New clip name")],
 ) -> None:
     def _run() -> dict[str, object]:
@@ -35,7 +36,7 @@ def clip_name_set(
 
 def clip_name_set_many(
     ctx: typer.Context,
-    track: Annotated[int, typer.Argument(help="Track index (0-based)")],
+    track: TrackArgument,
     map_: Annotated[
         str,
         typer.Option("--map", help="Comma-separated clip:name pairs (e.g. 1:Main,2:Var)"),

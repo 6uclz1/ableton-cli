@@ -128,3 +128,37 @@ def test_recording_transport_writes_error_entries(tmp_path: Path) -> None:
     assert entry["request"] == request_payload
     assert entry["response"] is None
     assert entry["error"]["error_code"] == "TIMEOUT"
+
+
+def test_replay_matching_ignores_the_idempotency_key(tmp_path: Path) -> None:
+    replay_path = tmp_path / "replay.jsonl"
+    _write_jsonl(
+        replay_path,
+        [
+            {
+                "request": {"name": "song_info", "args": {}},
+                "response": {
+                    "ok": True,
+                    "request_id": "recorded-id",
+                    "protocol_version": 3,
+                    "result": {"tempo": 120.0},
+                    "error": None,
+                },
+            }
+        ],
+    )
+    transport = ReplayTransport(path=str(replay_path))
+
+    # Fixtures are keyed on name+args, so a per-attempt idempotency key in meta
+    # must not make a recorded request unmatchable.
+    response = transport.send(
+        {
+            "name": "song_info",
+            "args": {},
+            "meta": {"idempotency_key": "step-key"},
+            "request_id": "runtime-id",
+            "protocol_version": 3,
+        }
+    )
+
+    assert response["result"] == {"tempo": 120.0}

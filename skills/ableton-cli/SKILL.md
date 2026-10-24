@@ -46,9 +46,22 @@ uv run ableton-cli song undo
 uv run ableton-cli song redo
 uv run ableton-cli song save --path /tmp/demo.als
 uv run ableton-cli song export audio --path /tmp/demo.wav
+```
+
+`song save` and `song export audio` fail with `not_supported_by_live_api` on current Live
+versions (Live exposes no save/export to scripts); save and export from Live itself.
+
+```bash
+uv run ableton-cli song scale get
+uv run ableton-cli song scale set --root A --name Minor --mode
 uv run ableton-cli session info
 uv run ableton-cli session snapshot
 uv run ableton-cli session diff --from ./snapshot-before.json --to ./snapshot-after.json
+uv run ableton-cli session watch --interval-ms 500 --scope all --count 5
+uv run ableton-cli session events --events tempo,is_playing --count 5
+uv run ableton-cli session events --idle-timeout-ms 5000
+uv run ableton-cli session capture --track-index 0 --slot 0 --bars 8 --start 32 --set-routing
+uv run ableton-cli session capture-tracks --track-index 0 --track-index 3 --start 304 --bars 8 --bypass-main-devices
 uv run ableton-cli session stop-all-clips
 ```
 
@@ -94,8 +107,130 @@ uv run ableton-cli arrangement clip notes import-browser 0 0 sounds/Bass\ Loop.a
 uv run ableton-cli arrangement clip delete 0 0
 uv run ableton-cli arrangement clip delete 0 --start 8 --end 16
 uv run ableton-cli arrangement clip delete 0 --all
+uv run ableton-cli arrangement clip props get 0 0
+uv run ableton-cli arrangement clip loop set 0 0 --start 0 --end 16 --enabled true
+uv run ableton-cli arrangement clip marker set 0 0 --start-marker 0 --end-marker 16
+uv run ableton-cli arrangement clip warp get 0 0
+uv run ableton-cli arrangement clip warp set 0 0 --enabled true --mode beats
+uv run ableton-cli arrangement clip gain set 0 0 --db -6
+uv run ableton-cli arrangement clip transpose set 0 0 --semitones -1
+uv run ableton-cli arrangement clip file replace 0 0 --audio-path /tmp/replacement.wav
 uv run ableton-cli arrangement from-session --scenes "0:24,1:48"
 ```
+
+To chop a slice out of an audio file, create the clip, then `loop set` the slice range
+(the arrangement clip length follows the loop), then `marker set` the same range. Live
+ignores a start marker past the loop end, so `marker set` before `loop set` fails with
+`INVALID_ARGUMENT`; `marker set` and `loop set` read their values back and fail the same
+way whenever Live does not apply the requested range.
+
+### Remix / Audio Workflow
+
+```bash
+uv run ableton-cli remix init --source /abs/anime_song.wav --project ./proj --rights-status private_test
+uv run ableton-cli remix inspect --project ./proj/remix_project.json
+uv run ableton-cli audio asset add --project ./proj/remix_project.json --role vocal --path /abs/vocal.wav
+uv run ableton-cli audio asset add --project ./proj/remix_project.json --role instrumental --path /abs/instrumental.wav
+uv run ableton-cli audio asset list --project ./proj/remix_project.json
+uv run ableton-cli audio asset remove --project ./proj/remix_project.json --role vocal --path /abs/vocal.wav
+uv run ableton-cli audio sections import --project ./proj/remix_project.json --sections "intro:1-8,verse:9-24,pre:25-32,chorus:33-48"
+uv run ableton-cli audio beatgrid import --project ./proj/remix_project.json --downbeats "0.0,1.395,2.790"
+uv run ableton-cli audio analyze --project ./proj/remix_project.json --detect bpm,key --manual-bpm 172 --manual-key "A minor"
+uv run ableton-cli remix set-target --project ./proj/remix_project.json --bpm 174 --key "F minor"
+uv run ableton-cli remix plan --project ./proj/remix_project.json --style anime-club
+uv run ableton-cli remix arrange --project ./proj/remix_project.json --form anime-dnb
+uv run ableton-cli remix import-assets --project ./proj/remix_project.json --to-arrangement
+uv run ableton-cli remix apply --project ./proj/remix_project.json --dry-run
+uv run ableton-cli remix apply --project ./proj/remix_project.json --yes
+uv run ableton-cli remix generate drums --project ./proj/remix_project.json --style dnb --section chorus_drop --humanize 0.3 --seed 42
+uv run ableton-cli remix generate bass --project ./proj/remix_project.json --pattern offbeat --key "F minor" --follow-chords
+uv run ableton-cli remix generate chords --project ./proj/remix_project.json --progression "i-VI-III-VII" --key "F minor" --voicing drop2
+uv run ableton-cli remix generate chords --project ./proj/remix_project.json --progression "Cmaj7 A7 Dm7 G7" --apply --track 2 --clip 0
+uv run ableton-cli remix vocal-chop --project ./proj/remix_project.json --source vocal --section chorus --slice 1/8 --create-trigger
+uv run ableton-cli remix mastering profile list
+uv run ableton-cli remix mastering target set --project ./proj/remix_project.json --profile anime-club-demo --true-peak-dbtp-max -1.0
+uv run ableton-cli remix mastering reference add --project ./proj/remix_project.json --path ./refs/reference.wav --role commercial-reference --id ref-main
+uv run ableton-cli remix mastering reference list --project ./proj/remix_project.json
+uv run ableton-cli remix mastering reference remove --project ./proj/remix_project.json --id ref-main
+uv run ableton-cli remix mastering report add --project ./proj/remix_project.json --kind loudness --report ./proj/reports/remix_loudness.json
+uv run ableton-cli remix mastering plan --project ./proj/remix_project.json --target anime-club-demo --chain utility,eq8,compressor,limiter
+uv run ableton-cli remix mastering apply --project ./proj/remix_project.json --dry-run
+uv run ableton-cli remix mastering apply --project ./proj/remix_project.json --yes
+uv run ableton-cli remix mastering qa --project ./proj/remix_project.json --render ./renders/remix.wav --strict
+uv run ableton-cli audio stems list --project ./proj/remix_project.json
+uv run ableton-cli remix qa --project ./proj/remix_project.json --include-mastering --render ./renders/remix.wav
+uv run ableton-cli remix export-plan --project ./proj/remix_project.json --target /abs/out/remix.wav
+```
+
+Remix commands are manifest-first. Use `remix plan` and `remix apply --dry-run` before writing to Live. Store only cleared, private-test, or original material in remix manifests.
+
+Mastering workflow is measurement-first:
+- Loudness, spectrum, band-share and reference measurement come from the `analysis` plugin
+  (the `ableton-cli-analysis` repository, installed with `plugins install`; it needs `ffmpeg`
+  and `ffprobe`). Check `plugins list` for `analysis` before relying on it; if it is missing,
+  ask the user before installing it.
+- After every render, write `analysis loudness analyze` and `analysis spectrum analyze`
+  reports with `--report-out`, register each with `remix mastering report add --kind
+  loudness|spectrum|reference_compare --report <json>`, then run `remix mastering qa`.
+  `report add` rejects a report missing a field QA reads.
+- Do not chase LUFS by increasing limiter pressure when true peak is close to ceiling.
+- Treat large spectrum deltas as mix/stem issues before using master EQ compensation.
+- To find which track owns a band, run `session capture-tracks` per section (it solos each
+  track into a temporary capture track and restores solos, the temporary track, and any
+  bypassed main devices even on failure), then pass each `captures[].label` and
+  `captures[].file_path` to `analysis spectrum shares --stem LABEL=PATH`.
+- `session capture` and `session capture-tracks` need `--start` (in beats) at least one bar
+  in: playback starts first, the playhead moves one bar before `--start`, and launch
+  quantization begins the recording at `--start`. The result reports `recorded_start_beat`;
+  a recording that began elsewhere (launch quantization other than 1 Bar) fails with
+  `step: verify_recorded_start`.
+- Run `remix mastering apply --dry-run` before `--yes`.
+- Pick device/preset targets from `browser search`; do not assume fixed URI availability.
+- If a standard effect wrapper fails on locale/device-variant parameter names, switch to generic parameter list/set commands.
+
+### Offline Live Set Files
+
+```bash
+uv run ableton-cli set inspect --path ./Song\ Project/Song.als
+uv run ableton-cli set lint --path ./Song\ Project/Song.als
+uv run ableton-cli set diff --from ./Song\ Project/Song.als --to ./Song\ Project/Song-v2.als
+uv run ableton-cli set automation write --path ./Song\ Project/Song.als --out ./Song\ Project/Song-auto.als --track-index 0 --target device.1.Frequency --points-json '[{"time":0,"value":500},{"time":64,"value":8000}]'
+uv run ableton-cli set automation write --path ./Song\ Project/Song.als --out ./Song\ Project/Song-sends.als --track-name Keys --target send.0 --points-json '[{"time":0,"value":0.1},{"time":32,"value":0.6}]'
+uv run ableton-cli set automation write --path ./Song\ Project/Song.als --out ./Song\ Project/Song-tempo.als --main --target mixer.tempo --points-json '[{"time":0,"value":120},{"time":128,"value":132}]'
+```
+
+`set` commands read `.als` files directly and never contact Live. They accept Live 12
+sets only (`SET_SCHEMA_UNSUPPORTED` otherwise) and fail with `SET_FILE_INVALID` for
+files that are not gzip-compressed Live Set XML. `set lint` exits `20` with
+`SET_INTEGRITY_FAILED` when the set has integrity errors (duplicate or dangling global
+IDs, bad `NextPointeeId`); missing project samples are warnings, and library samples
+are counted in `result.media` as unchecked, not verified. `set inspect` reports the
+effective tempo, which follows arrangement tempo automation over the manual value.
+
+`set automation write` is the way to write arrangement automation; the Remote Script can
+only write session clip envelopes.
+
+Automation in a composition workflow:
+
+- Clip-level changes (a filter sweep inside one clip): `clip envelope set|shape` on a
+  session clip. Live 12 refuses clip envelopes on arrangement clips
+  (`create_automation_envelope` raises "Not a session clip"), and
+  `arrangement from-session` copies notes into new clips, so session envelopes do not
+  carry over to the arrangement.
+- Arrangement automation: save the Set in Live by hand, then `set automation write`.
+  `song save` and `song export audio` always fail with `not_supported_by_live_api`,
+  because Live exposes no save or export to scripts.
+
+`set automation write` writes a new set (`--out` must not exist and its
+directory must exist; save the open set in Live first, then open the output in Live).
+Pass exactly one of `--track-index`, `--track-name`, `--return-track-index`, `--main`.
+Targets: `mixer.volume`, `mixer.pan`, `mixer.tempo` (`--main` only), `send.<return index>`,
+`device.<device index>.<parameter XML tag>`. Values are Live's internal parameter values,
+not the normalized values `track volume set` / `track send set` take: volume and sends are
+linear gain (1.0 = 0 dB, 0.5 = about -6 dB) and device frequencies are in Hz. They are
+validated against the parameter's range; on/off and choice parameters are rejected, and
+an unknown device tag fails with `details.available_parameters`. It replaces any lane for
+the same parameter and is blocked by `--read-only`.
 
 ### Track
 
@@ -111,7 +246,8 @@ uv run ableton-cli track solo set true --track-index 0
 uv run ableton-cli track arm get --track-index 0
 uv run ableton-cli track arm set false --track-index 0
 uv run ableton-cli track panning get --track-index 0
-uv run ableton-cli track panning set -- -0.25 --track-index 0
+uv run ableton-cli track panning set --track-index 0 -- -0.25
+uv run ableton-cli track meter get --track-index 0 --samples 20 --interval-ms 50
 uv run ableton-cli track send get 1 --track-index 0
 uv run ableton-cli track send set 1 0.6 --track-index 0
 uv run ableton-cli track routing input get --selected-track
@@ -121,7 +257,8 @@ uv run ableton-cli track routing output set --type Master --channel 3/4 --track-
 ```
 
 Ref-aware commands use selector flags, not positional indexes.
-Track selectors: `--track-index`, `--track-name`, `--selected-track`, `--track-query`, `--track-ref`.
+Track selectors: `--track-index`, `--track-name`, `--selected-track`, `--track-query`, `--track-ref`
+(`device` commands also accept `--return-track-index`, `--return-track-name`).
 Device selectors: `--device-index`, `--device-name`, `--selected-device`, `--device-query`, `--device-ref`.
 Parameter selectors: `--parameter-index`, `--parameter-name`, `--parameter-query`, `--parameter-key`, `--parameter-ref`.
 Reuse `stable_ref` values emitted by `tracks list`, `track info`, synth/effect finds, and parameter listings when you need an exact session-local target.
@@ -130,12 +267,15 @@ Reuse `stable_ref` values emitted by `tracks list`, `track info`, synth/effect f
 
 ```bash
 uv run ableton-cli return-tracks list
+uv run ableton-cli return-tracks create
+uv run ableton-cli return-tracks delete 2
 uv run ableton-cli return-track volume get 0
 uv run ableton-cli return-track volume set 0 0.5
 uv run ableton-cli return-track mute get 0
 uv run ableton-cli return-track mute set 0 true
 uv run ableton-cli return-track solo get 0
 uv run ableton-cli return-track solo set 0 false
+uv run ableton-cli return-track meter get 0 --samples 20 --interval-ms 50
 ```
 
 ### Master / Mixer
@@ -143,8 +283,29 @@ uv run ableton-cli return-track solo set 0 false
 ```bash
 uv run ableton-cli master info
 uv run ableton-cli master volume get
+uv run ableton-cli master volume set 0.85
 uv run ableton-cli master panning get
+uv run ableton-cli master panning set -- 0.0
+uv run ableton-cli master meter get --samples 20 --interval-ms 50
 uv run ableton-cli master devices list
+uv run ableton-cli device insert Limiter --main
+uv run ableton-cli device parameters list --main --device-name "Glue Compressor"
+uv run ableton-cli device parameter set-display --main --device-name "Glue Compressor" --parameter-name Threshold -- -10
+uv run ableton-cli device parameter select 4 --main --device-name "Glue Compressor" --parameter-name Ratio
+uv run ableton-cli device move --to-index 0 --main --device-index 2
+uv run ableton-cli device delete --main --device-index 3
+uv run ableton-cli master effect eq8 keys
+uv run ableton-cli master effect eq8 set 0.42 --device-query "EQ Eight" --parameter-key band1_gain
+uv run ableton-cli master effect eq8 observe --device-query "EQ Eight"
+uv run ableton-cli master effect limiter keys
+uv run ableton-cli master effect limiter set 0.4 --device-query "Limiter" --parameter-key ceiling
+uv run ableton-cli master effect limiter observe --device-query "Limiter"
+uv run ableton-cli master effect compressor keys
+uv run ableton-cli master effect compressor set 0.3 --device-query "Compressor" --parameter-key ratio
+uv run ableton-cli master effect compressor observe --device-query "Compressor"
+uv run ableton-cli master effect utility keys
+uv run ableton-cli master effect utility set 0.5 --device-query "Utility" --parameter-key gain
+uv run ableton-cli master effect utility observe --device-query "Utility"
 uv run ableton-cli mixer crossfader get
 uv run ableton-cli mixer crossfader set -- -0.2
 uv run ableton-cli mixer cue-volume get
@@ -159,14 +320,28 @@ uv run ableton-cli mixer cue-routing set Ext.\ Out
 uv run ableton-cli clip create 0 0 --length 4
 uv run ableton-cli clip notes add 0 0 --notes-json '[{"pitch":60,"start_time":0.0,"duration":0.5,"velocity":100,"mute":false}]'
 uv run ableton-cli clip notes add 0 0 --notes-file ./notes.json
+uv run ableton-cli clip notes add 0 0 --pattern "c3 ~ [e3 g3] c4*2" --pattern-length 4
 uv run ableton-cli clip notes get 0 0 --start-time 0.0 --end-time 4.0 --pitch 60
 uv run ableton-cli clip notes clear 0 0 --start-time 0.0 --end-time 1.0
 uv run ableton-cli clip notes replace 0 0 --notes-json '[{"pitch":65,"start_time":0.25,"duration":0.5,"velocity":100,"mute":false}]' --start-time 0.0 --end-time 1.0
+uv run ableton-cli clip notes update 0 0 --notes-json '[{"note_id":3,"velocity":90,"probability":0.75}]'
 uv run ableton-cli clip notes import-browser 0 1 sounds/Bass\ Loop.alc --mode replace --import-length --import-groove
 uv run ableton-cli clip notes quantize 0 0 --grid 1/16 --strength 0.8 --start-time 0.0 --end-time 4.0
 uv run ableton-cli clip notes humanize 0 0 --timing 0.05 --velocity 5
 uv run ableton-cli clip notes velocity-scale 0 0 --scale 1.1 --offset -3
 uv run ableton-cli clip notes transpose 0 0 --semitones 2 --start-time 0.0 --end-time 4.0
+uv run ableton-cli clip notes transpose-in-scale 0 0 --root C --scale major --degrees 1
+uv run ableton-cli clip notes arpeggiate 0 0 --mode up --rate 1/16 --gate 0.9
+uv run ableton-cli clip notes arpeggiate 0 0 --mode random --seed 42
+uv run ableton-cli clip notes euclidean 0 0 --pitch 36 --steps 16 --pulses 5 --length 4 --mode replace
+uv run ableton-cli clip notes ratchet 0 0 --division 2 --probability 1.0
+uv run ableton-cli clip notes ratchet 0 0 --division 4 --probability 0.6 --seed 42
+uv run ableton-cli clip notes retrograde 0 0 --loop-length 4
+uv run ableton-cli clip notes apply-groove 0 0 --groove-file groove.json --timing-amount 1.0 --velocity-amount 0.5
+uv run ableton-cli clip envelope set 0 0 --points-json '[{"time":0.0,"value":0.1},{"time":4.0,"value":0.9}]' --device-index 0 --parameter-key filter_cutoff
+uv run ableton-cli clip envelope shape 0 0 --device-index 0 --parameter-key filter_cutoff --shape ramp --from 0.1 --to 0.9 --start 0 --length 4 --resolution 16
+uv run ableton-cli clip envelope clear 0 0 --device-index 0 --parameter-key filter_cutoff
+uv run ableton-cli clip envelope clear 0 0 --all
 uv run ableton-cli clip groove get 0 0
 uv run ableton-cli clip groove set 0 0 grooves/Hip\ Hop\ Boom\ Bap\ 16ths\ 90\ bpm.agr
 uv run ableton-cli clip groove amount set 0 0 0.6
@@ -180,7 +355,25 @@ uv run ableton-cli clip active set 0 0 false
 uv run ableton-cli clip duplicate 0 0 1
 uv run ableton-cli clip duplicate-many 0 0 --to 2,4,5,6
 uv run ableton-cli clip place-pattern 0 --clip 0 --scenes Intro,Drop,Peak
+uv run ableton-cli audio transient analyze --path ./loops/drum-break.wav --bpm 174 --max-slices 16
+uv run ableton-cli audio groove extract --path ./loops/drum-break.wav --bpm 174 --grid 1/16 --out groove.json
+uv run ableton-cli clip cut-to-drum-rack --source-file ./loops/drum-break.wav --transient --bpm 174 --max-slices 16 --create-trigger-clip --trigger-clip-slot 1
 uv run ableton-cli clip cut-to-drum-rack --source-track 1 --source-clip 0 --slice-count 8 --create-trigger-clip --trigger-clip-slot 1
+uv run ableton-cli clip props get 0 0
+uv run ableton-cli clip loop set 0 0 --start 0 --end 16 --enabled true
+uv run ableton-cli clip marker set 0 0 --start-marker 0 --end-marker 16
+uv run ableton-cli clip warp get 0 0
+uv run ableton-cli clip warp set 0 0 --enabled true --mode complex-pro
+uv run ableton-cli clip warp conform 0 0 --source-bpm 174 --target-bpm 168 --profile full-mix --verify
+uv run ableton-cli clip warp-marker list 0 0
+uv run ableton-cli clip warp-marker add 0 0 --beat-time 33.0
+uv run ableton-cli clip warp-marker add 0 0 --beat-time 33.0 --sample-time 12.345
+uv run ableton-cli clip warp-marker move 0 0 --beat-time 33.0 --distance -0.5
+uv run ableton-cli clip warp-marker remove 0 0 --beat-time 33.0
+uv run ableton-cli clip gain set 0 0 --db -3.0
+uv run ableton-cli clip transpose set 0 0 --semitones 2
+uv run ableton-cli clip file replace 0 0 --audio-path /tmp/replacement.wav
+uv run ableton-cli clip file path get 0 0
 ```
 
 ### Scenes
@@ -221,6 +414,7 @@ to select exact `uri` or `path` values from the active Live browser catalog befo
 
 ```bash
 uv run ableton-cli batch run --steps-file ./steps.json
+uv run ableton-cli batch run --continue-on-error --steps-file ./steps.json
 uv run ableton-cli batch run --steps-json '{"steps":[{"name":"song_info","args":{}}]}'
 echo '{"steps":[{"name":"song_info","args":{}}]}' | uv run ableton-cli batch run --steps-stdin
 uv run ableton-cli batch stream
@@ -231,7 +425,53 @@ echo '{"id":"req-1","steps":[{"name":"song_info","args":{}}]}' | uv run ableton-
 
 ```bash
 uv run ableton-cli device parameter set 0.25 --track-index 0 --device-index 0 --parameter-index 0
+uv run ableton-cli device chains list --track-index 0 --device-index 0
+uv run ableton-cli device macro list --track-index 0 --device-index 0
+uv run ableton-cli device macro set 0 64.0 --track-index 0 --device-index 0
+uv run ableton-cli device parameter set 0.5 --track-index 0 --device-ref device:12 --parameter-index 0
+uv run ableton-cli device parameters list --track-name Vox --device-name "Auto Shift"
+uv run ableton-cli device parameter set-display --track-name Bass --device-name Compressor --parameter-name Threshold -- -18
+uv run ableton-cli device parameter select RMS --track-name Bass --device-name Compressor --parameter-name Model
+uv run ableton-cli device parameter select 1/32 --track-name Drums --device-name "Beat Repeat" --parameter-name Grid
+uv run ableton-cli device active get --track-index 0 --device-index 1
+uv run ableton-cli device active set false --track-index 0 --device-index 1
+uv run ableton-cli device preset list --track-name Vox --device-index 0
+uv run ableton-cli device preset set 2 --track-name Vox --device-index 0
+uv run ableton-cli device sidechain get --track-name Bass --device-name Compressor
+uv run ableton-cli device sidechain set --type "1-Kick" --channel "Post FX" --track-name Bass --device-name Compressor
+uv run ableton-cli device insert Compressor --track-name Bass
+uv run ableton-cli device insert "Auto Shift" --index 0 --track-name Vox
+uv run ableton-cli device move --to-index 0 --track-index 0 --device-index 2
+uv run ableton-cli device delete --track-index 0 --device-index 2
+uv run ableton-cli device insert "Hybrid Reverb" --return-track-index 0
+uv run ableton-cli device parameters list --return-track-name A-Reverb --device-index 0
+uv run ableton-cli device parameter set-display 4.5 --return-track-index 0 --device-index 0 --parameter-name Decay
 ```
+
+Every `device` command also takes `--return-track-index` or `--return-track-name` in place of
+the track selector, to reach devices on return tracks, or `--main` for the main (master) track.
+Results then report `"track": {"kind": "return", "index": N}` or `"track": {"kind": "main"}`
+instead of an integer. Main-track devices have no separate `master device ...` commands: use
+`device ... --main` (plus `master devices list` and the typed `master effect <type>` wrappers).
+
+`device parameters list` works on any device, including VST/AU plug-ins and Max for Live
+devices: it reports each parameter's `display` string, `value_items` for choice parameters
+(`is_quantized: true`), and `step_labels` for stepped parameters. Pick the write command by
+what the listing reports:
+
+- `value_items` or `step_labels` present -> `device parameter select <label>`. Stepped
+  parameters (Beat Repeat Grid/Interval/Gate, Glue Compressor Ratio/Attack/Release, Auto Pan
+  Rate) are not quantized in Live, but every integer raw value has its own label (`1/32`, `4`);
+  Live rejects `set-display` for them, which fails with `INVALID_ARGUMENT`.
+- Otherwise (continuous) -> `device parameter set-display` in display units (dB, Hz, ms, %).
+- `device parameter set` writes the raw value; every write result reports the new `display`.
+`device sidechain` works on Compressor only, because Live exposes sidechain routing to
+scripts for that device alone; take `--type`/`--channel` exactly from `device sidechain get`.
+`device insert` needs Live 12.3+ and accepts native Live device names only; use
+`browser load` for plug-ins and Max for Live devices. For pitch correction, insert
+Auto Shift and set `song scale set` so it can follow the Set's scale.
+`device move --to-index` is the device's final index on its track (`0..device_count-1`), in
+either direction: on `[A, B, C]`, moving `A` with `--to-index 2` gives `[B, C, A]`.
 
 ### Synth
 
@@ -259,7 +499,7 @@ uv run ableton-cli effect find
 uv run ableton-cli effect find --track 0 --type eq8
 uv run ableton-cli effect parameters list --track-index 0 --device-index 0
 uv run ableton-cli effect parameter set 0.5 --track-index 0 --device-index 0 --parameter-index 0
-uv run ableton-cli effect parameter set -- -2.0 --track-index 0 --device-index 0 --parameter-index 7
+uv run ableton-cli effect parameter set --track-index 0 --device-index 0 --parameter-index 7 -- -2.0
 uv run ableton-cli effect observe --track-index 0 --device-index 0
 uv run ableton-cli effect eq8 keys
 uv run ableton-cli effect eq8 set 0.6 --track-index 0 --device-index 0 --parameter-key band1_freq
@@ -287,24 +527,74 @@ uv run ableton-cli effect utility observe 0 0
 uv run ableton-cli config init
 uv run ableton-cli config init --dry-run
 uv run ableton-cli config show
-uv run ableton-cli config set protocol_version 2
+uv run ableton-cli config set protocol_version 3
 uv run ableton-cli completion
 uv run ableton-cli --install-completion
 uv run ableton-cli --show-completion
 ```
 
+### Plugins
+
+```bash
+uv run ableton-cli plugins list
+uv run ableton-cli plugins info <name>
+uv run ableton-cli --plan plugins install https://github.com/<owner>/<repo>
+uv run ableton-cli plugins install https://github.com/<owner>/<repo> --ref v1.2.0
+uv run ableton-cli plugins update <name> --ref <branch|tag|sha>
+uv run ableton-cli plugins uninstall <name>
+uv run ableton-cli plugins sync
+```
+
+- Installed plugins add top-level groups (`uv run ableton-cli <plugin> ...`); `plugins list`
+  shows their commands and declared side effects. Plugin commands use the same envelope,
+  exit codes, `--plan`, `--read-only` and `--require-confirmation` rules as core commands.
+- Plugin error codes are prefixed with the plugin name (`ACE_STEP_GENERATION_FAILED`). A plugin
+  that fails to load answers every call with `PLUGIN_LOAD_FAILED`; core commands keep working.
+- Installing runs third-party code. Run `--plan plugins install` first: it shows the commit the
+  ref resolves to without installing. Installs are pinned to that commit.
+- When `doctor` reports plugins `out_of_sync` (the environment lost them, e.g. after reinstalling
+  ableton-cli), run `plugins sync`.
+
 ## Operational notes
 
-- For positional numeric arguments that begin with `-`, insert `--` before the value.
-  - Example: `uv run ableton-cli track panning set -- -0.25 --track-index 0`
-  - Example: `uv run ableton-cli effect parameter set -- -2.0 --track-index 0 --device-index 0 --parameter-index 7`
+- `track|return-track|master meter get` read output meters on Live's 0.0-1.0 meter scale (not dB),
+  `--samples` times `--interval-ms` apart, and report `peak`/`mean` per channel. Meters read 0.0
+  while stopped, so check `is_playing` in the result before treating a reading as silence.
+
+- For positional numeric arguments that begin with `-`, put all options first and insert `--` right before the value (options after `--` are read as positional arguments).
+  - Example: `uv run ableton-cli track panning set --track-index 0 -- -0.25`
+  - Example: `uv run ableton-cli effect parameter set --track-index 0 --device-index 0 --parameter-index 7 -- -2.0`
 - For low-latency repeated automation operations, prefer `uv run ableton-cli batch stream`.
 - Capability and compatibility checks are explicit through `uv run ableton-cli ping` and `uv run ableton-cli doctor`.
+- Batch steps run once unless the step declares `retry`. `retry.on` defaults to `["REMOTE_BUSY"]`.
+  - A retrying step carries one `meta.idempotency_key` across every attempt, so the Remote Script replays its stored response instead of applying the command twice. Adding `TIMEOUT` to `retry.on` is therefore safe for write commands too.
+  - A replayed response is marked with `idempotent_replay: true` in `result` (or in `error.details` for a replayed failure).
+  - A `TIMEOUT` step failure that is not retried reports `error.details.may_have_executed` (`true` / `false` / `null` when unknown). Inspect the set with a read command before resending anything other than `false`.
+- A failing batch step keeps its own error code and adds `error.details.step_index`, `step_name`, `completed_steps`, and `results` (completed steps are not rolled back).
+  - `batch run --continue-on-error` / `batch stream --continue-on-error` execute every step; each `results[]` entry has `ok` plus `result` or `error`. Any failure still fails the batch with `BATCH_STEP_FAILED` (exit 20) and the entries move to `error.details.results` with `failed_step_indices`.
+  - Assertion failures count as step failures: a failing `previous` assert skips the step, a failing `current` assert marks the executed step failed, and the step after a failure has no `previous` payload.
+- Protocol version 3 is required. On `PROTOCOL_VERSION_MISMATCH`, run `uv run ableton-cli install-remote-script --yes`, restart Ableton Live, and re-select `AbletonCliRemote`.
+- `device delete` (including `--main`) is destructive. Live API unsupported operations fail explicitly with `not_supported_by_live_api`.
 - Standard wrapper commands (`synth <type> ...`, `effect <type> ...`) are strict and intentionally fail if required parameter names are missing.
   - If you get `Missing required standard ... keys`, use generic commands instead:
     - `uv run ableton-cli --output json effect parameters list --track-index <track> --device-index <device>`
     - `uv run ableton-cli --output json effect parameter set <value> --track-index <track> --device-index <device> --parameter-index <parameter>`
   - Use this path for locale/device-variant differences to avoid workflow stalls.
+
+## Computer Use fallback
+
+Some results cannot be produced through the CLI because Live does not expose them to scripts:
+
+- plug-in presets and sound design (Serum and other VST/AU plug-ins list only `Device On` until configured)
+- Configure (exposing plug-in parameters to Live)
+- modulator mapping (`Map` on LFO / Shaper)
+- arrangement automation in the open set
+- saving the set
+
+For these steps, use Computer Use following `docs/computer-use/README.md` in the ableton-cli
+repository, then return to the CLI. After a plug-in parameter has been exposed with Configure,
+it appears in `device parameters list` and accepts `device parameter set`. Use the CLI first, fall
+back only for documented gaps, and report each step that ran through the GUI.
 
 ## Global options
 
@@ -338,8 +628,8 @@ uv run ableton-cli --output json ping
     "result": {
       "host": "127.0.0.1",
       "port": 8765,
-      "protocol_version": 2,
-      "remote_script_version": "0.4.0",
+      "protocol_version": 3,
+      "remote_script_version": "0.5.0",
       "rtt_ms": 2.31
     },
   "error": null
@@ -372,12 +662,12 @@ uv run ableton-cli --output json ping
 - `get_track_info` -> `uv run ableton-cli --output json track info --track-index <track>`
 - `play` -> `uv run ableton-cli --output json transport play`
 - `stop` -> `uv run ableton-cli --output json transport stop`
-- `arrangement_record_start` -> `uv run ableton-cli --output json arrangement record start`
-- `arrangement_record_stop` -> `uv run ableton-cli --output json arrangement record stop`
 - `set_tempo` -> `uv run ableton-cli --output json transport tempo set <bpm>`
 - `transport_position_get` -> `uv run ableton-cli --output json transport position get`
 - `transport_position_set` -> `uv run ableton-cli --output json transport position set <beats>`
 - `transport_rewind` -> `uv run ableton-cli --output json transport rewind`
+- `arrangement_record_start` -> `uv run ableton-cli --output json arrangement record start`
+- `arrangement_record_stop` -> `uv run ableton-cli --output json arrangement record stop`
 - `list_tracks` -> `uv run ableton-cli --output json tracks list`
 - `create_midi_track` -> `uv run ableton-cli --output json tracks create midi [--index <index>]`
 - `create_audio_track` -> `uv run ableton-cli --output json tracks create audio [--index <index>]`
@@ -392,21 +682,24 @@ uv run ableton-cli --output json ping
 - `set_track_arm` -> `uv run ableton-cli --output json track arm set <value> --track-index <track>`
 - `get_track_panning` -> `uv run ableton-cli --output json track panning get --track-index <track>`
 - `set_track_panning` -> `uv run ableton-cli --output json track panning set <value> --track-index <track>`
+- `get_track_meter` -> `uv run ableton-cli --output json track meter get --track-index <track> --samples <n> --interval-ms <ms>`
 - `get_track_send` -> `uv run ableton-cli --output json track send get <send> --track-index <track>`
 - `set_track_send` -> `uv run ableton-cli --output json track send set <send> <value> --track-index <track>`
 - `list_return_tracks` -> `uv run ableton-cli --output json return-tracks list`
 - `set_return_track_volume` -> `uv run ableton-cli --output json return-track volume set <return-track> <value>`
 - `get_master_info` -> `uv run ableton-cli --output json master info`
+- `get_master_meter` -> `uv run ableton-cli --output json master meter get --samples <n> --interval-ms <ms>`
 - `list_master_devices` -> `uv run ableton-cli --output json master devices list`
 - `set_mixer_crossfader` -> `uv run ableton-cli --output json mixer crossfader set <value>`
 - `set_mixer_cue_routing` -> `uv run ableton-cli --output json mixer cue-routing set <routing>`
 - `get_track_routing_input` -> `uv run ableton-cli --output json track routing input get --track-index <track>`
-- `set_track_routing_output` -> `uv run ableton-cli --output json track routing output set --track-index <track> --type <routing-type> --channel <routing-channel>`
+- `set_track_routing_output` -> `uv run ableton-cli --output json track routing output set --track-index <track> --type <routing-type> [--channel <routing-channel>]`
 - `create_clip` -> `uv run ableton-cli --output json clip create <track> <clip> --length <beats>`
 - `add_notes_to_clip` -> `uv run ableton-cli --output json clip notes add <track> <clip> (--notes-json '<json-array>' | --notes-file <path>)`
 - `get_clip_notes` -> `uv run ableton-cli --output json clip notes get <track> <clip> [--start-time <beats>] [--end-time <beats>] [--pitch <midi>]`
 - `clear_clip_notes` -> `uv run ableton-cli --output json clip notes clear <track> <clip> [--start-time <beats>] [--end-time <beats>] [--pitch <midi>]`
 - `replace_clip_notes` -> `uv run ableton-cli --output json clip notes replace <track> <clip> (--notes-json '<json-array>' | --notes-file <path>) [--start-time <beats>] [--end-time <beats>] [--pitch <midi>]`
+- `update_clip_notes` -> `uv run ableton-cli --output json clip notes update <track> <clip> (--notes-json '<json-array>' | --notes-file <path>)`
 - `arrangement_clip_notes_add` -> `uv run ableton-cli --output json arrangement clip notes add <track> <index> (--notes-json '<json-array>' | --notes-file <path>)`
 - `arrangement_clip_notes_get` -> `uv run ableton-cli --output json arrangement clip notes get <track> <index> [--start-time <beats>] [--end-time <beats>] [--pitch <midi>]`
 - `arrangement_clip_notes_clear` -> `uv run ableton-cli --output json arrangement clip notes clear <track> <index> [--start-time <beats>] [--end-time <beats>] [--pitch <midi>]`
@@ -447,7 +740,13 @@ uv run ableton-cli --output json ping
 - `list_standard_effect_keys` -> `uv run ableton-cli --output json effect <eq8|limiter|compressor|auto-filter|reverb|utility> keys`
 - `set_standard_effect_parameter_safe` -> `uv run ableton-cli --output json effect <eq8|limiter|compressor|auto-filter|reverb|utility> set <value> --track-index <track> --device-index <device> --parameter-key <key>`
 - `observe_standard_effect_state` -> `uv run ableton-cli --output json effect <eq8|limiter|compressor|auto-filter|reverb|utility> observe --track-index <track> --device-index <device>`
-- `execute_batch` -> `uv run ableton-cli --output json batch run (--steps-file <path> | --steps-json '<json>' | --steps-stdin)`
+- `remix_mastering_plan` -> `uv run ableton-cli --output json remix mastering plan --project <remix_project.json>`
+- `remix_mastering_qa` -> `uv run ableton-cli --output json remix mastering qa --project <remix_project.json> --render <wav>`
+- `inspect_live_set` -> `uv run ableton-cli --output json set inspect --path <set.als>`
+- `lint_live_set` -> `uv run ableton-cli --output json set lint --path <set.als>`
+- `diff_live_set` -> `uv run ableton-cli --output json set diff --from <a.als> --to <b.als>`
+- `write_live_set_automation` -> `uv run ableton-cli --output json set automation write --path <set.als> --out <new.als> --track-index <track> --target <target> --points-json '<json>'`
+- `execute_batch` -> `uv run ableton-cli --output json batch run (--steps-file <path> | --steps-json '<json>' | --steps-stdin) [--continue-on-error]`
 
 ## Examples
 
@@ -457,3 +756,21 @@ uv run ableton-cli --output json ping
 - `tracks list`: `docs/skills/examples/list-tracks.json`
 - `track volume set`: `docs/skills/examples/set-track-volume.json`
 - `browser search`: `docs/skills/examples/browser-search.json`
+- `remix mastering plan`: `docs/skills/examples/remix-mastering-plan.json`
+- `remix mastering qa`: `docs/skills/examples/remix-mastering-qa.json`
+
+## Not implemented
+
+These commands exist in the surface but always fail with `error.code=NOT_IMPLEMENTED`
+(exit code `20`). Do not call them expecting a mix to be set up; the error hint names the
+commands that actually do the work.
+
+```bash
+uv run ableton-cli remix setup-sound     # use: browser search + browser load / load-drum-kit
+uv run ableton-cli remix mix-macro       # use: create buses in Live, then track/return volume + send set
+uv run ableton-cli remix setup-mix       # same as mix-macro
+uv run ableton-cli remix setup-returns   # use: return-tracks create, then add effects in Live
+uv run ableton-cli remix setup-sidechain # use: device sidechain set on a Compressor
+uv run ableton-cli remix device-chain apply  # use: browser search + browser load + device parameter set
+uv run ableton-cli audio stems split     # use: an external separator, then audio asset add
+```

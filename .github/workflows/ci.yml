@@ -4,6 +4,9 @@ on:
   push:
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   test:
     strategy:
@@ -17,7 +20,7 @@ jobs:
 
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: "3.14"
 
       - uses: astral-sh/setup-uv@v4
 
@@ -27,6 +30,11 @@ jobs:
       - name: Verify generated skill docs
         run: |
           uv run python tools/generate_skill_docs.py
+          git diff --exit-code
+
+      - name: Verify generated client methods
+        run: |
+          uv run python tools/generate_client_methods.py
           git diff --exit-code
 
       - name: Run lint and tests
@@ -73,7 +81,7 @@ jobs:
 
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: "3.14"
 
       - uses: astral-sh/setup-uv@v4
 
@@ -81,7 +89,7 @@ jobs:
         run: uv sync --dev
 
       - name: Run dev checks enforce
-        run: uv run python -m ableton_cli.dev_checks_enforce --config .quality-harness.yml --report quality-harness-report.json --action-log quality-harness-action-log.json
+        run: uv run python -m ableton_cli.dev_checks_enforce --config .quality-harness.yml --report quality-harness-report.json --action-log quality-harness-action-log.json --baseline quality-harness-baseline.json
 
       - name: Upload quality harness report
         if: always()
@@ -109,7 +117,7 @@ jobs:
 
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: "3.14"
 
       - uses: astral-sh/setup-uv@v4
 

@@ -4,8 +4,7 @@ from typing import Any
 
 from ..capabilities import read_only_remote_commands
 from ..config import Settings
-from ..errors import AppError, ErrorCode, ExitCode
-from ..refs import RefPayload
+from ..errors import AppError, ErrorCode, ExitCode, read_only_violation
 from .backends import ClientBackend, LiveBackendClient, RecordingClient, ReplayClient
 
 
@@ -50,16 +49,16 @@ class _AbletonClientCore:
             return RecordingClient(settings, path=record_path)
         return LiveBackendClient(settings)
 
-    def _dispatch(self, name: str, args: dict[str, Any]) -> dict[str, Any]:
+    def _dispatch(
+        self,
+        name: str,
+        args: dict[str, Any],
+        *,
+        idempotency_key: str | None = None,
+    ) -> dict[str, Any]:
         if self.read_only and name not in self._read_only_commands:
-            raise AppError(
-                error_code=ErrorCode.READ_ONLY_VIOLATION,
-                message=f"Command '{name}' is blocked in read-only mode",
-                hint="Run without --read-only to execute write commands.",
-                exit_code=ExitCode.EXECUTION_FAILED,
-                details={"command": name},
-            )
-        return self._backend.dispatch(name, args)
+            raise read_only_violation(name)
+        return self._backend.dispatch(name, args, idempotency_key=idempotency_key)
 
     def _call(self, name: str, args: dict[str, Any] | None = None) -> dict[str, Any]:
         payload = {} if args is None else dict(args)
@@ -69,47 +68,29 @@ class _AbletonClientCore:
         self,
         name: str,
         args: dict[str, Any] | None = None,
+        *,
+        idempotency_key: str | None = None,
     ) -> dict[str, Any]:
         payload = {} if args is None else dict(args)
-        return self._dispatch(name, payload)
+        return self._dispatch(name, payload, idempotency_key=idempotency_key)
 
     @staticmethod
     def _add_if_not_none(args: dict[str, Any], key: str, value: Any) -> None:
         if value is not None:
             args[key] = value
 
-    def _build_clip_note_args(
+    def _note_args(
         self,
+        location: dict[str, int],
         *,
-        track: int,
-        clip: int,
-        notes: list[dict[str, Any]] | None,
-        start_time: float | None,
-        end_time: float | None,
-        pitch: int | None,
+        notes: list[dict[str, Any]] | None = None,
+        start_time: float | None = None,
+        end_time: float | None = None,
+        pitch: int | None = None,
     ) -> dict[str, Any]:
-        args: dict[str, Any] = {"track": track, "clip": clip}
+        args: dict[str, Any] = dict(location)
         self._add_if_not_none(args, "notes", notes)
         self._add_if_not_none(args, "start_time", start_time)
         self._add_if_not_none(args, "end_time", end_time)
         self._add_if_not_none(args, "pitch", pitch)
         return args
-
-    def _call_parameter_command(
-        self,
-        command_name: str,
-        *,
-        track_ref: RefPayload,
-        device_ref: RefPayload,
-        parameter_ref: RefPayload,
-        value: float,
-    ) -> dict[str, Any]:
-        return self._call(
-            command_name,
-            {
-                "track_ref": track_ref,
-                "device_ref": device_ref,
-                "parameter_ref": parameter_ref,
-                "value": value,
-            },
-        )

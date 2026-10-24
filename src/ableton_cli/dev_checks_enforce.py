@@ -75,6 +75,7 @@ def _serialize_violation(violation: Any) -> dict[str, Any]:
         "path": _read_field(violation, "path"),
         "qualname": _read_field(violation, "qualname"),
         "value": _read_field(violation, "value"),
+        "baselined": bool(_read_field(violation, "baselined")),
         "warn_threshold": _read_field(violation, "warn_threshold"),
         "fail_threshold": _read_field(violation, "fail_threshold"),
         "message": str(_read_field(violation, "message") or ""),
@@ -90,7 +91,12 @@ def _violation_signature(violation: Any) -> str:
 
 
 def _fail_violations(violations: list[Any]) -> list[Any]:
-    return [item for item in violations if str(_read_field(item, "severity")) == "fail"]
+    """Fail-level violations that are not already in the baseline."""
+    return [
+        item
+        for item in violations
+        if str(_read_field(item, "severity")) == "fail" and not _read_field(item, "baselined")
+    ]
 
 
 def _actions_for_violation(_violation: Any) -> tuple[ActionSpec, ...]:

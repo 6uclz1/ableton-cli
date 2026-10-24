@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import struct
+import wave
 from pathlib import Path
 
 from ableton_cli.errors import AppError, ExitCode
@@ -14,6 +16,22 @@ def _ref_index(ref: object) -> int:
 
 def _stable_ref(kind: str, index: int) -> str:
     return f"{kind}:{index}"
+
+
+def _write_impulse_wav(path: Path, *, bpm: float = 120.0) -> None:
+    sample_rate = 44100
+    beats = 2.0
+    frame_count = int(sample_rate * beats * 60.0 / bpm)
+    impulse_index = int(round(1.0 * 60.0 / bpm * sample_rate))
+    with wave.open(str(path), "wb") as wav:
+        wav.setnchannels(2)
+        wav.setsampwidth(2)
+        wav.setframerate(sample_rate)
+        frames = bytearray()
+        for index in range(frame_count):
+            value = int(0.8 * 32767) if index == impulse_index else 0
+            frames.extend(struct.pack("<hh", value, value))
+        wav.writeframes(bytes(frames))
 
 
 class _ClientStub:
@@ -33,6 +51,9 @@ class _ClientStub:
         return {"exported": True, "path": path}
 
     def get_session_info(self):  # noqa: ANN201
+        return {"tempo": 123.0}
+
+    def song_info(self):  # noqa: ANN201
         return {"tempo": 123.0}
 
     def session_snapshot(self):  # noqa: ANN201
@@ -66,6 +87,7 @@ class _ClientStub:
             "device_stable_ref": _stable_ref("device", device_index),
             "parameter_stable_ref": _stable_ref("parameter", parameter_index),
             "value": value,
+            "display": f"{value:.2f}",
         }
 
     def create_midi_track(self, index: int):  # noqa: ANN201
@@ -153,17 +175,22 @@ class _ClientStub:
         source_clip: int | None,
         source_uri: str | None,
         source_path: str | None,
-        target_track: int | None,
-        grid: str | None,
-        slice_count: int | None,
-        start_pad: int,
-        create_trigger_clip: bool,
-        trigger_clip_slot: int | None,
+        source_file: str | None = None,
+        source_file_duration_beats: float | None = None,
+        target_track: int | None = None,
+        grid: str | None = None,
+        slice_count: int | None = None,
+        slice_ranges: list[dict[str, float]] | None = None,
+        start_pad: int = 0,
+        create_trigger_clip: bool = False,
+        trigger_clip_slot: int | None = None,
     ):
         resolved_slice_count = (
-            slice_count if slice_count is not None else (4 if grid is not None else 0)
+            len(slice_ranges)
+            if slice_ranges is not None
+            else (slice_count if slice_count is not None else (4 if grid is not None else 0))
         )
-        return {
+        payload = {
             "source_track": source_track,
             "source_clip": source_clip,
             "source_uri": source_uri,
@@ -177,6 +204,20 @@ class _ClientStub:
             "trigger_clip_created": create_trigger_clip,
             "trigger_clip_slot": trigger_clip_slot,
         }
+        if source_file is not None:
+            payload["source_mode"] = "file"
+            payload["source_file"] = source_file
+            payload["source_file_duration_beats"] = source_file_duration_beats
+        if slice_ranges is not None:
+            payload["assignments"] = [
+                {
+                    "pad": start_pad + index,
+                    "slice_start": item["slice_start"],
+                    "slice_end": item["slice_end"],
+                }
+                for index, item in enumerate(slice_ranges)
+            ]
+        return payload
 
     def set_clip_name(self, track: int, clip: int, name: str):  # noqa: ANN201
         return {"track": track, "clip": clip, "name": name}
@@ -519,12 +560,6 @@ class _ClientStub:
 
     def transport_position_get(self):  # noqa: ANN201
         return {"current_time": 4.0, "beat_position": 4.0}
-
-    def transport_position_set(self, beats: float):  # noqa: ANN201
-        return {"current_time": beats, "beat_position": beats}
-
-    def transport_rewind(self):  # noqa: ANN201
-        return {"current_time": 0.0, "beat_position": 0.0}
 
     def scenes_list(self):  # noqa: ANN201
         return {
@@ -1170,6 +1205,7 @@ def test_device_parameter_set_outputs_json_envelope(runner, cli_app, monkeypatch
         "device_stable_ref": "device:2",
         "parameter_stable_ref": "parameter:3",
         "value": 0.75,
+        "display": "0.75",
     }
 
 
@@ -2180,6 +2216,84 @@ def test_clip_cut_to_drum_rack_command_supports_browser_source_and_trigger_clip(
     }
 
 
+def test_clip_cut_to_drum_rack_command_supports_transient_source_file(
+    runner,
+    cli_app,
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    from ableton_cli.commands import clip
+
+    audio_path = tmp_path / "break.wav"
+    _write_impulse_wav(audio_path, bpm=120.0)
+    monkeypatch.setattr(clip, "get_client", lambda ctx: _ClientStub())
+
+    result = runner.invoke(
+        cli_app,
+        [
+            "--output",
+            "json",
+            "clip",
+            "cut-to-drum-rack",
+            "--source-file",
+            str(audio_path),
+            "--transient",
+            "--bpm",
+            "120",
+            "--max-slices",
+            "8",
+            "--create-trigger-clip",
+            "--trigger-clip-slot",
+            "1",
+        ],
+    )
+
+    assert result.exit_code == 0, result.stdout
+    payload = json.loads(result.stdout)
+    cut = payload["result"]
+    assert cut["source_mode"] == "file"
+    assert cut["source_file"] == str(audio_path.resolve())
+    assert cut["bpm"] == 120.0
+    assert cut["duration_beats"] == 2.0
+    assert cut["slice_count"] == 2
+    assert cut["assigned_count"] == 2
+    assert cut["assignments"][1]["slice_start"] == 1.0
+    assert cut["transient_analysis"] == {
+        "analysis_version": "builtin_energy_flux_v1",
+        "confidence": cut["transient_analysis"]["confidence"],
+        "warnings": [],
+    }
+
+
+def test_clip_cut_to_drum_rack_transient_uses_song_tempo_when_bpm_is_omitted(
+    runner,
+    cli_app,
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    from ableton_cli.commands import clip
+
+    audio_path = tmp_path / "break.wav"
+    _write_impulse_wav(audio_path, bpm=123.0)
+    monkeypatch.setattr(clip, "get_client", lambda ctx: _ClientStub())
+
+    result = runner.invoke(
+        cli_app,
+        [
+            "--output",
+            "json",
+            "clip",
+            "cut-to-drum-rack",
+            "--source-file",
+            str(audio_path),
+            "--transient",
+        ],
+    )
+
+    assert result.exit_code == 0, result.stdout
+    assert json.loads(result.stdout)["result"]["bpm"] == 123.0
+
+
 def test_clip_place_pattern_supports_scene_ranges(runner, cli_app, monkeypatch) -> None:
     from ableton_cli.commands import clip
 
@@ -2299,30 +2413,17 @@ def test_tracks_delete_command_outputs_json_envelope(runner, cli_app, monkeypatc
     assert payload["result"] == {"track": 1, "deleted": True}
 
 
-def test_transport_position_commands_output_json_envelope(runner, cli_app, monkeypatch) -> None:
+def test_transport_position_get_outputs_json_envelope(runner, cli_app, monkeypatch) -> None:
     from ableton_cli.commands import transport
 
     monkeypatch.setattr(transport, "get_client", lambda ctx: _ClientStub())
 
     gotten = runner.invoke(cli_app, ["--output", "json", "transport", "position", "get"])
-    set_result = runner.invoke(
-        cli_app,
-        ["--output", "json", "transport", "position", "set", "32"],
-    )
-    rewind = runner.invoke(cli_app, ["--output", "json", "transport", "rewind"])
 
     assert gotten.exit_code == 0
-    assert set_result.exit_code == 0
-    assert rewind.exit_code == 0
     gotten_payload = json.loads(gotten.stdout)
-    set_payload = json.loads(set_result.stdout)
-    rewind_payload = json.loads(rewind.stdout)
     assert gotten_payload["ok"] is True
-    assert set_payload["ok"] is True
-    assert rewind_payload["ok"] is True
     assert gotten_payload["result"] == {"current_time": 4.0, "beat_position": 4.0}
-    assert set_payload["result"] == {"current_time": 32.0, "beat_position": 32.0}
-    assert rewind_payload["result"] == {"current_time": 0.0, "beat_position": 0.0}
 
 
 def test_arrangement_record_commands_output_json_envelope(runner, cli_app, monkeypatch) -> None:
@@ -2893,9 +2994,9 @@ def test_wait_ready_times_out_when_ping_never_recovers(runner, cli_app, monkeypa
 
 
 def test_synth_foundation_commands_output_json_envelope(runner, cli_app, monkeypatch) -> None:
-    from ableton_cli.commands import synth
+    from ableton_cli.commands import _device_family
 
-    monkeypatch.setattr(synth, "get_client", lambda ctx: _ClientStub())
+    monkeypatch.setattr(_device_family, "get_client", lambda ctx: _ClientStub())
 
     found = runner.invoke(
         cli_app,
@@ -2953,9 +3054,9 @@ def test_synth_foundation_commands_output_json_envelope(runner, cli_app, monkeyp
 
 
 def test_synth_standard_wrapper_commands_output_json_envelope(runner, cli_app, monkeypatch) -> None:
-    from ableton_cli.commands import synth
+    from ableton_cli.commands import _device_family
 
-    monkeypatch.setattr(synth, "get_client", lambda ctx: _ClientStub())
+    monkeypatch.setattr(_device_family, "get_client", lambda ctx: _ClientStub())
 
     keys = runner.invoke(
         cli_app,
@@ -3007,9 +3108,9 @@ def test_synth_standard_wrapper_commands_output_json_envelope(runner, cli_app, m
 
 
 def test_effect_foundation_commands_output_json_envelope(runner, cli_app, monkeypatch) -> None:
-    from ableton_cli.commands import effect
+    from ableton_cli.commands import _device_family
 
-    monkeypatch.setattr(effect, "get_client", lambda ctx: _ClientStub())
+    monkeypatch.setattr(_device_family, "get_client", lambda ctx: _ClientStub())
 
     found = runner.invoke(
         cli_app,
@@ -3069,9 +3170,9 @@ def test_effect_foundation_commands_output_json_envelope(runner, cli_app, monkey
 def test_effect_standard_wrapper_commands_output_json_envelope(
     runner, cli_app, monkeypatch
 ) -> None:
-    from ableton_cli.commands import effect
+    from ableton_cli.commands import _device_family
 
-    monkeypatch.setattr(effect, "get_client", lambda ctx: _ClientStub())
+    monkeypatch.setattr(_device_family, "get_client", lambda ctx: _ClientStub())
 
     keys = runner.invoke(
         cli_app,
@@ -3126,7 +3227,13 @@ class _BatchStreamClientStub:
     def __init__(self) -> None:
         self.calls: list[tuple[str, dict[str, object]]] = []
 
-    def execute_remote_command(self, name: str, args: dict[str, object]):  # noqa: ANN201
+    def execute_remote_command(  # noqa: ANN201
+        self,
+        name: str,
+        args: dict[str, object],
+        *,
+        idempotency_key: str | None = None,
+    ):
         self.calls.append((name, args))
         return {"ok": True, "name": name}
 
@@ -3232,7 +3339,13 @@ class _BatchAdvancedClientStub:
     def ping(self):  # noqa: ANN201
         return dict(self._ping_payload)
 
-    def execute_remote_command(self, name: str, args: dict[str, object]):  # noqa: ANN201
+    def execute_remote_command(  # noqa: ANN201
+        self,
+        name: str,
+        args: dict[str, object],
+        *,
+        idempotency_key: str | None = None,
+    ):
         self.calls.append((name, args))
         queue = self._responses.get(name)
         if queue:

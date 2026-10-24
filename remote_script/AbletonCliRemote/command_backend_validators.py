@@ -10,15 +10,28 @@ from .command_backend_contract import (
     MIN_BPM,
     MIN_PANNING,
     MIN_VOLUME,
-    NOTE_KEYS,
     NOTE_PITCH_MAX,
     NOTE_PITCH_MIN,
     NOTE_VELOCITY_MAX,
-    NOTE_VELOCITY_MIN,
     CommandError,
 )
 from .effect_specs import SUPPORTED_EFFECT_TYPES
+from .note_fields import NOTE_FIELD_SPECS, NoteFieldSpec
 from .synth_specs import SUPPORTED_SYNTH_TYPES
+
+_NOTE_REQUIRED_KEYS = frozenset(spec.name for spec in NOTE_FIELD_SPECS if spec.required)
+_NOTE_OPTIONAL_KEYS = frozenset(spec.name for spec in NOTE_FIELD_SPECS if not spec.required)
+_NOTE_ALL_KEYS = _NOTE_REQUIRED_KEYS | _NOTE_OPTIONAL_KEYS
+_NOTE_FIELD_HINTS: dict[str, str] = {
+    "pitch": "Use a valid MIDI pitch.",
+    "start_time": "Use a non-negative note start time.",
+    "duration": "Use a positive note duration.",
+    "velocity": "Use a valid MIDI velocity.",
+    "mute": "Set mute to true or false.",
+    "probability": "Use a probability in [0.0, 1.0].",
+    "velocity_deviation": "Use a velocity deviation in [-127, 127].",
+    "release_velocity": "Use a valid MIDI release velocity.",
+}
 
 
 def _invalid_argument(message: str, hint: str) -> CommandError:
@@ -354,53 +367,70 @@ def _notes(value: Any) -> list[dict[str, Any]]:
     return [_parse_note(index=index, note=note) for index, note in enumerate(value)]
 
 
+def _note_field_hint(name: str) -> str:
+    return _NOTE_FIELD_HINTS.get(name, f"Pass a valid value for '{name}'.")
+
+
+def _format_note_bound(value: float) -> str:
+    if float(value).is_integer():
+        return str(int(value))
+    return str(value)
+
+
+def _validate_note_field_bounds(*, spec: NoteFieldSpec, value: float) -> None:
+    name = spec.name
+    hint = _note_field_hint(name)
+    if spec.minimum is not None and spec.maximum is not None:
+        if value < spec.minimum or value > spec.maximum:
+            raise _invalid_argument(
+                message=(
+                    f"{name} must be between "
+                    f"{_format_note_bound(spec.minimum)} and {_format_note_bound(spec.maximum)}"
+                ),
+                hint=hint,
+            )
+        return
+    if spec.minimum is not None:
+        if spec.exclusive_minimum:
+            if value <= spec.minimum:
+                raise _invalid_argument(
+                    message=f"{name} must be > {_format_note_bound(spec.minimum)}",
+                    hint=hint,
+                )
+        elif value < spec.minimum:
+            raise _invalid_argument(
+                message=f"{name} must be >= {_format_note_bound(spec.minimum)}",
+                hint=hint,
+            )
+
+
+def _parsed_note_field(*, spec: NoteFieldSpec, mapping: dict[str, Any]) -> Any:
+    name = spec.name
+    if spec.kind == "bool":
+        value = mapping[name]
+        if not isinstance(value, bool):
+            raise _invalid_argument(
+                message=f"{name} must be a boolean",
+                hint=_note_field_hint(name),
+            )
+        return value
+    if spec.kind == "int":
+        value = _as_int(name, mapping[name])
+    else:
+        value = _as_float(name, mapping[name])
+    _validate_note_field_bounds(spec=spec, value=value)
+    return value
+
+
 def _parse_note(*, index: int, note: Any) -> dict[str, Any]:
     mapping = _require_note_mapping(index=index, note=note)
     _validate_note_keys(index=index, note=mapping)
-
-    pitch = _bounded_int(
-        name="pitch",
-        value=mapping["pitch"],
-        minimum=NOTE_PITCH_MIN,
-        maximum=NOTE_PITCH_MAX,
-        hint="Use a valid MIDI pitch.",
-    )
-    velocity = _bounded_int(
-        name="velocity",
-        value=mapping["velocity"],
-        minimum=NOTE_VELOCITY_MIN,
-        maximum=NOTE_VELOCITY_MAX,
-        hint="Use a valid MIDI velocity.",
-    )
-
-    start_time = _as_float("start_time", mapping["start_time"])
-    if start_time < 0:
-        raise _invalid_argument(
-            message="start_time must be >= 0",
-            hint="Use a non-negative note start time.",
-        )
-
-    duration = _as_float("duration", mapping["duration"])
-    if duration <= 0:
-        raise _invalid_argument(
-            message="duration must be > 0",
-            hint="Use a positive note duration.",
-        )
-
-    mute = mapping["mute"]
-    if not isinstance(mute, bool):
-        raise _invalid_argument(
-            message="mute must be a boolean",
-            hint="Set mute to true or false.",
-        )
-
-    return {
-        "pitch": pitch,
-        "start_time": start_time,
-        "duration": duration,
-        "velocity": velocity,
-        "mute": mute,
-    }
+    parsed: dict[str, Any] = {}
+    for spec in NOTE_FIELD_SPECS:
+        if spec.name not in mapping:
+            continue
+        parsed[spec.name] = _parsed_note_field(spec=spec, mapping=mapping)
+    return parsed
 
 
 def _require_note_mapping(*, index: int, note: Any) -> dict[str, Any]:
@@ -414,11 +444,64 @@ def _require_note_mapping(*, index: int, note: Any) -> dict[str, Any]:
 
 def _validate_note_keys(*, index: int, note: dict[str, Any]) -> None:
     keys = set(note.keys())
-    if keys != NOTE_KEYS:
+    if not _NOTE_OPTIONAL_KEYS:
+        if keys != _NOTE_REQUIRED_KEYS:
+            raise _invalid_argument(
+                message=f"notes[{index}] must include exactly {sorted(_NOTE_REQUIRED_KEYS)}",
+                hint="Provide all required note fields and no extra keys.",
+            )
+        return
+    missing = _NOTE_REQUIRED_KEYS - keys
+    unknown = keys - _NOTE_ALL_KEYS
+    if missing or unknown:
         raise _invalid_argument(
-            message=f"notes[{index}] must include exactly {sorted(NOTE_KEYS)}",
-            hint="Provide all required note fields and no extra keys.",
+            message=(
+                f"notes[{index}] must include {sorted(_NOTE_REQUIRED_KEYS)} "
+                f"and may only add optional fields from {sorted(_NOTE_OPTIONAL_KEYS)}"
+            ),
+            hint="Provide all required note fields; only supported optional fields are allowed.",
         )
+
+
+def _validate_partial_note_keys(*, index: int, note: dict[str, Any]) -> None:
+    keys = set(note.keys())
+    if "note_id" not in keys:
+        raise _invalid_argument(
+            message=f"notes[{index}] must include note_id",
+            hint="Provide note_id from 'clip notes get' for each note to update.",
+        )
+    editable_keys = keys - {"note_id"}
+    unknown = editable_keys - _NOTE_ALL_KEYS
+    if unknown:
+        raise _invalid_argument(
+            message=f"notes[{index}] has unsupported fields: {sorted(unknown)}",
+            hint=f"Use only note_id and fields from {sorted(_NOTE_ALL_KEYS)}.",
+        )
+    if not editable_keys:
+        raise _invalid_argument(
+            message=f"notes[{index}] must include at least one editable field besides note_id",
+            hint=f"Provide one or more fields from {sorted(_NOTE_ALL_KEYS)}.",
+        )
+
+
+def _parse_partial_note(*, index: int, note: Any) -> dict[str, Any]:
+    mapping = _require_note_mapping(index=index, note=note)
+    _validate_partial_note_keys(index=index, note=mapping)
+    note_id = _non_negative_int("note_id", mapping["note_id"])
+    parsed: dict[str, Any] = {"note_id": note_id}
+    for spec in NOTE_FIELD_SPECS:
+        if spec.name in mapping:
+            parsed[spec.name] = _parsed_note_field(spec=spec, mapping=mapping)
+    return parsed
+
+
+def _partial_notes(value: Any) -> list[dict[str, Any]]:
+    if not isinstance(value, list):
+        raise _invalid_argument(
+            message="notes must be an array",
+            hint="Pass notes as a JSON array of {note_id, ...} objects.",
+        )
+    return [_parse_partial_note(index=index, note=note) for index, note in enumerate(value)]
 
 
 def _bounded_int(
@@ -484,13 +567,13 @@ def _ref_object(name: str, value: Any, *, allowed_modes: set[str]) -> dict[str, 
             hint=f"Provide only the fields required by the '{mode}' selector mode.",
         )
 
-    if mode == "index":
+    if mode in {"index", "return_index"}:
         require_keys({"mode", "index"})
         return {"mode": mode, "index": _track_index(f"{name}.index", value.get("index"))}
-    if mode == "name":
+    if mode in {"name", "return_name"}:
         require_keys({"mode", "name"})
         return {"mode": mode, "name": _non_empty_string(f"{name}.name", value.get("name"))}
-    if mode == "selected":
+    if mode in {"selected", "main"}:
         require_keys({"mode"})
         return {"mode": mode}
     if mode == "query":
@@ -513,6 +596,24 @@ def _track_ref(value: Any) -> dict[str, Any]:
         "track_ref",
         value,
         allowed_modes={"index", "name", "selected", "query", "stable_ref"},
+    )
+
+
+def _device_track_ref(value: Any) -> dict[str, Any]:
+    """Track selector of the device command group, which also reaches return/main tracks."""
+    return _ref_object(
+        "track_ref",
+        value,
+        allowed_modes={
+            "index",
+            "name",
+            "selected",
+            "query",
+            "stable_ref",
+            "return_index",
+            "return_name",
+            "main",
+        },
     )
 
 
@@ -540,3 +641,102 @@ def _device_parameter_args(
     parameter = _parameter_ref(args.get("parameter_ref"))
     value = _as_float("value", args.get("value"))
     return track, device, parameter, value
+
+
+def _envelope_points(value: Any) -> list[dict[str, float]]:
+    if not isinstance(value, list) or not value:
+        raise _invalid_argument(
+            message="points must be a non-empty array",
+            hint="Pass points as a JSON array of {time, value} objects.",
+        )
+    parsed: list[dict[str, float]] = []
+    previous_time: float | None = None
+    for index, item in enumerate(value):
+        if not isinstance(item, dict) or set(item.keys()) != {"time", "value"}:
+            raise _invalid_argument(
+                message=f"points[{index}] must be an object with exactly 'time' and 'value'",
+                hint='Each point must be {"time": <float >= 0>, "value": <float>}.',
+            )
+        time = _as_float(f"points[{index}].time", item.get("time"))
+        if time < 0:
+            raise _invalid_argument(
+                message=f"points[{index}].time must be >= 0",
+                hint="Use non-negative, strictly increasing time values.",
+            )
+        if previous_time is not None and time <= previous_time:
+            raise _invalid_argument(
+                message=f"points[{index}].time must be strictly increasing",
+                hint="Sort points by time and remove duplicate time values.",
+            )
+        point_value = _as_float(f"points[{index}].value", item.get("value"))
+        parsed.append({"time": time, "value": point_value})
+        previous_time = time
+    return parsed
+
+
+def _envelope_mode(value: Any) -> str:
+    if value is None:
+        return "replace"
+    mode = _non_empty_string("mode", value)
+    if mode != "replace":
+        raise _invalid_argument(
+            message=f"mode must be 'replace', got {mode!r}",
+            hint="Only mode=replace is currently supported.",
+        )
+    return mode
+
+
+def _clip_envelope_set_args(
+    args: dict[str, Any],
+) -> tuple[int, int, dict[str, Any], dict[str, Any], list[dict[str, float]], str]:
+    track = _track_index("track", args.get("track"))
+    clip = _track_index("clip", args.get("clip"))
+    device = _device_ref(args.get("device_ref"))
+    parameter = _parameter_ref(args.get("parameter_ref"))
+    points = _envelope_points(args.get("points"))
+    mode = _envelope_mode(args.get("mode"))
+    return track, clip, device, parameter, points, mode
+
+
+def _clip_envelope_clear_args(
+    args: dict[str, Any],
+) -> tuple[int, int, dict[str, Any] | None, dict[str, Any] | None, bool]:
+    track = _track_index("track", args.get("track"))
+    clip = _track_index("clip", args.get("clip"))
+    clear_all = _as_bool("clear_all", args.get("clear_all", False))
+    if clear_all:
+        if args.get("device_ref") is not None or args.get("parameter_ref") is not None:
+            raise _invalid_argument(
+                message="device_ref/parameter_ref must not be set when clear_all is true",
+                hint="Pass either clear_all=true or device_ref+parameter_ref, not both.",
+            )
+        return track, clip, None, None, True
+    device = _device_ref(args.get("device_ref"))
+    parameter = _parameter_ref(args.get("parameter_ref"))
+    return track, clip, device, parameter, False
+
+
+def _device_ref_args(args: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Track and device selectors of the device command group."""
+    track_ref = _device_track_ref(args.get("track_ref"))
+    device_ref = _device_ref(args.get("device_ref"))
+    return track_ref, device_ref
+
+
+def _device_group_parameter_args(
+    args: dict[str, Any],
+) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any], float]:
+    track_ref, device_ref = _device_ref_args(args)
+    parameter = _parameter_ref(args.get("parameter_ref"))
+    value = _as_float("value", args.get("value"))
+    return track_ref, device_ref, parameter, value
+
+
+def _device_macro_set_args(
+    args: dict[str, Any],
+) -> tuple[dict[str, Any], dict[str, Any], int, float]:
+    track_ref = _device_track_ref(args.get("track_ref"))
+    device_ref = _device_ref(args.get("device_ref"))
+    macro_index = _track_index("macro_index", args.get("macro_index"))
+    value = _as_float("value", args.get("value"))
+    return track_ref, device_ref, macro_index, value

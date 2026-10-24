@@ -12,6 +12,12 @@ def _load_ci_workflow() -> dict[str, object]:
     return yaml.safe_load(CI_WORKFLOW_PATH.read_text(encoding="utf-8"))
 
 
+def test_ci_workflow_limits_default_token_permissions() -> None:
+    workflow = _load_ci_workflow()
+
+    assert workflow["permissions"] == {"contents": "read"}
+
+
 def test_ci_workflow_configures_dev_checks_reports() -> None:
     workflow = _load_ci_workflow()
     jobs = workflow["jobs"]
@@ -46,7 +52,8 @@ def test_ci_workflow_uses_dev_checks_enforce_for_quality_harness_job() -> None:
         "uv run python -m ableton_cli.dev_checks_enforce "
         "--config .quality-harness.yml "
         "--report quality-harness-report.json "
-        "--action-log quality-harness-action-log.json"
+        "--action-log quality-harness-action-log.json "
+        "--baseline quality-harness-baseline.json"
     )
 
     assert any(step.get("name") == "Upload quality harness report" for step in steps)
@@ -70,3 +77,12 @@ def test_ci_workflow_has_summary_job() -> None:
     download_steps = [step for step in steps if step.get("uses") == "actions/download-artifact@v4"]
     assert len(download_steps) >= 1
     assert all("if-no-files-found" not in step.get("with", {}) for step in download_steps)
+
+
+def test_ci_workflow_verifies_generated_client_methods() -> None:
+    workflow = _load_ci_workflow()
+    steps = workflow["jobs"]["test"]["steps"]
+
+    verify = next(step for step in steps if step.get("name") == "Verify generated client methods")
+    assert "python tools/generate_client_methods.py" in verify["run"]
+    assert "git diff --exit-code" in verify["run"]

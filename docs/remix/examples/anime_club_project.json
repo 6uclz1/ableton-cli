@@ -1,0 +1,47 @@
+{
+  "ableton_track_refs": {
+    "default_audio_track": 0,
+    "instrumental": 0,
+    "vocal": 1
+  },
+  "arrangement_plan": null,
+  "assets": [
+    {
+      "id": "vocal:vocal.wav",
+      "path": "/abs/stems/vocal.wav",
+      "role": "vocal"
+    },
+    {
+      "id": "instrumental:instrumental.wav",
+      "path": "/abs/stems/instrumental.wav",
+      "role": "instrumental"
+    }
+  ],
+  "detected_bpm": 172.0,
+  "detected_key": "A minor",
+  "generated_assets": [],
+  "rights_status": "private_test",
+  "schema_version": 1,
+  "sections": [
+    {
+      "end_bar": 8,
+      "name": "intro",
+      "start_bar": 1
+    },
+    {
+      "end_bar": 24,
+      "name": "verse",
+      "start_bar": 9
+    },
+    {
+      "end_bar": 48,
+      "name": "chorus",
+      "start_bar": 33
+    }
+  ],
+  "source_audio_path": "/abs/source/anime_song.wav",
+  "stems": [],
+  "target_bpm": 174.0,
+  "target_key": "F minor",
+  "time_signature": "4/4"
+}

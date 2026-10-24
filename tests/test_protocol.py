@@ -201,3 +201,45 @@ def test_parse_response_accepts_error_details_object() -> None:
     assert response.ok is False
     assert response.error is not None
     assert response.error["details"] == {"failed_step_index": 1}
+
+
+def test_make_request_omits_idempotency_key_by_default() -> None:
+    request = make_request(name="ping", args={}, protocol_version=3)
+
+    assert "idempotency_key" not in request.meta
+
+
+def test_make_request_never_generates_its_own_idempotency_key() -> None:
+    first = make_request(name="ping", args={}, protocol_version=3, idempotency_key="step-key")
+    second = make_request(name="ping", args={}, protocol_version=3, idempotency_key="step-key")
+
+    # The caller owning the retry loop supplies the key, so it is stable across
+    # attempts while request_id is not.
+    assert first.meta["idempotency_key"] == second.meta["idempotency_key"] == "step-key"
+    assert first.request_id != second.request_id
+
+
+def test_make_request_does_not_mutate_the_caller_meta() -> None:
+    meta: dict[str, object] = {"request_timeout_ms": 15000}
+
+    make_request(name="ping", args={}, protocol_version=3, meta=meta, idempotency_key="step-key")
+
+    assert meta == {"request_timeout_ms": 15000}
+
+
+@pytest.mark.parametrize("value", ["", "x" * 129])
+def test_make_request_rejects_an_invalid_idempotency_key(value: str) -> None:
+    with pytest.raises(AppError) as exc_info:
+        make_request(name="ping", args={}, protocol_version=3, idempotency_key=value)
+
+    assert exc_info.value.error_code == "INVALID_ARGUMENT"
+    assert exc_info.value.exit_code == ExitCode.INVALID_ARGUMENT
+
+
+def test_idempotency_key_bound_matches_the_remote_script() -> None:
+    from ableton_cli.client.protocol import IDEMPOTENCY_KEY_MAX_LENGTH
+    from remote_script.AbletonCliRemote.server import (
+        IDEMPOTENCY_KEY_MAX_LENGTH as REMOTE_MAX_LENGTH,
+    )
+
+    assert IDEMPOTENCY_KEY_MAX_LENGTH == REMOTE_MAX_LENGTH

@@ -6,6 +6,7 @@ import typer
 import ableton_cli.version as version_module
 from ableton_cli import __version__
 from ableton_cli.errors import ExitCode
+from remote_script.AbletonCliRemote.command_backend_contract import REMOTE_SCRIPT_VERSION
 
 
 def test_version_callback_prints_and_exits(monkeypatch) -> None:
@@ -21,3 +22,7 @@ def test_version_callback_prints_and_exits(monkeypatch) -> None:
 
 def test_version_callback_ignores_false() -> None:
     version_module.version_callback(False)
+
+
+def test_remote_script_version_matches_package_version() -> None:
+    assert REMOTE_SCRIPT_VERSION == __version__

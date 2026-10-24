@@ -59,17 +59,55 @@ def _require_response_string(payload: dict[str, Any], key: str) -> str:
     return value
 
 
+#: Upper bound on ``meta.idempotency_key``. Long enough for a uuid4 hex or an
+#: opaque caller-supplied token, short enough that one client cannot grow the
+#: Remote Script's bounded response cache into a memory problem.
+IDEMPOTENCY_KEY_MAX_LENGTH = 128
+
+
+def _validated_idempotency_key(value: str) -> str:
+    if not isinstance(value, str) or not value:
+        raise AppError(
+            error_code=ErrorCode.INVALID_ARGUMENT,
+            message="idempotency_key must be a non-empty string",
+            hint="Pass a stable opaque token, or omit idempotency_key entirely.",
+            exit_code=ExitCode.INVALID_ARGUMENT,
+        )
+    if len(value) > IDEMPOTENCY_KEY_MAX_LENGTH:
+        raise AppError(
+            error_code=ErrorCode.INVALID_ARGUMENT,
+            message=(
+                f"idempotency_key must be at most {IDEMPOTENCY_KEY_MAX_LENGTH} "
+                f"characters, got {len(value)}"
+            ),
+            hint="Use a short opaque token such as a uuid4 hex.",
+            exit_code=ExitCode.INVALID_ARGUMENT,
+        )
+    return value
+
+
 def make_request(
     name: str,
     args: dict[str, Any],
     protocol_version: int,
     meta: dict[str, Any] | None = None,
+    idempotency_key: str | None = None,
 ) -> Request:
+    """Build one request envelope.
+
+    ``request_id`` is fresh on every call, so it can never identify a retry.
+    ``idempotency_key`` is deliberately *not* generated here: the caller that
+    owns the retry loop generates it once and passes the same value to every
+    attempt, which is what makes the Remote Script able to deduplicate them.
+    """
+    request_meta = dict(meta or {})
+    if idempotency_key is not None:
+        request_meta["idempotency_key"] = _validated_idempotency_key(idempotency_key)
     return Request(
         type="command",
         name=name,
         args=args,
-        meta=meta or {},
+        meta=request_meta,
         request_id=uuid.uuid4().hex,
         protocol_version=protocol_version,
     )

@@ -1,15 +1,33 @@
 from __future__ import annotations
 
+from typing import Annotated
+
 import typer
 
+from ..refs import (
+    DeviceIndexOption,
+    DeviceNameOption,
+    DeviceQueryOption,
+    DeviceStableRefOption,
+    ParameterIndexOption,
+    ParameterKeyOption,
+    ParameterNameOption,
+    ParameterQueryOption,
+    ParameterStableRefOption,
+    build_device_ref,
+    build_parameter_ref,
+)
 from ..runtime import execute_command, get_client
 from ._client_command_runner import CommandSpec
 from ._client_command_runner import run_client_command_spec as run_client_command_spec_shared
+from ._meter_commands import MeterIntervalOption, MeterSamplesOption, run_meter_command
 
 master_app = typer.Typer(help="Master track commands", no_args_is_help=True)
 volume_app = typer.Typer(help="Master volume commands", no_args_is_help=True)
 panning_app = typer.Typer(help="Master panning commands", no_args_is_help=True)
+meter_app = typer.Typer(help="Master output meter commands", no_args_is_help=True)
 devices_app = typer.Typer(help="Master device commands", no_args_is_help=True)
+effect_app = typer.Typer(help="Master effect wrapper commands", no_args_is_help=True)
 
 MASTER_INFO_SPEC = CommandSpec(command_name="master info", client_method="master_info")
 MASTER_VOLUME_GET_SPEC = CommandSpec(
@@ -50,9 +68,35 @@ def master_volume_get(ctx: typer.Context) -> None:
     run_client_command_spec(ctx, spec=MASTER_VOLUME_GET_SPEC)
 
 
+@volume_app.command("set")
+def master_volume_set(
+    ctx: typer.Context,
+    value: Annotated[float, typer.Argument(help="Master volume value")],
+) -> None:
+    execute_command(
+        ctx,
+        command="master volume set",
+        args={"value": value},
+        action=lambda: get_client(ctx).master_volume_set(value),
+    )
+
+
 @panning_app.command("get")
 def master_panning_get(ctx: typer.Context) -> None:
     run_client_command_spec(ctx, spec=MASTER_PANNING_GET_SPEC)
+
+
+@panning_app.command("set")
+def master_panning_set(
+    ctx: typer.Context,
+    value: Annotated[float, typer.Argument(help="Master panning value")],
+) -> None:
+    execute_command(
+        ctx,
+        command="master panning set",
+        args={"value": value},
+        action=lambda: get_client(ctx).master_panning_set(value),
+    )
 
 
 @devices_app.command("list")
@@ -60,9 +104,143 @@ def master_devices_list(ctx: typer.Context) -> None:
     run_client_command_spec(ctx, spec=MASTER_DEVICES_LIST_SPEC)
 
 
+def _build_effect_app(effect_type: str) -> typer.Typer:
+    standard_app = typer.Typer(
+        help=f"Master {effect_type} effect commands",
+        no_args_is_help=True,
+    )
+
+    @standard_app.command("keys")
+    def master_effect_keys(ctx: typer.Context) -> None:
+        execute_command(
+            ctx,
+            command=f"master effect {effect_type} keys",
+            args={"effect_type": effect_type},
+            action=lambda: get_client(ctx).master_effect_keys(effect_type),
+        )
+
+    @standard_app.command("set")
+    def master_effect_set(
+        ctx: typer.Context,
+        value: Annotated[float, typer.Argument(help="Target parameter value")],
+        device_index: DeviceIndexOption = None,
+        device_name: DeviceNameOption = None,
+        device_query: DeviceQueryOption = None,
+        device_ref: DeviceStableRefOption = None,
+        parameter_index: ParameterIndexOption = None,
+        parameter_name: ParameterNameOption = None,
+        parameter_query: ParameterQueryOption = None,
+        parameter_key: ParameterKeyOption = None,
+        parameter_ref: ParameterStableRefOption = None,
+    ) -> None:
+        execute_command(
+            ctx,
+            command=f"master effect {effect_type} set",
+            args={"device_ref": None, "parameter_ref": None, "value": value},
+            resolved_args=lambda: {
+                "device_ref": _device_ref(device_index, device_name, device_query, device_ref),
+                "parameter_ref": _parameter_ref(
+                    parameter_index,
+                    parameter_name,
+                    parameter_query,
+                    parameter_key,
+                    parameter_ref,
+                ),
+                "value": value,
+            },
+            action=lambda: get_client(ctx).master_effect_set(
+                effect_type,
+                _device_ref(device_index, device_name, device_query, device_ref),
+                _parameter_ref(
+                    parameter_index,
+                    parameter_name,
+                    parameter_query,
+                    parameter_key,
+                    parameter_ref,
+                ),
+                value,
+            ),
+        )
+
+    @standard_app.command("observe")
+    def master_effect_observe(
+        ctx: typer.Context,
+        device_index: DeviceIndexOption = None,
+        device_name: DeviceNameOption = None,
+        device_query: DeviceQueryOption = None,
+        device_ref: DeviceStableRefOption = None,
+    ) -> None:
+        execute_command(
+            ctx,
+            command=f"master effect {effect_type} observe",
+            args={"device_ref": None},
+            resolved_args=lambda: {
+                "device_ref": _device_ref(device_index, device_name, device_query, device_ref)
+            },
+            action=lambda: get_client(ctx).master_effect_observe(
+                effect_type,
+                _device_ref(device_index, device_name, device_query, device_ref),
+            ),
+        )
+
+    return standard_app
+
+
+def _device_ref(
+    device_index: int | None,
+    device_name: str | None,
+    device_query: str | None,
+    device_ref: str | None,
+) -> dict[str, object]:
+    return build_device_ref(
+        device_index=device_index,
+        device_name=device_name,
+        selected_device=False,
+        device_query=device_query,
+        device_ref=device_ref,
+    )
+
+
+def _parameter_ref(
+    parameter_index: int | None,
+    parameter_name: str | None,
+    parameter_query: str | None,
+    parameter_key: str | None,
+    parameter_ref: str | None,
+) -> dict[str, object]:
+    return build_parameter_ref(
+        parameter_index=parameter_index,
+        parameter_name=parameter_name,
+        parameter_query=parameter_query,
+        parameter_key=parameter_key,
+        parameter_ref=parameter_ref,
+    )
+
+
+@meter_app.command("get")
+def master_meter_get(
+    ctx: typer.Context,
+    samples: MeterSamplesOption = 1,
+    interval_ms: MeterIntervalOption = 50,
+) -> None:
+    """Read the main track's output meters (0.0-1.0), as peak and mean."""
+    run_meter_command(
+        ctx,
+        command_name="master meter get",
+        target_args={},
+        read=lambda: get_client(ctx).master_meter_get(),
+        samples=samples,
+        interval_ms=interval_ms,
+    )
+
+
 master_app.add_typer(volume_app, name="volume")
+master_app.add_typer(meter_app, name="meter")
 master_app.add_typer(panning_app, name="panning")
 master_app.add_typer(devices_app, name="devices")
+for _effect_type in ("eq8", "limiter", "compressor", "utility"):
+    effect_app.add_typer(_build_effect_app(_effect_type), name=_effect_type)
+master_app.add_typer(effect_app, name="effect")
 
 
 def register(app: typer.Typer) -> None:

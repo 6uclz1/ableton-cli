@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import sys
 import time
+import uuid
 from pathlib import Path
 from typing import Annotated, Any
 
@@ -15,7 +16,14 @@ from ._validation import invalid_argument, require_non_empty_string
 
 batch_app = typer.Typer(help="Batch commands", no_args_is_help=True)
 _ASSERT_OPERATORS = frozenset({"eq", "ne", "gt", "gte", "lt", "lte"})
-_DEFAULT_RETRY_CODES = ("TIMEOUT", "REMOTE_BUSY")
+#: REMOTE_BUSY is the only code safe to retry with no further machinery: the
+#: Remote Script raises it from `_execute_command_from_server_thread` on the
+#: queue-depth check, which runs *before* `self._queue.put()`, so the request
+#: provably never reached Live's main thread and had zero side effects.
+#: TIMEOUT stays out of the default so a step must opt in; opting in is safe
+#: because `_execute_step` carries one idempotency key across every attempt and
+#: the Remote Script replays the stored response rather than re-running.
+_DEFAULT_RETRY_CODES = ("REMOTE_BUSY",)
 
 
 def _parse_retry_object(raw_retry: Any, *, step_index: int) -> dict[str, Any] | None:
@@ -477,6 +485,23 @@ def _run_preflight(
     }
 
 
+def _annotate_step_timeout(exc: AppError, *, step_index: int, name: str) -> None:
+    """Surface on a timed-out step whether Live may already have applied it.
+
+    The Remote Script reports ``may_have_executed`` once its main-thread wait
+    expires. ``None`` means no structured answer reached the client at all, so
+    the caller must assume the command might have landed.
+    """
+    if exc.error_code != ErrorCode.TIMEOUT:
+        return
+    exc.details = {
+        **exc.details,
+        "step_index": step_index,
+        "name": name,
+        "may_have_executed": exc.details.get("may_have_executed"),
+    }
+
+
 def _execute_step(
     client: Any,
     *,
@@ -485,20 +510,35 @@ def _execute_step(
 ) -> tuple[dict[str, Any], int]:
     retry = step["retry"]
     if retry is None:
-        result = client.execute_remote_command(step["name"], step["args"])
+        try:
+            result = client.execute_remote_command(step["name"], step["args"])
+        except AppError as exc:
+            _annotate_step_timeout(exc, step_index=step_index, name=step["name"])
+            raise
         return result, 1
 
     max_attempts = retry["max_attempts"]
     retry_on = set(retry["on"])
     backoff_ms = retry["backoff_ms"]
 
+    # Generated once and reused by every attempt: that is the whole mechanism.
+    # A fresh request_id is minted per send and can never identify a retry, so
+    # this key is what lets the Remote Script recognise a resend and replay the
+    # stored response instead of applying the command a second time.
+    idempotency_key = uuid.uuid4().hex
+
     attempt = 0
     while True:
         attempt += 1
         try:
-            result = client.execute_remote_command(step["name"], step["args"])
+            result = client.execute_remote_command(
+                step["name"],
+                step["args"],
+                idempotency_key=idempotency_key,
+            )
             return result, attempt
         except AppError as exc:
+            _annotate_step_timeout(exc, step_index=step_index, name=step["name"])
             if exc.error_code not in retry_on:
                 raise
             if attempt >= max_attempts:
@@ -520,10 +560,51 @@ def _execute_step(
                 time.sleep(sleep_seconds)
 
 
+def _annotate_step_failure(
+    exc: AppError,
+    *,
+    step_index: int,
+    name: str,
+    results: list[dict[str, Any]],
+) -> None:
+    """Locate a fail-fast batch failure without changing its error code."""
+    exc.details = {
+        **exc.details,
+        "step_index": step_index,
+        "step_name": name,
+        "completed_steps": len(results),
+        "results": list(results),
+    }
+
+
+def _run_step_with_assertions(
+    client: Any,
+    *,
+    step: dict[str, Any],
+    step_index: int,
+    previous_result: dict[str, Any] | None,
+) -> tuple[dict[str, Any], int]:
+    _evaluate_assertions(
+        step_index=step_index,
+        source="previous",
+        conditions=step["assert"],
+        payload=previous_result,
+    )
+    step_result, attempts = _execute_step(client, step=step, step_index=step_index)
+    _evaluate_assertions(
+        step_index=step_index,
+        source="current",
+        conditions=step["assert"],
+        payload=step_result,
+    )
+    return step_result, attempts
+
+
 def _execute_batch_spec(
     ctx: typer.Context,
     spec: dict[str, Any],
     *,
+    continue_on_error: bool = False,
     client_override: Any | None = None,
 ) -> dict[str, Any]:
     runtime = get_runtime(ctx)
@@ -538,32 +619,64 @@ def _execute_batch_spec(
         )
 
     results: list[dict[str, Any]] = []
+    failed_step_indices: list[int] = []
     previous_result: dict[str, Any] | None = None
     for step_index, step in enumerate(spec["steps"]):
-        _evaluate_assertions(
-            step_index=step_index,
-            source="previous",
-            conditions=step["assert"],
-            payload=previous_result,
-        )
-
-        step_result, attempts = _execute_step(client, step=step, step_index=step_index)
-
-        _evaluate_assertions(
-            step_index=step_index,
-            source="current",
-            conditions=step["assert"],
-            payload=step_result,
-        )
+        try:
+            step_result, attempts = _run_step_with_assertions(
+                client,
+                step=step,
+                step_index=step_index,
+                previous_result=previous_result,
+            )
+        except AppError as exc:
+            if not continue_on_error:
+                _annotate_step_failure(
+                    exc,
+                    step_index=step_index,
+                    name=step["name"],
+                    results=results,
+                )
+                raise
+            failed_step_indices.append(step_index)
+            results.append(
+                {
+                    "index": step_index,
+                    "name": step["name"],
+                    "ok": False,
+                    "result": None,
+                    "error": exc.to_payload(),
+                }
+            )
+            # A failed step has no trustworthy payload, so a following
+            # `previous` assert fails explicitly instead of reading stale data.
+            previous_result = None
+            continue
         results.append(
             {
                 "index": step_index,
                 "name": step["name"],
+                "ok": True,
                 "attempts": attempts,
                 "result": step_result,
             }
         )
         previous_result = step_result
+
+    if failed_step_indices:
+        raise AppError(
+            error_code=ErrorCode.BATCH_STEP_FAILED,
+            message=f"{len(failed_step_indices)} of {len(spec['steps'])} batch steps failed",
+            hint="Inspect error.details.results for each failed step's error.",
+            exit_code=ExitCode.EXECUTION_FAILED,
+            details={
+                "step_count": len(spec["steps"]),
+                "completed_steps": len(spec["steps"]) - len(failed_step_indices),
+                "failed_step_indices": failed_step_indices,
+                "results": results,
+                "preflight": preflight_result,
+            },
+        )
 
     return {
         "step_count": len(spec["steps"]),
@@ -586,6 +699,13 @@ def batch_run(
     steps_stdin: Annotated[
         bool,
         typer.Option("--steps-stdin", help="Read JSON object with 'steps' array from stdin"),
+    ] = False,
+    continue_on_error: Annotated[
+        bool,
+        typer.Option(
+            "--continue-on-error",
+            help="Run every step even after failures; any failure still fails the batch",
+        ),
     ] = False,
 ) -> None:
     def _run() -> dict[str, Any]:
@@ -616,25 +736,44 @@ def batch_run(
             raw_stdin = sys.stdin.read()
             spec = _parse_batch_payload(raw_stdin, source_name="steps stdin")
 
-        return _execute_batch_spec(ctx, spec)
+        return _execute_batch_spec(ctx, spec, continue_on_error=continue_on_error)
 
     execute_command(
         ctx,
         command="batch run",
-        args={"steps_file": steps_file, "steps_json": steps_json, "steps_stdin": steps_stdin},
+        args={
+            "steps_file": steps_file,
+            "steps_json": steps_json,
+            "steps_stdin": steps_stdin,
+            "continue_on_error": continue_on_error,
+        },
         action=_run,
     )
 
 
 @batch_app.command("stream")
-def batch_stream(ctx: typer.Context) -> None:
+def batch_stream(
+    ctx: typer.Context,
+    continue_on_error: Annotated[
+        bool,
+        typer.Option(
+            "--continue-on-error",
+            help="Run every step even after failures; any failure still fails the batch",
+        ),
+    ] = False,
+) -> None:
     runtime = get_runtime(ctx)
     if (
         runtime.plan
         or runtime.dry_run
         or (runtime.require_confirmation and not runtime.confirm_destructive)
     ):
-        execute_command(ctx, command="batch stream", args={}, action=lambda: {})
+        execute_command(
+            ctx,
+            command="batch stream",
+            args={"continue_on_error": continue_on_error},
+            action=lambda: {},
+        )
 
     client = get_client(ctx)
     for line_number, raw_line in enumerate(sys.stdin, start=1):
@@ -672,7 +811,12 @@ def batch_stream(ctx: typer.Context) -> None:
                 )
 
             spec = _parse_batch_object(payload, source_name=f"line {line_number}")
-            result = _execute_batch_spec(ctx, spec, client_override=client)
+            result = _execute_batch_spec(
+                ctx,
+                spec,
+                continue_on_error=continue_on_error,
+                client_override=client,
+            )
             _emit_stream_line(request_id=request_id, ok=True, result=result, error=None)
         except AppError as exc:
             _emit_stream_line(

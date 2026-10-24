@@ -2,10 +2,12 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from ableton_cli import __version__
 from ableton_cli.capabilities import compute_command_set_hash, required_remote_commands
 from ableton_cli.config import Settings
 from ableton_cli.doctor import run_doctor
 from ableton_cli.errors import AppError, ExitCode
+from ableton_cli.plugins.status import PluginHealth
 
 
 class _PlatformPathsStub:
@@ -51,6 +53,7 @@ def test_doctor_handles_unreachable_remote(monkeypatch) -> None:
             config_path="/tmp/not-found.toml",
         ),
         platform_paths=_PlatformPathsStub(),
+        plugin_health=PluginHealth(enabled=True),
     )
 
     assert "summary" in result
@@ -59,6 +62,7 @@ def test_doctor_handles_unreachable_remote(monkeypatch) -> None:
     assert checks["remote_ping"]["status"] == "FAIL"
     assert "start ableton" in checks["remote_ping"]["hint"].lower()
     assert checks["timeout_ms"]["status"] == "WARN"
+    assert checks["remote_script_version"]["status"] == "WARN"
 
 
 def test_doctor_fails_when_ping_has_no_supported_commands(monkeypatch) -> None:
@@ -82,6 +86,7 @@ def test_doctor_fails_when_ping_has_no_supported_commands(monkeypatch) -> None:
             config_path="/tmp/not-found.toml",
         ),
         platform_paths=_PlatformPathsStub(),
+        plugin_health=PluginHealth(enabled=True),
     )
 
     checks = {item["name"]: item for item in result["checks"]}
@@ -114,6 +119,7 @@ def test_doctor_fails_when_remote_is_missing_required_commands(monkeypatch) -> N
             config_path="/tmp/not-found.toml",
         ),
         platform_paths=_PlatformPathsStub(),
+        plugin_health=PluginHealth(enabled=True),
     )
 
     checks = {item["name"]: item for item in result["checks"]}
@@ -147,7 +153,57 @@ def test_doctor_protocol_mismatch_hint_mentions_protocol_setter(monkeypatch) -> 
             config_path="/tmp/not-found.toml",
         ),
         platform_paths=_PlatformPathsStub(),
+        plugin_health=PluginHealth(enabled=True),
     )
     checks = {item["name"]: item for item in result["checks"]}
     assert checks["protocol_version"]["status"] == "FAIL"
     assert "config set protocol_version" in (checks["protocol_version"]["hint"] or "")
+
+
+def _ping_payload(remote_script_version: str) -> dict[str, object]:
+    supported_commands = sorted(required_remote_commands())
+    return {
+        "protocol_version": 3,
+        "remote_script_version": remote_script_version,
+        "supported_commands": supported_commands,
+        "command_set_hash": compute_command_set_hash(supported_commands),
+    }
+
+
+def _run_doctor_with_ping(monkeypatch, ping_payload: dict[str, object]) -> dict[str, dict]:
+    monkeypatch.setattr(
+        "ableton_cli.doctor.AbletonClient",
+        lambda settings: _ClientStub(ping_payload=ping_payload),
+    )
+    result = run_doctor(
+        Settings(
+            host="127.0.0.1",
+            port=8765,
+            timeout_ms=15000,
+            log_level="INFO",
+            log_file=None,
+            protocol_version=3,
+            config_path="/tmp/not-found.toml",
+        ),
+        platform_paths=_PlatformPathsStub(),
+        plugin_health=PluginHealth(enabled=True),
+    )
+    return {item["name"]: item for item in result["checks"]}
+
+
+def test_doctor_fails_when_running_remote_script_version_differs(monkeypatch) -> None:
+    checks = _run_doctor_with_ping(monkeypatch, _ping_payload("0.4.0"))
+
+    check = checks["remote_script_version"]
+    assert check["status"] == "FAIL"
+    assert "install-remote-script --yes" in (check["hint"] or "")
+    assert check["details"] == {
+        "cli_version": __version__,
+        "remote_script_version": "0.4.0",
+    }
+
+
+def test_doctor_passes_when_running_remote_script_matches_cli(monkeypatch) -> None:
+    checks = _run_doctor_with_ping(monkeypatch, _ping_payload(__version__))
+
+    assert checks["remote_script_version"]["status"] == "PASS"

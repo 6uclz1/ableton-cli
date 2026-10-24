@@ -14,14 +14,14 @@ Stable action names and CLI mappings for automation wrappers.
 | `song_export_audio` | `uv run ableton-cli --output json song export audio --path <wav>` | Export session audio to a target path when supported. |
 | `get_session_info` | `uv run ableton-cli --output json session info` | Read session view state and structure information. |
 | `get_track_info` | `uv run ableton-cli --output json track info --track-index <track>` | Read one track details by selector. |
-| `play` | `uv run ableton-cli --output json transport play` | Start transport playback. |
+| `play` | `uv run ableton-cli --output json transport play` | Start transport playback from the current playhead position. |
 | `stop` | `uv run ableton-cli --output json transport stop` | Stop transport playback. |
-| `arrangement_record_start` | `uv run ableton-cli --output json arrangement record start` | Start arrangement recording when supported by Live API. |
-| `arrangement_record_stop` | `uv run ableton-cli --output json arrangement record stop` | Stop arrangement recording when supported by Live API. |
 | `set_tempo` | `uv run ableton-cli --output json transport tempo set <bpm>` | Update song tempo in BPM. |
 | `transport_position_get` | `uv run ableton-cli --output json transport position get` | Read current transport beat/time position. |
-| `transport_position_set` | `uv run ableton-cli --output json transport position set <beats>` | Move transport playhead to a beat position. |
+| `transport_position_set` | `uv run ableton-cli --output json transport position set <beats>` | Move transport playhead to a beat position, verified by read-back. |
 | `transport_rewind` | `uv run ableton-cli --output json transport rewind` | Rewind transport playhead to beat 0. |
+| `arrangement_record_start` | `uv run ableton-cli --output json arrangement record start` | Start arrangement recording when supported by Live API. |
+| `arrangement_record_stop` | `uv run ableton-cli --output json arrangement record stop` | Stop arrangement recording when supported by Live API. |
 | `list_tracks` | `uv run ableton-cli --output json tracks list` | List all tracks and their basic properties. |
 | `create_midi_track` | `uv run ableton-cli --output json tracks create midi [--index <index>]` | Insert a MIDI track at an index or append. |
 | `create_audio_track` | `uv run ableton-cli --output json tracks create audio [--index <index>]` | Insert an audio track at an index or append. |
@@ -36,21 +36,24 @@ Stable action names and CLI mappings for automation wrappers.
 | `set_track_arm` | `uv run ableton-cli --output json track arm set <value> --track-index <track>` | Update track arm state. |
 | `get_track_panning` | `uv run ableton-cli --output json track panning get --track-index <track>` | Read track panning value. |
 | `set_track_panning` | `uv run ableton-cli --output json track panning set <value> --track-index <track>` | Update track panning in range -1.0 to 1.0. |
+| `get_track_meter` | `uv run ableton-cli --output json track meter get --track-index <track> --samples <n> --interval-ms <ms>` | Read a track's output meter peak and mean over a sampling window. |
 | `get_track_send` | `uv run ableton-cli --output json track send get <send> --track-index <track>` | Read one track send level by 0-based send index. |
 | `set_track_send` | `uv run ableton-cli --output json track send set <send> <value> --track-index <track>` | Update one track send level in range 0.0 to 1.0. |
 | `list_return_tracks` | `uv run ableton-cli --output json return-tracks list` | List all return tracks and their mixer state. |
 | `set_return_track_volume` | `uv run ableton-cli --output json return-track volume set <return-track> <value>` | Update one return-track volume in range 0.0 to 1.0. |
 | `get_master_info` | `uv run ableton-cli --output json master info` | Read master track name, volume, and panning. |
+| `get_master_meter` | `uv run ableton-cli --output json master meter get --samples <n> --interval-ms <ms>` | Read the main output meter peak and mean over a sampling window. |
 | `list_master_devices` | `uv run ableton-cli --output json master devices list` | List master track devices and parameters. |
 | `set_mixer_crossfader` | `uv run ableton-cli --output json mixer crossfader set <value>` | Update mixer crossfader position in range -1.0 to 1.0. |
 | `set_mixer_cue_routing` | `uv run ableton-cli --output json mixer cue-routing set <routing>` | Update cue routing using an exact routing name. |
 | `get_track_routing_input` | `uv run ableton-cli --output json track routing input get --track-index <track>` | Read current and available input routing for one track. |
-| `set_track_routing_output` | `uv run ableton-cli --output json track routing output set --track-index <track> --type <routing-type> --channel <routing-channel>` | Update output routing using exact type and channel names. |
+| `set_track_routing_output` | `uv run ableton-cli --output json track routing output set --track-index <track> --type <routing-type> [--channel <routing-channel>]` | Update output routing using exact type and channel names. |
 | `create_clip` | `uv run ableton-cli --output json clip create <track> <clip> --length <beats>` | Create a clip in a slot with a target beat length. |
 | `add_notes_to_clip` | `uv run ableton-cli --output json clip notes add <track> <clip> (--notes-json '<json-array>' | --notes-file <path>)` | Add MIDI notes to an existing clip slot. |
 | `get_clip_notes` | `uv run ableton-cli --output json clip notes get <track> <clip> [--start-time <beats>] [--end-time <beats>] [--pitch <midi>]` | Read clip notes with optional time/pitch filters. |
 | `clear_clip_notes` | `uv run ableton-cli --output json clip notes clear <track> <clip> [--start-time <beats>] [--end-time <beats>] [--pitch <midi>]` | Remove matching clip notes by optional time/pitch filters. |
 | `replace_clip_notes` | `uv run ableton-cli --output json clip notes replace <track> <clip> (--notes-json '<json-array>' | --notes-file <path>) [--start-time <beats>] [--end-time <beats>] [--pitch <midi>]` | Clear matching notes then add replacement notes. |
+| `update_clip_notes` | `uv run ableton-cli --output json clip notes update <track> <clip> (--notes-json '<json-array>' | --notes-file <path>)` | Edit existing notes in place by note_id without disturbing unrelated notes (requires Live 12+ extended note API). |
 | `arrangement_clip_notes_add` | `uv run ableton-cli --output json arrangement clip notes add <track> <index> (--notes-json '<json-array>' | --notes-file <path>)` | Add MIDI notes to an arrangement clip by list index. |
 | `arrangement_clip_notes_get` | `uv run ableton-cli --output json arrangement clip notes get <track> <index> [--start-time <beats>] [--end-time <beats>] [--pitch <midi>]` | Read arrangement clip notes with optional time/pitch filters. |
 | `arrangement_clip_notes_clear` | `uv run ableton-cli --output json arrangement clip notes clear <track> <index> [--start-time <beats>] [--end-time <beats>] [--pitch <midi>]` | Remove matching arrangement clip notes by optional time/pitch filters. |
@@ -91,7 +94,13 @@ Stable action names and CLI mappings for automation wrappers.
 | `list_standard_effect_keys` | `uv run ableton-cli --output json effect <eq8|limiter|compressor|auto-filter|reverb|utility> keys` | List stable wrapper keys for a standard effect type. |
 | `set_standard_effect_parameter_safe` | `uv run ableton-cli --output json effect <eq8|limiter|compressor|auto-filter|reverb|utility> set <value> --track-index <track> --device-index <device> --parameter-key <key>` | Safely set a standard effect key resolved to native parameter index. |
 | `observe_standard_effect_state` | `uv run ableton-cli --output json effect <eq8|limiter|compressor|auto-filter|reverb|utility> observe --track-index <track> --device-index <device>` | Capture one-shot wrapper state snapshot keyed by stable effect keys. |
-| `execute_batch` | `uv run ableton-cli --output json batch run (--steps-file <path> | --steps-json '<json>' | --steps-stdin)` | Execute multiple remote commands atomically from JSON input. |
+| `remix_mastering_plan` | `uv run ableton-cli --output json remix mastering plan --project <remix_project.json>` | Generate a non-destructive master chain plan in the remix manifest. |
+| `remix_mastering_qa` | `uv run ableton-cli --output json remix mastering qa --project <remix_project.json> --render <wav>` | Validate offline render analysis and master-chain readiness against targets. |
+| `inspect_live_set` | `uv run ableton-cli --output json set inspect --path <set.als>` | Summarize a Live Set file offline: song, tracks, returns, scenes, locators, plug-ins. |
+| `lint_live_set` | `uv run ableton-cli --output json set lint --path <set.als>` | Check a Live Set file offline for ID integrity errors and missing samples. |
+| `diff_live_set` | `uv run ableton-cli --output json set diff --from <a.als> --to <b.als>` | Compute semantic added/removed/changed deltas between two Live Set files. |
+| `write_live_set_automation` | `uv run ableton-cli --output json set automation write --path <set.als> --out <new.als> --track-index <track> --target <target> --points-json '<json>'` | Write one arrangement automation lane into a new Live Set file. |
+| `execute_batch` | `uv run ableton-cli --output json batch run (--steps-file <path> | --steps-json '<json>' | --steps-stdin) [--continue-on-error]` | Execute multiple remote commands atomically from JSON input. |
 
 ## CLI-only commands (not stable actions)
 
@@ -116,7 +125,20 @@ Stable action names and CLI mappings for automation wrappers.
 - `uv run ableton-cli clip groove set <track> <clip> <target>`: Assign a `.agr` groove by browser path or URI.
 - `uv run ableton-cli clip groove amount set <track> <clip> <0.0-1.0>`: Set groove amount on a clip.
 - `uv run ableton-cli clip groove clear <track> <clip>`: Clear groove assignment from a clip.
-- `uv run ableton-cli clip cut-to-drum-rack (--source-track <track> --source-clip <clip> | --source <uri-or-path>) (--grid <fraction-or-beats> | --slice-count <n>) [--target-track <track>] [--start-pad <pad>] [--create-trigger-clip --trigger-clip-slot <clip>]`: Slice audio source and map slices into Drum Rack pads.
+- `uv run ableton-cli clip cut-to-drum-rack (--source-track <track> --source-clip <clip> | --source <uri-or-path>) (--grid <fraction-or-beats> | --slice-count <n>) [--target-track <track>] [--start-pad <pad>] [--create-trigger-clip --trigger-clip-slot <clip>]`: Slice session/browser audio source and map slices into Drum Rack pads.
+- `uv run ableton-cli clip cut-to-drum-rack --source-file <path> --transient [--bpm <bpm>] [--max-slices <n>] [--target-track <track>] [--start-pad <pad>] [--create-trigger-clip --trigger-clip-slot <clip>]`: Analyze a local PCM WAV file, slice detected transients, and map slices into Drum Rack pads.
+- `uv run ableton-cli remix init --source <abs-wav> --project <dir-or-json>`: Create a remix manifest.
+- `uv run ableton-cli audio asset add --project <remix_project.json> --role <role> --path <abs-audio>`: Register a remix asset.
+- `uv run ableton-cli audio transient analyze --path <audio-file> --bpm <bpm> [--max-slices <n>]`: Detect transient slice points for audio-to-Drum-Rack workflows.
+- `uv run ableton-cli audio sections import --project <remix_project.json> --sections "intro:1-8,chorus:33-48"`: Import a manual section map.
+- `uv run ableton-cli remix plan --project <remix_project.json> --style anime-club`: Generate an arrangement plan in the manifest.
+- `uv run ableton-cli remix apply --project <remix_project.json> --dry-run`: Print planned batch steps without writing to Live.
+- `uv run ableton-cli remix qa --project <remix_project.json>`: Validate remix manifest paths and planning metadata.
+- `uv run ableton-cli remix generate drums --project <remix_project.json> --style <style> [--section <name> | --bars <n>] [--seed <n>] [--apply --track <t> --clip <c>]`: Generate a drum pattern and optionally write it to a clip.
+- `uv run ableton-cli remix generate bass --project <remix_project.json> --pattern <name> [--key "F minor"] [--follow-chords]`: Generate a bass line, following generated chord roots when present.
+- `uv run ableton-cli remix generate chords --project <remix_project.json> --progression "i-VI-III-VII" --key "F minor" [--voicing drop2]`: Expand a progression into voiced chord notes.
+
+Not implemented (these exit `20` with `error.code=NOT_IMPLEMENTED`): `remix setup-sound`, `remix mix-macro`, `remix setup-mix`, `remix setup-returns`, `remix setup-sidechain`, `remix device-chain apply`, `audio stems split`. Each error carries a hint naming the commands that do the job.
 
 Operational note: after `install-remote-script --yes`, reload Ableton's Control Surface assignment (`None` -> `AbletonCliRemote`) or restart Ableton Live to apply updated Remote Script code.
 
@@ -126,7 +148,7 @@ Operational note: run `uv run ableton-cli doctor` to validate protocol/capabilit
 
 Operational note: ref-aware commands use selectors, not positional track/device/parameter indexes. Track selectors: `--track-index|--track-name|--selected-track|--track-query|--track-ref`. Device selectors: `--device-index|--device-name|--selected-device|--device-query|--device-ref`. Parameter selectors: `--parameter-index|--parameter-name|--parameter-query|--parameter-key|--parameter-ref`.
 
-Operational note: when passing a negative positional value, use `--` before the value (for example, `track panning set -- -0.25 --track-index 0`, `effect parameter set -- -2.0 --track-index 0 --device-index 0 --parameter-index 7`).
+Operational note: when passing a negative positional value, put every option first and `--` right before the value; options after `--` are read as positional arguments (for example, `track panning set --track-index 0 -- -0.25`, `effect parameter set --track-index 0 --device-index 0 --parameter-index 7 -- -2.0`).
 
 Operational note: standard wrapper commands (`synth <type> ...`, `effect <type> ...`) intentionally fail if required parameter-name keys are missing. If you see `Missing required standard ... keys`, switch to generic indexed commands:
 - `uv run ableton-cli --output json effect parameters list --track-index <track> --device-index <device>`

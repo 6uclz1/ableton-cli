@@ -1,140 +1,24 @@
 from __future__ import annotations
 
-from collections.abc import Callable
+import math
 from typing import Any
 
-from ..command_backend import (
-    NOTE_PITCH_MAX,
-    NOTE_PITCH_MIN,
-    NOTE_VELOCITY_MAX,
-    NOTE_VELOCITY_MIN,
-    CommandError,
-)
+from ..command_backend import CommandError
 from .base import _invalid_argument, _not_supported_by_live_api
 
 
 class LiveBackendTracksClipsMixin:
-    def _clip_note_matches_filter(
-        self,
-        note: dict[str, Any],
-        start_time: float | None,
-        end_time: float | None,
-        pitch: int | None,
-    ) -> bool:
-        note_start = float(note["start_time"])
-        note_pitch = int(note["pitch"])
-        if start_time is not None and note_start < start_time:
-            return False
-        if end_time is not None and note_start >= end_time:
-            return False
-        if pitch is not None and note_pitch != pitch:
-            return False
-        return True
-
-    def _normalize_clip_note(self, note: Any) -> dict[str, Any]:
-        return {
-            "note_id": int(note.note_id),
-            "pitch": int(note.pitch),
-            "start_time": float(note.start_time),
-            "duration": float(note.duration),
-            "velocity": int(note.velocity),
-            "mute": bool(note.mute),
-        }
-
-    def _clip_notes_extended(self, clip_obj: Any) -> list[dict[str, Any]]:
-        time_span = max(float(getattr(clip_obj, "length", 0.0)), 0.0) + 1.0
-        notes_raw = tuple(
-            clip_obj.get_notes_extended(
-                from_pitch=0,
-                pitch_span=128,
-                from_time=0.0,
-                time_span=time_span,
-            )
-        )
-        return [self._normalize_clip_note(note) for note in notes_raw]
-
-    def _filtered_clip_notes(
-        self,
-        clip_obj: Any,
-        start_time: float | None,
-        end_time: float | None,
-        pitch: int | None,
-    ) -> list[dict[str, Any]]:
-        return [
-            note
-            for note in self._clip_notes_extended(clip_obj)
-            if self._clip_note_matches_filter(note, start_time, end_time, pitch)
-        ]
-
-    @staticmethod
-    def _clamp_int(value: int, minimum: int, maximum: int) -> int:
-        return max(minimum, min(maximum, value))
-
-    def _clip_note_tuple(self, note: dict[str, Any]) -> tuple[int, float, float, int, bool]:
-        return (
-            int(note["pitch"]),
-            float(note["start_time"]),
-            float(note["duration"]),
-            int(note["velocity"]),
-            bool(note["mute"]),
-        )
-
-    def _normalized_note_payload(self, note: dict[str, Any]) -> dict[str, Any]:
-        return {
-            "pitch": self._clamp_int(int(note["pitch"]), NOTE_PITCH_MIN, NOTE_PITCH_MAX),
-            "start_time": max(0.0, float(note["start_time"])),
-            "duration": max(float(note["duration"]), 0.000001),
-            "velocity": self._clamp_int(
-                int(note["velocity"]),
-                NOTE_VELOCITY_MIN,
-                NOTE_VELOCITY_MAX,
-            ),
-            "mute": bool(note["mute"]),
-        }
-
-    def _transform_filtered_clip_notes(
-        self,
-        *,
-        track: int,
-        clip: int,
-        start_time: float | None,
-        end_time: float | None,
-        pitch: int | None,
-        transform: Callable[[dict[str, Any], int], dict[str, Any]],
-        metadata: dict[str, Any] | None = None,
-    ) -> dict[str, Any]:
-        slot = self._clip_slot_at(track, clip)
-        if not slot.has_clip:
-            raise _invalid_argument(
-                message="No clip in slot",
-                hint="Create a clip in the target slot before transforming notes.",
-            )
-        clip_obj = slot.clip
-        assert clip_obj is not None
-        filtered = self._filtered_clip_notes(clip_obj, start_time, end_time, pitch)
-        changed_note_ids: list[int] = []
-        replacement_notes: list[tuple[int, float, float, int, bool]] = []
-
-        for index, note in enumerate(filtered):
-            transformed = self._normalized_note_payload(transform(dict(note), index))
-            if self._clip_note_tuple(note) == self._clip_note_tuple(transformed):
-                continue
-            changed_note_ids.append(int(note["note_id"]))
-            replacement_notes.append(self._clip_note_tuple(transformed))
-
-        if changed_note_ids:
-            clip_obj.remove_notes_by_id(changed_note_ids)
-            clip_obj.set_notes(tuple(replacement_notes))
-
-        return {
-            "track": track,
-            "clip": clip,
-            "start_time": start_time,
-            "end_time": end_time,
-            "pitch": pitch,
-            **(metadata or {}),
-            "changed_count": len(changed_note_ids),
-        }
+    _WARP_MODE_VALUES = {
+        "beats": 0,
+        "tones": 1,
+        "texture": 2,
+        "re-pitch": 3,
+        "repitch": 3,
+        "complex": 4,
+        "rex": 5,
+        "complex-pro": 6,
+        "complex_pro": 6,
+    }
 
     @staticmethod
     def _clip_groove_attr_name(clip_obj: Any) -> str | None:
@@ -151,7 +35,7 @@ class LiveBackendTracksClipsMixin:
         return None
 
     def _require_clip_with_groove_support(self, *, track: int, clip: int) -> tuple[Any, str]:
-        slot = self._clip_slot_at(track, clip)
+        slot = self._ctx._clip_slot_at(track, clip)
         if not slot.has_clip:
             raise _invalid_argument(
                 message="No clip in slot",
@@ -174,18 +58,18 @@ class LiveBackendTracksClipsMixin:
     def _resolve_groove_target(self, target: str) -> dict[str, str | None]:
         parsed_target = str(target).strip()
         if "/" in parsed_target:
-            item = self._resolve_browser_path(parsed_target)
+            item = self._ctx.services.browser._resolve_browser_path(parsed_target)
             item_path = parsed_target
             uri_raw = getattr(item, "uri", None)
             item_uri = str(uri_raw).strip() if uri_raw is not None else None
         elif ":" in parsed_target:
-            item = self._find_browser_item_by_uri(parsed_target)
+            item = self._ctx.services.browser._find_browser_item_by_uri(parsed_target)
             if item is None:
                 raise _invalid_argument(
                     message=f"Browser item with URI '{parsed_target}' not found",
                     hint="Use browser search/items to choose a valid groove URI.",
                 )
-            item_path = self._item_path_by_uri(parsed_target)
+            item_path = self._ctx.services.browser._item_path_by_uri(parsed_target)
             uri_raw = getattr(item, "uri", None)
             item_uri = str(uri_raw).strip() if uri_raw is not None else parsed_target
         else:
@@ -256,7 +140,7 @@ class LiveBackendTracksClipsMixin:
         }
 
     def create_clip(self, track: int, clip: int, length: float) -> dict[str, Any]:
-        slot = self._clip_slot_at(track, clip)
+        slot = self._ctx._clip_slot_at(track, clip)
         if slot.has_clip:
             raise _invalid_argument(
                 message="Clip slot already has a clip",
@@ -276,221 +160,6 @@ class LiveBackendTracksClipsMixin:
             "name": str(getattr(clip_obj, "name", "")),
             "length": float(getattr(clip_obj, "length", length)),
         }
-
-    def add_notes_to_clip(
-        self,
-        track: int,
-        clip: int,
-        notes: list[dict[str, Any]],
-    ) -> dict[str, Any]:
-        slot = self._clip_slot_at(track, clip)
-        if not slot.has_clip:
-            raise _invalid_argument(
-                message="No clip in slot",
-                hint="Create a clip in the target slot before adding notes.",
-            )
-        clip_obj = slot.clip
-        live_notes = [
-            (
-                int(note["pitch"]),
-                float(note["start_time"]),
-                float(note["duration"]),
-                int(note["velocity"]),
-                bool(note["mute"]),
-            )
-            for note in notes
-        ]
-        clip_obj.set_notes(tuple(live_notes))
-        return {"track": track, "clip": clip, "note_count": len(live_notes)}
-
-    def get_clip_notes(
-        self,
-        track: int,
-        clip: int,
-        start_time: float | None,
-        end_time: float | None,
-        pitch: int | None,
-    ) -> dict[str, Any]:
-        slot = self._clip_slot_at(track, clip)
-        if not slot.has_clip:
-            raise _invalid_argument(
-                message="No clip in slot",
-                hint="Create a clip in the target slot before reading notes.",
-            )
-        clip_obj = slot.clip
-        assert clip_obj is not None
-        filtered = self._filtered_clip_notes(clip_obj, start_time, end_time, pitch)
-        payload_notes = [
-            {
-                "pitch": int(note["pitch"]),
-                "start_time": float(note["start_time"]),
-                "duration": float(note["duration"]),
-                "velocity": int(note["velocity"]),
-                "mute": bool(note["mute"]),
-            }
-            for note in filtered
-        ]
-        return {
-            "track": track,
-            "clip": clip,
-            "start_time": start_time,
-            "end_time": end_time,
-            "pitch": pitch,
-            "notes": payload_notes,
-            "note_count": len(payload_notes),
-        }
-
-    def clear_clip_notes(
-        self,
-        track: int,
-        clip: int,
-        start_time: float | None,
-        end_time: float | None,
-        pitch: int | None,
-    ) -> dict[str, Any]:
-        slot = self._clip_slot_at(track, clip)
-        if not slot.has_clip:
-            raise _invalid_argument(
-                message="No clip in slot",
-                hint="Create a clip in the target slot before clearing notes.",
-            )
-        clip_obj = slot.clip
-        assert clip_obj is not None
-        filtered = self._filtered_clip_notes(clip_obj, start_time, end_time, pitch)
-        to_remove = [int(note["note_id"]) for note in filtered]
-        if to_remove:
-            clip_obj.remove_notes_by_id(to_remove)
-        return {
-            "track": track,
-            "clip": clip,
-            "start_time": start_time,
-            "end_time": end_time,
-            "pitch": pitch,
-            "cleared_count": len(to_remove),
-        }
-
-    def replace_clip_notes(
-        self,
-        track: int,
-        clip: int,
-        notes: list[dict[str, Any]],
-        start_time: float | None,
-        end_time: float | None,
-        pitch: int | None,
-    ) -> dict[str, Any]:
-        cleared = self.clear_clip_notes(track, clip, start_time, end_time, pitch)
-        added = self.add_notes_to_clip(track, clip, notes)
-        return {
-            "track": track,
-            "clip": clip,
-            "start_time": start_time,
-            "end_time": end_time,
-            "pitch": pitch,
-            "cleared_count": int(cleared["cleared_count"]),
-            "added_count": int(added["note_count"]),
-        }
-
-    def clip_notes_quantize(
-        self,
-        track: int,
-        clip: int,
-        grid: float,
-        strength: float,
-        start_time: float | None,
-        end_time: float | None,
-        pitch: int | None,
-    ) -> dict[str, Any]:
-        def _quantize(note: dict[str, Any], _index: int) -> dict[str, Any]:
-            original_start = float(note["start_time"])
-            snapped_start = round(round(original_start / grid) * grid, 6)
-            note["start_time"] = round(
-                original_start + ((snapped_start - original_start) * strength),
-                6,
-            )
-            return note
-
-        return self._transform_filtered_clip_notes(
-            track=track,
-            clip=clip,
-            start_time=start_time,
-            end_time=end_time,
-            pitch=pitch,
-            transform=_quantize,
-            metadata={"grid": grid, "strength": strength},
-        )
-
-    def clip_notes_humanize(
-        self,
-        track: int,
-        clip: int,
-        timing: float,
-        velocity: int,
-        start_time: float | None,
-        end_time: float | None,
-        pitch: int | None,
-    ) -> dict[str, Any]:
-        def _humanize(note: dict[str, Any], index: int) -> dict[str, Any]:
-            direction = 1 if index % 2 == 0 else -1
-            note["start_time"] = round(float(note["start_time"]) + (timing * direction), 6)
-            note["velocity"] = int(note["velocity"]) + (velocity * direction)
-            return note
-
-        return self._transform_filtered_clip_notes(
-            track=track,
-            clip=clip,
-            start_time=start_time,
-            end_time=end_time,
-            pitch=pitch,
-            transform=_humanize,
-            metadata={"timing": timing, "velocity": velocity},
-        )
-
-    def clip_notes_velocity_scale(
-        self,
-        track: int,
-        clip: int,
-        scale: float,
-        offset: int,
-        start_time: float | None,
-        end_time: float | None,
-        pitch: int | None,
-    ) -> dict[str, Any]:
-        def _velocity_scale(note: dict[str, Any], _index: int) -> dict[str, Any]:
-            note["velocity"] = int(round(float(note["velocity"]) * scale + offset))
-            return note
-
-        return self._transform_filtered_clip_notes(
-            track=track,
-            clip=clip,
-            start_time=start_time,
-            end_time=end_time,
-            pitch=pitch,
-            transform=_velocity_scale,
-            metadata={"scale": scale, "offset": offset},
-        )
-
-    def clip_notes_transpose(
-        self,
-        track: int,
-        clip: int,
-        semitones: int,
-        start_time: float | None,
-        end_time: float | None,
-        pitch: int | None,
-    ) -> dict[str, Any]:
-        def _transpose(note: dict[str, Any], _index: int) -> dict[str, Any]:
-            note["pitch"] = int(note["pitch"]) + semitones
-            return note
-
-        return self._transform_filtered_clip_notes(
-            track=track,
-            clip=clip,
-            start_time=start_time,
-            end_time=end_time,
-            pitch=pitch,
-            transform=_transpose,
-            metadata={"semitones": semitones},
-        )
 
     def clip_groove_get(self, track: int, clip: int) -> dict[str, Any]:
         clip_obj, groove_attr = self._require_clip_with_groove_support(track=track, clip=clip)
@@ -557,7 +226,7 @@ class LiveBackendTracksClipsMixin:
         )
 
     def set_clip_name(self, track: int, clip: int, name: str) -> dict[str, Any]:
-        slot = self._clip_slot_at(track, clip)
+        slot = self._ctx._clip_slot_at(track, clip)
         if not slot.has_clip:
             raise _invalid_argument(
                 message="No clip in slot",
@@ -568,17 +237,16 @@ class LiveBackendTracksClipsMixin:
         return {"track": track, "clip": clip, "name": str(clip_obj.name)}
 
     def fire_clip(self, track: int, clip: int) -> dict[str, Any]:
-        slot = self._clip_slot_at(track, clip)
-        if not slot.has_clip:
-            raise _invalid_argument(
-                message="No clip in slot",
-                hint="Create a clip in the target slot before firing.",
-            )
+        # Firing an empty slot is valid Live API usage: on an armed,
+        # record-enabled track this is how session recording starts, so no
+        # has_clip guard here (unlike the other clip-slot commands below,
+        # which operate on an existing clip's contents).
+        slot = self._ctx._clip_slot_at(track, clip)
         slot.fire()
         return {"track": track, "clip": clip, "fired": True}
 
     def stop_clip(self, track: int, clip: int) -> dict[str, Any]:
-        slot = self._clip_slot_at(track, clip)
+        slot = self._ctx._clip_slot_at(track, clip)
         if not slot.has_clip:
             raise _invalid_argument(
                 message="No clip in slot",
@@ -588,7 +256,7 @@ class LiveBackendTracksClipsMixin:
         return {"track": track, "clip": clip, "stopped": True}
 
     def clip_active_get(self, track: int, clip: int) -> dict[str, Any]:
-        slot = self._clip_slot_at(track, clip)
+        slot = self._ctx._clip_slot_at(track, clip)
         if not slot.has_clip:
             raise _invalid_argument(
                 message="No clip in slot",
@@ -608,7 +276,7 @@ class LiveBackendTracksClipsMixin:
         }
 
     def clip_active_set(self, track: int, clip: int, value: bool) -> dict[str, Any]:
-        slot = self._clip_slot_at(track, clip)
+        slot = self._ctx._clip_slot_at(track, clip)
         if not slot.has_clip:
             raise _invalid_argument(
                 message="No clip in slot",
@@ -628,6 +296,333 @@ class LiveBackendTracksClipsMixin:
             "active": not bool(clip_obj.muted),
         }
 
+    def _require_session_clip(self, track: int, clip: int, *, action: str) -> Any:
+        slot = self._ctx._clip_slot_at(track, clip)
+        if not slot.has_clip:
+            raise _invalid_argument(
+                message="No clip in slot",
+                hint=f"Create a clip in the target slot before {action}.",
+            )
+        clip_obj = slot.clip
+        assert clip_obj is not None
+        return clip_obj
+
+    def _require_session_audio_clip(self, track: int, clip: int, *, action: str) -> Any:
+        clip_obj = self._require_session_clip(track, clip, action=action)
+        if not bool(getattr(clip_obj, "is_audio_clip", False)):
+            raise _invalid_argument(
+                message="clip must be an audio clip",
+                hint=f"Use an audio clip before {action}.",
+            )
+        return clip_obj
+
+    def _clip_props_payload(
+        self,
+        *,
+        clip_obj: Any,
+        track: int,
+        clip: int | None,
+        index: int | None,
+    ) -> dict[str, Any]:
+        payload: dict[str, Any] = {
+            "track": track,
+            "name": str(self._safe_clip_attr(clip_obj, "name", "")),
+            "length": self._ctx._safe_float(self._safe_clip_attr(clip_obj, "length")),
+            "is_audio_clip": bool(self._safe_clip_attr(clip_obj, "is_audio_clip", False)),
+            "is_midi_clip": bool(self._safe_clip_attr(clip_obj, "is_midi_clip", False)),
+            "loop_start": self._ctx._safe_float(self._safe_clip_attr(clip_obj, "loop_start")),
+            "loop_end": self._ctx._safe_float(self._safe_clip_attr(clip_obj, "loop_end")),
+            "looping": bool(self._safe_clip_attr(clip_obj, "looping", False)),
+            "start_marker": self._ctx._safe_float(self._safe_clip_attr(clip_obj, "start_marker")),
+            "end_marker": self._ctx._safe_float(self._safe_clip_attr(clip_obj, "end_marker")),
+            "warping": bool(self._safe_clip_attr(clip_obj, "warping", False)),
+            "warp_mode": self._safe_clip_attr(clip_obj, "warp_mode"),
+            "gain_db": self._safe_clip_attr(clip_obj, "_ableton_cli_gain_db"),
+            "pitch_coarse": self._safe_clip_attr(clip_obj, "pitch_coarse"),
+        }
+        if clip is not None:
+            payload["clip"] = clip
+        if index is not None:
+            payload["index"] = index
+            payload["start_time"] = self._ctx._safe_float(
+                self._safe_clip_attr(clip_obj, "start_time")
+            )
+        return payload
+
+    @staticmethod
+    def _set_required_clip_attr(clip_obj: Any, attr: str, value: Any, *, api_name: str) -> None:
+        if not hasattr(clip_obj, attr):
+            raise _not_supported_by_live_api(
+                message=f"Clip {api_name} API is not available in Live API",
+                hint=f"Use a Live version exposing clip.{attr}.",
+            )
+        setattr(clip_obj, attr, value)
+
+    @classmethod
+    def _set_required_clip_range(
+        cls,
+        clip_obj: Any,
+        *,
+        start_attr: str,
+        end_attr: str,
+        start: float,
+        end: float,
+        api_names: tuple[str, str],
+    ) -> None:
+        # Live rejects any single write that leaves start >= end, so moving a range
+        # forward past the current end must write the end first.
+        current_end = cls._safe_clip_attr(clip_obj, end_attr)
+        writes = [(start_attr, start, api_names[0]), (end_attr, end, api_names[1])]
+        if current_end is not None and start >= float(current_end):
+            writes.reverse()
+        for attr, value, write_api_name in writes:
+            cls._set_required_clip_attr(clip_obj, attr, float(value), api_name=write_api_name)
+        cls._verify_clip_range_applied(clip_obj, ((start_attr, start), (end_attr, end)))
+
+    @classmethod
+    def _verify_clip_range_applied(
+        cls, clip_obj: Any, requested: tuple[tuple[str, float], ...]
+    ) -> None:
+        # Some writes are accepted without raising but ignored or clamped by Live
+        # (e.g. start_marker past loop_end), so read every value back.
+        mismatches = []
+        for attr, value in requested:
+            actual = cls._safe_clip_attr(clip_obj, attr)
+            if actual is None or not math.isclose(float(actual), float(value), abs_tol=1e-6):
+                mismatches.append({"attribute": attr, "requested": float(value), "actual": actual})
+        if not mismatches:
+            return
+        summary = ", ".join(
+            f"{item['attribute']} requested {item['requested']} but is {item['actual']}"
+            for item in mismatches
+        )
+        hint = "Read clip props for the accepted values; the clip may be partially updated."
+        if any(item["attribute"] == "start_marker" for item in mismatches):
+            hint = (
+                "Live ignores a start_marker past loop_end: set the loop range first, "
+                "then the markers. The clip may be partially updated."
+            )
+        raise CommandError(
+            code="INVALID_ARGUMENT",
+            message=f"Live did not apply the requested clip range: {summary}",
+            hint=hint,
+            details={"mismatches": mismatches},
+        )
+
+    @staticmethod
+    def _safe_clip_attr(clip_obj: Any, attr: str, default: Any = None) -> Any:
+        try:
+            return getattr(clip_obj, attr)
+        except Exception:  # noqa: BLE001
+            return default
+
+    @classmethod
+    def _warp_mode_value(cls, mode: str | int) -> int:
+        if isinstance(mode, int):
+            return mode
+        normalized = str(mode).strip().lower()
+        if normalized.isdecimal():
+            return int(normalized)
+        value = cls._WARP_MODE_VALUES.get(normalized)
+        if value is None:
+            raise _invalid_argument(
+                message=f"unsupported warp mode: {mode}",
+                hint="Use beats, tones, texture, re-pitch, complex, rex, or complex-pro.",
+            )
+        return value
+
+    def clip_props_get(self, track: int, clip: int) -> dict[str, Any]:
+        clip_obj = self._require_session_clip(track, clip, action="reading clip properties")
+        return self._clip_props_payload(clip_obj=clip_obj, track=track, clip=clip, index=None)
+
+    def clip_file_path_get(self, track: int, clip: int) -> dict[str, Any]:
+        clip_obj = self._require_session_audio_clip(track, clip, action="reading clip file path")
+        if not hasattr(clip_obj, "file_path"):
+            raise _not_supported_by_live_api(
+                message="Clip file_path API is not available in Live API",
+                hint="Use a Live version exposing clip.file_path.",
+            )
+        file_path = self._safe_clip_attr(clip_obj, "file_path")
+        if not file_path:
+            raise _invalid_argument(
+                message="Clip has no recorded/rendered file path",
+                hint="Record or render audio into this clip before reading its file path.",
+            )
+        return {"track": track, "clip": clip, "file_path": str(file_path)}
+
+    def clip_loop_set(
+        self,
+        track: int,
+        clip: int,
+        start: float,
+        end: float,
+        enabled: bool,
+    ) -> dict[str, Any]:
+        clip_obj = self._require_session_clip(track, clip, action="updating clip loop")
+        self._set_required_clip_range(
+            clip_obj,
+            start_attr="loop_start",
+            end_attr="loop_end",
+            start=start,
+            end=end,
+            api_names=("loop start", "loop end"),
+        )
+        self._set_required_clip_attr(clip_obj, "looping", bool(enabled), api_name="loop")
+        return self.clip_props_get(track, clip)
+
+    def clip_marker_set(
+        self,
+        track: int,
+        clip: int,
+        start_marker: float,
+        end_marker: float,
+    ) -> dict[str, Any]:
+        clip_obj = self._require_session_clip(track, clip, action="updating clip markers")
+        self._set_required_clip_range(
+            clip_obj,
+            start_attr="start_marker",
+            end_attr="end_marker",
+            start=start_marker,
+            end=end_marker,
+            api_names=("start marker", "end marker"),
+        )
+        return self.clip_props_get(track, clip)
+
+    def clip_warp_get(self, track: int, clip: int) -> dict[str, Any]:
+        clip_obj = self._require_session_audio_clip(track, clip, action="reading warp state")
+        return {
+            "track": track,
+            "clip": clip,
+            "warping": bool(getattr(clip_obj, "warping", False)),
+            "warp_mode": getattr(clip_obj, "warp_mode", None),
+            "available_warp_modes": list(getattr(clip_obj, "available_warp_modes", [])),
+        }
+
+    def clip_warp_set(
+        self,
+        track: int,
+        clip: int,
+        enabled: bool,
+        mode: str | None,
+    ) -> dict[str, Any]:
+        clip_obj = self._require_session_audio_clip(track, clip, action="updating warp state")
+        self._set_required_clip_attr(clip_obj, "warping", bool(enabled), api_name="warp")
+        if mode is not None:
+            self._set_required_clip_attr(
+                clip_obj,
+                "warp_mode",
+                self._warp_mode_value(mode),
+                api_name="warp mode",
+            )
+        return self.clip_warp_get(track, clip)
+
+    def clip_warp_marker_list(self, track: int, clip: int) -> dict[str, Any]:
+        clip_obj = self._require_session_audio_clip(track, clip, action="reading warp markers")
+        markers = getattr(clip_obj, "warp_markers", None)
+        if markers is None:
+            raise _not_supported_by_live_api(
+                message="Clip warp marker list API is not available in Live API",
+                hint="Use a Live version exposing clip.warp_markers.",
+            )
+        return {"track": track, "clip": clip, "warp_markers": list(markers)}
+
+    def clip_warp_marker_add(
+        self,
+        track: int,
+        clip: int,
+        beat_time: float,
+        sample_time: float | None,
+    ) -> dict[str, Any]:
+        clip_obj = self._require_session_audio_clip(track, clip, action="adding a warp marker")
+        add_warp_marker = getattr(clip_obj, "add_warp_marker", None)
+        if not callable(add_warp_marker):
+            raise _not_supported_by_live_api(
+                message="Clip warp marker write API is not available in Live API",
+                hint="Use a Live version exposing clip.add_warp_marker.",
+            )
+        marker = {"beat_time": float(beat_time)}
+        if sample_time is not None:
+            marker["sample_time"] = float(sample_time)
+        add_warp_marker(marker)
+        return {
+            "track": track,
+            "clip": clip,
+            "beat_time": float(beat_time),
+            "sample_time": float(sample_time) if sample_time is not None else None,
+            "created": True,
+        }
+
+    def clip_warp_marker_move(
+        self,
+        track: int,
+        clip: int,
+        beat_time: float,
+        distance: float,
+    ) -> dict[str, Any]:
+        clip_obj = self._require_session_audio_clip(track, clip, action="moving a warp marker")
+        move_warp_marker = getattr(clip_obj, "move_warp_marker", None)
+        if not callable(move_warp_marker):
+            raise _not_supported_by_live_api(
+                message="Clip warp marker move API is not available in Live API",
+                hint="Use a Live version exposing clip.move_warp_marker.",
+            )
+        move_warp_marker(float(beat_time), float(distance))
+        return {
+            "track": track,
+            "clip": clip,
+            "beat_time": float(beat_time),
+            "distance": float(distance),
+            "moved": True,
+        }
+
+    def clip_warp_marker_remove(
+        self,
+        track: int,
+        clip: int,
+        beat_time: float,
+    ) -> dict[str, Any]:
+        clip_obj = self._require_session_audio_clip(track, clip, action="removing a warp marker")
+        remove_warp_marker = getattr(clip_obj, "remove_warp_marker", None)
+        if not callable(remove_warp_marker):
+            raise _not_supported_by_live_api(
+                message="Clip warp marker remove API is not available in Live API",
+                hint="Use a Live version exposing clip.remove_warp_marker.",
+            )
+        remove_warp_marker(float(beat_time))
+        return {
+            "track": track,
+            "clip": clip,
+            "beat_time": float(beat_time),
+            "removed": True,
+        }
+
+    def clip_gain_set(self, track: int, clip: int, db: float) -> dict[str, Any]:
+        clip_obj = self._require_session_clip(track, clip, action="updating clip gain")
+        if not hasattr(clip_obj, "gain"):
+            raise _not_supported_by_live_api(
+                message="Clip gain API is not available in Live API",
+                hint="Use a Live version exposing clip.gain.",
+            )
+        clip_obj.gain = math.pow(10.0, float(db) / 20.0)
+        clip_obj._ableton_cli_gain_db = float(db)  # noqa: SLF001
+        return {"track": track, "clip": clip, "gain_db": float(db), "gain": float(clip_obj.gain)}
+
+    def clip_transpose_set(self, track: int, clip: int, semitones: int) -> dict[str, Any]:
+        clip_obj = self._require_session_clip(track, clip, action="updating clip transpose")
+        self._set_required_clip_attr(clip_obj, "pitch_coarse", int(semitones), api_name="transpose")
+        return {"track": track, "clip": clip, "pitch_coarse": int(clip_obj.pitch_coarse)}
+
+    def clip_file_replace(self, track: int, clip: int, audio_path: str) -> dict[str, Any]:
+        clip_obj = self._require_session_clip(track, clip, action="replacing clip audio file")
+        replace_file = getattr(clip_obj, "replace_file", None)
+        if not callable(replace_file):
+            raise _not_supported_by_live_api(
+                message="Clip file replacement API is not available in Live API",
+                hint="Use manual replacement in Ableton Live for this Live version.",
+            )
+        replace_file(audio_path)
+        return {"track": track, "clip": clip, "audio_path": audio_path, "replaced": True}
+
     def _duplicate_clip_to_destination(
         self,
         *,
@@ -637,7 +632,7 @@ class LiveBackendTracksClipsMixin:
         source_length: float,
         live_notes: list[tuple[int, float, float, int, bool]],
     ) -> None:
-        destination_slot = self._clip_slot_at(track, destination_clip)
+        destination_slot = self._ctx._clip_slot_at(track, destination_clip)
         if destination_slot.has_clip:
             raise _invalid_argument(
                 message=f"Destination clip slot already has a clip: {destination_clip}",
@@ -675,7 +670,7 @@ class LiveBackendTracksClipsMixin:
                 hint="Provide either dst_clip or dst_clips.",
             )
 
-        source_slot = self._clip_slot_at(track, src_clip)
+        source_slot = self._ctx._clip_slot_at(track, src_clip)
         if not source_slot.has_clip:
             raise _invalid_argument(
                 message="Source clip does not exist",
@@ -691,7 +686,7 @@ class LiveBackendTracksClipsMixin:
                 hint="Duplicate only clips with positive length.",
             )
 
-        source_notes = self._clip_notes_extended(source_clip)
+        source_notes = self._ctx.services.clip_notes._clip_notes_extended(source_clip)
         live_notes = [
             (
                 int(note["pitch"]),

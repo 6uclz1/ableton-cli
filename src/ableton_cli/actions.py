@@ -2,12 +2,33 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from .command_specs import TRANSPORT_COMMAND_SPECS
+
 
 @dataclass(frozen=True, slots=True)
 class StableActionMapping:
     action: str
     command: str
     capability: str
+
+
+def transport_action_mappings() -> tuple[StableActionMapping, ...]:
+    """Action mappings derived from the transport command specs.
+
+    The action name, CLI form and capability text already live on
+    TransportSurfaceSpec; repeating them here is how the two drift apart.
+    """
+    return tuple(
+        StableActionMapping(
+            action=spec.action_name,
+            command=spec.action_command,
+            capability=spec.capability,
+        )
+        for spec in TRANSPORT_COMMAND_SPECS
+        if spec.action_name is not None
+        and spec.action_command is not None
+        and spec.capability is not None
+    )
 
 
 STABLE_ACTION_MAPPINGS: tuple[StableActionMapping, ...] = (
@@ -61,16 +82,7 @@ STABLE_ACTION_MAPPINGS: tuple[StableActionMapping, ...] = (
         command="uv run ableton-cli --output json track info --track-index <track>",
         capability="Read one track details by selector.",
     ),
-    StableActionMapping(
-        action="play",
-        command="uv run ableton-cli --output json transport play",
-        capability="Start transport playback.",
-    ),
-    StableActionMapping(
-        action="stop",
-        command="uv run ableton-cli --output json transport stop",
-        capability="Stop transport playback.",
-    ),
+    *transport_action_mappings(),
     StableActionMapping(
         action="arrangement_record_start",
         command="uv run ableton-cli --output json arrangement record start",
@@ -80,26 +92,6 @@ STABLE_ACTION_MAPPINGS: tuple[StableActionMapping, ...] = (
         action="arrangement_record_stop",
         command="uv run ableton-cli --output json arrangement record stop",
         capability="Stop arrangement recording when supported by Live API.",
-    ),
-    StableActionMapping(
-        action="set_tempo",
-        command="uv run ableton-cli --output json transport tempo set <bpm>",
-        capability="Update song tempo in BPM.",
-    ),
-    StableActionMapping(
-        action="transport_position_get",
-        command="uv run ableton-cli --output json transport position get",
-        capability="Read current transport beat/time position.",
-    ),
-    StableActionMapping(
-        action="transport_position_set",
-        command="uv run ableton-cli --output json transport position set <beats>",
-        capability="Move transport playhead to a beat position.",
-    ),
-    StableActionMapping(
-        action="transport_rewind",
-        command="uv run ableton-cli --output json transport rewind",
-        capability="Rewind transport playhead to beat 0.",
     ),
     StableActionMapping(
         action="list_tracks",
@@ -172,6 +164,14 @@ STABLE_ACTION_MAPPINGS: tuple[StableActionMapping, ...] = (
         capability="Update track panning in range -1.0 to 1.0.",
     ),
     StableActionMapping(
+        action="get_track_meter",
+        command=(
+            "uv run ableton-cli --output json track meter get --track-index <track> "
+            "--samples <n> --interval-ms <ms>"
+        ),
+        capability="Read a track's output meter peak and mean over a sampling window.",
+    ),
+    StableActionMapping(
         action="get_track_send",
         command="uv run ableton-cli --output json track send get <send> --track-index <track>",
         capability="Read one track send level by 0-based send index.",
@@ -199,6 +199,13 @@ STABLE_ACTION_MAPPINGS: tuple[StableActionMapping, ...] = (
         capability="Read master track name, volume, and panning.",
     ),
     StableActionMapping(
+        action="get_master_meter",
+        command=(
+            "uv run ableton-cli --output json master meter get --samples <n> --interval-ms <ms>"
+        ),
+        capability="Read the main output meter peak and mean over a sampling window.",
+    ),
+    StableActionMapping(
         action="list_master_devices",
         command="uv run ableton-cli --output json master devices list",
         capability="List master track devices and parameters.",
@@ -222,7 +229,7 @@ STABLE_ACTION_MAPPINGS: tuple[StableActionMapping, ...] = (
         action="set_track_routing_output",
         command=(
             "uv run ableton-cli --output json track routing output set --track-index <track> "
-            "--type <routing-type> --channel <routing-channel>"
+            "--type <routing-type> [--channel <routing-channel>]"
         ),
         capability="Update output routing using exact type and channel names.",
     ),
@@ -263,6 +270,17 @@ STABLE_ACTION_MAPPINGS: tuple[StableActionMapping, ...] = (
             "-time <beats>] [--pitch <midi>]"
         ),
         capability="Clear matching notes then add replacement notes.",
+    ),
+    StableActionMapping(
+        action="update_clip_notes",
+        command=(
+            "uv run ableton-cli --output json clip notes update <track> <clip> (--notes"
+            "-json '<json-array>' | --notes-file <path>)"
+        ),
+        capability=(
+            "Edit existing notes in place by note_id without disturbing unrelated notes "
+            "(requires Live 12+ extended note API)."
+        ),
     ),
     StableActionMapping(
         action="arrangement_clip_notes_add",
@@ -541,10 +559,50 @@ STABLE_ACTION_MAPPINGS: tuple[StableActionMapping, ...] = (
         capability="Capture one-shot wrapper state snapshot keyed by stable effect keys.",
     ),
     StableActionMapping(
+        action="remix_mastering_plan",
+        command=(
+            "uv run ableton-cli --output json remix mastering plan --project <remix_project.json>"
+        ),
+        capability="Generate a non-destructive master chain plan in the remix manifest.",
+    ),
+    StableActionMapping(
+        action="remix_mastering_qa",
+        command=(
+            "uv run ableton-cli --output json remix mastering qa --project <remix_project.json> "
+            "--render <wav>"
+        ),
+        capability="Validate offline render analysis and master-chain readiness against targets.",
+    ),
+    StableActionMapping(
+        action="inspect_live_set",
+        command="uv run ableton-cli --output json set inspect --path <set.als>",
+        capability=(
+            "Summarize a Live Set file offline: song, tracks, returns, scenes, locators, plug-ins."
+        ),
+    ),
+    StableActionMapping(
+        action="lint_live_set",
+        command="uv run ableton-cli --output json set lint --path <set.als>",
+        capability="Check a Live Set file offline for ID integrity errors and missing samples.",
+    ),
+    StableActionMapping(
+        action="diff_live_set",
+        command="uv run ableton-cli --output json set diff --from <a.als> --to <b.als>",
+        capability="Compute semantic added/removed/changed deltas between two Live Set files.",
+    ),
+    StableActionMapping(
+        action="write_live_set_automation",
+        command=(
+            "uv run ableton-cli --output json set automation write --path <set.als> "
+            "--out <new.als> --track-index <track> --target <target> --points-json '<json>'"
+        ),
+        capability="Write one arrangement automation lane into a new Live Set file.",
+    ),
+    StableActionMapping(
         action="execute_batch",
         command=(
             "uv run ableton-cli --output json batch run (--steps-file <path> | --steps-"
-            "json '<json>' | --steps-stdin)"
+            "json '<json>' | --steps-stdin) [--continue-on-error]"
         ),
         capability="Execute multiple remote commands atomically from JSON input.",
     ),

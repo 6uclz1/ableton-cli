@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from enum import Enum, IntEnum
+from enum import IntEnum, StrEnum
 from typing import Any
 
 
@@ -17,7 +17,7 @@ class ExitCode(IntEnum):
     INTERNAL_ERROR = 99
 
 
-class ErrorCode(str, Enum):
+class ErrorCode(StrEnum):
     INVALID_ARGUMENT = "INVALID_ARGUMENT"
     CONFIG_INVALID = "CONFIG_INVALID"
     ABLETON_NOT_REACHABLE = "ABLETON_NOT_REACHABLE"
@@ -28,6 +28,7 @@ class ErrorCode(str, Enum):
     PROTOCOL_MALFORMED_JSON = "PROTOCOL_MALFORMED_JSON"
     PROTOCOL_CONNECTION_CLOSED = "PROTOCOL_CONNECTION_CLOSED"
     PROTOCOL_REQUEST_ID_MISMATCH = "PROTOCOL_REQUEST_ID_MISMATCH"
+    UNAUTHORIZED = "UNAUTHORIZED"
     TIMEOUT = "TIMEOUT"
     BATCH_STEP_FAILED = "BATCH_STEP_FAILED"
     REMOTE_BUSY = "REMOTE_BUSY"
@@ -39,12 +40,20 @@ class ErrorCode(str, Enum):
     INSTALL_TARGET_NOT_FOUND = "INSTALL_TARGET_NOT_FOUND"
     SKILL_SOURCE_NOT_FOUND = "SKILL_SOURCE_NOT_FOUND"
     UNSUPPORTED_OS = "UNSUPPORTED_OS"
+    NOT_IMPLEMENTED = "NOT_IMPLEMENTED"
+    SET_FILE_INVALID = "SET_FILE_INVALID"
+    SET_SCHEMA_UNSUPPORTED = "SET_SCHEMA_UNSUPPORTED"
+    SET_INTEGRITY_FAILED = "SET_INTEGRITY_FAILED"
+    PLUGIN_LOAD_FAILED = "PLUGIN_LOAD_FAILED"
+    PLUGIN_INVALID = "PLUGIN_INVALID"
+    PLUGIN_INSTALL_FAILED = "PLUGIN_INSTALL_FAILED"
     INTERNAL_ERROR = "INTERNAL_ERROR"
 
 
-class ErrorDetailReason(str, Enum):
+class ErrorDetailReason(StrEnum):
     NOT_SUPPORTED_BY_LIVE_API = "not_supported_by_live_api"
     CONTRACT_VALIDATION_FAILED = "contract_validation_failed"
+    NOT_IMPLEMENTED = "not_implemented"
 
 
 def _error_code_value(error_code: ErrorCode | str) -> str:
@@ -70,6 +79,9 @@ class AppError(Exception):
     exit_code: ExitCode = ExitCode.INTERNAL_ERROR
     details: dict[str, Any] = field(default_factory=dict)
 
+    def __str__(self) -> str:
+        return self.message
+
     def to_payload(self) -> dict[str, Any]:
         return {
             "code": _error_code_value(self.error_code),
@@ -77,6 +89,16 @@ class AppError(Exception):
             "hint": self.hint,
             "details": self.details or None,
         }
+
+
+def read_only_violation(command: str) -> AppError:
+    return AppError(
+        error_code=ErrorCode.READ_ONLY_VIOLATION,
+        message=f"Command '{command}' is blocked in read-only mode",
+        hint="Run without --read-only to execute write commands.",
+        exit_code=ExitCode.EXECUTION_FAILED,
+        details={"command": command},
+    )
 
 
 REMOTE_ERROR_TO_EXIT_CODE: dict[ErrorCode, ExitCode] = {
@@ -90,6 +112,7 @@ REMOTE_ERROR_TO_EXIT_CODE: dict[ErrorCode, ExitCode] = {
     ErrorCode.PROTOCOL_MALFORMED_JSON: ExitCode.PROTOCOL_MISMATCH,
     ErrorCode.PROTOCOL_CONNECTION_CLOSED: ExitCode.PROTOCOL_MISMATCH,
     ErrorCode.PROTOCOL_REQUEST_ID_MISMATCH: ExitCode.PROTOCOL_MISMATCH,
+    ErrorCode.UNAUTHORIZED: ExitCode.EXECUTION_FAILED,
     ErrorCode.TIMEOUT: ExitCode.TIMEOUT,
     ErrorCode.BATCH_STEP_FAILED: ExitCode.EXECUTION_FAILED,
     ErrorCode.REMOTE_BUSY: ExitCode.EXECUTION_FAILED,
@@ -101,8 +124,31 @@ REMOTE_ERROR_TO_EXIT_CODE: dict[ErrorCode, ExitCode] = {
     ErrorCode.INSTALL_TARGET_NOT_FOUND: ExitCode.EXECUTION_FAILED,
     ErrorCode.SKILL_SOURCE_NOT_FOUND: ExitCode.EXECUTION_FAILED,
     ErrorCode.UNSUPPORTED_OS: ExitCode.EXECUTION_FAILED,
+    ErrorCode.NOT_IMPLEMENTED: ExitCode.EXECUTION_FAILED,
+    ErrorCode.SET_FILE_INVALID: ExitCode.INVALID_ARGUMENT,
+    ErrorCode.SET_SCHEMA_UNSUPPORTED: ExitCode.INVALID_ARGUMENT,
+    ErrorCode.SET_INTEGRITY_FAILED: ExitCode.EXECUTION_FAILED,
+    ErrorCode.PLUGIN_LOAD_FAILED: ExitCode.EXECUTION_FAILED,
+    ErrorCode.PLUGIN_INVALID: ExitCode.EXECUTION_FAILED,
+    ErrorCode.PLUGIN_INSTALL_FAILED: ExitCode.EXECUTION_FAILED,
     ErrorCode.INTERNAL_ERROR: ExitCode.INTERNAL_ERROR,
 }
+
+
+def not_implemented(*, message: str, hint: str, **details: Any) -> AppError:
+    """Fail a command that has no working implementation behind it.
+
+    Used instead of returning a hardcoded plan with ``ok: true``: a caller
+    that cannot tell "did nothing" from "succeeded" will happily move on to
+    the next step.
+    """
+    return AppError(
+        error_code=ErrorCode.NOT_IMPLEMENTED,
+        message=message,
+        hint=hint,
+        exit_code=ExitCode.EXECUTION_FAILED,
+        details=details_with_reason(ErrorDetailReason.NOT_IMPLEMENTED, **details),
+    )
 
 
 def exit_code_from_error_code(error_code: ErrorCode | str) -> ExitCode:

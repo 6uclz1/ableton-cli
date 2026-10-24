@@ -7,10 +7,13 @@ import typer
 
 from ._arrangement_shared import require_arrangement_clip_index, require_track_index
 from ._arrangement_specs import ArrangementCommandSpec
+from ._params import TrackArgument
 from ._validation import (
     invalid_argument,
     parse_notes_input,
+    parse_pattern_notes,
     require_absolute_path,
+    require_mutually_exclusive_note_sources,
     require_non_negative_float,
     require_positive_float,
 )
@@ -31,6 +34,59 @@ CLIP_DELETE_SPEC = ArrangementCommandSpec(
 )
 
 
+def _clip_delete_kwargs(
+    *,
+    track: int,
+    index: int | None,
+    start: float | None,
+    end: float | None,
+    all_: bool,
+) -> dict[str, object]:
+    valid_track = require_track_index(track)
+    valid_index = require_arrangement_clip_index(index) if index is not None else None
+    has_range_value = start is not None or end is not None
+    if has_range_value and (start is None or end is None):
+        raise invalid_argument(
+            message="--start and --end must be provided together for range delete mode",
+            hint="Use both --start and --end, or use index/--all mode.",
+        )
+    mode_count = int(valid_index is not None) + int(has_range_value) + int(all_)
+    if mode_count != 1:
+        raise invalid_argument(
+            message="Exactly one delete mode must be selected: index, range, or --all",
+            hint="Use one of: <index> | --start/--end | --all.",
+        )
+
+    valid_start = None
+    valid_end = None
+    if has_range_value:
+        assert start is not None
+        assert end is not None
+        valid_start = require_non_negative_float(
+            "start",
+            start,
+            hint="Use a non-negative --start value in beats.",
+        )
+        valid_end = require_non_negative_float(
+            "end",
+            end,
+            hint="Use a non-negative --end value in beats.",
+        )
+        if valid_end <= valid_start:
+            raise invalid_argument(
+                message=f"end must be greater than start (start={valid_start}, end={valid_end})",
+                hint="Use a valid [start, end) range with end > start.",
+            )
+
+    return {
+        "track": valid_track,
+        "index": valid_index,
+        "start": valid_start,
+        "end": valid_end,
+        "delete_all": all_,
+    }
+
+
 def register_commands(
     clip_app: typer.Typer,
     *,
@@ -39,7 +95,7 @@ def register_commands(
     @clip_app.command("create")
     def arrangement_clip_create(
         ctx: typer.Context,
-        track: Annotated[int, typer.Argument(help="Track index (0-based)")],
+        track: TrackArgument,
         start: Annotated[
             float,
             typer.Option(
@@ -72,6 +128,25 @@ def register_commands(
                 help="Path to JSON file containing note array for MIDI clips",
             ),
         ] = None,
+        pattern: Annotated[
+            str | None,
+            typer.Option(
+                "--pattern",
+                help="Mini-notation pattern for MIDI clips, e.g. 'c3 ~ [e3 g3] c4*2'",
+            ),
+        ] = None,
+        pattern_length: Annotated[
+            float,
+            typer.Option("--pattern-length", help="Pattern cycle length in beats"),
+        ] = 4.0,
+        velocity: Annotated[
+            int,
+            typer.Option("--velocity", help="Default velocity for pattern notes without @velocity"),
+        ] = 100,
+        gate: Annotated[
+            float,
+            typer.Option("--gate", help="Sustain fraction of each pattern step, in (0.0, 1.0]"),
+        ] = 1.0,
     ) -> None:
         def _method_kwargs() -> dict[str, object]:
             valid_track = require_track_index(track)
@@ -94,14 +169,23 @@ def register_commands(
                 if audio_path is not None
                 else None
             )
-            notes = (
-                parse_notes_input(notes_json=notes_json, notes_file=notes_file)
-                if notes_json is not None or notes_file is not None
-                else None
+            require_mutually_exclusive_note_sources(
+                notes_json=notes_json, notes_file=notes_file, pattern=pattern
             )
+            if pattern is not None:
+                notes = parse_pattern_notes(
+                    pattern, pattern_length=pattern_length, velocity=velocity, gate=gate
+                )
+            elif notes_json is not None or notes_file is not None:
+                notes = parse_notes_input(notes_json=notes_json, notes_file=notes_file)
+            else:
+                notes = None
             if normalized_audio_path is not None and notes is not None:
                 raise invalid_argument(
-                    message="--audio-path and --notes-json/--notes-file are mutually exclusive",
+                    message=(
+                        "--audio-path and --notes-json/--notes-file/--pattern "
+                        "are mutually exclusive"
+                    ),
                     hint="Use notes options for MIDI clips or --audio-path for audio clips.",
                 )
             return {
@@ -120,7 +204,7 @@ def register_commands(
                 "start_time": start,
                 "length": length,
                 "audio_path": audio_path,
-                "notes": notes_json is not None or notes_file is not None,
+                "notes": notes_json is not None or notes_file is not None or pattern is not None,
             },
             method_kwargs=_method_kwargs,
         )
@@ -150,7 +234,7 @@ def register_commands(
     @clip_app.command("delete")
     def arrangement_clip_delete(
         ctx: typer.Context,
-        track: Annotated[int, typer.Argument(help="Track index (0-based)")],
+        track: TrackArgument,
         index: Annotated[
             int | None,
             typer.Argument(help="Arrangement clip index to delete", show_default=False),
@@ -168,56 +252,11 @@ def register_commands(
             typer.Option("--all", help="Delete all arrangement clips on the track"),
         ] = False,
     ) -> None:
-        def _method_kwargs() -> dict[str, object]:
-            valid_track = require_track_index(track)
-            valid_index = require_arrangement_clip_index(index) if index is not None else None
-            has_range_value = start is not None or end is not None
-            if has_range_value and (start is None or end is None):
-                raise invalid_argument(
-                    message="--start and --end must be provided together for range delete mode",
-                    hint="Use both --start and --end, or use index/--all mode.",
-                )
-            mode_count = int(valid_index is not None) + int(has_range_value) + int(all_)
-            if mode_count != 1:
-                raise invalid_argument(
-                    message="Exactly one delete mode must be selected: index, range, or --all",
-                    hint="Use one of: <index> | --start/--end | --all.",
-                )
-
-            valid_start = None
-            valid_end = None
-            if has_range_value:
-                assert start is not None
-                assert end is not None
-                valid_start = require_non_negative_float(
-                    "start",
-                    start,
-                    hint="Use a non-negative --start value in beats.",
-                )
-                valid_end = require_non_negative_float(
-                    "end",
-                    end,
-                    hint="Use a non-negative --end value in beats.",
-                )
-                if valid_end <= valid_start:
-                    raise invalid_argument(
-                        message=(
-                            f"end must be greater than start (start={valid_start}, end={valid_end})"
-                        ),
-                        hint="Use a valid [start, end) range with end > start.",
-                    )
-
-            return {
-                "track": valid_track,
-                "index": valid_index,
-                "start": valid_start,
-                "end": valid_end,
-                "delete_all": all_,
-            }
-
         run_client_command_spec(
             ctx,
             spec=CLIP_DELETE_SPEC,
             args={"track": track, "index": index, "start": start, "end": end, "all": all_},
-            method_kwargs=_method_kwargs,
+            method_kwargs=lambda: _clip_delete_kwargs(
+                track=track, index=index, start=start, end=end, all_=all_
+            ),
         )

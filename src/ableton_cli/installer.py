@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import os
 import shutil
+from collections.abc import Sequence
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -10,13 +12,32 @@ from .errors import AppError, ErrorCode, ExitCode
 from .platform_paths import PlatformPaths
 
 REMOTE_SCRIPT_DIR_NAME = "AbletonCliRemote"
+# Sibling of "Remote Scripts": Live imports every folder inside "Remote Scripts" as a
+# control surface, so backups placed there fail to import on every launch.
+REMOTE_SCRIPT_BACKUP_DIR_NAME = "Remote Script Backups"
 SKILL_DIR_NAME = "ableton-cli"
 SKILL_FILE_NAME = "SKILL.md"
 CODEX_HOME_ENV_VAR = "CODEX_HOME"
 
+_PACKAGE_DIR = Path(__file__).resolve().parent
+_BUNDLED_DIR = _PACKAGE_DIR / "_bundled"
+_REPO_ROOT = _PACKAGE_DIR.parents[1]
+
+
+def _first_existing(candidates: list[Path]) -> Path:
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate
+    return candidates[-1]
+
 
 def remote_script_source_dir() -> Path:
-    return Path(__file__).resolve().parents[2] / "remote_script" / REMOTE_SCRIPT_DIR_NAME
+    return _first_existing(
+        [
+            _BUNDLED_DIR / "remote_script" / REMOTE_SCRIPT_DIR_NAME,
+            _REPO_ROOT / "remote_script" / REMOTE_SCRIPT_DIR_NAME,
+        ]
+    )
 
 
 def _select_target_roots(candidates: list[Path]) -> list[Path]:
@@ -67,14 +88,19 @@ def install_remote_script(
         if target.exists():
             action = "update"
             timestamp = datetime.now(UTC).strftime("%Y%m%d%H%M%S")
-            backup_path = target_root / f"{REMOTE_SCRIPT_DIR_NAME}.backup-{timestamp}"
+            backup_path = (
+                target_root.parent
+                / REMOTE_SCRIPT_BACKUP_DIR_NAME
+                / f"{REMOTE_SCRIPT_DIR_NAME}.backup-{timestamp}"
+            )
             backups.append(str(backup_path))
 
         if not dry_run:
             target_root.mkdir(parents=True, exist_ok=True)
             if target.exists() and backup_path is not None:
+                backup_path.parent.mkdir(parents=True, exist_ok=True)
                 shutil.move(str(target), str(backup_path))
-            shutil.copytree(source, target)
+            shutil.copytree(source, target, ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
 
         targets.append(str(target))
 
@@ -90,7 +116,12 @@ def install_remote_script(
 
 
 def skill_source_file() -> Path:
-    return Path(__file__).resolve().parents[2] / "skills" / SKILL_DIR_NAME / SKILL_FILE_NAME
+    return _first_existing(
+        [
+            _BUNDLED_DIR / "skills" / SKILL_DIR_NAME / SKILL_FILE_NAME,
+            _REPO_ROOT / "skills" / SKILL_DIR_NAME / SKILL_FILE_NAME,
+        ]
+    )
 
 
 def _resolve_codex_home(codex_home: Path | None) -> Path:
@@ -142,6 +173,14 @@ def _resolve_skill_home(
     )
 
 
+@dataclass(frozen=True, slots=True)
+class PluginSkill:
+    """A skill directory shipped by a loaded plugin; installed next to the core skill."""
+
+    plugin: str
+    path: Path
+
+
 def install_skill(
     *,
     dry_run: bool,
@@ -151,6 +190,7 @@ def install_skill(
     codex_home: Path | None = None,
     claude_home: Path | None = None,
     cursor_home: Path | None = None,
+    plugin_skills: Sequence[PluginSkill] = (),
 ) -> dict[str, Any]:
     del yes  # reserved for explicit confirmation flows; command stays non-interactive.
 
@@ -171,11 +211,20 @@ def install_skill(
         cursor_home=cursor_home,
     )
     target_path = resolved_home / "skills" / SKILL_DIR_NAME / SKILL_FILE_NAME
-    action = "update" if target_path.exists() else "install"
-
-    if not dry_run:
-        target_path.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(source, target_path)
+    action = _copy_skill(source, target_path, dry_run=dry_run)
+    plugin_results = [
+        {
+            "plugin": skill.plugin,
+            "source": str(skill.path / SKILL_FILE_NAME),
+            "target": str(resolved_home / "skills" / skill.path.name / SKILL_FILE_NAME),
+            "action": _copy_skill(
+                skill.path / SKILL_FILE_NAME,
+                resolved_home / "skills" / skill.path.name / SKILL_FILE_NAME,
+                dry_run=dry_run,
+            ),
+        }
+        for skill in plugin_skills
+    ]
 
     return {
         "action": action,
@@ -184,4 +233,13 @@ def install_skill(
         "source": str(source),
         "target": str(target_path),
         "home": str(resolved_home),
+        "plugin_skills": plugin_results,
     }
+
+
+def _copy_skill(source: Path, target: Path, *, dry_run: bool) -> str:
+    action = "update" if target.exists() else "install"
+    if not dry_run:
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(source, target)
+    return action

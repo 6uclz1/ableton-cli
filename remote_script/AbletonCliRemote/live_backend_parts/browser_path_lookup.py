@@ -46,14 +46,12 @@ class LiveBackendBrowserPathLookupMixin:
     def _iterate_items_with_path(self) -> Iterable[tuple[Any, str]]:
         categories = self._browser_category_map()
         for category_name, category in categories.items():
+            # The browser is a tree, so no visited set is needed. Live hands out a
+            # fresh proxy per access and reuses freed addresses, so an id()-based
+            # visited set skipped whole subtrees.
             stack: list[tuple[Any, str]] = [(category, category_name)]
-            seen: set[int] = set()
             while stack:
                 item, path = stack.pop()
-                ident = id(item)
-                if ident in seen:
-                    continue
-                seen.add(ident)
                 yield item, path
                 children = list(getattr(item, "children", []) or [])
                 for child in children:

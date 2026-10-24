@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import functools
+import os
+from collections.abc import Callable, Iterable, Mapping
 from pathlib import Path
 from typing import Annotated
 
@@ -7,15 +10,20 @@ import click
 import typer
 
 from .bootstrap import build_runtime_context
+from .command_registry import command_roots
 from .commands import (
     arrangement,
+    audio,
     batch,
     browser,
     clip,
     device,
     effect,
+    liveset,
     master,
     mixer,
+    plugins,
+    remix,
     return_track,
     return_tracks,
     scenes,
@@ -29,10 +37,15 @@ from .commands import (
 )
 from .errors import AppError
 from .output import OutputMode, emit_human_error, emit_json, error_payload
+from .plugins.host import PluginSource, load_plugins
+from .plugins.model import PluginLoadReport
 from .version import version_callback
 
 _COMMAND_MODULES = (
     setup,
+    remix,
+    audio,
+    liveset,
     batch,
     song,
     arrangement,
@@ -50,7 +63,11 @@ _COMMAND_MODULES = (
     device,
     synth,
     effect,
+    plugins,
 )
+
+#: Where the root callback finds the plugin report; click shares ``meta`` across contexts.
+_PLUGIN_REPORT_META_KEY = "ableton_cli.plugins"
 
 
 def register_commands(app: typer.Typer) -> None:
@@ -68,6 +85,10 @@ def main(
     protocol_version: Annotated[
         int | None,
         typer.Option("--protocol-version", help="Protocol version for CLI/Remote handshake"),
+    ] = None,
+    auth_token: Annotated[
+        str | None,
+        typer.Option("--auth-token", help="Shared secret sent to the Remote Script"),
     ] = None,
     output: Annotated[
         OutputMode,
@@ -131,6 +152,7 @@ def main(
             port=port,
             timeout_ms=timeout_ms,
             protocol_version=protocol_version,
+            auth_token=auth_token,
             output=output,
             verbose=verbose,
             log_file=log_file,
@@ -145,6 +167,7 @@ def main(
             plan=plan,
             dry_run=dry_run,
             compact=compact,
+            plugins=click.get_current_context().meta[_PLUGIN_REPORT_META_KEY],
         )
     except AppError as exc:
         payload = error_payload(
@@ -162,12 +185,34 @@ def main(
         raise typer.Exit(code=exc.exit_code.value) from exc
 
 
-def create_app() -> typer.Typer:
+def _with_plugin_report(report: PluginLoadReport) -> Callable[..., None]:
+    """``main`` with the report placed where it reads it; Typer sees ``main``'s signature."""
+
+    @functools.wraps(main)
+    def callback(*args: object, **kwargs: object) -> None:
+        click.get_current_context().meta[_PLUGIN_REPORT_META_KEY] = report
+        main(*args, **kwargs)  # type: ignore[arg-type]
+
+    return callback
+
+
+def create_app(
+    *,
+    plugin_sources: Iterable[PluginSource] | None = None,
+    env: Mapping[str, str] | None = None,
+) -> typer.Typer:
+    """Build the CLI; ``plugin_sources=None`` discovers installed plugin entry points."""
     app = typer.Typer(
         help="Control and inspect Ableton Live through a local Remote Script.",
         no_args_is_help=True,
         add_completion=True,
     )
-    app.callback()(main)
     register_commands(app)
+    report = load_plugins(
+        app,
+        sources=plugin_sources,
+        env=os.environ if env is None else env,
+        reserved_names=command_roots(),
+    )
+    app.callback()(_with_plugin_report(report))
     return app

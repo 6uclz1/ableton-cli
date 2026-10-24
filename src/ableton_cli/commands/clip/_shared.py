@@ -86,6 +86,11 @@ def validated_transform_filters(
     )
 
 
+def notes_without_ids(notes: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    # Live returns note_id from 'clip notes get', but add/replace payloads reject it.
+    return [{key: value for key, value in note.items() if key != "note_id"} for note in notes]
+
+
 def require_float_in_range(
     *,
     name: str,

@@ -11,22 +11,34 @@ from ..command_backend import (
     RemoteErrorReason,
     details_with_reason,
 )
-from ..effect_specs import (
-    SUPPORTED_EFFECT_TYPES,
-    canonicalize_effect_type,
-    detect_effect_type,
-    resolve_standard_effect_key_indexes,
-)
-from ..synth_specs import (
-    SUPPORTED_SYNTH_TYPES,
-    canonicalize_synth_type,
-    detect_synth_type,
-    resolve_standard_synth_key_indexes,
-)
+from ..device_families import DEVICE_FAMILIES, DeviceFamily
+
+# A flat device index (top-level device on a track), or a chain-nested path:
+# (top_device_index, chain_index, device_index, [chain_index, device_index, ...])
+# for a device reached by descending into rack chains.
+DeviceLocator = int | tuple[int, ...]
+
+# A regular track index, ("return", return_track_index) for a return track, or
+# ("main", None) for the main track. Only device-group commands resolve return
+# and main tracks (``resolve_device_track_ref``).
+TrackLocator = int | tuple[str, int | None]
+RETURN_TRACK = "return"
+MAIN_TRACK = "main"
+MAIN_TRACK_LOCATOR: TrackLocator = (MAIN_TRACK, None)
 
 
-def _invalid_argument(message: str, hint: str) -> CommandError:
-    return CommandError(code=RemoteErrorCode.INVALID_ARGUMENT, message=message, hint=hint)
+def _invalid_argument(
+    message: str,
+    hint: str,
+    *,
+    details: dict[str, Any] | None = None,
+) -> CommandError:
+    return CommandError(
+        code=RemoteErrorCode.INVALID_ARGUMENT,
+        message=message,
+        hint=hint,
+        details=details,
+    )
 
 
 def _not_supported_by_live_api(message: str, hint: str) -> CommandError:
@@ -38,8 +50,31 @@ def _not_supported_by_live_api(message: str, hint: str) -> CommandError:
     )
 
 
-class LiveBackendBaseMixin:
-    _control_surface: Any
+class LiveBackendContext:
+    """State and Live-API helpers shared by every backend service.
+
+    Owns the control surface handle, the stable-ref bookkeeping and the
+    browser search index cache, plus the lookup/serialisation helpers the
+    services build on. Services hold a reference to one of these rather
+    than inheriting from each other, so a helper has exactly one home and
+    a service's dependencies are visible at its call sites.
+
+    ``services`` is populated by the composition root once every service
+    exists, and is the only route from one service to another.
+    """
+
+    def __init__(self, control_surface: Any) -> None:
+        self._control_surface = control_surface
+        self._browser_search_index_cache: dict[str, list[dict[str, Any]]] = {}
+        self._stable_ref_counter = 0
+        self._stable_ref_by_locator: dict[Any, str] = {}
+        self._stable_ref_by_object: dict[Any, str] = {}
+        self._stable_ref_by_live_ptr: dict[Any, str] = {}
+        self._stable_ref_entries: dict[str, Any] = {}
+        self.services: Any = None
+
+    def bind_services(self, services: Any) -> None:
+        self.services = services
 
     def _ensure_stable_ref_state(self) -> None:
         if not hasattr(self, "_stable_ref_counter"):
@@ -48,6 +83,8 @@ class LiveBackendBaseMixin:
             self._stable_ref_by_locator = {}
         if not hasattr(self, "_stable_ref_by_object"):
             self._stable_ref_by_object = {}
+        if not hasattr(self, "_stable_ref_by_live_ptr"):
+            self._stable_ref_by_live_ptr = {}
         if not hasattr(self, "_stable_ref_entries"):
             self._stable_ref_entries = {}
 
@@ -55,8 +92,21 @@ class LiveBackendBaseMixin:
     def _unwrap_live_object(target: Any) -> Any:
         return getattr(target, "_target", target)
 
+    @classmethod
+    def _live_ptr(cls, target: Any) -> int | None:
+        # Live hands out a new Python wrapper on every access, so ``is`` never
+        # matches the same track or device twice; ``_live_ptr`` is the address
+        # of the underlying Live object and stays the same across wrappers.
+        ptr = getattr(cls._unwrap_live_object(target), "_live_ptr", None)
+        return ptr if isinstance(ptr, int) else None
+
     def _same_live_object(self, left: Any, right: Any) -> bool:
-        return self._unwrap_live_object(left) is self._unwrap_live_object(right)
+        left = self._unwrap_live_object(left)
+        right = self._unwrap_live_object(right)
+        if left is right:
+            return True
+        left_ptr = self._live_ptr(left)
+        return left_ptr is not None and left_ptr == self._live_ptr(right)
 
     @staticmethod
     def _is_callable_attribute(target: Any, name: str) -> bool:
@@ -102,7 +152,20 @@ class LiveBackendBaseMixin:
             )
         return app
 
-    def _track_at(self, index: int) -> Any:
+    def _main_track(self) -> Any:
+        master = getattr(self._song(), "master_track", None)
+        if master is None:
+            raise _not_supported_by_live_api(
+                message="Master track API is not available in Live API",
+                hint="Use a Live version exposing song.master_track.",
+            )
+        return master
+
+    def _track_at(self, index: TrackLocator) -> Any:
+        if isinstance(index, tuple):
+            if index[0] == MAIN_TRACK:
+                return self._main_track()
+            return self._return_track_at(int(index[1]))
         tracks = list(self._song().tracks)
         if index < 0 or index >= len(tracks):
             raise _invalid_argument(
@@ -154,17 +217,52 @@ class LiveBackendBaseMixin:
             )
         return tracks[index]
 
-    def _device_at(self, track: int, device: int) -> Any:
+    def _device_at(self, track: int, device: DeviceLocator) -> Any:
         target = self._track_at(track)
         devices = list(target.devices)
-        if device < 0 or device >= len(devices):
+        if isinstance(device, int):
+            if device < 0 or device >= len(devices):
+                raise _invalid_argument(
+                    message=f"device out of range: {device}",
+                    hint="Use a valid device index from track info.",
+                )
+            return devices[device]
+
+        if not device:
             raise _invalid_argument(
-                message=f"device out of range: {device}",
+                message="device path must not be empty",
+                hint="Use a valid device index or chain-nested device stable_ref.",
+            )
+        top_index, *rest = device
+        if top_index < 0 or top_index >= len(devices):
+            raise _invalid_argument(
+                message=f"device out of range: {top_index}",
                 hint="Use a valid device index from track info.",
             )
-        return devices[device]
+        current = devices[top_index]
+        while rest:
+            if len(rest) < 2:
+                raise _invalid_argument(
+                    message="malformed chain device path",
+                    hint="Use a stable_ref emitted by 'device chains list'.",
+                )
+            chain_index, chain_device_index, *rest = rest
+            chains = list(getattr(current, "chains", []))
+            if chain_index < 0 or chain_index >= len(chains):
+                raise _invalid_argument(
+                    message=f"chain out of range: {chain_index}",
+                    hint="Use a valid chain index from 'device chains list'.",
+                )
+            chain_devices = list(getattr(chains[chain_index], "devices", []))
+            if chain_device_index < 0 or chain_device_index >= len(chain_devices):
+                raise _invalid_argument(
+                    message=f"chain device out of range: {chain_device_index}",
+                    hint="Use a valid device index from 'device chains list'.",
+                )
+            current = chain_devices[chain_device_index]
+        return current
 
-    def _parameter_at(self, track: int, device: int, parameter: int) -> Any:
+    def _parameter_at(self, track: int, device: DeviceLocator, parameter: int) -> Any:
         target_device = self._device_at(track, device)
         parameters = list(getattr(target_device, "parameters", []))
         if parameter < 0 or parameter >= len(parameters):
@@ -237,13 +335,20 @@ class LiveBackendBaseMixin:
         canonical_target = self._unwrap_live_object(target)
         if locator is None:
             locator = self._stable_ref_locator(kind, target)
+        # A ref follows its Live object. Only an object without ``_live_ptr``
+        # cannot be recognised again, and falls back to its position.
+        live_ptr = self._live_ptr(canonical_target)
         token = None
-        if locator is not None:
+        if live_ptr is not None:
+            token = self._stable_ref_by_live_ptr.get((kind, live_ptr))
+        elif locator is not None:
             token = self._stable_ref_by_locator.get((kind, locator))
         else:
             token = self._stable_ref_by_object.get((kind, id(canonical_target)))
         if token is None:
             token = self._next_stable_ref(kind)
+        if live_ptr is not None:
+            self._stable_ref_by_live_ptr[(kind, live_ptr)] = token
         if locator is not None:
             self._stable_ref_by_locator[(kind, locator)] = token
         self._stable_ref_by_object[(kind, id(canonical_target))] = token
@@ -270,6 +375,20 @@ class LiveBackendBaseMixin:
             locator = ("track", track_index, device_index)
         return self._stable_ref("device", device, locator=locator)
 
+    def _device_locator_for(self, track: TrackLocator, device: DeviceLocator) -> tuple[Any, ...]:
+        # Main-track devices keep the ("master", ...) locators that
+        # ``_device_locator`` derives, so both paths share one stable_ref.
+        prefix: tuple[Any, ...] = ("master",) if track == MAIN_TRACK_LOCATOR else ("track", track)
+        if isinstance(device, int):
+            return (*prefix, device)
+        top_index, *rest = device
+        return (*prefix, top_index, "chain", *rest)
+
+    def _device_stable_ref_for(self, track: int, device: DeviceLocator) -> str:
+        device_obj = self._device_at(track, device)
+        locator = self._device_locator_for(track, device)
+        return self._stable_ref("device", device_obj, locator=locator)
+
     def _parameter_stable_ref(
         self,
         parameter: Any,
@@ -282,6 +401,24 @@ class LiveBackendBaseMixin:
         if track_index is not None and device_index is not None and parameter_index is not None:
             locator = ("track", track_index, device_index, parameter_index)
         return self._stable_ref("parameter", parameter, locator=locator)
+
+    def _parameter_stable_ref_for(
+        self,
+        parameter: Any,
+        track: TrackLocator,
+        device: DeviceLocator,
+        index: int,
+    ) -> str:
+        if not isinstance(device, int):
+            return self._stable_ref("parameter", parameter, locator=None)
+        if track == MAIN_TRACK_LOCATOR:
+            return self._stable_ref("parameter", parameter, locator=("master", device, index))
+        return self._parameter_stable_ref(
+            parameter,
+            track_index=track,
+            device_index=device,
+            parameter_index=index,
+        )
 
     def _resolve_by_name_or_query(
         self,
@@ -315,8 +452,8 @@ class LiveBackendBaseMixin:
         kind: str,
         stable_ref: str,
         candidates: list[tuple[int, Any]],
-        locator_matcher: Callable[[tuple[Any, ...]], int | None] | None = None,
-    ) -> int:
+        locator_matcher: Callable[[tuple[Any, ...]], DeviceLocator | None] | None = None,
+    ) -> DeviceLocator:
         self._ensure_stable_ref_state()
         entry = self._stable_ref_entries.get(stable_ref)
         if entry is None or entry["kind"] != kind:
@@ -329,7 +466,10 @@ class LiveBackendBaseMixin:
             if self._same_live_object(candidate, target):
                 return index
         locator = entry["locator"]
-        if locator_matcher is not None and locator is not None:
+        # An object Live can identify is gone from these candidates; whatever
+        # now sits at its old position is a different object.
+        recognisable = self._live_ptr(target) is not None
+        if locator_matcher is not None and locator is not None and not recognisable:
             index = locator_matcher(locator)
             if index is not None:
                 return index
@@ -339,7 +479,7 @@ class LiveBackendBaseMixin:
         )
 
     def _track_index_from_locator(self, locator: tuple[Any, ...]) -> int | None:
-        if len(locator) != 2 or locator[0] != "track":
+        if len(locator) != 2 or locator[0] != "track" or not isinstance(locator[1], int):
             return None
         index = int(locator[1])
         tracks = list(self._song().tracks)
@@ -348,16 +488,37 @@ class LiveBackendBaseMixin:
         return index
 
     def _device_index_from_locator(self, track: int, locator: tuple[Any, ...]) -> int | None:
-        if len(locator) != 3 or locator[0] != "track":
+        if len(locator) != 3 or locator[0] != "track" or locator[1] != track:
             return None
-        locator_track = int(locator[1])
         locator_device = int(locator[2])
-        if locator_track != track:
-            return None
         devices = list(self._track_at(track).devices)
         if locator_device < 0 or locator_device >= len(devices):
             return None
         return locator_device
+
+    def _device_locator_with_chains(
+        self, track: int, locator: tuple[Any, ...]
+    ) -> DeviceLocator | None:
+        """Like ``_device_index_from_locator``, but also resolves chain-nested
+        device locators of the shape
+        ``("track", track_index, top_device_index, "chain", chain_index, device_index, ...)``
+        emitted by ``device_chains_list``."""
+        flat = self._device_index_from_locator(track, locator)
+        if flat is not None:
+            return flat
+        if len(locator) < 6 or locator[0] != "track" or locator[3] != "chain":
+            return None
+        if locator[1] != track:
+            return None
+        rest = locator[4:]
+        if len(rest) % 2 != 0:
+            return None
+        path = (int(locator[2]), *(int(value) for value in rest))
+        try:
+            self._device_at(track, path)
+        except CommandError:
+            return None
+        return path
 
     def _parameter_index_from_locator(
         self,
@@ -365,12 +526,11 @@ class LiveBackendBaseMixin:
         device: int,
         locator: tuple[Any, ...],
     ) -> int | None:
-        if len(locator) != 4 or locator[0] != "track":
+        if len(locator) != 4 or locator[0] != "track" or locator[1] != track:
             return None
-        locator_track = int(locator[1])
         locator_device = int(locator[2])
         locator_parameter = int(locator[3])
-        if locator_track != track or locator_device != device:
+        if locator_device != device:
             return None
         parameters = list(getattr(self._device_at(track, device), "parameters", []))
         if locator_parameter < 0 or locator_parameter >= len(parameters):
@@ -410,6 +570,46 @@ class LiveBackendBaseMixin:
             )
         raise AssertionError(f"unsupported track mode: {mode}")
 
+    def resolve_device_track_ref(self, track_ref: dict[str, Any]) -> TrackLocator:
+        """Resolve a device-group track selector, which may name a return or main track."""
+        mode = str(track_ref["mode"])
+        if mode == MAIN_TRACK:
+            self._main_track()
+            return MAIN_TRACK_LOCATOR
+        return_tracks = list(getattr(self._song(), "return_tracks", []))
+        if mode == "return_index":
+            index = int(track_ref["index"])
+            self._return_track_at(index)
+            return (RETURN_TRACK, index)
+        if mode == "return_name":
+            return (
+                RETURN_TRACK,
+                self._resolve_by_name_or_query(
+                    kind="return_track",
+                    candidates=[
+                        (index, str(getattr(track, "name", "")))
+                        for index, track in enumerate(return_tracks)
+                    ],
+                    ref={"mode": "name", "name": track_ref["name"]},
+                ),
+            )
+        if mode == "stable_ref":
+            entry = self._stable_ref_entries.get(str(track_ref["stable_ref"]))
+            if entry is not None and entry["kind"] == "track":
+                for index, track in enumerate(return_tracks):
+                    if self._same_live_object(track, entry["target"]):
+                        return (RETURN_TRACK, index)
+        return self.resolve_track_ref(track_ref)
+
+    @staticmethod
+    def _track_field(track: TrackLocator) -> int | dict[str, Any]:
+        """The ``track`` value reported in device-group results."""
+        if track == MAIN_TRACK_LOCATOR:
+            return {"kind": MAIN_TRACK}
+        if isinstance(track, tuple):
+            return {"kind": RETURN_TRACK, "index": track[1]}
+        return track
+
     def _selected_device(self, track: Any) -> Any:
         view = getattr(track, "view", None)
         if view is None or not hasattr(view, "selected_device"):
@@ -425,7 +625,7 @@ class LiveBackendBaseMixin:
             )
         return selected_device
 
-    def resolve_device_ref(self, track: int, device_ref: dict[str, Any]) -> int:
+    def resolve_device_ref(self, track: int, device_ref: dict[str, Any]) -> DeviceLocator:
         target_track = self._track_at(track)
         devices = list(target_track.devices)
         mode = str(device_ref["mode"])
@@ -456,11 +656,13 @@ class LiveBackendBaseMixin:
                 kind="device",
                 stable_ref=str(device_ref["stable_ref"]),
                 candidates=[(index, device) for index, device in enumerate(devices)],
-                locator_matcher=lambda locator: self._device_index_from_locator(track, locator),
+                locator_matcher=lambda locator: self._device_locator_with_chains(track, locator),
             )
         raise AssertionError(f"unsupported device mode: {mode}")
 
-    def resolve_parameter_ref(self, track: int, device: int, parameter_ref: dict[str, Any]) -> int:
+    def resolve_parameter_ref(
+        self, track: int, device: DeviceLocator, parameter_ref: dict[str, Any]
+    ) -> int:
         target_device = self._device_at(track, device)
         parameters = list(getattr(target_device, "parameters", []))
         mode = str(parameter_ref["mode"])
@@ -490,19 +692,13 @@ class LiveBackendBaseMixin:
             )
         if mode == "key":
             key = str(parameter_ref["key"])
-            detected_synth_type = self._synth_type_for_device(target_device)
-            if detected_synth_type is not None:
-                key_indexes, _ = self._resolved_standard_synth_key_indexes(
-                    synth_type=detected_synth_type,
-                    track=track,
-                    device=device,
-                )
-                if key in key_indexes:
-                    return key_indexes[key]
-            detected_effect_type = self._effect_type_for_device(target_device)
-            if detected_effect_type is not None:
-                key_indexes, _ = self._resolved_standard_effect_key_indexes(
-                    effect_type=detected_effect_type,
+            for family in DEVICE_FAMILIES:
+                detected_type = family.detect(target_device)
+                if detected_type is None:
+                    continue
+                key_indexes, _ = self._resolved_standard_key_indexes(
+                    family,
+                    device_type=detected_type,
                     track=track,
                     device=device,
                 )
@@ -585,35 +781,18 @@ class LiveBackendBaseMixin:
             payload.append(serialized)
         return payload
 
-    def _synth_type_for_device(self, device: Any) -> str | None:
-        return detect_synth_type(device)
-
-    def _effect_type_for_device(self, device: Any) -> str | None:
-        return detect_effect_type(device)
-
-    def _require_supported_synth_device(self, track: int, device: int) -> tuple[Any, str]:
+    def _require_supported_device(
+        self, family: DeviceFamily, track: int, device: int
+    ) -> tuple[Any, str]:
         target_device = self._device_at(track, device)
-        detected_type = self._synth_type_for_device(target_device)
+        detected_type = family.detect(target_device)
         if detected_type is None:
             raise _invalid_argument(
                 message=(
-                    "Device is not a supported synth "
-                    f"(supported: {', '.join(SUPPORTED_SYNTH_TYPES)})"
+                    f"Device is not a supported {family.name} "
+                    f"(supported: {', '.join(family.supported_types)})"
                 ),
-                hint="Choose a Wavetable, Drift, or Meld device.",
-            )
-        return target_device, detected_type
-
-    def _require_supported_effect_device(self, track: int, device: int) -> tuple[Any, str]:
-        target_device = self._device_at(track, device)
-        detected_type = self._effect_type_for_device(target_device)
-        if detected_type is None:
-            raise _invalid_argument(
-                message=(
-                    "Device is not a supported effect "
-                    f"(supported: {', '.join(SUPPORTED_EFFECT_TYPES)})"
-                ),
-                hint="Choose one of the supported audio effects.",
+                hint=family.unsupported_device_hint,
             )
         return target_device, detected_type
 
@@ -640,38 +819,10 @@ class LiveBackendBaseMixin:
             "detected_type": detected_type,
         }
 
-    def _synth_device_payload(
-        self,
-        *,
-        track: int,
-        device_index: int,
-        device: Any,
-        detected_type: str,
+    def _list_parameters_payload(
+        self, family: DeviceFamily, track: int, device: int
     ) -> dict[str, Any]:
-        return self._device_payload(
-            track=track,
-            device_index=device_index,
-            device=device,
-            detected_type=detected_type,
-        )
-
-    def _effect_device_payload(
-        self,
-        *,
-        track: int,
-        device_index: int,
-        device: Any,
-        detected_type: str,
-    ) -> dict[str, Any]:
-        return self._device_payload(
-            track=track,
-            device_index=device_index,
-            device=device,
-            detected_type=detected_type,
-        )
-
-    def _list_synth_parameters_payload(self, track: int, device: int) -> dict[str, Any]:
-        target_device, detected_type = self._require_supported_synth_device(track, device)
+        target_device, detected_type = self._require_supported_device(family, track, device)
         serialized_parameters = [
             self._serialize_parameter(
                 parameter,
@@ -697,98 +848,37 @@ class LiveBackendBaseMixin:
             "parameters": serialized_parameters,
         }
 
-    def _resolved_standard_synth_key_indexes(
+    def _resolved_standard_key_indexes(
         self,
+        family: DeviceFamily,
         *,
-        synth_type: str,
+        device_type: str,
         track: int,
         device: int,
     ) -> tuple[dict[str, int], str]:
-        parsed_type = canonicalize_synth_type(synth_type)
-        target_device, detected_type = self._require_supported_synth_device(track, device)
+        parsed_type = family.canonicalize(device_type)
+        target_device, detected_type = self._require_supported_device(family, track, device)
         if detected_type != parsed_type:
             raise _invalid_argument(
                 message=(
-                    f"Device synth type mismatch: requested={parsed_type}, detected={detected_type}"
-                ),
-                hint="Select a device that matches the requested synth type.",
-            )
-
-        parameter_names = [
-            str(getattr(parameter, "name", ""))
-            for parameter in list(getattr(target_device, "parameters", []))
-        ]
-        key_indexes, missing_keys = resolve_standard_synth_key_indexes(parameter_names, parsed_type)
-        if missing_keys:
-            raise _invalid_argument(
-                message=(
-                    f"Missing required standard synth keys for {parsed_type}: "
-                    f"{', '.join(missing_keys)}"
-                ),
-                hint="Use the exact English standard synth parameter names.",
-            )
-        return key_indexes, parsed_type
-
-    def _list_effect_parameters_payload(self, track: int, device: int) -> dict[str, Any]:
-        target_device, detected_type = self._require_supported_effect_device(track, device)
-        serialized_parameters = [
-            self._serialize_parameter(
-                parameter,
-                index,
-                track_index=track,
-                device_index=device,
-            )
-            for index, parameter in enumerate(list(getattr(target_device, "parameters", [])))
-        ]
-        return {
-            "track": track,
-            "device": device,
-            "track_stable_ref": self._track_stable_ref(self._track_at(track), index=track),
-            "device_stable_ref": self._device_stable_ref(
-                target_device,
-                track_index=track,
-                device_index=device,
-            ),
-            "device_name": str(getattr(target_device, "name", "")),
-            "class_name": str(getattr(target_device, "class_name", "")),
-            "detected_type": detected_type,
-            "parameter_count": len(serialized_parameters),
-            "parameters": serialized_parameters,
-        }
-
-    def _resolved_standard_effect_key_indexes(
-        self,
-        *,
-        effect_type: str,
-        track: int,
-        device: int,
-    ) -> tuple[dict[str, int], str]:
-        parsed_type = canonicalize_effect_type(effect_type)
-        target_device, detected_type = self._require_supported_effect_device(track, device)
-        if detected_type != parsed_type:
-            raise _invalid_argument(
-                message=(
-                    f"Device effect type mismatch: requested={parsed_type}, "
+                    f"Device {family.name} type mismatch: requested={parsed_type}, "
                     f"detected={detected_type}"
                 ),
-                hint="Select a device that matches the requested effect type.",
+                hint=f"Select a device that matches the requested {family.name} type.",
             )
 
         parameter_names = [
             str(getattr(parameter, "name", ""))
             for parameter in list(getattr(target_device, "parameters", []))
         ]
-        key_indexes, missing_keys = resolve_standard_effect_key_indexes(
-            parameter_names,
-            parsed_type,
-        )
+        key_indexes, missing_keys = family.resolve_key_indexes(parameter_names, parsed_type)
         if missing_keys:
             raise _invalid_argument(
                 message=(
-                    f"Missing required standard effect keys for {parsed_type}: "
+                    f"Missing required standard {family.name} keys for {parsed_type}: "
                     f"{', '.join(missing_keys)}"
                 ),
-                hint="Use the exact English standard effect parameter names.",
+                hint=f"Use the exact English standard {family.name} parameter names.",
             )
         return key_indexes, parsed_type
 

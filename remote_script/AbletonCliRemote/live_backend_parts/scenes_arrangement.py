@@ -9,7 +9,7 @@ from .base import _invalid_argument, _not_supported_by_live_api
 
 class LiveBackendScenesArrangementMixin:
     def _focus_arranger_view(self) -> None:
-        app = self._application()
+        app = self._ctx._application()
         view = getattr(app, "view", None)
         if view is None:
             raise _not_supported_by_live_api(
@@ -25,7 +25,7 @@ class LiveBackendScenesArrangementMixin:
         focus_view("Arranger")
 
     def _arrangement_clips(self, track: int) -> list[Any]:
-        target_track = self._track_at(track)
+        target_track = self._ctx._track_at(track)
         arrangement_clips = getattr(target_track, "arrangement_clips", None)
         if arrangement_clips is None:
             raise _not_supported_by_live_api(
@@ -39,6 +39,24 @@ class LiveBackendScenesArrangementMixin:
                 message="Arrangement clip container API is not iterable in Live API",
                 hint="Use a Live version exposing iterable track.arrangement_clips.",
             ) from exc
+
+    def _created_arrangement_clip_index(self, track: int, start_time: float) -> int:
+        # arrangement_clips is in start-time order, so a new clip is found by its
+        # start, not at the previous clip count.
+        indexes = [
+            index
+            for index, clip in enumerate(self._arrangement_clips(track))
+            if abs(float(getattr(clip, "start_time", -1.0)) - start_time) < 1e-6
+        ]
+        if len(indexes) != 1:
+            raise _invalid_argument(
+                message=(
+                    "Arrangement clip creation did not produce exactly one clip "
+                    f"at start_time {start_time}"
+                ),
+                hint="Retry arrangement clip creation.",
+            )
+        return indexes[0]
 
     def _arrangement_clip_at(self, track: int, index: int) -> Any:
         clips = self._arrangement_clips(track)
@@ -70,11 +88,15 @@ class LiveBackendScenesArrangementMixin:
     ) -> dict[str, Any]:
         payload_notes = [
             {
+                "note_id": int(note["note_id"]),
                 "pitch": int(note["pitch"]),
                 "start_time": float(note["start_time"]),
                 "duration": float(note["duration"]),
                 "velocity": int(note["velocity"]),
                 "mute": bool(note["mute"]),
+                "probability": float(note["probability"]),
+                "velocity_deviation": float(note["velocity_deviation"]),
+                "release_velocity": int(note["release_velocity"]),
             }
             for note in notes
         ]
@@ -90,12 +112,12 @@ class LiveBackendScenesArrangementMixin:
 
     def scenes_list(self) -> dict[str, Any]:
         scenes = []
-        for index, scene in enumerate(list(getattr(self._song(), "scenes", []))):
+        for index, scene in enumerate(list(getattr(self._ctx._song(), "scenes", []))):
             scenes.append({"index": index, "name": str(getattr(scene, "name", ""))})
         return {"scenes": scenes}
 
     def create_scene(self, index: int) -> dict[str, Any]:
-        song = self._song()
+        song = self._ctx._song()
         scenes = list(getattr(song, "scenes", []))
         if index != -1 and index > len(scenes):
             raise _invalid_argument(
@@ -105,23 +127,23 @@ class LiveBackendScenesArrangementMixin:
 
         target_index = len(scenes) if index == -1 else index
         song.create_scene(target_index)
-        created = self._scene_at(target_index)
+        created = self._ctx._scene_at(target_index)
         return {"index": target_index, "name": str(getattr(created, "name", ""))}
 
     def set_scene_name(self, scene: int, name: str) -> dict[str, Any]:
-        target = self._scene_at(scene)
+        target = self._ctx._scene_at(scene)
         target.name = name
         return {"scene": scene, "name": str(target.name)}
 
     def fire_scene(self, scene: int) -> dict[str, Any]:
-        target = self._scene_at(scene)
+        target = self._ctx._scene_at(scene)
         target.fire()
         return {"scene": scene, "fired": True}
 
     def scenes_move(self, from_index: int, to_index: int) -> dict[str, Any]:
-        self._scene_at(from_index)
-        self._scene_at(to_index)
-        move_scene = getattr(self._song(), "move_scene", None)
+        self._ctx._scene_at(from_index)
+        self._ctx._scene_at(to_index)
+        move_scene = getattr(self._ctx._song(), "move_scene", None)
         if not callable(move_scene):
             raise _not_supported_by_live_api(
                 message="Scene move API is not available in Live API",
@@ -131,7 +153,7 @@ class LiveBackendScenesArrangementMixin:
         return {"from": from_index, "to": to_index, "moved": True}
 
     def stop_all_clips(self) -> dict[str, Any]:
-        song = self._song()
+        song = self._ctx._song()
         if not hasattr(song, "stop_all_clips"):
             raise _invalid_argument(
                 message="Song does not support stop_all_clips",
@@ -141,7 +163,7 @@ class LiveBackendScenesArrangementMixin:
         return {"stopped": True}
 
     def arrangement_record_start(self) -> dict[str, Any]:
-        song = self._song()
+        song = self._ctx._song()
         if hasattr(song, "record_mode"):
             song.record_mode = True
             return {"recording": bool(song.record_mode)}
@@ -155,7 +177,7 @@ class LiveBackendScenesArrangementMixin:
         )
 
     def arrangement_record_stop(self) -> dict[str, Any]:
-        song = self._song()
+        song = self._ctx._song()
         if hasattr(song, "record_mode"):
             song.record_mode = False
             return {"recording": bool(song.record_mode)}
@@ -177,8 +199,7 @@ class LiveBackendScenesArrangementMixin:
         notes: list[dict[str, Any]] | None = None,
     ) -> dict[str, Any]:
         self._focus_arranger_view()
-        target_track = self._track_at(track)
-        before_count = len(self._arrangement_clips(track))
+        target_track = self._ctx._track_at(track)
         is_midi_track = bool(getattr(target_track, "has_midi_input", False))
         is_audio_track = bool(getattr(target_track, "has_audio_input", False))
         normalized_start_time = float(start_time)
@@ -199,23 +220,25 @@ class LiveBackendScenesArrangementMixin:
             create_midi_clip(normalized_start_time, normalized_length)
             notes_added: int | None = None
             if notes is not None:
-                clips = self._arrangement_clips(track)
-                if len(clips) <= before_count:
-                    raise _invalid_argument(
-                        message="Arrangement MIDI clip creation did not produce a clip",
-                        hint="Retry arrangement clip creation before adding notes.",
-                    )
-                created_clip = clips[before_count]
-                set_notes = getattr(created_clip, "set_notes", None)
-                if not callable(set_notes):
+                created_clip = self._arrangement_clips(track)[
+                    self._created_arrangement_clip_index(track, normalized_start_time)
+                ]
+                add_new_notes = getattr(created_clip, "add_new_notes", None)
+                if not callable(add_new_notes):
                     raise _not_supported_by_live_api(
-                        message="Arrangement clip note write API is not available in Live API",
-                        hint="Use a Live version exposing clip.set_notes for arrangement clips.",
+                        message="Arrangement clip extended note write API is not available "
+                        "in Live API",
+                        hint=(
+                            "Use a Live version exposing clip.add_new_notes for arrangement "
+                            "clips (Live 12+)."
+                        ),
                     )
-                note_payload = self._clip_note_tuples(notes)
-                if note_payload:
-                    set_notes(note_payload)
-                notes_added = len(note_payload)
+                specs = tuple(
+                    self._ctx.services.clip_notes._note_specification(note) for note in notes
+                )
+                if specs:
+                    add_new_notes(specs)
+                notes_added = len(specs)
             result = {
                 "track": track,
                 "start_time": normalized_start_time,
@@ -252,15 +275,13 @@ class LiveBackendScenesArrangementMixin:
                     hint="Use a Live version exposing track.create_audio_clip.",
                 )
             create_audio_clip(normalized_audio_path, normalized_start_time)
-            clips = self._arrangement_clips(track)
-            if len(clips) <= before_count:
-                raise _invalid_argument(
-                    message="Arrangement audio clip creation did not produce a clip",
-                    hint="Retry arrangement clip creation.",
-                )
-            created_clip = clips[before_count]
-            if hasattr(created_clip, "length"):
-                created_clip.length = normalized_length
+            created_index = self._created_arrangement_clip_index(track, normalized_start_time)
+            self._set_arrangement_audio_clip_span(
+                self._arrangement_clips(track)[created_index],
+                track=track,
+                index=created_index,
+                length=normalized_length,
+            )
             return {
                 "track": track,
                 "start_time": normalized_start_time,
@@ -279,14 +300,54 @@ class LiveBackendScenesArrangementMixin:
             hint="Use a standard MIDI or audio track for arrangement clip creation.",
         )
 
+    def _set_arrangement_audio_clip_span(
+        self, clip: Any, *, track: int, index: int, length: float
+    ) -> None:
+        # Live sizes a new audio clip to the file's warped length. Its arrangement
+        # length is read-only and follows loop_end - loop_start; end_marker does
+        # not move it.
+        tracks_clips = self._ctx.services.tracks_clips
+        loop_start = self._ctx._safe_float(tracks_clips._safe_clip_attr(clip, "loop_start"))
+        write_error: str | None = None
+        if loop_start is not None:
+            try:
+                clip.loop_end = loop_start + length
+            except Exception as exc:  # noqa: BLE001
+                write_error = str(exc)
+        actual_length = self._ctx._safe_float(tracks_clips._safe_clip_attr(clip, "length"))
+        if actual_length is not None and math.isclose(actual_length, length, abs_tol=1e-6):
+            return
+        details: dict[str, Any] = {
+            "track": track,
+            "index": index,
+            "requested_length": length,
+            "actual_length": actual_length,
+            "warping": bool(tracks_clips._safe_clip_attr(clip, "warping", False)),
+            "looping": bool(tracks_clips._safe_clip_attr(clip, "looping", False)),
+        }
+        if write_error is not None:
+            details["write_error"] = write_error
+        raise _invalid_argument(
+            message=(
+                f"Live did not apply the requested arrangement audio clip length: "
+                f"requested {length} but is {actual_length}"
+            ),
+            hint=(
+                "The clip was created with Live's length. Live measures an unwarped clip's "
+                "loop in seconds: enable warping with 'arrangement clip warp set', then set "
+                "the span with 'arrangement clip loop set', or delete the clip."
+            ),
+            details=details,
+        )
+
     def arrangement_clip_list(self, track: int | None) -> dict[str, Any]:
         if track is None:
             target_tracks = [
                 (index, target_track)
-                for index, target_track in enumerate(list(self._song().tracks))
+                for index, target_track in enumerate(list(self._ctx._song().tracks))
             ]
         else:
-            target_tracks = [(track, self._track_at(track))]
+            target_tracks = [(track, self._ctx._track_at(track))]
 
         clips: list[dict[str, Any]] = []
         for track_index, _target_track in target_tracks:
@@ -296,8 +357,8 @@ class LiveBackendScenesArrangementMixin:
                         "track": track_index,
                         "index": clip_index,
                         "name": str(getattr(clip, "name", "")),
-                        "start_time": self._safe_float(getattr(clip, "start_time", None)),
-                        "length": self._safe_float(getattr(clip, "length", None)),
+                        "start_time": self._ctx._safe_float(getattr(clip, "start_time", None)),
+                        "length": self._ctx._safe_float(getattr(clip, "length", None)),
                         "is_audio_clip": bool(getattr(clip, "is_audio_clip", False)),
                         "is_midi_clip": bool(getattr(clip, "is_midi_clip", False)),
                     }
@@ -320,16 +381,19 @@ class LiveBackendScenesArrangementMixin:
             index,
             hint="Choose a MIDI arrangement clip from 'arrangement clip list'.",
         )
-        set_notes = getattr(clip, "set_notes", None)
-        if not callable(set_notes):
+        add_new_notes = getattr(clip, "add_new_notes", None)
+        if not callable(add_new_notes):
             raise _not_supported_by_live_api(
-                message="Arrangement clip note write API is not available in Live API",
-                hint="Use a Live version exposing clip.set_notes for arrangement clips.",
+                message="Arrangement clip extended note write API is not available in Live API",
+                hint=(
+                    "Use a Live version exposing clip.add_new_notes for arrangement "
+                    "clips (Live 12+)."
+                ),
             )
-        note_payload = self._clip_note_tuples(notes)
-        if note_payload:
-            set_notes(note_payload)
-        return {"track": track, "index": index, "note_count": len(note_payload)}
+        specs = tuple(self._ctx.services.clip_notes._note_specification(note) for note in notes)
+        if specs:
+            add_new_notes(specs)
+        return {"track": track, "index": index, "note_count": len(specs)}
 
     def arrangement_clip_notes_get(
         self,
@@ -344,7 +408,9 @@ class LiveBackendScenesArrangementMixin:
             index,
             hint="Choose a MIDI arrangement clip from 'arrangement clip list'.",
         )
-        filtered = self._filtered_clip_notes(clip, start_time, end_time, pitch)
+        filtered = self._ctx.services.clip_notes._filtered_clip_notes(
+            clip, start_time, end_time, pitch
+        )
         return self._arrangement_notes_payload(
             track=track,
             index=index,
@@ -373,7 +439,9 @@ class LiveBackendScenesArrangementMixin:
                 message="Arrangement clip note remove API is not available in Live API",
                 hint="Use a Live version exposing clip.remove_notes_by_id for arrangement clips.",
             )
-        filtered = self._filtered_clip_notes(clip, start_time, end_time, pitch)
+        filtered = self._ctx.services.clip_notes._filtered_clip_notes(
+            clip, start_time, end_time, pitch
+        )
         to_remove = [int(note["note_id"]) for note in filtered]
         if to_remove:
             remove_notes_by_id(to_remove)
@@ -434,7 +502,7 @@ class LiveBackendScenesArrangementMixin:
             )
 
         if target_uri is not None:
-            item = self._find_browser_item_by_uri(target_uri)
+            item = self._ctx.services.browser._find_browser_item_by_uri(target_uri)
             if item is None:
                 raise _invalid_argument(
                     message=f"Browser item with URI '{target_uri}' not found",
@@ -442,9 +510,9 @@ class LiveBackendScenesArrangementMixin:
                 )
         else:
             assert target_path is not None
-            item = self._resolve_browser_path(target_path)
+            item = self._ctx.services.browser._resolve_browser_path(target_path)
 
-        if not self._is_midi_clip_browser_item(item):
+        if not self._ctx.services.browser._is_midi_clip_browser_item(item):
             raise _invalid_argument(
                 message=(
                     "arrangement clip notes import-browser supports only MIDI clip (.alc) items"
@@ -457,30 +525,34 @@ class LiveBackendScenesArrangementMixin:
             index,
             hint="Choose a MIDI arrangement clip from 'arrangement clip list'.",
         )
-        song = self._song()
+        song = self._ctx._song()
         source_track_index: int | None = None
         try:
-            source_track_index, source_clip = self._load_midi_clip_to_temporary_track(
-                song=song, item=item
+            source_track_index, source_clip = (
+                self._ctx.services.browser._load_midi_clip_to_temporary_track(song=song, item=item)
             )
-            notes_imported = self._import_clip_notes(
+            notes_imported = self._ctx.services.browser._import_clip_notes(
                 source_clip=source_clip,
                 target_clip=target_clip,
                 notes_mode=mode,
             )
             length_imported = (
-                self._import_clip_length(source_clip=source_clip, target_clip=target_clip)
+                self._ctx.services.browser._import_clip_length(
+                    source_clip=source_clip, target_clip=target_clip
+                )
                 if import_length
                 else False
             )
             groove_imported = (
-                self._import_clip_groove(source_clip=source_clip, target_clip=target_clip)
+                self._ctx.services.browser._import_clip_groove(
+                    source_clip=source_clip, target_clip=target_clip
+                )
                 if import_groove
                 else False
             )
         finally:
             if source_track_index is not None:
-                self._delete_track(song, source_track_index)
+                self._ctx.services.browser._delete_track(song, source_track_index)
 
         return {
             "track": track,
@@ -503,7 +575,7 @@ class LiveBackendScenesArrangementMixin:
         end: float | None,
         delete_all: bool,
     ) -> dict[str, Any]:
-        target_track = self._track_at(track)
+        target_track = self._ctx._track_at(track)
         clips = self._arrangement_clips(track)
         has_range = start is not None or end is not None
         if has_range and (start is None or end is None):
@@ -537,8 +609,8 @@ class LiveBackendScenesArrangementMixin:
                 )
             mode = "range"
             for clip_index, clip in enumerate(list(clips)):
-                clip_start = self._safe_float(getattr(clip, "start_time", None))
-                clip_length = self._safe_float(getattr(clip, "length", None))
+                clip_start = self._ctx._safe_float(getattr(clip, "start_time", None))
+                clip_length = self._ctx._safe_float(getattr(clip, "length", None))
                 if clip_start is None or clip_length is None:
                     continue
                 clip_end = clip_start + max(clip_length, 0.0)
@@ -571,6 +643,117 @@ class LiveBackendScenesArrangementMixin:
             "deleted_indexes": deleted_indexes,
         }
 
+    def arrangement_clip_props_get(self, track: int, index: int) -> dict[str, Any]:
+        clip = self._arrangement_clip_at(track, index)
+        return self._ctx.services.tracks_clips._clip_props_payload(
+            clip_obj=clip, track=track, clip=None, index=index
+        )
+
+    def arrangement_clip_loop_set(
+        self,
+        track: int,
+        index: int,
+        start: float,
+        end: float,
+        enabled: bool,
+    ) -> dict[str, Any]:
+        clip = self._arrangement_clip_at(track, index)
+        self._ctx.services.tracks_clips._set_required_clip_range(
+            clip,
+            start_attr="loop_start",
+            end_attr="loop_end",
+            start=start,
+            end=end,
+            api_names=("loop start", "loop end"),
+        )
+        self._ctx.services.tracks_clips._set_required_clip_attr(
+            clip, "looping", bool(enabled), api_name="loop"
+        )
+        return self.arrangement_clip_props_get(track, index)
+
+    def arrangement_clip_marker_set(
+        self,
+        track: int,
+        index: int,
+        start_marker: float,
+        end_marker: float,
+    ) -> dict[str, Any]:
+        clip = self._arrangement_clip_at(track, index)
+        self._ctx.services.tracks_clips._set_required_clip_range(
+            clip,
+            start_attr="start_marker",
+            end_attr="end_marker",
+            start=start_marker,
+            end=end_marker,
+            api_names=("start marker", "end marker"),
+        )
+        return self.arrangement_clip_props_get(track, index)
+
+    def arrangement_clip_warp_get(self, track: int, index: int) -> dict[str, Any]:
+        clip = self._arrangement_clip_at(track, index)
+        return {
+            "track": track,
+            "index": index,
+            "warping": bool(getattr(clip, "warping", False)),
+            "warp_mode": getattr(clip, "warp_mode", None),
+        }
+
+    def arrangement_clip_warp_set(
+        self,
+        track: int,
+        index: int,
+        enabled: bool,
+        mode: str | None,
+    ) -> dict[str, Any]:
+        clip = self._arrangement_clip_at(track, index)
+        self._ctx.services.tracks_clips._set_required_clip_attr(
+            clip, "warping", bool(enabled), api_name="warp"
+        )
+        if mode is not None:
+            self._ctx.services.tracks_clips._set_required_clip_attr(
+                clip,
+                "warp_mode",
+                self._ctx.services.tracks_clips._warp_mode_value(mode),
+                api_name="warp mode",
+            )
+        return self.arrangement_clip_warp_get(track, index)
+
+    def arrangement_clip_gain_set(self, track: int, index: int, db: float) -> dict[str, Any]:
+        clip = self._arrangement_clip_at(track, index)
+        if not hasattr(clip, "gain"):
+            raise _not_supported_by_live_api(
+                message="Arrangement clip gain API is not available in Live API",
+                hint="Use a Live version exposing clip.gain.",
+            )
+        clip.gain = math.pow(10.0, float(db) / 20.0)
+        clip._ableton_cli_gain_db = float(db)  # noqa: SLF001
+        return {"track": track, "index": index, "gain_db": float(db), "gain": float(clip.gain)}
+
+    def arrangement_clip_transpose_set(
+        self,
+        track: int,
+        index: int,
+        semitones: int,
+    ) -> dict[str, Any]:
+        clip = self._arrangement_clip_at(track, index)
+        self._ctx.services.tracks_clips._set_required_clip_attr(
+            clip, "pitch_coarse", int(semitones), api_name="transpose"
+        )
+        return {"track": track, "index": index, "pitch_coarse": int(clip.pitch_coarse)}
+
+    def arrangement_clip_file_replace(
+        self, track: int, index: int, audio_path: str
+    ) -> dict[str, Any]:
+        clip = self._arrangement_clip_at(track, index)
+        replace_file = getattr(clip, "replace_file", None)
+        if not callable(replace_file):
+            raise _not_supported_by_live_api(
+                message="Arrangement clip file replacement API is not available in Live API",
+                hint="Use manual replacement in Ableton Live for this Live version.",
+            )
+        replace_file(audio_path)
+        return {"track": track, "index": index, "audio_path": audio_path, "replaced": True}
+
     @staticmethod
     def _scene_from_session_spec(scene_spec: dict[str, Any]) -> tuple[int, float]:
         scene_index = int(scene_spec["scene"])
@@ -599,7 +782,7 @@ class LiveBackendScenesArrangementMixin:
         source_notes: list[dict[str, Any]],
         duration_beats: float,
     ) -> float:
-        source_length = self._safe_float(getattr(source_clip, "length", None))
+        source_length = self._ctx._safe_float(getattr(source_clip, "length", None))
         if source_length is not None and source_length > 0:
             return source_length
         note_end = max(
@@ -647,7 +830,6 @@ class LiveBackendScenesArrangementMixin:
         duration_beats: float,
         source_clip: Any,
     ) -> tuple[int, int]:
-        before_count = len(self._arrangement_clips(track_index))
         self.arrangement_clip_create(
             track=track_index,
             start_time=arrangement_cursor,
@@ -655,8 +837,8 @@ class LiveBackendScenesArrangementMixin:
             audio_path=None,
             notes=None,
         )
-        target_index = before_count
-        source_notes = list(self._clip_notes_extended(source_clip))
+        target_index = self._created_arrangement_clip_index(track_index, float(arrangement_cursor))
+        source_notes = list(self._ctx.services.clip_notes._clip_notes_extended(source_clip))
         source_length = self._arrangement_from_session_source_midi_length(
             source_clip=source_clip,
             source_notes=source_notes,
@@ -679,7 +861,7 @@ class LiveBackendScenesArrangementMixin:
                 message="source session audio clip must expose file_path",
                 hint="Use audio clips with a resolvable file path.",
             )
-        source_length = self._safe_float(getattr(source_clip, "length", None))
+        source_length = self._ctx._safe_float(getattr(source_clip, "length", None))
         if source_length is None or source_length <= 0:
             raise _invalid_argument(
                 message="source session audio clip must expose positive length",
@@ -732,14 +914,14 @@ class LiveBackendScenesArrangementMixin:
         }
 
     def arrangement_from_session(self, scenes: list[dict[str, Any]]) -> dict[str, Any]:
-        song = self._song()
+        song = self._ctx._song()
         arrangement_cursor = 0.0
         scene_payloads: list[dict[str, Any]] = []
         total_created = 0
         total_notes_added = 0
         for scene_spec in scenes:
             scene_index, duration_beats = self._scene_from_session_spec(scene_spec)
-            self._scene_at(scene_index)
+            self._ctx._scene_at(scene_index)
 
             midi_created = 0
             audio_created = 0
@@ -791,12 +973,12 @@ class LiveBackendScenesArrangementMixin:
         }
 
     def tracks_delete(self, track: int) -> dict[str, Any]:
-        self._track_at(track)
-        delete_track = getattr(self._song(), "delete_track", None)
+        self._ctx._track_at(track)
+        delete_track = getattr(self._ctx._song(), "delete_track", None)
         if not callable(delete_track):
             raise _not_supported_by_live_api(
                 message="Track delete API is not available in Live API",
                 hint="Delete tracks manually in Ableton Live.",
             )
         delete_track(track)
-        return {"track": track, "deleted": True, "track_count": len(list(self._song().tracks))}
+        return {"track": track, "deleted": True, "track_count": len(list(self._ctx._song().tracks))}

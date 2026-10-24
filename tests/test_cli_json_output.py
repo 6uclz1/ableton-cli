@@ -76,7 +76,7 @@ def test_install_remote_script_verify_includes_doctor_result(runner, cli_app, mo
             "candidates": ["/tmp"],
         }
 
-    def _run_doctor_stub(settings, *, platform_paths) -> dict[str, object]:
+    def _run_doctor_stub(settings, *, platform_paths, plugin_health) -> dict[str, object]:
         del settings
         seen["doctor"] = platform_paths
         return {
@@ -121,13 +121,14 @@ def test_install_skill_outputs_json_envelope(runner, cli_app, monkeypatch) -> No
     monkeypatch.setattr(
         setup,
         "install_skill",
-        lambda yes, dry_run, platform_paths, target: {
+        lambda yes, dry_run, platform_paths, target, plugin_skills: {
             "action": "install",
             "dry_run": dry_run,
             "target_type": target,
             "source": "/tmp/repo/skills/ableton-cli/SKILL.md",
             "target": "/tmp/.claude/skills/ableton-cli/SKILL.md",
             "home": "/tmp/.claude",
+            "plugin_skills": [],
         },
     )
 
@@ -152,13 +153,14 @@ def test_install_skill_cursor_target_outputs_json_envelope(runner, cli_app, monk
     monkeypatch.setattr(
         setup,
         "install_skill",
-        lambda yes, dry_run, platform_paths, target: {
+        lambda yes, dry_run, platform_paths, target, plugin_skills: {
             "action": "install",
             "dry_run": dry_run,
             "target_type": target,
             "source": "/tmp/repo/skills/ableton-cli/SKILL.md",
             "target": "/tmp/.cursor/skills/ableton-cli/SKILL.md",
             "home": "/tmp/.cursor",
+            "plugin_skills": [],
         },
     )
 
@@ -201,7 +203,7 @@ def test_ping_includes_capabilities_when_remote_reports_them(runner, cli_app, mo
     class _ClientStub:
         def ping(self):  # noqa: ANN201
             return {
-                "protocol_version": 2,
+                "protocol_version": 3,
                 "remote_script_version": "0.2.0",
                 "supported_commands": ["ping", "song_info"],
                 "command_set_hash": "abc123",
@@ -237,7 +239,7 @@ def test_config_set_updates_key_and_returns_json_envelope(runner, cli_app, tmp_p
                 'host = "127.0.0.1"',
                 "port = 8765",
                 "timeout_ms = 15000",
-                "protocol_version = 2",
+                "protocol_version = 3",
                 "",
             ]
         ),
@@ -307,9 +309,129 @@ def test_config_set_rejects_invalid_key_or_value(runner, cli_app, tmp_path) -> N
     assert invalid_value_payload["error"]["code"] == "INVALID_ARGUMENT"
 
 
+def test_config_set_auth_token_writes_raw_value_and_masks_output(runner, cli_app, tmp_path) -> None:
+    config_path = tmp_path / "config.toml"
+    config_path.write_text('host = "127.0.0.1"\nport = 8765\n', encoding="utf-8")
+
+    result = runner.invoke(
+        cli_app,
+        [
+            "--config",
+            str(config_path),
+            "--output",
+            "json",
+            "config",
+            "set",
+            "auth_token",
+            "super-secret",
+        ],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["ok"] is True
+    assert payload["result"]["key"] == "auth_token"
+    assert payload["result"]["value"] == "***"
+    assert 'auth_token = "super-secret"' in config_path.read_text(encoding="utf-8")
+
+
+def test_config_show_masks_configured_auth_token(runner, cli_app, tmp_path) -> None:
+    config_path = tmp_path / "config.toml"
+    config_path.write_text(
+        'host = "127.0.0.1"\nport = 8765\nauth_token = "super-secret"\n',
+        encoding="utf-8",
+    )
+
+    result = runner.invoke(
+        cli_app,
+        [
+            "--config",
+            str(config_path),
+            "--output",
+            "json",
+            "config",
+            "show",
+        ],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["result"]["auth_token"] == "***"
+
+
+def test_config_show_reports_none_auth_token_when_unset(runner, cli_app, tmp_path) -> None:
+    config_path = tmp_path / "config.toml"
+    config_path.write_text('host = "127.0.0.1"\nport = 8765\n', encoding="utf-8")
+
+    result = runner.invoke(
+        cli_app,
+        [
+            "--config",
+            str(config_path),
+            "--output",
+            "json",
+            "config",
+            "show",
+        ],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["result"]["auth_token"] is None
+
+
+def test_auth_token_global_option_is_used_for_dispatch_meta(
+    runner, cli_app, tmp_path, monkeypatch
+) -> None:
+    import ableton_cli.client.backends as backends_module
+
+    captured: dict[str, object] = {}
+    original_dispatch = backends_module._TransportBackend.dispatch
+
+    def _capture_dispatch(self, name, args, **kwargs):  # noqa: ANN001, ANN202
+        request_meta: dict[str, object] = {}
+
+        def _fake_send(payload):  # noqa: ANN001, ANN202
+            request_meta.update(payload["meta"])
+            return {
+                "ok": True,
+                "request_id": payload["request_id"],
+                "protocol_version": payload["protocol_version"],
+                "result": {},
+                "error": None,
+            }
+
+        monkeypatch.setattr(self.transport, "send", _fake_send)
+        result = original_dispatch(self, name, args, **kwargs)
+        captured["meta"] = request_meta
+        return result
+
+    monkeypatch.setattr(backends_module._TransportBackend, "dispatch", _capture_dispatch)
+
+    config_path = tmp_path / "config.toml"
+    config_path.write_text('host = "127.0.0.1"\nport = 8765\n', encoding="utf-8")
+
+    result = runner.invoke(
+        cli_app,
+        [
+            "--config",
+            str(config_path),
+            "--auth-token",
+            "cli-secret",
+            "--output",
+            "json",
+            "song",
+            "info",
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert captured["meta"]["auth_token"] == "cli-secret"
+
+
 def test_protocol_version_global_option_overrides_config(runner, cli_app, tmp_path) -> None:
     config_path = tmp_path / "config.toml"
-    config_path.write_text("protocol_version = 2\n", encoding="utf-8")
+    config_path.write_text("protocol_version = 3\n", encoding="utf-8")
 
     result = runner.invoke(
         cli_app,
@@ -339,9 +461,9 @@ def test_ping_supports_replay_option_without_network(runner, cli_app, tmp_path: 
                 "response": {
                     "ok": True,
                     "request_id": "recorded-request-id",
-                    "protocol_version": 2,
+                    "protocol_version": 3,
                     "result": {
-                        "protocol_version": 2,
+                        "protocol_version": 3,
                         "remote_script_version": "9.9.9",
                         "supported_commands": ["ping"],
                         "command_set_hash": "hash",
@@ -358,7 +480,15 @@ def test_ping_supports_replay_option_without_network(runner, cli_app, tmp_path: 
 
     result = runner.invoke(
         cli_app,
-        ["--output", "json", "--replay", str(replay_path), "ping"],
+        [
+            "--config",
+            str(tmp_path / "empty.toml"),
+            "--output",
+            "json",
+            "--replay",
+            str(replay_path),
+            "ping",
+        ],
     )
 
     assert result.exit_code == 0
@@ -399,7 +529,7 @@ def test_read_only_allows_read_commands(runner, cli_app, tmp_path: Path) -> None
                 "response": {
                     "ok": True,
                     "request_id": "recorded-request-id",
-                    "protocol_version": 2,
+                    "protocol_version": 3,
                     "result": {"tempo": 120.0},
                     "error": None,
                 },
@@ -412,7 +542,17 @@ def test_read_only_allows_read_commands(runner, cli_app, tmp_path: Path) -> None
 
     result = runner.invoke(
         cli_app,
-        ["--output", "json", "--read-only", "--replay", str(replay_path), "song", "info"],
+        [
+            "--config",
+            str(tmp_path / "empty.toml"),
+            "--output",
+            "json",
+            "--read-only",
+            "--replay",
+            str(replay_path),
+            "song",
+            "info",
+        ],
     )
 
     assert result.exit_code == 0
@@ -457,7 +597,7 @@ def test_read_only_batch_rejects_write_steps(runner, cli_app, tmp_path: Path) ->
                 "response": {
                     "ok": True,
                     "request_id": "recorded-request-id",
-                    "protocol_version": 2,
+                    "protocol_version": 3,
                     "result": {"tracks": []},
                     "error": None,
                 },
@@ -471,6 +611,8 @@ def test_read_only_batch_rejects_write_steps(runner, cli_app, tmp_path: Path) ->
     result = runner.invoke(
         cli_app,
         [
+            "--config",
+            str(tmp_path / "empty.toml"),
             "--output",
             "json",
             "--read-only",

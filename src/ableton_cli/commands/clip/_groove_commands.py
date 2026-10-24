@@ -4,6 +4,7 @@ from typing import Annotated
 
 import typer
 
+from .._params import ClipArgument, TrackArgument
 from ._shared import (
     execute_clip_command,
     execute_track_clip_command,
@@ -26,8 +27,8 @@ def register_groove_commands(
 
 def clip_groove_get(
     ctx: typer.Context,
-    track: Annotated[int, typer.Argument(help="Track index (0-based)")],
-    clip: Annotated[int, typer.Argument(help="Clip slot index (0-based)")],
+    track: TrackArgument,
+    clip: ClipArgument,
 ) -> None:
     execute_track_clip_command(
         ctx,
@@ -43,8 +44,8 @@ def clip_groove_get(
 
 def clip_groove_set(
     ctx: typer.Context,
-    track: Annotated[int, typer.Argument(help="Track index (0-based)")],
-    clip: Annotated[int, typer.Argument(help="Clip slot index (0-based)")],
+    track: TrackArgument,
+    clip: ClipArgument,
     target: Annotated[str, typer.Argument(help="Groove target (URI or path to .agr)")],
 ) -> None:
     def _run() -> dict[str, object]:
@@ -62,8 +63,8 @@ def clip_groove_set(
 
 def clip_groove_amount_set(
     ctx: typer.Context,
-    track: Annotated[int, typer.Argument(help="Track index (0-based)")],
-    clip: Annotated[int, typer.Argument(help="Clip slot index (0-based)")],
+    track: TrackArgument,
+    clip: ClipArgument,
     value: Annotated[float, typer.Argument(help="Groove amount in [0.0, 1.0]")],
 ) -> None:
     def _run() -> dict[str, object]:
@@ -87,8 +88,8 @@ def clip_groove_amount_set(
 
 def clip_groove_clear(
     ctx: typer.Context,
-    track: Annotated[int, typer.Argument(help="Track index (0-based)")],
-    clip: Annotated[int, typer.Argument(help="Clip slot index (0-based)")],
+    track: TrackArgument,
+    clip: ClipArgument,
 ) -> None:
     execute_track_clip_command(
         ctx,

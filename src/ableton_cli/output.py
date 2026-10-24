@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 import json
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 import typer
 
 
-class OutputMode(str, Enum):
+class OutputMode(StrEnum):
     HUMAN = "human"
     JSON = "json"
 

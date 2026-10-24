@@ -11,6 +11,7 @@ from pathlib import Path
 DEFAULT_CHECK_COMMANDS: tuple[tuple[str, ...], ...] = (
     ("uv", "run", "ruff", "check", "."),
     ("uv", "run", "ruff", "format", "--check", "."),
+    ("uv", "run", "python", "tools/check_remote_script_runtime.py"),
     ("uv", "run", "python", "tools/generate_skill_docs.py", "--check"),
     ("uv", "run", "python", "-m", "ableton_cli.contract_checks"),
     ("uv", "run", "pytest"),

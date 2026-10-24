@@ -5,13 +5,19 @@ from typing import cast
 
 import typer
 
-from ..refs import RefPayload
+from ..refs import (
+    RefPayload,
+    SelectedTrackOption,
+    TrackIndexOption,
+    TrackNameOption,
+    TrackQueryOption,
+    TrackStableRefOption,
+    build_track_ref,
+)
 from ..runtime import execute_command, get_client
-from ._track_arm_commands import register_commands as register_arm_commands
-from ._track_info_commands import register_commands as register_info_commands
-from ._track_mute_commands import register_commands as register_mute_commands
-from ._track_name_commands import register_commands as register_name_commands
-from ._track_panning_commands import register_commands as register_panning_commands
+from ._meter_commands import MeterIntervalOption, MeterSamplesOption, run_meter_command
+from ._track_facets import register_track_facets
+from ._track_routing_commands import ROUTING_CHANNEL_HINT, ROUTING_TYPE_HINT
 from ._track_routing_commands import register_commands as register_routing_commands
 from ._track_send_commands import register_commands as register_send_commands
 from ._track_shared import (
@@ -20,9 +26,8 @@ from ._track_shared import (
     TValue,
     ValueValidator,
 )
-from ._track_solo_commands import register_commands as register_solo_commands
 from ._track_specs import TrackCommandSpec, TrackValueCommandSpec
-from ._track_volume_commands import register_commands as register_volume_commands
+from ._validation import require_non_empty_string
 
 
 def _resolve_track_ref(track_ref: RefPayload | Callable[[], RefPayload]) -> RefPayload:
@@ -124,42 +129,11 @@ def run_track_value_command_spec(
 
 
 track_app = typer.Typer(help="Single-track commands", no_args_is_help=True)
-volume_app = typer.Typer(help="Track volume commands", no_args_is_help=True)
-name_app = typer.Typer(help="Track naming commands", no_args_is_help=True)
-mute_app = typer.Typer(help="Track mute commands", no_args_is_help=True)
-solo_app = typer.Typer(help="Track solo commands", no_args_is_help=True)
-arm_app = typer.Typer(help="Track arm commands", no_args_is_help=True)
-panning_app = typer.Typer(help="Track panning commands", no_args_is_help=True)
 send_app = typer.Typer(help="Track send commands", no_args_is_help=True)
 routing_app = typer.Typer(help="Track routing commands", no_args_is_help=True)
 
-register_info_commands(track_app, run_track_command_spec=run_track_command_spec)
-register_volume_commands(
-    volume_app,
-    run_track_command_spec=run_track_command_spec,
-    run_track_value_command_spec=run_track_value_command_spec,
-)
-register_name_commands(
-    name_app,
-    run_track_value_command_spec=run_track_value_command_spec,
-)
-register_mute_commands(
-    mute_app,
-    run_track_command_spec=run_track_command_spec,
-    run_track_value_command_spec=run_track_value_command_spec,
-)
-register_solo_commands(
-    solo_app,
-    run_track_command_spec=run_track_command_spec,
-    run_track_value_command_spec=run_track_value_command_spec,
-)
-register_arm_commands(
-    arm_app,
-    run_track_command_spec=run_track_command_spec,
-    run_track_value_command_spec=run_track_value_command_spec,
-)
-register_panning_commands(
-    panning_app,
+register_track_facets(
+    track_app,
     run_track_command_spec=run_track_command_spec,
     run_track_value_command_spec=run_track_value_command_spec,
 )
@@ -228,14 +202,45 @@ register_routing_commands(
 )
 
 
-track_app.add_typer(volume_app, name="volume")
-track_app.add_typer(name_app, name="name")
-track_app.add_typer(mute_app, name="mute")
-track_app.add_typer(solo_app, name="solo")
-track_app.add_typer(arm_app, name="arm")
-track_app.add_typer(panning_app, name="panning")
+meter_app = typer.Typer(help="Track output meter commands", no_args_is_help=True)
+
+
+@meter_app.command("get")
+def track_meter_get(
+    ctx: typer.Context,
+    track_index: TrackIndexOption = None,
+    track_name: TrackNameOption = None,
+    selected_track: SelectedTrackOption = False,
+    track_query: TrackQueryOption = None,
+    track_ref: TrackStableRefOption = None,
+    samples: MeterSamplesOption = 1,
+    interval_ms: MeterIntervalOption = 50,
+) -> None:
+    """Read the track's output meters (0.0-1.0), as peak and mean over the samples."""
+
+    def _track_ref() -> RefPayload:
+        return build_track_ref(
+            track_index=track_index,
+            track_name=track_name,
+            selected_track=selected_track,
+            track_query=track_query,
+            track_ref=track_ref,
+        )
+
+    run_meter_command(
+        ctx,
+        command_name="track meter get",
+        target_args={"track_ref": None},
+        resolved_target_args=lambda: {"track_ref": _track_ref()},
+        read=lambda: get_client(ctx).track_meter_get(_track_ref()),
+        samples=samples,
+        interval_ms=interval_ms,
+    )
+
+
 track_app.add_typer(send_app, name="send")
 track_app.add_typer(routing_app, name="routing")
+track_app.add_typer(meter_app, name="meter")
 
 
 def run_track_send_command(
@@ -321,14 +326,21 @@ def run_track_routing_set(
     command_name: str,
     track_ref: RefPayload | Callable[[], RefPayload],
     routing_type: str,
-    routing_channel: str,
+    routing_channel: str | None,
     fn_name: str,
 ) -> None:
     def _run() -> dict[str, object]:
+        valid_type = require_non_empty_string("type", routing_type, hint=ROUTING_TYPE_HINT)
+        # None keeps Live's auto-selected channel (Resampling only offers "").
+        valid_channel = (
+            None
+            if routing_channel is None
+            else require_non_empty_string("channel", routing_channel, hint=ROUTING_CHANNEL_HINT)
+        )
         client = get_client(ctx)
         return cast(
             dict[str, object],
-            getattr(client, fn_name)(_resolve_track_ref(track_ref), routing_type, routing_channel),
+            getattr(client, fn_name)(_resolve_track_ref(track_ref), valid_type, valid_channel),
         )
 
     execute_kwargs: dict[str, object] = {

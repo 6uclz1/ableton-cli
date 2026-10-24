@@ -2,11 +2,11 @@ from __future__ import annotations
 
 import json
 import os
+import tomllib
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
-import tomli
 from platformdirs import user_config_dir
 
 from .errors import AppError, ErrorCode, ExitCode
@@ -21,16 +21,18 @@ class Settings:
     timeout_ms: int = 15000
     log_level: str = "INFO"
     log_file: str | None = None
-    protocol_version: int = 2
+    protocol_version: int = 3
     config_path: str | None = None
+    auth_token: str | None = None
 
     def to_public_dict(self) -> dict[str, Any]:
         data = asdict(self)
+        data["auth_token"] = "***" if self.auth_token is not None else None
         return data
 
 
 DEFAULT_SETTINGS = Settings()
-CONFIG_SET_KEYS = frozenset({"host", "port", "timeout_ms", "protocol_version"})
+CONFIG_SET_KEYS = frozenset({"host", "port", "timeout_ms", "protocol_version", "auth_token"})
 
 
 def default_config_path() -> Path:
@@ -45,6 +47,7 @@ def parse_env() -> dict[str, Any]:
         "log_level": os.getenv(f"{ENV_PREFIX}LOG_LEVEL"),
         "log_file": os.getenv(f"{ENV_PREFIX}LOG_FILE"),
         "protocol_version": os.getenv(f"{ENV_PREFIX}PROTOCOL_VERSION"),
+        "auth_token": os.getenv(f"{ENV_PREFIX}AUTH_TOKEN"),
     }
 
 
@@ -76,8 +79,8 @@ def _load_file_values(path: Path) -> dict[str, Any]:
         return {}
 
     try:
-        raw = tomli.loads(path.read_text(encoding="utf-8"))
-    except (tomli.TOMLDecodeError, OSError) as exc:
+        raw = tomllib.loads(path.read_text(encoding="utf-8"))
+    except (tomllib.TOMLDecodeError, OSError) as exc:
         raise AppError(
             error_code=ErrorCode.CONFIG_INVALID,
             message=f"Failed to read config file: {path}",
@@ -119,6 +122,11 @@ def _settings_from_merged(merged: dict[str, Any], *, resolved_path: Path) -> Set
         if "protocol_version" in merged
         else DEFAULT_SETTINGS.protocol_version
     )
+    auth_token = (
+        _normalize_str("auth_token", merged["auth_token"])
+        if "auth_token" in merged and merged["auth_token"] is not None
+        else None
+    )
 
     if not host:
         raise AppError(
@@ -145,7 +153,7 @@ def _settings_from_merged(merged: dict[str, Any], *, resolved_path: Path) -> Set
         raise AppError(
             error_code=ErrorCode.CONFIG_INVALID,
             message=f"protocol_version must be positive: {protocol_version}",
-            hint="Set protocol_version to 2.",
+            hint="Set protocol_version to 3.",
             exit_code=ExitCode.CONFIG_INVALID,
         )
 
@@ -157,6 +165,7 @@ def _settings_from_merged(merged: dict[str, Any], *, resolved_path: Path) -> Set
         log_file=log_file,
         protocol_version=protocol_version,
         config_path=str(resolved_path),
+        auth_token=auth_token,
     )
 
 
@@ -178,7 +187,15 @@ def _serialize_toml_value(value: Any) -> str:
 
 
 def _render_config_content(values: dict[str, Any]) -> str:
-    ordered_keys = ["host", "port", "timeout_ms", "log_level", "log_file", "protocol_version"]
+    ordered_keys = [
+        "host",
+        "port",
+        "timeout_ms",
+        "log_level",
+        "log_file",
+        "protocol_version",
+        "auth_token",
+    ]
     lines: list[str] = []
 
     for key in ordered_keys:

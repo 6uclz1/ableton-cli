@@ -12,7 +12,6 @@ from ..refs import (
     TrackStableRefOption,
     build_track_ref,
 )
-from ._validation import require_non_empty_string
 
 ROUTING_TYPE_HINT = "Use one of the exact routing types returned by track routing get."
 ROUTING_CHANNEL_HINT = "Use one of the exact routing channels returned by track routing get."
@@ -52,23 +51,17 @@ def register_commands(
     @input_app.command("set")
     def track_routing_input_set(
         ctx: typer.Context,
-        routing_type: Annotated[str, typer.Option("--type", help="Input routing type")] = "",
+        routing_type: Annotated[str, typer.Option("--type", help="Input routing type")],
         routing_channel: Annotated[
-            str,
-            typer.Option("--channel", help="Input routing channel"),
-        ] = "",
+            str | None,
+            typer.Option("--channel", help="Input routing channel; omit for Live's default"),
+        ] = None,
         track_index: TrackIndexOption = None,
         track_name: TrackNameOption = None,
         selected_track: SelectedTrackOption = False,
         track_query: TrackQueryOption = None,
         track_ref: TrackStableRefOption = None,
     ) -> None:
-        valid_type = require_non_empty_string("type", routing_type, hint=ROUTING_TYPE_HINT)
-        valid_channel = require_non_empty_string(
-            "channel",
-            routing_channel,
-            hint=ROUTING_CHANNEL_HINT,
-        )
         run_track_routing_set(
             ctx,
             command_name="track routing input set",
@@ -79,8 +72,8 @@ def register_commands(
                 track_query=track_query,
                 track_ref=track_ref,
             ),
-            routing_type=valid_type,
-            routing_channel=valid_channel,
+            routing_type=routing_type,
+            routing_channel=routing_channel,
             fn_name="track_routing_input_set",
         )
 
@@ -109,23 +102,17 @@ def register_commands(
     @output_app.command("set")
     def track_routing_output_set(
         ctx: typer.Context,
-        routing_type: Annotated[str, typer.Option("--type", help="Output routing type")] = "",
+        routing_type: Annotated[str, typer.Option("--type", help="Output routing type")],
         routing_channel: Annotated[
-            str,
-            typer.Option("--channel", help="Output routing channel"),
-        ] = "",
+            str | None,
+            typer.Option("--channel", help="Output routing channel; omit for Live's default"),
+        ] = None,
         track_index: TrackIndexOption = None,
         track_name: TrackNameOption = None,
         selected_track: SelectedTrackOption = False,
         track_query: TrackQueryOption = None,
         track_ref: TrackStableRefOption = None,
     ) -> None:
-        valid_type = require_non_empty_string("type", routing_type, hint=ROUTING_TYPE_HINT)
-        valid_channel = require_non_empty_string(
-            "channel",
-            routing_channel,
-            hint=ROUTING_CHANNEL_HINT,
-        )
         run_track_routing_set(
             ctx,
             command_name="track routing output set",
@@ -136,8 +123,8 @@ def register_commands(
                 track_query=track_query,
                 track_ref=track_ref,
             ),
-            routing_type=valid_type,
-            routing_channel=valid_channel,
+            routing_type=routing_type,
+            routing_channel=routing_channel,
             fn_name="track_routing_output_set",
         )
 

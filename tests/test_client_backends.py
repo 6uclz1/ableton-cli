@@ -18,7 +18,7 @@ def _settings() -> Settings:
         timeout_ms=15000,
         log_level="INFO",
         log_file=None,
-        protocol_version=2,
+        protocol_version=3,
         config_path="/tmp/ableton-cli-test.toml",
     )
 
@@ -45,9 +45,12 @@ def test_client_dispatch_uses_backend(monkeypatch: pytest.MonkeyPatch) -> None:
     client = AbletonClient(_settings())
     captured: dict[str, Any] = {}
 
-    def _dispatch(name: str, args: dict[str, Any]) -> dict[str, Any]:
+    def _dispatch(
+        name: str, args: dict[str, Any], *, idempotency_key: str | None = None
+    ) -> dict[str, Any]:
         captured["name"] = name
         captured["args"] = args
+        captured["idempotency_key"] = idempotency_key
         return {"tempo": 123.0}
 
     monkeypatch.setattr(client._backend, "dispatch", _dispatch)
@@ -55,13 +58,13 @@ def test_client_dispatch_uses_backend(monkeypatch: pytest.MonkeyPatch) -> None:
     result = client.song_info()
 
     assert result == {"tempo": 123.0}
-    assert captured == {"name": "song_info", "args": {}}
+    assert captured == {"name": "song_info", "args": {}, "idempotency_key": None}
 
 
 def test_client_read_only_stops_dispatch_before_backend(monkeypatch: pytest.MonkeyPatch) -> None:
     client = AbletonClient(_settings(), read_only=True)
 
-    def _dispatch(_name: str, _args: dict[str, Any]) -> dict[str, Any]:
+    def _dispatch(_name: str, _args: dict[str, Any], **_kwargs: Any) -> dict[str, Any]:
         raise AssertionError("backend dispatch must not run for blocked write commands")
 
     monkeypatch.setattr(client._backend, "dispatch", _dispatch)
@@ -75,7 +78,7 @@ def test_client_read_only_stops_dispatch_before_backend(monkeypatch: pytest.Monk
 def test_client_read_only_blocks_song_undo(monkeypatch: pytest.MonkeyPatch) -> None:
     client = AbletonClient(_settings(), read_only=True)
 
-    def _dispatch(_name: str, _args: dict[str, Any]) -> dict[str, Any]:
+    def _dispatch(_name: str, _args: dict[str, Any], **_kwargs: Any) -> dict[str, Any]:
         raise AssertionError("backend dispatch must not run for blocked write commands")
 
     monkeypatch.setattr(client._backend, "dispatch", _dispatch)

@@ -1175,195 +1175,7 @@
         "requires_confirmation": false
       }
     },
-    "audio loudness analyze": {
-      "args": {
-        "type": "object"
-      },
-      "errors": {
-        "codes": [
-          "ABLETON_NOT_REACHABLE",
-          "BATCH_ASSERT_FAILED",
-          "BATCH_PREFLIGHT_FAILED",
-          "BATCH_RETRY_EXHAUSTED",
-          "BATCH_STEP_FAILED",
-          "CONFIG_INVALID",
-          "CONFIRMATION_REQUIRED",
-          "INSTALL_TARGET_NOT_FOUND",
-          "INTERNAL_ERROR",
-          "INVALID_ARGUMENT",
-          "NOT_IMPLEMENTED",
-          "PLUGIN_INSTALL_FAILED",
-          "PLUGIN_INVALID",
-          "PLUGIN_LOAD_FAILED",
-          "PROTOCOL_CONNECTION_CLOSED",
-          "PROTOCOL_INVALID_RESPONSE",
-          "PROTOCOL_MALFORMED_JSON",
-          "PROTOCOL_REQUEST_ID_MISMATCH",
-          "PROTOCOL_VERSION_MISMATCH",
-          "READ_ONLY_VIOLATION",
-          "REMOTE_BUSY",
-          "REMOTE_SCRIPT_INCOMPATIBLE",
-          "REMOTE_SCRIPT_NOT_INSTALLED",
-          "SET_FILE_INVALID",
-          "SET_INTEGRITY_FAILED",
-          "SET_SCHEMA_UNSUPPORTED",
-          "SKILL_SOURCE_NOT_FOUND",
-          "TIMEOUT",
-          "UNAUTHORIZED",
-          "UNSUPPORTED_OS"
-        ]
-      },
-      "result": {
-        "type": "object"
-      },
-      "side_effect": {
-        "idempotent": false,
-        "kind": "write",
-        "requires_confirmation": false
-      }
-    },
-    "audio reference compare": {
-      "args": {
-        "type": "object"
-      },
-      "errors": {
-        "codes": [
-          "ABLETON_NOT_REACHABLE",
-          "BATCH_ASSERT_FAILED",
-          "BATCH_PREFLIGHT_FAILED",
-          "BATCH_RETRY_EXHAUSTED",
-          "BATCH_STEP_FAILED",
-          "CONFIG_INVALID",
-          "CONFIRMATION_REQUIRED",
-          "INSTALL_TARGET_NOT_FOUND",
-          "INTERNAL_ERROR",
-          "INVALID_ARGUMENT",
-          "NOT_IMPLEMENTED",
-          "PLUGIN_INSTALL_FAILED",
-          "PLUGIN_INVALID",
-          "PLUGIN_LOAD_FAILED",
-          "PROTOCOL_CONNECTION_CLOSED",
-          "PROTOCOL_INVALID_RESPONSE",
-          "PROTOCOL_MALFORMED_JSON",
-          "PROTOCOL_REQUEST_ID_MISMATCH",
-          "PROTOCOL_VERSION_MISMATCH",
-          "READ_ONLY_VIOLATION",
-          "REMOTE_BUSY",
-          "REMOTE_SCRIPT_INCOMPATIBLE",
-          "REMOTE_SCRIPT_NOT_INSTALLED",
-          "SET_FILE_INVALID",
-          "SET_INTEGRITY_FAILED",
-          "SET_SCHEMA_UNSUPPORTED",
-          "SKILL_SOURCE_NOT_FOUND",
-          "TIMEOUT",
-          "UNAUTHORIZED",
-          "UNSUPPORTED_OS"
-        ]
-      },
-      "result": {
-        "type": "object"
-      },
-      "side_effect": {
-        "idempotent": false,
-        "kind": "write",
-        "requires_confirmation": false
-      }
-    },
     "audio sections import": {
-      "args": {
-        "type": "object"
-      },
-      "errors": {
-        "codes": [
-          "ABLETON_NOT_REACHABLE",
-          "BATCH_ASSERT_FAILED",
-          "BATCH_PREFLIGHT_FAILED",
-          "BATCH_RETRY_EXHAUSTED",
-          "BATCH_STEP_FAILED",
-          "CONFIG_INVALID",
-          "CONFIRMATION_REQUIRED",
-          "INSTALL_TARGET_NOT_FOUND",
-          "INTERNAL_ERROR",
-          "INVALID_ARGUMENT",
-          "NOT_IMPLEMENTED",
-          "PLUGIN_INSTALL_FAILED",
-          "PLUGIN_INVALID",
-          "PLUGIN_LOAD_FAILED",
-          "PROTOCOL_CONNECTION_CLOSED",
-          "PROTOCOL_INVALID_RESPONSE",
-          "PROTOCOL_MALFORMED_JSON",
-          "PROTOCOL_REQUEST_ID_MISMATCH",
-          "PROTOCOL_VERSION_MISMATCH",
-          "READ_ONLY_VIOLATION",
-          "REMOTE_BUSY",
-          "REMOTE_SCRIPT_INCOMPATIBLE",
-          "REMOTE_SCRIPT_NOT_INSTALLED",
-          "SET_FILE_INVALID",
-          "SET_INTEGRITY_FAILED",
-          "SET_SCHEMA_UNSUPPORTED",
-          "SKILL_SOURCE_NOT_FOUND",
-          "TIMEOUT",
-          "UNAUTHORIZED",
-          "UNSUPPORTED_OS"
-        ]
-      },
-      "result": {
-        "type": "object"
-      },
-      "side_effect": {
-        "idempotent": false,
-        "kind": "write",
-        "requires_confirmation": false
-      }
-    },
-    "audio spectrum analyze": {
-      "args": {
-        "type": "object"
-      },
-      "errors": {
-        "codes": [
-          "ABLETON_NOT_REACHABLE",
-          "BATCH_ASSERT_FAILED",
-          "BATCH_PREFLIGHT_FAILED",
-          "BATCH_RETRY_EXHAUSTED",
-          "BATCH_STEP_FAILED",
-          "CONFIG_INVALID",
-          "CONFIRMATION_REQUIRED",
-          "INSTALL_TARGET_NOT_FOUND",
-          "INTERNAL_ERROR",
-          "INVALID_ARGUMENT",
-          "NOT_IMPLEMENTED",
-          "PLUGIN_INSTALL_FAILED",
-          "PLUGIN_INVALID",
-          "PLUGIN_LOAD_FAILED",
-          "PROTOCOL_CONNECTION_CLOSED",
-          "PROTOCOL_INVALID_RESPONSE",
-          "PROTOCOL_MALFORMED_JSON",
-          "PROTOCOL_REQUEST_ID_MISMATCH",
-          "PROTOCOL_VERSION_MISMATCH",
-          "READ_ONLY_VIOLATION",
-          "REMOTE_BUSY",
-          "REMOTE_SCRIPT_INCOMPATIBLE",
-          "REMOTE_SCRIPT_NOT_INSTALLED",
-          "SET_FILE_INVALID",
-          "SET_INTEGRITY_FAILED",
-          "SET_SCHEMA_UNSUPPORTED",
-          "SKILL_SOURCE_NOT_FOUND",
-          "TIMEOUT",
-          "UNAUTHORIZED",
-          "UNSUPPORTED_OS"
-        ]
-      },
-      "result": {
-        "type": "object"
-      },
-      "side_effect": {
-        "idempotent": false,
-        "kind": "write",
-        "requires_confirmation": false
-      }
-    },
-    "audio spectrum shares": {
       "args": {
         "type": "object"
       },
@@ -13915,53 +13727,6 @@
         "requires_confirmation": false
       }
     },
-    "remix mastering analyze": {
-      "args": {
-        "type": "object"
-      },
-      "errors": {
-        "codes": [
-          "ABLETON_NOT_REACHABLE",
-          "BATCH_ASSERT_FAILED",
-          "BATCH_PREFLIGHT_FAILED",
-          "BATCH_RETRY_EXHAUSTED",
-          "BATCH_STEP_FAILED",
-          "CONFIG_INVALID",
-          "CONFIRMATION_REQUIRED",
-          "INSTALL_TARGET_NOT_FOUND",
-          "INTERNAL_ERROR",
-          "INVALID_ARGUMENT",
-          "NOT_IMPLEMENTED",
-          "PLUGIN_INSTALL_FAILED",
-          "PLUGIN_INVALID",
-          "PLUGIN_LOAD_FAILED",
-          "PROTOCOL_CONNECTION_CLOSED",
-          "PROTOCOL_INVALID_RESPONSE",
-          "PROTOCOL_MALFORMED_JSON",
-          "PROTOCOL_REQUEST_ID_MISMATCH",
-          "PROTOCOL_VERSION_MISMATCH",
-          "READ_ONLY_VIOLATION",
-          "REMOTE_BUSY",
-          "REMOTE_SCRIPT_INCOMPATIBLE",
-          "REMOTE_SCRIPT_NOT_INSTALLED",
-          "SET_FILE_INVALID",
-          "SET_INTEGRITY_FAILED",
-          "SET_SCHEMA_UNSUPPORTED",
-          "SKILL_SOURCE_NOT_FOUND",
-          "TIMEOUT",
-          "UNAUTHORIZED",
-          "UNSUPPORTED_OS"
-        ]
-      },
-      "result": {
-        "type": "object"
-      },
-      "side_effect": {
-        "idempotent": false,
-        "kind": "write",
-        "requires_confirmation": false
-      }
-    },
     "remix mastering apply": {
       "args": {
         "type": "object"
@@ -14245,6 +14010,53 @@
       }
     },
     "remix mastering reference remove": {
+      "args": {
+        "type": "object"
+      },
+      "errors": {
+        "codes": [
+          "ABLETON_NOT_REACHABLE",
+          "BATCH_ASSERT_FAILED",
+          "BATCH_PREFLIGHT_FAILED",
+          "BATCH_RETRY_EXHAUSTED",
+          "BATCH_STEP_FAILED",
+          "CONFIG_INVALID",
+          "CONFIRMATION_REQUIRED",
+          "INSTALL_TARGET_NOT_FOUND",
+          "INTERNAL_ERROR",
+          "INVALID_ARGUMENT",
+          "NOT_IMPLEMENTED",
+          "PLUGIN_INSTALL_FAILED",
+          "PLUGIN_INVALID",
+          "PLUGIN_LOAD_FAILED",
+          "PROTOCOL_CONNECTION_CLOSED",
+          "PROTOCOL_INVALID_RESPONSE",
+          "PROTOCOL_MALFORMED_JSON",
+          "PROTOCOL_REQUEST_ID_MISMATCH",
+          "PROTOCOL_VERSION_MISMATCH",
+          "READ_ONLY_VIOLATION",
+          "REMOTE_BUSY",
+          "REMOTE_SCRIPT_INCOMPATIBLE",
+          "REMOTE_SCRIPT_NOT_INSTALLED",
+          "SET_FILE_INVALID",
+          "SET_INTEGRITY_FAILED",
+          "SET_SCHEMA_UNSUPPORTED",
+          "SKILL_SOURCE_NOT_FOUND",
+          "TIMEOUT",
+          "UNAUTHORIZED",
+          "UNSUPPORTED_OS"
+        ]
+      },
+      "result": {
+        "type": "object"
+      },
+      "side_effect": {
+        "idempotent": false,
+        "kind": "write",
+        "requires_confirmation": false
+      }
+    },
+    "remix mastering report add": {
       "args": {
         "type": "object"
       },

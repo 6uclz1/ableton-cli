@@ -1,5 +1,5 @@
-from .compare import compare_reference
-from .loudness import analyze_loudness
-from .spectrum import analyze_spectrum, spectrum_shares
+"""Offline PCM WAV analysis that needs no external tools: transients and groove.
 
-__all__ = ["analyze_loudness", "analyze_spectrum", "compare_reference", "spectrum_shares"]
+ffmpeg-based loudness, spectrum and reference analysis lives in the ``analysis``
+plugin (https://github.com/6uclz1/ableton-cli-analysis).
+"""

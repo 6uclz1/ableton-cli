@@ -4,7 +4,7 @@ from typing import Any
 
 import pytest
 
-from ableton_cli.capture import ShareAnalysis, capture_tracks
+from ableton_cli.capture import capture_tracks
 from ableton_cli.errors import AppError
 
 MAIN = {"mode": "main"}
@@ -150,31 +150,6 @@ def test_capture_tracks_labels_duplicate_track_names_by_index(monkeypatch) -> No
     assert [capture["label"] for capture in result["captures"]] == ["0:Synth", "1:Synth"]
 
 
-def test_capture_tracks_analyze_reports_band_shares_by_label(monkeypatch) -> None:
-    live = _FakeLive(tracks=[("Kick", False), ("Lead", False)])
-    _fake_capture(monkeypatch, live)
-    calls: list[tuple[Any, ...]] = []
-
-    def shares(stems, *, resolution, focus):  # noqa: ANN001, ANN202
-        calls.append((stems, resolution, focus))
-        return {"resolution": resolution}
-
-    monkeypatch.setattr("ableton_cli.capture.spectrum_shares", shares)
-
-    result = capture_tracks(
-        live,
-        tracks=[0, 1],
-        bars=4.0,
-        start=0.0,
-        analysis=ShareAnalysis(resolution="third-octave", focus="Lead"),
-    )
-
-    assert calls == [
-        ([("Kick", "/rec/Kick.wav"), ("Lead", "/rec/Lead.wav")], "third-octave", "Lead")
-    ]
-    assert result["shares"] == {"resolution": "third-octave"}
-
-
 @pytest.mark.parametrize(
     ("tracks", "message"),
     [
@@ -209,27 +184,6 @@ def test_capture_tracks_refuses_when_a_track_is_already_soloed(monkeypatch) -> N
     assert live.calls == []
 
 
-def test_session_capture_tracks_rejects_focus_without_analyze(runner, cli_app) -> None:
-    result = runner.invoke(
-        cli_app,
-        [
-            "--output",
-            "json",
-            "session",
-            "capture-tracks",
-            "--track-index",
-            "0",
-            "--start",
-            "8",
-            "--focus",
-            "Kick",
-        ],
-    )
-
-    assert result.exit_code == 2, result.stdout
-    assert "--focus requires --analyze" in result.stdout
-
-
 def test_session_capture_tracks_is_blocked_in_read_only_mode(runner, cli_app) -> None:
     result = runner.invoke(
         cli_app,
@@ -250,16 +204,3 @@ def test_session_capture_tracks_is_blocked_in_read_only_mode(runner, cli_app) ->
 
     assert result.exit_code == 20, result.stdout
     assert '"code": "READ_ONLY_VIOLATION"' in result.stdout
-
-
-def test_capture_tracks_rejects_unknown_resolution_before_capturing(monkeypatch) -> None:
-    live = _FakeLive(tracks=[("Kick", False)])
-    _fake_capture(monkeypatch, live)
-
-    with pytest.raises(AppError) as exc_info:
-        capture_tracks(
-            live, tracks=[0], bars=4.0, start=0.0, analysis=ShareAnalysis(resolution="octave")
-        )
-
-    assert "unsupported spectrum resolution: octave" in exc_info.value.message
-    assert live.calls == []

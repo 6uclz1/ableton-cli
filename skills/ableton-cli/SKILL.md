@@ -534,6 +534,28 @@ uv run ableton-cli --install-completion
 uv run ableton-cli --show-completion
 ```
 
+### Plugins
+
+```bash
+uv run ableton-cli plugins list
+uv run ableton-cli plugins info <name>
+uv run ableton-cli --plan plugins install https://github.com/<owner>/<repo>
+uv run ableton-cli plugins install https://github.com/<owner>/<repo> --ref v1.2.0
+uv run ableton-cli plugins update <name> --ref <branch|tag|sha>
+uv run ableton-cli plugins uninstall <name>
+uv run ableton-cli plugins sync
+```
+
+- Installed plugins add top-level groups (`uv run ableton-cli <plugin> ...`); `plugins list`
+  shows their commands and declared side effects. Plugin commands use the same envelope,
+  exit codes, `--plan`, `--read-only` and `--require-confirmation` rules as core commands.
+- Plugin error codes are prefixed with the plugin name (`ACE_STEP_GENERATION_FAILED`). A plugin
+  that fails to load answers every call with `PLUGIN_LOAD_FAILED`; core commands keep working.
+- Installing runs third-party code. Run `--plan plugins install` first: it shows the commit the
+  ref resolves to without installing. Installs are pinned to that commit.
+- When `doctor` reports plugins `out_of_sync` (the environment lost them, e.g. after reinstalling
+  ableton-cli), run `plugins sync`.
+
 ## Operational notes
 
 - `track|return-track|master meter get` read output meters on Live's 0.0-1.0 meter scale (not dB),

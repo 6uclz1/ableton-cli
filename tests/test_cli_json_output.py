@@ -76,7 +76,7 @@ def test_install_remote_script_verify_includes_doctor_result(runner, cli_app, mo
             "candidates": ["/tmp"],
         }
 
-    def _run_doctor_stub(settings, *, platform_paths) -> dict[str, object]:
+    def _run_doctor_stub(settings, *, platform_paths, plugin_health) -> dict[str, object]:
         del settings
         seen["doctor"] = platform_paths
         return {
@@ -121,13 +121,14 @@ def test_install_skill_outputs_json_envelope(runner, cli_app, monkeypatch) -> No
     monkeypatch.setattr(
         setup,
         "install_skill",
-        lambda yes, dry_run, platform_paths, target: {
+        lambda yes, dry_run, platform_paths, target, plugin_skills: {
             "action": "install",
             "dry_run": dry_run,
             "target_type": target,
             "source": "/tmp/repo/skills/ableton-cli/SKILL.md",
             "target": "/tmp/.claude/skills/ableton-cli/SKILL.md",
             "home": "/tmp/.claude",
+            "plugin_skills": [],
         },
     )
 
@@ -152,13 +153,14 @@ def test_install_skill_cursor_target_outputs_json_envelope(runner, cli_app, monk
     monkeypatch.setattr(
         setup,
         "install_skill",
-        lambda yes, dry_run, platform_paths, target: {
+        lambda yes, dry_run, platform_paths, target, plugin_skills: {
             "action": "install",
             "dry_run": dry_run,
             "target_type": target,
             "source": "/tmp/repo/skills/ableton-cli/SKILL.md",
             "target": "/tmp/.cursor/skills/ableton-cli/SKILL.md",
             "home": "/tmp/.cursor",
+            "plugin_skills": [],
         },
     )
 

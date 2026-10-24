@@ -14,6 +14,7 @@ from .config import Settings
 from .errors import AppError
 from .installer import REMOTE_SCRIPT_DIR_NAME
 from .platform_paths import PlatformPaths
+from .plugins.status import PluginHealth
 
 
 @dataclass(slots=True)
@@ -44,7 +45,32 @@ def _fail(name: str, hint: str, details: dict[str, Any]) -> DoctorCheck:
     return DoctorCheck(name=name, status="FAIL", hint=hint, details=details)
 
 
-def run_doctor(settings: Settings, *, platform_paths: PlatformPaths) -> dict[str, Any]:
+def _plugins_check(health: PluginHealth) -> DoctorCheck:
+    details: dict[str, Any] = {
+        "enabled": health.enabled,
+        "loaded": list(health.loaded),
+        "failed": list(health.failed),
+        "out_of_sync": list(health.out_of_sync),
+        "manifest_error": health.manifest_error,
+    }
+    if health.manifest_error is not None:
+        return _fail("plugins", "Fix or delete the plugin manifest (plugins.toml).", details)
+    if health.failed:
+        return _fail(
+            "plugins",
+            "Run 'ableton-cli plugins info <name>' for each failed plugin.",
+            details,
+        )
+    if health.out_of_sync:
+        return _fail("plugins", "Run 'ableton-cli plugins sync' to reinstall them.", details)
+    if not health.enabled:
+        return _warn("plugins", "Plugins are disabled by ABLETON_CLI_PLUGINS=off.", details)
+    return _pass("plugins", details)
+
+
+def run_doctor(
+    settings: Settings, *, platform_paths: PlatformPaths, plugin_health: PluginHealth
+) -> dict[str, Any]:
     checks: list[DoctorCheck] = []
 
     config_path = Path(settings.config_path) if settings.config_path else None
@@ -155,6 +181,8 @@ def run_doctor(settings: Settings, *, platform_paths: PlatformPaths) -> dict[str
                 {},
             )
         )
+
+    checks.append(_plugins_check(plugin_health))
 
     client = AbletonClient(settings)
     try:

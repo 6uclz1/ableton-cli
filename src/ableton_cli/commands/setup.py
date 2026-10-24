@@ -10,8 +10,11 @@ from ..completion import completion_help
 from ..config import default_config_path, init_config_file, update_config_value
 from ..doctor import run_doctor
 from ..errors import AppError, ErrorCode, ExitCode
-from ..installer import install_remote_script, install_skill
-from ..runtime import execute_command, get_client, get_runtime
+from ..installer import PluginSkill, install_remote_script, install_skill
+from ..plugins.environment import PluginEnvironment
+from ..plugins.manifest import plugin_manifest_path
+from ..plugins.status import plugin_health
+from ..runtime import RuntimeContext, execute_command, get_client, get_runtime
 from ._validation import invalid_argument, require_non_empty_string
 
 config_app = typer.Typer(help="Configuration commands", no_args_is_help=True)
@@ -123,12 +126,23 @@ def config_set(
     )
 
 
+def _run_doctor(runtime: RuntimeContext) -> dict[str, object]:
+    return run_doctor(
+        runtime.settings,
+        platform_paths=runtime.platform_paths,
+        plugin_health=plugin_health(
+            runtime.plugins,
+            manifest_path=plugin_manifest_path(),
+            environment=PluginEnvironment(),
+        ),
+    )
+
+
 def _register_doctor_command(app: typer.Typer) -> None:
     @app.command("doctor")
     def doctor(ctx: typer.Context) -> None:
         def _run() -> dict[str, object]:
-            runtime = get_runtime(ctx)
-            return run_doctor(runtime.settings, platform_paths=runtime.platform_paths)
+            return _run_doctor(get_runtime(ctx))
 
         execute_command(
             ctx,
@@ -175,7 +189,7 @@ def _register_install_remote_script_command(app: typer.Typer) -> None:
             )
             if not verify:
                 return install_result
-            doctor_result = run_doctor(runtime.settings, platform_paths=runtime.platform_paths)
+            doctor_result = _run_doctor(runtime)
             return {
                 **install_result,
                 "verification": doctor_result,
@@ -226,6 +240,11 @@ def _register_install_skill_command(app: typer.Typer) -> None:
                 dry_run=dry_run,
                 platform_paths=runtime.platform_paths,
                 target=normalized_target,
+                plugin_skills=[
+                    PluginSkill(plugin=loaded.name, path=path)
+                    for loaded in runtime.plugins.loaded
+                    for path in loaded.plugin.skills
+                ],
             )
 
         execute_command(

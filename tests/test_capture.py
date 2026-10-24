@@ -279,40 +279,6 @@ def test_capture_session_rejects_non_positive_bars() -> None:
     assert excinfo.value.details["step"] == "validate_bars"
 
 
-def test_capture_session_analyze_invokes_analyzer_entry_points(monkeypatch) -> None:
-    import ableton_cli.capture as capture_module
-
-    loudness_calls: list[str] = []
-    spectrum_calls: list[str] = []
-    monkeypatch.setattr(
-        capture_module,
-        "analyze_loudness",
-        lambda path: loudness_calls.append(path) or {"integrated_lufs": -14.0},
-    )
-    monkeypatch.setattr(
-        capture_module,
-        "analyze_spectrum",
-        lambda path: spectrum_calls.append(path) or {"bands": {}},
-    )
-    client, recorded_seconds = _client_recording_from(4.0)
-
-    result = capture_session(
-        client,
-        track=0,
-        slot=0,
-        bars=1,
-        start=4.0,
-        analyze=True,
-        wait_fn=lambda _seconds: None,
-        recorded_seconds_fn=recorded_seconds,
-    )
-
-    assert loudness_calls == ["/tmp/capture/Track 1.wav"]
-    assert spectrum_calls == ["/tmp/capture/Track 1.wav"]
-    assert result["loudness"] == {"integrated_lufs": -14.0}
-    assert result["spectrum"] == {"bands": {}}
-
-
 def test_capture_session_qa_project_invokes_mastering_qa(monkeypatch) -> None:
     import ableton_cli.capture as capture_module
 

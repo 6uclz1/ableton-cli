@@ -93,13 +93,10 @@ uv run ableton-cli master meter get --samples 20 --interval-ms 50
 uv run ableton-cli master devices list
 uv run ableton-cli device insert Utility --main
 uv run ableton-cli device parameter set-display --main --device-name "Glue Compressor" --parameter-name Threshold -- -10
-uv run ableton-cli audio loudness analyze --path ./renders/remix.wav --engine ffmpeg
-uv run ableton-cli audio spectrum analyze --path ./renders/remix.wav --profile anime-club
-uv run ableton-cli audio spectrum shares --stem Kick=./caps/kick.wav --stem Lead=./caps/lead.wav --focus Lead
-uv run ableton-cli session capture-tracks --track-index 0 --track-index 9 --start 304 --bars 8 --bypass-main-devices --analyze
+uv run ableton-cli session capture-tracks --track-index 0 --track-index 9 --start 304 --bars 8 --bypass-main-devices
 uv run ableton-cli audio transient analyze --path ./loops/drum-break.wav --bpm 174 --max-slices 16
 uv run ableton-cli remix mastering target set --project ./proj/remix_project.json --profile anime-club-demo
-uv run ableton-cli remix mastering analyze --project ./proj/remix_project.json --render ./renders/remix.wav
+uv run ableton-cli remix mastering report add --project ./proj/remix_project.json --kind loudness --report ./proj/reports/remix_loudness.json
 uv run ableton-cli remix mastering plan --project ./proj/remix_project.json
 uv run ableton-cli remix mastering apply --project ./proj/remix_project.json --dry-run
 uv run ableton-cli remix mastering qa --project ./proj/remix_project.json --render ./renders/remix.wav
@@ -145,9 +142,15 @@ uv run ableton-cli set diff --from ./Song\ Project/Song.als --to ./Song\ Project
 uv run ableton-cli set automation write --path ./Song\ Project/Song.als --out ./Song\ Project/Song-auto.als --track-index 0 --target device.1.Frequency --points-json '[{"time":0,"value":500},{"time":64,"value":8000}]'
 ```
 
-Offline mastering analysis with the `ffmpeg` engine requires both `ffmpeg` and
-`ffprobe` on `PATH`. Without them, `audio loudness analyze`, `audio reference
-compare`, and `remix mastering analyze` fail explicitly with `CONFIG_INVALID`.
+Offline loudness, spectrum, band-share and reference analysis through ffmpeg is not part of
+the core: install the `analysis` plugin (the `ableton-cli-analysis` repository; see
+[docs/mastering.md](docs/mastering.md) for the install command), which adds
+`ableton-cli analysis loudness analyze`, `analysis spectrum analyze`, `analysis spectrum
+shares` and `analysis reference compare`. Write their reports with `--report-out` and
+register them with `remix mastering report add --kind loudness|spectrum|reference_compare`
+so `remix mastering qa` can read them; `report add` fails with `INVALID_ARGUMENT` when a
+report lacks a field QA reads. `session capture` and `session capture-tracks` return the
+captured `file_path`s for the plugin to measure.
 
 Ref-aware track, device, and parameter commands now use mutually exclusive selector flags instead of positional indexes.
 Track selectors: `--track-index`, `--track-name`, `--selected-track`, `--track-query`, `--track-ref`.
@@ -657,6 +660,53 @@ Skill-oriented references:
 - JSON output examples: `docs/skills/examples/*.json`
 
 All skill command examples assume the `uv run ableton-cli ...` form.
+
+## Plugins
+
+Features that do not belong in the core CLI (for example a local music generator or a
+gating tool) ship as plugins: separate Python packages that add a top-level command group,
+`ableton-cli <plugin> ...`. Plugin commands use the core JSON envelope, exit codes,
+`--plan`/`--dry-run`, `--read-only` and `--require-confirmation`.
+
+Install a plugin from its GitHub repository:
+
+```bash
+uv run ableton-cli --plan plugins install https://github.com/<owner>/<repo>
+uv run ableton-cli plugins install https://github.com/<owner>/<repo>
+uv run ableton-cli plugins install https://github.com/<owner>/<repo>/tree/v1.2.0
+uv run ableton-cli plugins list
+uv run ableton-cli plugins info <name>
+uv run ableton-cli plugins update <name> --ref <branch|tag|sha>
+uv run ableton-cli plugins uninstall <name>
+uv run ableton-cli plugins sync
+```
+
+- Only `https://github.com/<owner>/<repo>` URLs are accepted, optionally ending in
+  `/tree/<ref>` (or pass `--ref`). The ref is resolved with `git ls-remote` to a full commit
+  SHA, and the install is pinned to that commit. `--plan` shows the commit without installing.
+- The package is installed with `uv pip install` into the Python environment that runs
+  `ableton-cli`. Every package already installed is pinned through a constraints file, so a
+  plugin can add dependencies but never change ableton-cli's or another plugin's. `git` and
+  `uv` must be on `PATH` (`CONFIG_INVALID` otherwise).
+- After installing, the plugin is loaded in a fresh interpreter. If it does not load (wrong
+  plugin API version, name clash, import error, ...) the install is rolled back and the command
+  fails with `PLUGIN_INVALID`.
+- Installed plugins are recorded in `plugins.toml` next to the config file (override the path
+  with `ABLETON_CLI_PLUGIN_MANIFEST`). Recreating the environment (reinstalling ableton-cli,
+  `uv sync`) removes plugin packages; `doctor` then fails its `plugins` check and
+  `plugins sync` reinstalls the recorded commits.
+- Installing a plugin runs its code with the same access as `ableton-cli`, including write
+  access to the Live Set. Only install repositories you trust; `plugins install`,
+  `update`, `uninstall` and `sync` are destructive commands, so `--require-confirmation`
+  makes them require `--yes`.
+- A plugin that fails to load answers every call with `PLUGIN_LOAD_FAILED` and the reason in
+  `error.details.load_failure`; core commands keep working. `ABLETON_CLI_PLUGINS=off`
+  disables all plugins (`on` is the default; any other value is `CONFIG_INVALID`).
+- Plugin error codes are prefixed with the plugin name, for example
+  `ACE_STEP_GENERATION_FAILED`.
+- `install-skill` also installs the skills of loaded plugins (`result.plugin_skills`).
+
+Writing a plugin: see `docs/plugins.md`.
 
 ## Contributing
 

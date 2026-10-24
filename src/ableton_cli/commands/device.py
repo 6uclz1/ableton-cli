@@ -685,7 +685,7 @@ _register_device_target_command(
 @device_app.command("move")
 def device_move(
     ctx: typer.Context,
-    to_index: Annotated[int, typer.Option("--to-index", help="Destination index")],
+    to_index: Annotated[int, typer.Option("--to-index", help="Final device index after the move")],
     track_index: TrackIndexOption = None,
     track_name: TrackNameOption = None,
     selected_track: SelectedTrackOption = False,

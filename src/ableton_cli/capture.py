@@ -1,10 +1,11 @@
 """Session capture workflow: compose existing primitives (routing, arm,
-record, transport, analysis) into one "hear what you composed" command.
+record, transport) into one "hear what you composed" command.
 
 ``capture_tracks`` repeats that capture once per track with the track soloed,
 into a temporary audio track, so each track's contribution to a section can be
-measured on its own (``spectrum_shares``). Every solo, temporary track, and
-bypassed main device it touches is restored even when a capture fails.
+measured on its own (for example with the analysis plugin's
+``analysis spectrum shares``). Every solo, temporary track, and bypassed main
+device it touches is restored even when a capture fails.
 
 ``capture_session`` takes an injected ``client`` so it is unit-testable
 with fakes (see ``tests/test_capture.py``), per the dependency-injection
@@ -18,12 +19,9 @@ from __future__ import annotations
 import time
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
-from dataclasses import dataclass
 from typing import Any
 
-from .audio_analysis import analyze_loudness, analyze_spectrum, spectrum_shares
 from .audio_analysis.io import wav_duration_sec
-from .audio_analysis.spectrum import RESOLUTIONS
 from .errors import AppError, ErrorCode, ExitCode
 from .remix.mastering import run_mastering_qa
 
@@ -50,7 +48,6 @@ def capture_session(
     bars: float,
     start: float,
     set_routing: bool = False,
-    analyze: bool = False,
     qa_project: str | None = None,
     wait_fn: Callable[[float], None] | None = None,
     recorded_seconds_fn: Callable[[str], float] | None = None,
@@ -166,10 +163,6 @@ def capture_session(
         "file_path": file_path,
     }
 
-    if analyze:
-        result["loudness"] = analyze_loudness(file_path)
-        result["spectrum"] = analyze_spectrum(file_path)
-
     if qa_project is not None:
         result["qa"] = run_mastering_qa(qa_project, render=file_path)
 
@@ -179,14 +172,6 @@ def capture_session(
 _MAIN_TRACK = {"mode": "main"}
 
 
-@dataclass(frozen=True, slots=True)
-class ShareAnalysis:
-    """Band-share analysis to run on the captures (``spectrum_shares`` arguments)."""
-
-    resolution: str = "bands"
-    focus: str | None = None
-
-
 def capture_tracks(
     client: Any,
     *,
@@ -194,10 +179,8 @@ def capture_tracks(
     bars: float,
     start: float,
     bypass_main_devices: bool = False,
-    analysis: ShareAnalysis | None = None,
     wait_fn: Callable[[float], None] | None = None,
 ) -> dict[str, Any]:
-    _validate_analysis(analysis)
     names = _validate_capture_tracks(client, tracks)
     labels = _track_labels(tracks, names)
 
@@ -214,19 +197,12 @@ def capture_tracks(
             for track in tracks
         ]
 
-    result: dict[str, Any] = {
+    return {
         "start": start,
         "bars": bars,
         "bypassed_main_devices": bypassed,
         "captures": captures,
     }
-    if analysis is not None:
-        result["shares"] = spectrum_shares(
-            [(capture["label"], capture["file_path"]) for capture in captures],
-            resolution=analysis.resolution,
-            focus=analysis.focus,
-        )
-    return result
 
 
 @contextmanager
@@ -251,15 +227,6 @@ def _turn_off_active_main_devices(client: Any, bypassed: list[int]) -> None:
         if client.device_active_get(_MAIN_TRACK, device_ref).get("active"):
             client.device_active_set(_MAIN_TRACK, device_ref, False)
             bypassed.append(device["index"])
-
-
-def _validate_analysis(analysis: ShareAnalysis | None) -> None:
-    if analysis is not None and analysis.resolution not in RESOLUTIONS:
-        raise _invalid_argument(
-            message=f"unsupported spectrum resolution: {analysis.resolution}",
-            hint=f"Use one of: {', '.join(RESOLUTIONS)}.",
-            step="validate_resolution",
-        )
 
 
 def _validate_capture_tracks(client: Any, tracks: list[int]) -> dict[int, str]:

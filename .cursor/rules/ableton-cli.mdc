@@ -17,6 +17,7 @@ This repo controls Ableton Live via a local Remote Script.
 - Stable action mappings: `docs/skills/skill-actions.md`
 - JSON output examples: `docs/skills/examples/*.json`
 - Computer Use fallback and GUI playbooks: `docs/computer-use/README.md`
+- Plugin API, packaging and GitHub installation: `docs/plugins.md`
 
 ## Computer Use fallback
 - For results the CLI cannot produce (plug-in presets and sound design, Configure, modulator mapping, arrangement automation in the open set, saving), use Computer Use following `docs/computer-use/README.md`.

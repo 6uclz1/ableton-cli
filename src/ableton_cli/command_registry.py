@@ -62,6 +62,11 @@ _WRITE = SideEffectSpec(kind="write", idempotent=False, requires_confirmation=Fa
 _DESTRUCTIVE = SideEffectSpec(kind="destructive", idempotent=False, requires_confirmation=True)
 
 
+def command_roots() -> frozenset[str]:
+    """Top-level command names; plugins may not take any of them."""
+    return frozenset(descriptor.command_name.split()[0] for descriptor in COMMAND_DESCRIPTORS)
+
+
 def _d(command_name: str, remote_command: str | None, side_effect: SideEffectSpec):
     return CommandDescriptor(
         command_name=command_name,
@@ -104,11 +109,7 @@ COMMAND_DESCRIPTORS: tuple[CommandDescriptor, ...] = (
     _d("audio asset remove", None, _WRITE),
     _d("audio beatgrid import", None, _WRITE),
     _d("audio groove extract", None, _WRITE),
-    _d("audio loudness analyze", None, _WRITE),
-    _d("audio reference compare", None, _WRITE),
     _d("audio sections import", None, _WRITE),
-    _d("audio spectrum analyze", None, _WRITE),
-    _d("audio spectrum shares", None, _WRITE),
     _d("audio stems list", None, _READ),
     _d("audio stems split", None, _WRITE),
     _d("audio transient analyze", None, _WRITE),
@@ -241,6 +242,12 @@ COMMAND_DESCRIPTORS: tuple[CommandDescriptor, ...] = (
     _d("mixer cue-volume get", "mixer_cue_volume_get", _READ),
     _d("mixer cue-volume set", "mixer_cue_volume_set", _WRITE),
     _d("ping", "ping", _READ),
+    _d("plugins info", None, _READ),
+    _d("plugins install", None, _DESTRUCTIVE),
+    _d("plugins list", None, _READ),
+    _d("plugins sync", None, _DESTRUCTIVE),
+    _d("plugins uninstall", None, _DESTRUCTIVE),
+    _d("plugins update", None, _DESTRUCTIVE),
     _d("remix apply", None, _WRITE),
     _d("remix arrange", None, _WRITE),
     _d("remix device-chain apply", None, _WRITE),
@@ -251,7 +258,6 @@ COMMAND_DESCRIPTORS: tuple[CommandDescriptor, ...] = (
     _d("remix import-assets", None, _WRITE),
     _d("remix init", None, _WRITE),
     _d("remix inspect", None, _WRITE),
-    _d("remix mastering analyze", None, _WRITE),
     _d("remix mastering apply", None, _WRITE),
     _d("remix mastering plan", None, _WRITE),
     _d("remix mastering profile list", None, _READ),
@@ -259,6 +265,7 @@ COMMAND_DESCRIPTORS: tuple[CommandDescriptor, ...] = (
     _d("remix mastering reference add", None, _WRITE),
     _d("remix mastering reference list", None, _READ),
     _d("remix mastering reference remove", None, _WRITE),
+    _d("remix mastering report add", None, _WRITE),
     _d("remix mastering target set", None, _WRITE),
     _d("remix mix-macro", None, _WRITE),
     _d("remix plan", None, _WRITE),

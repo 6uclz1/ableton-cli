@@ -163,7 +163,10 @@ def _walk(
 
 def build_command_surface_snapshot() -> dict[str, Any]:
     """Walk the real CLI app and describe every command's command-line shape."""
-    from ableton_cli.cli import app
+    from ableton_cli.app_factory import create_app
+
+    # Installed plugins are not part of the core surface.
+    app = create_app(plugin_sources=(), env={})
 
     root = get_command(app)
     commands: dict[str, dict[str, Any]] = {}

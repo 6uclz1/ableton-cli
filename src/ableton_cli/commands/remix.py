@@ -15,7 +15,7 @@ from ..remix.manifest import (
 )
 from ..remix.mastering import (
     add_reference,
-    analyze_render,
+    add_report,
     apply_chain_plan,
     list_references,
     mark_chain_applied,
@@ -40,6 +40,7 @@ mastering_app = typer.Typer(help="Remix mastering workflow commands", no_args_is
 mastering_profile_app = typer.Typer(help="Mastering profile commands", no_args_is_help=True)
 mastering_target_app = typer.Typer(help="Mastering target commands", no_args_is_help=True)
 mastering_reference_app = typer.Typer(help="Mastering reference commands", no_args_is_help=True)
+mastering_report_app = typer.Typer(help="Mastering analysis report commands", no_args_is_help=True)
 
 
 def get_client(ctx: typer.Context):  # noqa: ANN201
@@ -430,11 +431,6 @@ def remix_mastering_reference_add(
     role: Annotated[str, typer.Option("--role", help="Reference role")],
     reference_id: Annotated[str, typer.Option("--id", help="Reference id")],
     notes: Annotated[str, typer.Option("--notes", help="Reference notes")] = "",
-    analyze: Annotated[bool, typer.Option("--analyze", help="Analyze reference on add")] = False,
-    report_dir: Annotated[
-        Path | None,
-        typer.Option("--report-dir", help="Analysis report directory"),
-    ] = None,
 ) -> None:
     execute_command(
         ctx,
@@ -445,8 +441,6 @@ def remix_mastering_reference_add(
             "role": role,
             "id": reference_id,
             "notes": notes,
-            "analyze": analyze,
-            "report_dir": None if report_dir is None else str(report_dir),
         },
         action=lambda: add_reference(
             project,
@@ -454,8 +448,6 @@ def remix_mastering_reference_add(
             role=role,
             reference_id=reference_id,
             notes=notes,
-            analyze=analyze,
-            report_dir=report_dir,
         ),
     )
 
@@ -487,35 +479,24 @@ def remix_mastering_reference_remove(
     )
 
 
-@mastering_app.command("analyze")
-def remix_mastering_analyze(
+@mastering_report_app.command("add")
+def remix_mastering_report_add(
     ctx: typer.Context,
     project: ProjectOption,
-    render: Annotated[Path, typer.Option("--render", help="Rendered audio path")],
-    reference: Annotated[
-        str | None,
-        typer.Option("--reference", help="Registered reference id"),
-    ] = None,
-    report_dir: Annotated[
-        Path | None,
-        typer.Option("--report-dir", help="Analysis report directory"),
-    ] = None,
+    kind: Annotated[
+        str,
+        typer.Option("--kind", help="Report kind: loudness, spectrum or reference_compare"),
+    ],
+    report: Annotated[
+        Path,
+        typer.Option("--report", help="JSON report written by an analysis --report-out"),
+    ],
 ) -> None:
     execute_command(
         ctx,
-        command="remix mastering analyze",
-        args={
-            "project": str(project),
-            "render": str(render),
-            "reference": reference,
-            "report_dir": None if report_dir is None else str(report_dir),
-        },
-        action=lambda: analyze_render(
-            project,
-            render=render,
-            reference_id=reference,
-            report_dir=report_dir,
-        ),
+        command="remix mastering report add",
+        args={"project": str(project), "kind": kind, "report": str(report)},
+        action=lambda: add_report(project, kind=kind, report=report),
     )
 
 
@@ -600,6 +581,7 @@ remix_app.add_typer(device_chain_app, name="device-chain")
 mastering_app.add_typer(mastering_profile_app, name="profile")
 mastering_app.add_typer(mastering_target_app, name="target")
 mastering_app.add_typer(mastering_reference_app, name="reference")
+mastering_app.add_typer(mastering_report_app, name="report")
 remix_app.add_typer(mastering_app, name="mastering")
 
 

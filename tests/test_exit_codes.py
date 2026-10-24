@@ -41,6 +41,9 @@ def test_remote_error_to_exit_code_mapping() -> None:
     assert exit_code_from_error_code("SET_FILE_INVALID") == ExitCode.INVALID_ARGUMENT
     assert exit_code_from_error_code("SET_SCHEMA_UNSUPPORTED") == ExitCode.INVALID_ARGUMENT
     assert exit_code_from_error_code("SET_INTEGRITY_FAILED") == ExitCode.EXECUTION_FAILED
+    assert exit_code_from_error_code("PLUGIN_LOAD_FAILED") == ExitCode.EXECUTION_FAILED
+    assert exit_code_from_error_code("PLUGIN_INVALID") == ExitCode.EXECUTION_FAILED
+    assert exit_code_from_error_code("PLUGIN_INSTALL_FAILED") == ExitCode.EXECUTION_FAILED
     assert exit_code_from_error_code("INTERNAL_ERROR") == ExitCode.INTERNAL_ERROR
     assert exit_code_from_error_code("UNKNOWN") == ExitCode.EXECUTION_FAILED
 

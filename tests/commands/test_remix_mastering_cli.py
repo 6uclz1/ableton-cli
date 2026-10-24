@@ -28,7 +28,6 @@ def test_remix_mastering_cli_flow_outputs_json(
     runner,
     cli_app,
     tmp_path: Path,
-    fake_ffmpeg,
 ) -> None:
     source = tmp_path / "source.wav"
     render = tmp_path / "render.wav"
@@ -89,20 +88,35 @@ def test_remix_mastering_cli_flow_outputs_json(
             "ref-main",
         ],
     )
-    analyze = runner.invoke(
+    loudness_report = project_dir / "reports" / "render_loudness.json"
+    loudness_report.parent.mkdir(parents=True, exist_ok=True)
+    loudness_report.write_text(
+        json.dumps(
+            {
+                "path": str(render),
+                "integrated_lufs": -9.0,
+                "true_peak_dbtp": -1.5,
+                "crest_db": 6.0,
+                "clipping_sample_count": 0,
+            }
+        ),
+        encoding="utf-8",
+    )
+    report = runner.invoke(
         cli_app,
         [
             "--output",
             "json",
             "remix",
             "mastering",
-            "analyze",
+            "report",
+            "add",
             "--project",
             str(manifest_path),
-            "--render",
-            str(render),
-            "--reference",
-            "ref-main",
+            "--kind",
+            "loudness",
+            "--report",
+            str(loudness_report),
         ],
     )
     plan = runner.invoke(
@@ -154,12 +168,12 @@ def test_remix_mastering_cli_flow_outputs_json(
     assert profile.exit_code == 0, profile.stdout
     assert target.exit_code == 0, target.stdout
     assert ref.exit_code == 0, ref.stdout
-    assert analyze.exit_code == 0, analyze.stdout
+    assert report.exit_code == 0, report.stdout
     assert plan.exit_code == 0, plan.stdout
     assert apply.exit_code == 0, apply.stdout
     assert qa.exit_code == 0, qa.stdout
     assert remix_qa.exit_code == 0, remix_qa.stdout
-    assert _payload(analyze.stdout)["result"]["reports"][0]["kind"] == "loudness"  # type: ignore[index]
+    assert _payload(report.stdout)["result"]["report"]["kind"] == "loudness"  # type: ignore[index]
     assert _payload(apply.stdout)["result"]["steps"][0] == {  # type: ignore[index]
         "name": "device_insert",
         "args": {"track_ref": {"mode": "main"}, "device_name": "Utility", "index": -1},

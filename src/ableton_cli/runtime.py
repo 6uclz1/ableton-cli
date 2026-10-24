@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 import typer
@@ -23,6 +23,7 @@ from .output import (
     success_payload,
 )
 from .platform_paths import PlatformPaths
+from .plugins.model import PluginLoadReport
 
 
 @dataclass(slots=True)
@@ -40,6 +41,7 @@ class RuntimeContext:
     plan: bool = False
     dry_run: bool = False
     compact: bool = False
+    plugins: PluginLoadReport = field(default_factory=lambda: PluginLoadReport(enabled=False))
     _client: AbletonClient | None = None
 
     def client(self) -> AbletonClient:
@@ -60,8 +62,14 @@ def _command_spec(command: str) -> CommandDescriptor:
     return command_spec_map()[command]
 
 
-def build_command_plan(command: str, args: dict[str, Any], *, dry_run: bool) -> dict[str, Any]:
-    spec = _command_spec(command)
+def build_command_plan(
+    command: str,
+    args: dict[str, Any],
+    *,
+    dry_run: bool,
+    descriptor: CommandDescriptor | None = None,
+) -> dict[str, Any]:
+    spec = descriptor if descriptor is not None else _command_spec(command)
     return {
         "command": command,
         "remote_command": spec.remote_command,
@@ -74,7 +82,10 @@ def build_command_plan(command: str, args: dict[str, Any], *, dry_run: bool) -> 
 
 
 def enforce_destructive_confirmation(
-    runtime: RuntimeContext, command: str, args: dict[str, Any]
+    runtime: RuntimeContext,
+    command: str,
+    args: dict[str, Any],
+    descriptor: CommandDescriptor | None = None,
 ) -> None:
     if (
         not runtime.require_confirmation
@@ -84,7 +95,7 @@ def enforce_destructive_confirmation(
     ):
         return
 
-    spec = _command_spec(command)
+    spec = descriptor if descriptor is not None else _command_spec(command)
     if not spec.side_effect.requires_confirmation:
         return
 
@@ -121,14 +132,22 @@ def execute_command(
     action: Callable[[], dict[str, Any]],
     resolved_args: Callable[[], dict[str, Any]] | None = None,
     human_formatter: Callable[[dict[str, Any]], str] | None = None,
+    descriptor: CommandDescriptor | None = None,
 ) -> None:
+    """Run one command under the shared envelope, plan and confirmation rules.
+
+    ``descriptor`` is for commands outside the core table (plugins); core
+    commands are looked up by ``command``.
+    """
     runtime = get_runtime(ctx)
     logger = logging.getLogger("ableton_cli")
 
     try:
         payload_args = resolved_args() if resolved_args is not None else args
         if runtime.plan or runtime.dry_run:
-            result = build_command_plan(command, payload_args, dry_run=runtime.dry_run)
+            result = build_command_plan(
+                command, payload_args, dry_run=runtime.dry_run, descriptor=descriptor
+            )
             payload = success_payload(command=command, args=payload_args, result=result)
             if runtime.output_mode == OutputMode.JSON:
                 emit_json(payload)
@@ -136,7 +155,7 @@ def execute_command(
                 emit_human_result(command, result, runtime.quiet)
             raise typer.Exit(ExitCode.SUCCESS.value)
 
-        enforce_destructive_confirmation(runtime, command, payload_args)
+        enforce_destructive_confirmation(runtime, command, payload_args, descriptor)
         result = action()
         validate_command_contract(command=command, args=payload_args, result=result)
         payload = success_payload(command=command, args=payload_args, result=result)

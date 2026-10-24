@@ -7,6 +7,7 @@ from ableton_cli.capabilities import compute_command_set_hash, required_remote_c
 from ableton_cli.config import Settings
 from ableton_cli.doctor import run_doctor
 from ableton_cli.errors import AppError, ExitCode
+from ableton_cli.plugins.status import PluginHealth
 
 
 class _PlatformPathsStub:
@@ -52,6 +53,7 @@ def test_doctor_handles_unreachable_remote(monkeypatch) -> None:
             config_path="/tmp/not-found.toml",
         ),
         platform_paths=_PlatformPathsStub(),
+        plugin_health=PluginHealth(enabled=True),
     )
 
     assert "summary" in result
@@ -84,6 +86,7 @@ def test_doctor_fails_when_ping_has_no_supported_commands(monkeypatch) -> None:
             config_path="/tmp/not-found.toml",
         ),
         platform_paths=_PlatformPathsStub(),
+        plugin_health=PluginHealth(enabled=True),
     )
 
     checks = {item["name"]: item for item in result["checks"]}
@@ -116,6 +119,7 @@ def test_doctor_fails_when_remote_is_missing_required_commands(monkeypatch) -> N
             config_path="/tmp/not-found.toml",
         ),
         platform_paths=_PlatformPathsStub(),
+        plugin_health=PluginHealth(enabled=True),
     )
 
     checks = {item["name"]: item for item in result["checks"]}
@@ -149,6 +153,7 @@ def test_doctor_protocol_mismatch_hint_mentions_protocol_setter(monkeypatch) -> 
             config_path="/tmp/not-found.toml",
         ),
         platform_paths=_PlatformPathsStub(),
+        plugin_health=PluginHealth(enabled=True),
     )
     checks = {item["name"]: item for item in result["checks"]}
     assert checks["protocol_version"]["status"] == "FAIL"
@@ -181,6 +186,7 @@ def _run_doctor_with_ping(monkeypatch, ping_payload: dict[str, object]) -> dict[
             config_path="/tmp/not-found.toml",
         ),
         platform_paths=_PlatformPathsStub(),
+        plugin_health=PluginHealth(enabled=True),
     )
     return {item["name"]: item for item in result["checks"]}
 

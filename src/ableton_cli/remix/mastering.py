@@ -5,9 +5,17 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from ..audio_analysis import analyze_loudness, analyze_spectrum, compare_reference
 from .manifest import load_manifest, remix_error, resolve_manifest_path, save_manifest
 from .mastering_profiles import list_profiles, profile_targets
+
+# The fields mastering QA reads from each report kind, as written by the analysis
+# plugin's ``--report-out``; the audio a report measures is in its source field.
+_REPORT_FIELDS: dict[str, tuple[str, ...]] = {
+    "loudness": ("path", "integrated_lufs", "true_peak_dbtp", "crest_db", "clipping_sample_count"),
+    "spectrum": ("path", "bands", "stereo", "warnings"),
+    "reference_compare": ("candidate", "reference", "delta"),
+}
+_REPORT_SOURCE_FIELD = {"loudness": "path", "spectrum": "path", "reference_compare": "candidate"}
 
 
 def profiles_list() -> dict[str, Any]:
@@ -53,8 +61,6 @@ def add_reference(
     role: str,
     reference_id: str,
     notes: str = "",
-    analyze: bool = False,
-    report_dir: str | Path | None = None,
 ) -> dict[str, Any]:
     manifest_path = resolve_manifest_path(project)
     manifest = load_manifest(manifest_path)
@@ -76,16 +82,8 @@ def add_reference(
         "notes": notes,
     }
     manifest.setdefault("reference_tracks", []).append(reference)
-    reports: list[dict[str, Any]] = []
-    if analyze:
-        reports = _analyze_one_audio(
-            manifest,
-            source_audio_path=audio_path,
-            report_dir=_report_dir(report_dir, manifest_path),
-            report_prefix=f"reference_{reference_id}",
-        )
     save_manifest(manifest_path, manifest)
-    return {"project": str(manifest_path), "reference": reference, "reports": reports}
+    return {"project": str(manifest_path), "reference": reference}
 
 
 def list_references(project: str | Path) -> dict[str, Any]:
@@ -114,41 +112,53 @@ def remove_reference(project: str | Path, *, reference_id: str) -> dict[str, Any
     return {"project": str(manifest_path), "removed": reference_id, "reference_count": len(kept)}
 
 
-def analyze_render(
-    project: str | Path,
-    *,
-    render: str | Path,
-    reference_id: str | None = None,
-    report_dir: str | Path | None = None,
-) -> dict[str, Any]:
+def add_report(project: str | Path, *, kind: str, report: str | Path) -> dict[str, Any]:
+    """Register an analysis report so mastering QA reads it for the audio it measures."""
+    if kind not in _REPORT_FIELDS:
+        raise remix_error(
+            message=f"unsupported report kind: {kind}",
+            hint=f"Use one of: {', '.join(_REPORT_FIELDS)}.",
+        )
     manifest_path = resolve_manifest_path(project)
     manifest = load_manifest(manifest_path)
-    render_path = Path(render).expanduser()
-    reports = _analyze_one_audio(
-        manifest,
-        source_audio_path=render_path,
-        report_dir=_report_dir(report_dir, manifest_path),
-        report_prefix=_safe_report_prefix(render_path.stem),
+    report_path = Path(report).expanduser().resolve()
+    payload = _read_report(report_path)
+    missing = [field for field in _REPORT_FIELDS[kind] if field not in payload]
+    if missing:
+        raise remix_error(
+            message=f"{kind} report {report_path} is missing {', '.join(missing)}",
+            hint=f"Pass a report written by 'ableton-cli analysis ... --report-out' for {kind}.",
+        )
+    record = _report_record(
+        kind=kind,
+        path=report_path,
+        source_audio_path=Path(str(payload[_REPORT_SOURCE_FIELD[kind]])).expanduser(),
+        payload=payload,
     )
-    reference = _find_reference(manifest, reference_id) if reference_id else None
-    if reference is not None:
-        compare_path = _report_dir(report_dir, manifest_path) / f"{render_path.stem}_reference.json"
-        comparison = compare_reference(
-            candidate=render_path,
-            reference=reference["path"],
-            report_out=compare_path,
-        )
-        reports.append(
-            _report_record(
-                kind="reference_compare",
-                path=compare_path,
-                source_audio_path=render_path,
-                payload=comparison,
-            )
-        )
-    manifest.setdefault("analysis_reports", []).extend(reports)
+    manifest.setdefault("analysis_reports", []).append(record)
     save_manifest(manifest_path, manifest)
-    return {"project": str(manifest_path), "render": str(render_path), "reports": reports}
+    return {"project": str(manifest_path), "report": record}
+
+
+def _read_report(report_path: Path) -> dict[str, Any]:
+    if not report_path.is_file():
+        raise remix_error(
+            message=f"report not found: {report_path}",
+            hint="Pass the --report-out path of an analysis command.",
+        )
+    try:
+        payload = json.loads(report_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise remix_error(
+            message=f"report is not valid JSON: {report_path} ({exc.msg})",
+            hint="Pass the --report-out path of an analysis command.",
+        ) from exc
+    if not isinstance(payload, dict):
+        raise remix_error(
+            message=f"report must be a JSON object: {report_path}",
+            hint="Pass the --report-out path of an analysis command.",
+        )
+    return payload
 
 
 def plan_chain(
@@ -263,40 +273,6 @@ def run_mastering_qa(
         "errors": errors,
         "warnings": warnings,
     }
-
-
-def _analyze_one_audio(
-    manifest: dict[str, Any],
-    *,
-    source_audio_path: Path,
-    report_dir: Path,
-    report_prefix: str,
-) -> list[dict[str, Any]]:
-    spectrum_profile = (manifest.get("mastering_targets") or {}).get(
-        "spectrum_profile",
-        "anime-club",
-    )
-    report_dir.mkdir(parents=True, exist_ok=True)
-    loudness_path = report_dir / f"{report_prefix}_loudness.json"
-    spectrum_path = report_dir / f"{report_prefix}_spectrum.json"
-    loudness = analyze_loudness(source_audio_path, report_out=loudness_path)
-    spectrum = analyze_spectrum(
-        source_audio_path, profile=spectrum_profile, report_out=spectrum_path
-    )
-    return [
-        _report_record(
-            kind="loudness",
-            path=loudness_path,
-            source_audio_path=source_audio_path,
-            payload=loudness,
-        ),
-        _report_record(
-            kind="spectrum",
-            path=spectrum_path,
-            source_audio_path=source_audio_path,
-            payload=spectrum,
-        ),
-    ]
 
 
 def _report_record(
@@ -506,28 +482,6 @@ def _load_report_payload(report: dict[str, Any] | None) -> dict[str, Any] | None
         return None
     payload = json.loads(path.read_text(encoding="utf-8"))
     return payload if isinstance(payload, dict) else None
-
-
-def _find_reference(manifest: dict[str, Any], reference_id: str | None) -> dict[str, Any] | None:
-    if reference_id is None:
-        return None
-    for reference in manifest.get("reference_tracks", []):
-        if reference.get("id") == reference_id:
-            return reference
-    raise remix_error(
-        message=f"reference id not found: {reference_id}",
-        hint="Use 'remix mastering reference list' to inspect references.",
-    )
-
-
-def _report_dir(report_dir: str | Path | None, manifest_path: Path) -> Path:
-    if report_dir is None:
-        return manifest_path.parent / "reports"
-    return Path(report_dir).expanduser()
-
-
-def _safe_report_prefix(name: str) -> str:
-    return "".join(char if char.isalnum() or char in {"-", "_"} else "_" for char in name)
 
 
 def _now() -> str:

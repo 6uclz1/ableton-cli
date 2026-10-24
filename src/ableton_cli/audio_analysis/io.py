@@ -1,12 +1,9 @@
 from __future__ import annotations
 
-import math
-import shutil
 import struct
 import wave
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
 
 from ..errors import AppError, ErrorCode, ExitCode
 
@@ -47,36 +44,6 @@ def require_existing_audio_path(path: str | Path) -> Path:
             hint="Pass a render file path.",
         )
     return audio_path
-
-
-def require_ffmpeg_engine(engine: str) -> str:
-    parsed = engine.strip().lower()
-    if parsed != "ffmpeg":
-        raise audio_error(
-            message=f"unsupported loudness engine: {engine}",
-            hint="Use --engine ffmpeg.",
-        )
-    if shutil.which("ffmpeg") is None or shutil.which("ffprobe") is None:
-        raise AppError(
-            error_code=ErrorCode.CONFIG_INVALID,
-            message="ffmpeg engine is not available",
-            hint="Install ffmpeg and ffprobe, or run on a host that provides them.",
-            exit_code=ExitCode.CONFIG_INVALID,
-        )
-    return parsed
-
-
-def wav_channels(path: str | Path) -> int:
-    """Read only the channel count of a PCM WAV file, without decoding its samples."""
-    audio_path = require_existing_audio_path(path)
-    try:
-        with wave.open(str(audio_path), "rb") as wav:
-            return wav.getnchannels()
-    except wave.Error as exc:
-        raise audio_error(
-            message=f"unsupported audio format for builtin analysis: {audio_path}",
-            hint="Use PCM WAV for deterministic offline analysis.",
-        ) from exc
 
 
 def wav_duration_sec(path: str | Path) -> float:
@@ -145,28 +112,3 @@ def _decode_pcm(raw: bytes, sample_width: int) -> float:
             value -= 0x1000000
         return value / 8388608.0
     return struct.unpack("<i", raw)[0] / 2147483648.0
-
-
-def write_report(path: str | Path | None, payload: dict[str, Any]) -> None:
-    if path is None:
-        return
-    import json
-
-    report_path = Path(path).expanduser()
-    report_path.parent.mkdir(parents=True, exist_ok=True)
-    report_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-
-
-def rms_dbfs(values: list[float] | tuple[float, ...]) -> float:
-    if not values:
-        return float("-inf")
-    mean_square = sum(value * value for value in values) / len(values)
-    if mean_square <= 0:
-        return float("-inf")
-    return 20.0 * math.log10(math.sqrt(mean_square))
-
-
-def amplitude_dbfs(value: float) -> float:
-    if value <= 0:
-        return float("-inf")
-    return 20.0 * math.log10(value)

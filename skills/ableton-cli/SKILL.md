@@ -60,8 +60,8 @@ uv run ableton-cli session diff --from ./snapshot-before.json --to ./snapshot-af
 uv run ableton-cli session watch --interval-ms 500 --scope all --count 5
 uv run ableton-cli session events --events tempo,is_playing --count 5
 uv run ableton-cli session events --idle-timeout-ms 5000
-uv run ableton-cli session capture --track-index 0 --slot 0 --bars 8 --start 32 --set-routing --analyze
-uv run ableton-cli session capture-tracks --track-index 0 --track-index 3 --start 304 --bars 8 --bypass-main-devices --analyze --focus Lead
+uv run ableton-cli session capture --track-index 0 --slot 0 --bars 8 --start 32 --set-routing
+uv run ableton-cli session capture-tracks --track-index 0 --track-index 3 --start 304 --bars 8 --bypass-main-devices
 uv run ableton-cli session stop-all-clips
 ```
 
@@ -136,10 +136,6 @@ uv run ableton-cli audio asset remove --project ./proj/remix_project.json --role
 uv run ableton-cli audio sections import --project ./proj/remix_project.json --sections "intro:1-8,verse:9-24,pre:25-32,chorus:33-48"
 uv run ableton-cli audio beatgrid import --project ./proj/remix_project.json --downbeats "0.0,1.395,2.790"
 uv run ableton-cli audio analyze --project ./proj/remix_project.json --detect bpm,key --manual-bpm 172 --manual-key "A minor"
-uv run ableton-cli audio loudness analyze --path ./renders/remix.wav --engine ffmpeg --report-out ./proj/reports/loudness.json
-uv run ableton-cli audio spectrum analyze --path ./renders/remix.wav --profile anime-club --report-out ./proj/reports/spectrum.json
-uv run ableton-cli audio spectrum shares --stem Kick=./caps/kick.wav --stem Lead=./caps/lead.wav --resolution third-octave --focus Lead
-uv run ableton-cli audio reference compare --candidate ./renders/remix.wav --reference ./refs/reference.wav --metrics loudness,spectrum,stereo
 uv run ableton-cli remix set-target --project ./proj/remix_project.json --bpm 174 --key "F minor"
 uv run ableton-cli remix plan --project ./proj/remix_project.json --style anime-club
 uv run ableton-cli remix arrange --project ./proj/remix_project.json --form anime-dnb
@@ -156,7 +152,7 @@ uv run ableton-cli remix mastering target set --project ./proj/remix_project.jso
 uv run ableton-cli remix mastering reference add --project ./proj/remix_project.json --path ./refs/reference.wav --role commercial-reference --id ref-main
 uv run ableton-cli remix mastering reference list --project ./proj/remix_project.json
 uv run ableton-cli remix mastering reference remove --project ./proj/remix_project.json --id ref-main
-uv run ableton-cli remix mastering analyze --project ./proj/remix_project.json --render ./renders/remix.wav --reference ref-main
+uv run ableton-cli remix mastering report add --project ./proj/remix_project.json --kind loudness --report ./proj/reports/remix_loudness.json
 uv run ableton-cli remix mastering plan --project ./proj/remix_project.json --target anime-club-demo --chain utility,eq8,compressor,limiter
 uv run ableton-cli remix mastering apply --project ./proj/remix_project.json --dry-run
 uv run ableton-cli remix mastering apply --project ./proj/remix_project.json --yes
@@ -169,19 +165,20 @@ uv run ableton-cli remix export-plan --project ./proj/remix_project.json --targe
 Remix commands are manifest-first. Use `remix plan` and `remix apply --dry-run` before writing to Live. Store only cleared, private-test, or original material in remix manifests.
 
 Mastering workflow is measurement-first:
-- Ensure `ffmpeg` and `ffprobe` are installed before running `audio loudness analyze`,
-  `audio reference compare`, or `remix mastering analyze`; missing binaries fail
-  explicitly with `CONFIG_INVALID`.
-- Run `audio loudness analyze` and `audio spectrum analyze` after every render.
-- Run `audio reference compare` when a reference track is registered.
+- Loudness, spectrum, band-share and reference measurement come from the `analysis` plugin
+  (the `ableton-cli-analysis` repository, installed with `plugins install`; it needs `ffmpeg`
+  and `ffprobe`). Check `plugins list` for `analysis` before relying on it; if it is missing,
+  ask the user before installing it.
+- After every render, write `analysis loudness analyze` and `analysis spectrum analyze`
+  reports with `--report-out`, register each with `remix mastering report add --kind
+  loudness|spectrum|reference_compare --report <json>`, then run `remix mastering qa`.
+  `report add` rejects a report missing a field QA reads.
 - Do not chase LUFS by increasing limiter pressure when true peak is close to ceiling.
 - Treat large spectrum deltas as mix/stem issues before using master EQ compensation.
 - To find which track owns a band, run `session capture-tracks` per section (it solos each
   track into a temporary capture track and restores solos, the temporary track, and any
-  bypassed main devices even on failure), then read `shares.shares_pct` and
-  `shares.focus.margin_db`. A negative margin means another track is louder there.
-  Shares average the whole window, so a track that rests for part of it reads low; check
-  its level while it plays before raising it.
+  bypassed main devices even on failure), then pass each `captures[].label` and
+  `captures[].file_path` to `analysis spectrum shares --stem LABEL=PATH`.
 - `session capture` and `session capture-tracks` need `--start` (in beats) at least one bar
   in: playback starts first, the playhead moves one bar before `--start`, and launch
   quantization begins the recording at `--start`. The result reports `recorded_start_beat`;
@@ -473,6 +470,8 @@ scripts for that device alone; take `--type`/`--channel` exactly from `device si
 `device insert` needs Live 12.3+ and accepts native Live device names only; use
 `browser load` for plug-ins and Max for Live devices. For pitch correction, insert
 Auto Shift and set `song scale set` so it can follow the Set's scale.
+`device move --to-index` is the device's final index on its track (`0..device_count-1`), in
+either direction: on `[A, B, C]`, moving `A` with `--to-index 2` gives `[B, C, A]`.
 
 ### Synth
 
@@ -741,7 +740,6 @@ uv run ableton-cli --output json ping
 - `list_standard_effect_keys` -> `uv run ableton-cli --output json effect <eq8|limiter|compressor|auto-filter|reverb|utility> keys`
 - `set_standard_effect_parameter_safe` -> `uv run ableton-cli --output json effect <eq8|limiter|compressor|auto-filter|reverb|utility> set <value> --track-index <track> --device-index <device> --parameter-key <key>`
 - `observe_standard_effect_state` -> `uv run ableton-cli --output json effect <eq8|limiter|compressor|auto-filter|reverb|utility> observe --track-index <track> --device-index <device>`
-- `audio_loudness_analyze` -> `uv run ableton-cli --output json audio loudness analyze --path <wav>`
 - `remix_mastering_plan` -> `uv run ableton-cli --output json remix mastering plan --project <remix_project.json>`
 - `remix_mastering_qa` -> `uv run ableton-cli --output json remix mastering qa --project <remix_project.json> --render <wav>`
 - `inspect_live_set` -> `uv run ableton-cli --output json set inspect --path <set.als>`
@@ -758,7 +756,6 @@ uv run ableton-cli --output json ping
 - `tracks list`: `docs/skills/examples/list-tracks.json`
 - `track volume set`: `docs/skills/examples/set-track-volume.json`
 - `browser search`: `docs/skills/examples/browser-search.json`
-- `audio loudness analyze`: `docs/skills/examples/audio-loudness-analyze.json`
 - `remix mastering plan`: `docs/skills/examples/remix-mastering-plan.json`
 - `remix mastering qa`: `docs/skills/examples/remix-mastering-qa.json`
 

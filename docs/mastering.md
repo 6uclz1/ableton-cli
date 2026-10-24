@@ -1,45 +1,39 @@
 # Mastering Commands
 
-The mastering surface is split into offline analysis, master-track primitives, and remix
-workflow commands.
-
-## Requirements
-
-Offline mastering analysis with the `ffmpeg` engine requires both `ffmpeg` and
-`ffprobe` on `PATH`. Without them, loudness analysis, reference comparison, and
-remix mastering analysis fail explicitly with `CONFIG_INVALID`; the CLI does not
-silently skip metrics or use a fallback analyzer.
+The mastering surface is split into offline analysis (the `analysis` plugin), master-track
+primitives, and remix workflow commands.
 
 ## Offline analysis
 
+Loudness, spectrum, band-share and reference measurement run through ffmpeg in the
+[`analysis` plugin](https://github.com/6uclz1/ableton-cli-analysis), not in the core. Install
+it with `ableton-cli plugins install https://github.com/6uclz1/ableton-cli-analysis`; it needs
+`ffmpeg` and `ffprobe` on `PATH` and fails explicitly (`ANALYSIS_FFMPEG_NOT_AVAILABLE`,
+`CONFIG_INVALID`) without them. Its README documents every metric and spectrum profile.
+
+To feed `remix mastering qa`, write the render's reports with `--report-out` and register
+each one in the remix manifest:
+
 ```bash
-uv run ableton-cli --output json audio loudness analyze --path ./renders/remix.wav --engine ffmpeg --report-out ./proj/reports/loudness.json
-uv run ableton-cli --output json audio spectrum analyze --path ./renders/remix.wav --profile anime-club --report-out ./proj/reports/spectrum.json
-uv run ableton-cli --output json audio reference compare --candidate ./renders/remix.wav --reference ./refs/reference.wav --metrics loudness,spectrum,stereo
+uv run ableton-cli --output json analysis loudness analyze --path ./renders/remix.wav --report-out ./proj/reports/remix_loudness.json
+uv run ableton-cli --output json analysis spectrum analyze --path ./renders/remix.wav --profile anime-club --report-out ./proj/reports/remix_spectrum.json
+uv run ableton-cli --output json remix mastering report add --project ./proj/remix_project.json --kind loudness --report ./proj/reports/remix_loudness.json
+uv run ableton-cli --output json remix mastering report add --project ./proj/remix_project.json --kind spectrum --report ./proj/reports/remix_spectrum.json
+uv run ableton-cli --output json remix mastering qa --project ./proj/remix_project.json --render ./renders/remix.wav
 ```
 
-`audio loudness analyze` reports integrated LUFS, true peak, sample peak, RMS, crest
-factor, clipping count, and DC offset.
-
-`integrated_lufs`, `lra_lu`, `true_peak_dbtp`, `momentary_lufs_max`, and
-`short_term_lufs_max` come from ffmpeg's `ebur128` filter (ITU-R BS.1770 K-weighting and
-gating, 4x-oversampled true peak). `sample_peak_dbfs`, `rms_dbfs`, `crest_db`,
-`clipping_sample_count`, and `dc_offset` are computed from the PCM samples. True peak can
-sit several dB above sample peak, so check `true_peak_dbtp` against the ceiling. If ffmpeg
-fails or its output has no EBU R128 summary, the command fails with `INTERNAL_ERROR`.
-
-`audio spectrum analyze` reports, in `bands`, the RMS level (dBFS) of the mono downmix in
-each band over the whole file: `sub_20_60_hz`, `bass_60_120_hz`, `low_mid_120_400_hz`,
-`mid_400_2000_hz`, `presence_2000_6000_hz`, `brilliance_6000_10000_hz`, and
-`air_10000_18000_hz`. ffmpeg cuts each band brick-wall in the FFT domain (`afftfilt`), so
-the command needs ffmpeg and fails with `CONFIG_INVALID` without it. To compare sections
-or tracks, capture each one (`session capture`) and analyze the captures.
+`remix mastering report add --kind loudness|spectrum|reference_compare --report <json>`
+records the report against the audio it measures (`path`, or `candidate` for a reference
+comparison), which is how `remix mastering qa --render` finds it. It fails with
+`INVALID_ARGUMENT` when the report is missing, is not a JSON object, or lacks a field QA
+reads (loudness: `integrated_lufs`, `true_peak_dbtp`, `crest_db`, `clipping_sample_count`;
+spectrum: `bands`, `stereo`, `warnings`).
 
 ### Per-track band diagnosis
 
 ```bash
-uv run ableton-cli --output json session capture-tracks --track-index 0 --track-index 4 --track-index 9 --start 304 --bars 8 --bypass-main-devices --analyze --resolution third-octave --focus Lead
-uv run ableton-cli --output json audio spectrum shares --stem Kick=./caps/kick.wav --stem Bass=./caps/bass.wav --resolution bands
+uv run ableton-cli --output json session capture-tracks --track-index 0 --track-index 4 --track-index 9 --start 304 --bars 8 --bypass-main-devices
+uv run ableton-cli --output json analysis spectrum shares --stem Kick=<captures[0].file_path> --stem Bass=<captures[1].file_path> --stem Lead=<captures[2].file_path> --resolution third-octave --focus Lead
 ```
 
 `session capture-tracks` solos each listed track in turn and records the main output into a
@@ -59,29 +53,8 @@ therefore be at least one bar. Each capture reports `recorded_start_beat` (the s
 minus the file's length) and fails with `step: verify_recorded_start` when the recording
 began more than half a beat away from `--start`, e.g. under another launch quantization.
 
-`audio spectrum shares` (and `--analyze`) measures every stem in each band and reports:
-
-- `shares_pct`: each stem's share of the band's summed energy over the whole window. A stem
-  that rests for part of the window reads low, so check its level while it plays.
-- `dominant`: the stem with the largest share (`null` when the band is silent).
-- `band_totals_dbfs`: the summed level, ignoring phase between stems.
-- `focus.margin_db` with `--focus LABEL`: the focus stem's level minus the loudest other
-  stem's, so a negative value is the gap to close. It is `null` where either side is silent.
-
-`--resolution third-octave` uses the 29 ISO third-octave bands from 25 Hz to 16 kHz (named
-like `1250_hz`) to place an EQ move; `bands` uses the seven analysis bands above.
-
-Spectrum warnings judge tonal balance, not loudness: each band is compared, relative to
-the file's full-band level, with the profile's expected share. A band more than 6 dB above
-its share is `<band>_hot` and one more than 8 dB below is `<band>_low`; a file with no
-signal gets `silent`. The `anime-club-balanced` shape models a spectrum whose energy per
-octave falls 1.5 dB per octave (the -4.5 dB/octave slope of a per-Hz analyzer); the other
-profiles are offsets from it. Treat the warnings as a first pass; a registered reference
-track (`audio reference compare`) is the better guide for EQ decisions.
-
-Spectrum profiles are diagnostic presets, not platform specifications. `broadcast-r128`
-uses the EBU R128 programme loudness target of -23.0 LUFS and is separate from music
-demo presets such as `anime-club-demo`.
+Pass each capture's `label` and `file_path` to `analysis spectrum shares --stem LABEL=PATH`
+to see which track owns each band.
 
 ## Master track primitives
 

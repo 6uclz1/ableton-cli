@@ -2578,9 +2578,6 @@
         "\u2502 sections   Audio section map commands                                                            \u2502",
         "\u2502 beatgrid   Audio beatgrid commands                                                               \u2502",
         "\u2502 stems      Audio stem commands                                                                   \u2502",
-        "\u2502 loudness   Offline loudness analysis commands                                                    \u2502",
-        "\u2502 spectrum   Offline spectrum analysis commands                                                    \u2502",
-        "\u2502 reference  Reference comparison commands                                                         \u2502",
         "\u2502 transient  Offline transient analysis commands                                                   \u2502",
         "\u2502 groove     Offline groove extraction commands                                                    \u2502",
         "\u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f"
@@ -2599,9 +2596,6 @@
         "sections",
         "beatgrid",
         "stems",
-        "loudness",
-        "spectrum",
-        "reference",
         "transient",
         "groove"
       ]
@@ -3347,299 +3341,6 @@
       ],
       "short_help": null
     },
-    "audio loudness": {
-      "deprecated": false,
-      "help": "Offline loudness analysis commands",
-      "help_text": [
-        "",
-        " Usage: loudness [OPTIONS] COMMAND [ARGS]...",
-        "",
-        " Offline loudness analysis commands",
-        "",
-        "\u256d\u2500 Options \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e",
-        "\u2502 --help          Show this message and exit.                                                      \u2502",
-        "\u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f",
-        "\u256d\u2500 Commands \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e",
-        "\u2502 analyze                                                                                          \u2502",
-        "\u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f"
-      ],
-      "hidden": false,
-      "kind": "group",
-      "no_args_is_help": true,
-      "params": [],
-      "path": [
-        "audio",
-        "loudness"
-      ],
-      "short_help": null,
-      "subcommands": [
-        "analyze"
-      ]
-    },
-    "audio loudness analyze": {
-      "deprecated": false,
-      "help": null,
-      "help_text": [
-        "",
-        " Usage: analyze [OPTIONS]",
-        "",
-        "\u256d\u2500 Options \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e",
-        "\u2502 *  --path              PATH  Rendered audio file path [required]                                 \u2502",
-        "\u2502    --engine            TEXT  Analysis engine [default: ffmpeg]                                   \u2502",
-        "\u2502    --report-out        PATH  Write JSON report to this path                                      \u2502",
-        "\u2502    --help                    Show this message and exit.                                         \u2502",
-        "\u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f"
-      ],
-      "hidden": false,
-      "kind": "command",
-      "no_args_is_help": false,
-      "params": [
-        {
-          "count": false,
-          "default": null,
-          "envvar": null,
-          "expose_value": true,
-          "flag_value": null,
-          "help": "Rendered audio file path",
-          "hidden": false,
-          "is_flag": false,
-          "kind": "option",
-          "metavar": null,
-          "multiple": false,
-          "name": "path",
-          "nargs": 1,
-          "opts": [
-            "--path"
-          ],
-          "prompt": null,
-          "required": true,
-          "secondary_opts": [],
-          "show_default": true,
-          "type": {
-            "class": "TyperPath",
-            "name": "path"
-          }
-        },
-        {
-          "count": false,
-          "default": "ffmpeg",
-          "envvar": null,
-          "expose_value": true,
-          "flag_value": null,
-          "help": "Analysis engine",
-          "hidden": false,
-          "is_flag": false,
-          "kind": "option",
-          "metavar": null,
-          "multiple": false,
-          "name": "engine",
-          "nargs": 1,
-          "opts": [
-            "--engine"
-          ],
-          "prompt": null,
-          "required": false,
-          "secondary_opts": [],
-          "show_default": true,
-          "type": {
-            "class": "StringParamType",
-            "name": "text"
-          }
-        },
-        {
-          "count": false,
-          "default": null,
-          "envvar": null,
-          "expose_value": true,
-          "flag_value": null,
-          "help": "Write JSON report to this path",
-          "hidden": false,
-          "is_flag": false,
-          "kind": "option",
-          "metavar": null,
-          "multiple": false,
-          "name": "report_out",
-          "nargs": 1,
-          "opts": [
-            "--report-out"
-          ],
-          "prompt": null,
-          "required": false,
-          "secondary_opts": [],
-          "show_default": true,
-          "type": {
-            "class": "TyperPath",
-            "name": "path"
-          }
-        }
-      ],
-      "path": [
-        "audio",
-        "loudness",
-        "analyze"
-      ],
-      "short_help": null
-    },
-    "audio reference": {
-      "deprecated": false,
-      "help": "Reference comparison commands",
-      "help_text": [
-        "",
-        " Usage: reference [OPTIONS] COMMAND [ARGS]...",
-        "",
-        " Reference comparison commands",
-        "",
-        "\u256d\u2500 Options \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e",
-        "\u2502 --help          Show this message and exit.                                                      \u2502",
-        "\u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f",
-        "\u256d\u2500 Commands \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e",
-        "\u2502 compare                                                                                          \u2502",
-        "\u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f"
-      ],
-      "hidden": false,
-      "kind": "group",
-      "no_args_is_help": true,
-      "params": [],
-      "path": [
-        "audio",
-        "reference"
-      ],
-      "short_help": null,
-      "subcommands": [
-        "compare"
-      ]
-    },
-    "audio reference compare": {
-      "deprecated": false,
-      "help": null,
-      "help_text": [
-        "",
-        " Usage: compare [OPTIONS]",
-        "",
-        "\u256d\u2500 Options \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e",
-        "\u2502 *  --candidate         PATH  Candidate render path [required]                                    \u2502",
-        "\u2502 *  --reference         PATH  Reference track path [required]                                     \u2502",
-        "\u2502    --metrics           TEXT  Comma-separated metrics [default: loudness,spectrum,stereo]         \u2502",
-        "\u2502    --report-out        PATH  Write JSON report to this path                                      \u2502",
-        "\u2502    --help                    Show this message and exit.                                         \u2502",
-        "\u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f"
-      ],
-      "hidden": false,
-      "kind": "command",
-      "no_args_is_help": false,
-      "params": [
-        {
-          "count": false,
-          "default": null,
-          "envvar": null,
-          "expose_value": true,
-          "flag_value": null,
-          "help": "Candidate render path",
-          "hidden": false,
-          "is_flag": false,
-          "kind": "option",
-          "metavar": null,
-          "multiple": false,
-          "name": "candidate",
-          "nargs": 1,
-          "opts": [
-            "--candidate"
-          ],
-          "prompt": null,
-          "required": true,
-          "secondary_opts": [],
-          "show_default": true,
-          "type": {
-            "class": "TyperPath",
-            "name": "path"
-          }
-        },
-        {
-          "count": false,
-          "default": null,
-          "envvar": null,
-          "expose_value": true,
-          "flag_value": null,
-          "help": "Reference track path",
-          "hidden": false,
-          "is_flag": false,
-          "kind": "option",
-          "metavar": null,
-          "multiple": false,
-          "name": "reference",
-          "nargs": 1,
-          "opts": [
-            "--reference"
-          ],
-          "prompt": null,
-          "required": true,
-          "secondary_opts": [],
-          "show_default": true,
-          "type": {
-            "class": "TyperPath",
-            "name": "path"
-          }
-        },
-        {
-          "count": false,
-          "default": "loudness,spectrum,stereo",
-          "envvar": null,
-          "expose_value": true,
-          "flag_value": null,
-          "help": "Comma-separated metrics",
-          "hidden": false,
-          "is_flag": false,
-          "kind": "option",
-          "metavar": null,
-          "multiple": false,
-          "name": "metrics",
-          "nargs": 1,
-          "opts": [
-            "--metrics"
-          ],
-          "prompt": null,
-          "required": false,
-          "secondary_opts": [],
-          "show_default": true,
-          "type": {
-            "class": "StringParamType",
-            "name": "text"
-          }
-        },
-        {
-          "count": false,
-          "default": null,
-          "envvar": null,
-          "expose_value": true,
-          "flag_value": null,
-          "help": "Write JSON report to this path",
-          "hidden": false,
-          "is_flag": false,
-          "kind": "option",
-          "metavar": null,
-          "multiple": false,
-          "name": "report_out",
-          "nargs": 1,
-          "opts": [
-            "--report-out"
-          ],
-          "prompt": null,
-          "required": false,
-          "secondary_opts": [],
-          "show_default": true,
-          "type": {
-            "class": "TyperPath",
-            "name": "path"
-          }
-        }
-      ],
-      "path": [
-        "audio",
-        "reference",
-        "compare"
-      ],
-      "short_help": null
-    },
     "audio sections": {
       "deprecated": false,
       "help": "Audio section map commands",
@@ -3743,272 +3444,6 @@
         "audio",
         "sections",
         "import"
-      ],
-      "short_help": null
-    },
-    "audio spectrum": {
-      "deprecated": false,
-      "help": "Offline spectrum analysis commands",
-      "help_text": [
-        "",
-        " Usage: spectrum [OPTIONS] COMMAND [ARGS]...",
-        "",
-        " Offline spectrum analysis commands",
-        "",
-        "\u256d\u2500 Options \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e",
-        "\u2502 --help          Show this message and exit.                                                      \u2502",
-        "\u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f",
-        "\u256d\u2500 Commands \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e",
-        "\u2502 analyze                                                                                          \u2502",
-        "\u2502 shares                                                                                           \u2502",
-        "\u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f"
-      ],
-      "hidden": false,
-      "kind": "group",
-      "no_args_is_help": true,
-      "params": [],
-      "path": [
-        "audio",
-        "spectrum"
-      ],
-      "short_help": null,
-      "subcommands": [
-        "analyze",
-        "shares"
-      ]
-    },
-    "audio spectrum analyze": {
-      "deprecated": false,
-      "help": null,
-      "help_text": [
-        "",
-        " Usage: analyze [OPTIONS]",
-        "",
-        "\u256d\u2500 Options \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e",
-        "\u2502 *  --path              PATH  Rendered audio file path [required]                                 \u2502",
-        "\u2502    --profile           TEXT  Spectrum profile [default: anime-club]                              \u2502",
-        "\u2502    --report-out        PATH  Write JSON report to this path                                      \u2502",
-        "\u2502    --help                    Show this message and exit.                                         \u2502",
-        "\u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f"
-      ],
-      "hidden": false,
-      "kind": "command",
-      "no_args_is_help": false,
-      "params": [
-        {
-          "count": false,
-          "default": null,
-          "envvar": null,
-          "expose_value": true,
-          "flag_value": null,
-          "help": "Rendered audio file path",
-          "hidden": false,
-          "is_flag": false,
-          "kind": "option",
-          "metavar": null,
-          "multiple": false,
-          "name": "path",
-          "nargs": 1,
-          "opts": [
-            "--path"
-          ],
-          "prompt": null,
-          "required": true,
-          "secondary_opts": [],
-          "show_default": true,
-          "type": {
-            "class": "TyperPath",
-            "name": "path"
-          }
-        },
-        {
-          "count": false,
-          "default": "anime-club",
-          "envvar": null,
-          "expose_value": true,
-          "flag_value": null,
-          "help": "Spectrum profile",
-          "hidden": false,
-          "is_flag": false,
-          "kind": "option",
-          "metavar": null,
-          "multiple": false,
-          "name": "profile",
-          "nargs": 1,
-          "opts": [
-            "--profile"
-          ],
-          "prompt": null,
-          "required": false,
-          "secondary_opts": [],
-          "show_default": true,
-          "type": {
-            "class": "StringParamType",
-            "name": "text"
-          }
-        },
-        {
-          "count": false,
-          "default": null,
-          "envvar": null,
-          "expose_value": true,
-          "flag_value": null,
-          "help": "Write JSON report to this path",
-          "hidden": false,
-          "is_flag": false,
-          "kind": "option",
-          "metavar": null,
-          "multiple": false,
-          "name": "report_out",
-          "nargs": 1,
-          "opts": [
-            "--report-out"
-          ],
-          "prompt": null,
-          "required": false,
-          "secondary_opts": [],
-          "show_default": true,
-          "type": {
-            "class": "TyperPath",
-            "name": "path"
-          }
-        }
-      ],
-      "path": [
-        "audio",
-        "spectrum",
-        "analyze"
-      ],
-      "short_help": null
-    },
-    "audio spectrum shares": {
-      "deprecated": false,
-      "help": null,
-      "help_text": [
-        "",
-        " Usage: shares [OPTIONS]",
-        "",
-        "\u256d\u2500 Options \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e",
-        "\u2502 --stem              TEXT  Stem as LABEL=PATH (repeatable), e.g. a solo capture of one track      \u2502",
-        "\u2502 --resolution        TEXT  Band set: bands or third-octave [default: bands]                       \u2502",
-        "\u2502 --focus             TEXT  Stem label to compare against the loudest other stem per band          \u2502",
-        "\u2502 --report-out        PATH  Write JSON report to this path                                         \u2502",
-        "\u2502 --help                    Show this message and exit.                                            \u2502",
-        "\u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f"
-      ],
-      "hidden": false,
-      "kind": "command",
-      "no_args_is_help": false,
-      "params": [
-        {
-          "count": false,
-          "default": null,
-          "envvar": null,
-          "expose_value": true,
-          "flag_value": null,
-          "help": "Stem as LABEL=PATH (repeatable), e.g. a solo capture of one track",
-          "hidden": false,
-          "is_flag": false,
-          "kind": "option",
-          "metavar": null,
-          "multiple": true,
-          "name": "stems",
-          "nargs": 1,
-          "opts": [
-            "--stem"
-          ],
-          "prompt": null,
-          "required": false,
-          "secondary_opts": [],
-          "show_default": true,
-          "type": {
-            "class": "StringParamType",
-            "name": "text"
-          }
-        },
-        {
-          "count": false,
-          "default": "bands",
-          "envvar": null,
-          "expose_value": true,
-          "flag_value": null,
-          "help": "Band set: bands or third-octave",
-          "hidden": false,
-          "is_flag": false,
-          "kind": "option",
-          "metavar": null,
-          "multiple": false,
-          "name": "resolution",
-          "nargs": 1,
-          "opts": [
-            "--resolution"
-          ],
-          "prompt": null,
-          "required": false,
-          "secondary_opts": [],
-          "show_default": true,
-          "type": {
-            "class": "StringParamType",
-            "name": "text"
-          }
-        },
-        {
-          "count": false,
-          "default": null,
-          "envvar": null,
-          "expose_value": true,
-          "flag_value": null,
-          "help": "Stem label to compare against the loudest other stem per band",
-          "hidden": false,
-          "is_flag": false,
-          "kind": "option",
-          "metavar": null,
-          "multiple": false,
-          "name": "focus",
-          "nargs": 1,
-          "opts": [
-            "--focus"
-          ],
-          "prompt": null,
-          "required": false,
-          "secondary_opts": [],
-          "show_default": true,
-          "type": {
-            "class": "StringParamType",
-            "name": "text"
-          }
-        },
-        {
-          "count": false,
-          "default": null,
-          "envvar": null,
-          "expose_value": true,
-          "flag_value": null,
-          "help": "Write JSON report to this path",
-          "hidden": false,
-          "is_flag": false,
-          "kind": "option",
-          "metavar": null,
-          "multiple": false,
-          "name": "report_out",
-          "nargs": 1,
-          "opts": [
-            "--report-out"
-          ],
-          "prompt": null,
-          "required": false,
-          "secondary_opts": [],
-          "show_default": true,
-          "type": {
-            "class": "TyperPath",
-            "name": "path"
-          }
-        }
-      ],
-      "path": [
-        "audio",
-        "spectrum",
-        "shares"
       ],
       "short_help": null
     },
@@ -16469,7 +15904,7 @@
         " Move a top-level device to another position on its track.",
         "",
         "\u256d\u2500 Options \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e",
-        "\u2502 *  --to-index                  INTEGER  Destination index [required]                             \u2502",
+        "\u2502 *  --to-index                  INTEGER  Final device index after the move [required]             \u2502",
         "\u2502    --track-index               INTEGER  Track index (0-based)                                    \u2502",
         "\u2502    --track-name                TEXT     Exact track name                                         \u2502",
         "\u2502    --selected-track                     Use the currently selected track                         \u2502",
@@ -16496,7 +15931,7 @@
           "envvar": null,
           "expose_value": true,
           "flag_value": null,
-          "help": "Destination index",
+          "help": "Final device index after the move",
           "hidden": false,
           "is_flag": false,
           "kind": "option",
@@ -30846,13 +30281,13 @@
         "\u2502 --help          Show this message and exit.                                                      \u2502",
         "\u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f",
         "\u256d\u2500 Commands \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e",
-        "\u2502 analyze                                                                                          \u2502",
         "\u2502 plan                                                                                             \u2502",
         "\u2502 apply                                                                                            \u2502",
         "\u2502 qa                                                                                               \u2502",
         "\u2502 profile    Mastering profile commands                                                            \u2502",
         "\u2502 target     Mastering target commands                                                             \u2502",
         "\u2502 reference  Mastering reference commands                                                          \u2502",
+        "\u2502 report     Mastering analysis report commands                                                    \u2502",
         "\u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f"
       ],
       "hidden": false,
@@ -30865,145 +30300,14 @@
       ],
       "short_help": null,
       "subcommands": [
-        "analyze",
         "plan",
         "apply",
         "qa",
         "profile",
         "target",
-        "reference"
+        "reference",
+        "report"
       ]
-    },
-    "remix mastering analyze": {
-      "deprecated": false,
-      "help": null,
-      "help_text": [
-        "",
-        " Usage: analyze [OPTIONS]",
-        "",
-        "\u256d\u2500 Options \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e",
-        "\u2502 *  --project           PATH  Manifest path [required]                                            \u2502",
-        "\u2502 *  --render            PATH  Rendered audio path [required]                                      \u2502",
-        "\u2502    --reference         TEXT  Registered reference id                                             \u2502",
-        "\u2502    --report-dir        PATH  Analysis report directory                                           \u2502",
-        "\u2502    --help                    Show this message and exit.                                         \u2502",
-        "\u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f"
-      ],
-      "hidden": false,
-      "kind": "command",
-      "no_args_is_help": false,
-      "params": [
-        {
-          "count": false,
-          "default": null,
-          "envvar": null,
-          "expose_value": true,
-          "flag_value": null,
-          "help": "Manifest path",
-          "hidden": false,
-          "is_flag": false,
-          "kind": "option",
-          "metavar": null,
-          "multiple": false,
-          "name": "project",
-          "nargs": 1,
-          "opts": [
-            "--project"
-          ],
-          "prompt": null,
-          "required": true,
-          "secondary_opts": [],
-          "show_default": true,
-          "type": {
-            "class": "TyperPath",
-            "name": "path"
-          }
-        },
-        {
-          "count": false,
-          "default": null,
-          "envvar": null,
-          "expose_value": true,
-          "flag_value": null,
-          "help": "Rendered audio path",
-          "hidden": false,
-          "is_flag": false,
-          "kind": "option",
-          "metavar": null,
-          "multiple": false,
-          "name": "render",
-          "nargs": 1,
-          "opts": [
-            "--render"
-          ],
-          "prompt": null,
-          "required": true,
-          "secondary_opts": [],
-          "show_default": true,
-          "type": {
-            "class": "TyperPath",
-            "name": "path"
-          }
-        },
-        {
-          "count": false,
-          "default": null,
-          "envvar": null,
-          "expose_value": true,
-          "flag_value": null,
-          "help": "Registered reference id",
-          "hidden": false,
-          "is_flag": false,
-          "kind": "option",
-          "metavar": null,
-          "multiple": false,
-          "name": "reference",
-          "nargs": 1,
-          "opts": [
-            "--reference"
-          ],
-          "prompt": null,
-          "required": false,
-          "secondary_opts": [],
-          "show_default": true,
-          "type": {
-            "class": "StringParamType",
-            "name": "text"
-          }
-        },
-        {
-          "count": false,
-          "default": null,
-          "envvar": null,
-          "expose_value": true,
-          "flag_value": null,
-          "help": "Analysis report directory",
-          "hidden": false,
-          "is_flag": false,
-          "kind": "option",
-          "metavar": null,
-          "multiple": false,
-          "name": "report_dir",
-          "nargs": 1,
-          "opts": [
-            "--report-dir"
-          ],
-          "prompt": null,
-          "required": false,
-          "secondary_opts": [],
-          "show_default": true,
-          "type": {
-            "class": "TyperPath",
-            "name": "path"
-          }
-        }
-      ],
-      "path": [
-        "remix",
-        "mastering",
-        "analyze"
-      ],
-      "short_help": null
     },
     "remix mastering apply": {
       "deprecated": false,
@@ -31412,14 +30716,12 @@
         " Usage: add [OPTIONS]",
         "",
         "\u256d\u2500 Options \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e",
-        "\u2502 *  --project           PATH  Manifest path [required]                                            \u2502",
-        "\u2502 *  --path              PATH  Reference audio path [required]                                     \u2502",
-        "\u2502 *  --role              TEXT  Reference role [required]                                           \u2502",
-        "\u2502 *  --id                TEXT  Reference id [required]                                             \u2502",
-        "\u2502    --notes             TEXT  Reference notes                                                     \u2502",
-        "\u2502    --analyze                 Analyze reference on add                                            \u2502",
-        "\u2502    --report-dir        PATH  Analysis report directory                                           \u2502",
-        "\u2502    --help                    Show this message and exit.                                         \u2502",
+        "\u2502 *  --project        PATH  Manifest path [required]                                               \u2502",
+        "\u2502 *  --path           PATH  Reference audio path [required]                                        \u2502",
+        "\u2502 *  --role           TEXT  Reference role [required]                                              \u2502",
+        "\u2502 *  --id             TEXT  Reference id [required]                                                \u2502",
+        "\u2502    --notes          TEXT  Reference notes                                                        \u2502",
+        "\u2502    --help                 Show this message and exit.                                            \u2502",
         "\u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f"
       ],
       "hidden": false,
@@ -31554,58 +30856,6 @@
           "type": {
             "class": "StringParamType",
             "name": "text"
-          }
-        },
-        {
-          "count": false,
-          "default": false,
-          "envvar": null,
-          "expose_value": true,
-          "flag_value": true,
-          "help": "Analyze reference on add",
-          "hidden": false,
-          "is_flag": true,
-          "kind": "option",
-          "metavar": null,
-          "multiple": false,
-          "name": "analyze",
-          "nargs": 1,
-          "opts": [
-            "--analyze"
-          ],
-          "prompt": null,
-          "required": false,
-          "secondary_opts": [],
-          "show_default": true,
-          "type": {
-            "class": "BoolParamType",
-            "name": "boolean"
-          }
-        },
-        {
-          "count": false,
-          "default": null,
-          "envvar": null,
-          "expose_value": true,
-          "flag_value": null,
-          "help": "Analysis report directory",
-          "hidden": false,
-          "is_flag": false,
-          "kind": "option",
-          "metavar": null,
-          "multiple": false,
-          "name": "report_dir",
-          "nargs": 1,
-          "opts": [
-            "--report-dir"
-          ],
-          "prompt": null,
-          "required": false,
-          "secondary_opts": [],
-          "show_default": true,
-          "type": {
-            "class": "TyperPath",
-            "name": "path"
           }
         }
       ],
@@ -31743,6 +30993,141 @@
         "mastering",
         "reference",
         "remove"
+      ],
+      "short_help": null
+    },
+    "remix mastering report": {
+      "deprecated": false,
+      "help": "Mastering analysis report commands",
+      "help_text": [
+        "",
+        " Usage: report [OPTIONS] COMMAND [ARGS]...",
+        "",
+        " Mastering analysis report commands",
+        "",
+        "\u256d\u2500 Options \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e",
+        "\u2502 --help          Show this message and exit.                                                      \u2502",
+        "\u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f",
+        "\u256d\u2500 Commands \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e",
+        "\u2502 add                                                                                              \u2502",
+        "\u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f"
+      ],
+      "hidden": false,
+      "kind": "group",
+      "no_args_is_help": true,
+      "params": [],
+      "path": [
+        "remix",
+        "mastering",
+        "report"
+      ],
+      "short_help": null,
+      "subcommands": [
+        "add"
+      ]
+    },
+    "remix mastering report add": {
+      "deprecated": false,
+      "help": null,
+      "help_text": [
+        "",
+        " Usage: add [OPTIONS]",
+        "",
+        "\u256d\u2500 Options \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e",
+        "\u2502 *  --project        PATH  Manifest path [required]                                               \u2502",
+        "\u2502 *  --kind           TEXT  Report kind: loudness, spectrum or reference_compare [required]        \u2502",
+        "\u2502 *  --report         PATH  JSON report written by an analysis --report-out [required]             \u2502",
+        "\u2502    --help                 Show this message and exit.                                            \u2502",
+        "\u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f"
+      ],
+      "hidden": false,
+      "kind": "command",
+      "no_args_is_help": false,
+      "params": [
+        {
+          "count": false,
+          "default": null,
+          "envvar": null,
+          "expose_value": true,
+          "flag_value": null,
+          "help": "Manifest path",
+          "hidden": false,
+          "is_flag": false,
+          "kind": "option",
+          "metavar": null,
+          "multiple": false,
+          "name": "project",
+          "nargs": 1,
+          "opts": [
+            "--project"
+          ],
+          "prompt": null,
+          "required": true,
+          "secondary_opts": [],
+          "show_default": true,
+          "type": {
+            "class": "TyperPath",
+            "name": "path"
+          }
+        },
+        {
+          "count": false,
+          "default": null,
+          "envvar": null,
+          "expose_value": true,
+          "flag_value": null,
+          "help": "Report kind: loudness, spectrum or reference_compare",
+          "hidden": false,
+          "is_flag": false,
+          "kind": "option",
+          "metavar": null,
+          "multiple": false,
+          "name": "kind",
+          "nargs": 1,
+          "opts": [
+            "--kind"
+          ],
+          "prompt": null,
+          "required": true,
+          "secondary_opts": [],
+          "show_default": true,
+          "type": {
+            "class": "StringParamType",
+            "name": "text"
+          }
+        },
+        {
+          "count": false,
+          "default": null,
+          "envvar": null,
+          "expose_value": true,
+          "flag_value": null,
+          "help": "JSON report written by an analysis --report-out",
+          "hidden": false,
+          "is_flag": false,
+          "kind": "option",
+          "metavar": null,
+          "multiple": false,
+          "name": "report",
+          "nargs": 1,
+          "opts": [
+            "--report"
+          ],
+          "prompt": null,
+          "required": true,
+          "secondary_opts": [],
+          "show_default": true,
+          "type": {
+            "class": "TyperPath",
+            "name": "path"
+          }
+        }
+      ],
+      "path": [
+        "remix",
+        "mastering",
+        "report",
+        "add"
       ],
       "short_help": null
     },
@@ -34007,7 +33392,6 @@
         "\u2502                                  bar)                                                            \u2502",
         "\u2502                                  [required]                                                      \u2502",
         "\u2502    --set-routing                 Set the track's input routing to Resampling automatically       \u2502",
-        "\u2502    --analyze                     Run loudness/spectrum analysis on the captured file             \u2502",
         "\u2502    --qa-project         TEXT     Run remix mastering QA against this project file                \u2502",
         "\u2502    --help                        Show this message and exit.                                     \u2502",
         "\u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f"
@@ -34148,32 +33532,6 @@
         },
         {
           "count": false,
-          "default": false,
-          "envvar": null,
-          "expose_value": true,
-          "flag_value": true,
-          "help": "Run loudness/spectrum analysis on the captured file",
-          "hidden": false,
-          "is_flag": true,
-          "kind": "option",
-          "metavar": null,
-          "multiple": false,
-          "name": "analyze",
-          "nargs": 1,
-          "opts": [
-            "--analyze"
-          ],
-          "prompt": null,
-          "required": false,
-          "secondary_opts": [],
-          "show_default": true,
-          "type": {
-            "class": "BoolParamType",
-            "name": "boolean"
-          }
-        },
-        {
-          "count": false,
           "default": null,
           "envvar": null,
           "expose_value": true,
@@ -34220,10 +33578,6 @@
         "\u2502    --bars                       FLOAT    Number of bars to capture [default: 8.0]                \u2502",
         "\u2502    --bypass-main-devices                 Turn off active main-track devices while capturing,     \u2502",
         "\u2502                                          then restore them                                       \u2502",
-        "\u2502    --analyze                             Report each band's share per captured track             \u2502",
-        "\u2502    --resolution                 TEXT     Band set for --analyze: bands or third-octave           \u2502",
-        "\u2502                                          [default: bands]                                        \u2502",
-        "\u2502    --focus                      TEXT     Track label to compare against the loudest other track  \u2502",
         "\u2502    --help                                Show this message and exit.                             \u2502",
         "\u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f"
       ],
@@ -34333,84 +33687,6 @@
           "type": {
             "class": "BoolParamType",
             "name": "boolean"
-          }
-        },
-        {
-          "count": false,
-          "default": false,
-          "envvar": null,
-          "expose_value": true,
-          "flag_value": true,
-          "help": "Report each band's share per captured track",
-          "hidden": false,
-          "is_flag": true,
-          "kind": "option",
-          "metavar": null,
-          "multiple": false,
-          "name": "analyze",
-          "nargs": 1,
-          "opts": [
-            "--analyze"
-          ],
-          "prompt": null,
-          "required": false,
-          "secondary_opts": [],
-          "show_default": true,
-          "type": {
-            "class": "BoolParamType",
-            "name": "boolean"
-          }
-        },
-        {
-          "count": false,
-          "default": "bands",
-          "envvar": null,
-          "expose_value": true,
-          "flag_value": null,
-          "help": "Band set for --analyze: bands or third-octave",
-          "hidden": false,
-          "is_flag": false,
-          "kind": "option",
-          "metavar": null,
-          "multiple": false,
-          "name": "resolution",
-          "nargs": 1,
-          "opts": [
-            "--resolution"
-          ],
-          "prompt": null,
-          "required": false,
-          "secondary_opts": [],
-          "show_default": true,
-          "type": {
-            "class": "StringParamType",
-            "name": "text"
-          }
-        },
-        {
-          "count": false,
-          "default": null,
-          "envvar": null,
-          "expose_value": true,
-          "flag_value": null,
-          "help": "Track label to compare against the loudest other track",
-          "hidden": false,
-          "is_flag": false,
-          "kind": "option",
-          "metavar": null,
-          "multiple": false,
-          "name": "focus",
-          "nargs": 1,
-          "opts": [
-            "--focus"
-          ],
-          "prompt": null,
-          "required": false,
-          "secondary_opts": [],
-          "show_default": true,
-          "type": {
-            "class": "StringParamType",
-            "name": "text"
           }
         }
       ],

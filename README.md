@@ -93,13 +93,10 @@ uv run ableton-cli master meter get --samples 20 --interval-ms 50
 uv run ableton-cli master devices list
 uv run ableton-cli device insert Utility --main
 uv run ableton-cli device parameter set-display --main --device-name "Glue Compressor" --parameter-name Threshold -- -10
-uv run ableton-cli audio loudness analyze --path ./renders/remix.wav --engine ffmpeg
-uv run ableton-cli audio spectrum analyze --path ./renders/remix.wav --profile anime-club
-uv run ableton-cli audio spectrum shares --stem Kick=./caps/kick.wav --stem Lead=./caps/lead.wav --focus Lead
-uv run ableton-cli session capture-tracks --track-index 0 --track-index 9 --start 304 --bars 8 --bypass-main-devices --analyze
+uv run ableton-cli session capture-tracks --track-index 0 --track-index 9 --start 304 --bars 8 --bypass-main-devices
 uv run ableton-cli audio transient analyze --path ./loops/drum-break.wav --bpm 174 --max-slices 16
 uv run ableton-cli remix mastering target set --project ./proj/remix_project.json --profile anime-club-demo
-uv run ableton-cli remix mastering analyze --project ./proj/remix_project.json --render ./renders/remix.wav
+uv run ableton-cli remix mastering report add --project ./proj/remix_project.json --kind loudness --report ./proj/reports/remix_loudness.json
 uv run ableton-cli remix mastering plan --project ./proj/remix_project.json
 uv run ableton-cli remix mastering apply --project ./proj/remix_project.json --dry-run
 uv run ableton-cli remix mastering qa --project ./proj/remix_project.json --render ./renders/remix.wav
@@ -145,9 +142,15 @@ uv run ableton-cli set diff --from ./Song\ Project/Song.als --to ./Song\ Project
 uv run ableton-cli set automation write --path ./Song\ Project/Song.als --out ./Song\ Project/Song-auto.als --track-index 0 --target device.1.Frequency --points-json '[{"time":0,"value":500},{"time":64,"value":8000}]'
 ```
 
-Offline mastering analysis with the `ffmpeg` engine requires both `ffmpeg` and
-`ffprobe` on `PATH`. Without them, `audio loudness analyze`, `audio reference
-compare`, and `remix mastering analyze` fail explicitly with `CONFIG_INVALID`.
+Offline loudness, spectrum, band-share and reference analysis through ffmpeg is not part of
+the core: install the `analysis` plugin (the `ableton-cli-analysis` repository; see
+[docs/mastering.md](docs/mastering.md) for the install command), which adds
+`ableton-cli analysis loudness analyze`, `analysis spectrum analyze`, `analysis spectrum
+shares` and `analysis reference compare`. Write their reports with `--report-out` and
+register them with `remix mastering report add --kind loudness|spectrum|reference_compare`
+so `remix mastering qa` can read them; `report add` fails with `INVALID_ARGUMENT` when a
+report lacks a field QA reads. `session capture` and `session capture-tracks` return the
+captured `file_path`s for the plugin to measure.
 
 Ref-aware track, device, and parameter commands now use mutually exclusive selector flags instead of positional indexes.
 Track selectors: `--track-index`, `--track-name`, `--selected-track`, `--track-query`, `--track-ref`.

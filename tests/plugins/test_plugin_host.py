@@ -5,6 +5,7 @@ from dataclasses import replace
 from pathlib import Path
 
 import pytest
+import typer
 from typer.testing import CliRunner
 
 from ableton_cli.app_factory import create_app
@@ -210,8 +211,6 @@ def test_loaded_plugin_entry_lists_commands_side_effects_and_skills() -> None:
 
 
 def test_plugin_api_rejects_malformed_declarations() -> None:
-    import typer
-
     from ableton_cli.plugin_api import ExitCode, PluginApi
 
     api = PluginApi("ace-step", typer.Typer())
@@ -230,3 +229,59 @@ def test_plugin_api_rejects_malformed_declarations() -> None:
 
 def test_plugin_is_exported_from_the_plugin_api() -> None:
     assert Plugin is DEMO.__class__
+
+
+def test_live_request_failures_are_live_errors_with_code_and_message(monkeypatch) -> None:
+    from ableton_cli.errors import AppError, ExitCode
+    from ableton_cli.plugin_api import LiveError, PluginApi
+
+    class _Client:
+        def execute_remote_command(self, name, args=None):
+            raise AppError(
+                error_code="INVALID_ARGUMENT",
+                message="device index out of range",
+                hint="List devices first.",
+                exit_code=ExitCode.INVALID_ARGUMENT,
+            )
+
+    def register(api: PluginApi) -> None:
+        @api.command("probe", side_effect=READ)
+        def probe(ctx: typer.Context) -> None:
+            def _action(live) -> dict[str, object]:
+                try:
+                    live.request("track_devices_list", {"track": 0})
+                except LiveError as exc:
+                    return {"code": exc.error_code, "message": exc.message, "hint": exc.hint}
+                return {}
+
+            api.run(ctx, args={}, action=_action)
+
+    monkeypatch.setattr(RuntimeContext, "client", lambda self: _Client())
+    result, payload = _invoke(_app(_source(replace(DEMO, register=register))), "demo", "probe")
+
+    assert result.exit_code == 0, result.output
+    assert payload["result"] == {
+        "code": "INVALID_ARGUMENT",
+        "message": "device index out of range",
+        "hint": "List devices first.",
+    }
+
+
+def test_fake_live_callables_can_raise_live_errors() -> None:
+    from ableton_cli.plugin_api import ExitCode, LiveError
+    from ableton_cli.plugin_api.testing import FakeLive
+
+    def _out_of_range(args):
+        raise LiveError(
+            error_code="INVALID_ARGUMENT",
+            message="device index out of range",
+            exit_code=ExitCode.INVALID_ARGUMENT,
+        )
+
+    live = FakeLive({"device_parameters_list": _out_of_range})
+
+    with pytest.raises(LiveError) as exc_info:
+        live.request("device_parameters_list", {"device": 9})
+
+    assert exc_info.value.error_code == "INVALID_ARGUMENT"
+    assert str(exc_info.value) == "device index out of range"

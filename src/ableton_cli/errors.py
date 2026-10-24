@@ -79,6 +79,9 @@ class AppError(Exception):
     exit_code: ExitCode = ExitCode.INTERNAL_ERROR
     details: dict[str, Any] = field(default_factory=dict)
 
+    def __str__(self) -> str:
+        return self.message
+
     def to_payload(self) -> dict[str, Any]:
         return {
             "code": _error_code_value(self.error_code),

@@ -33,6 +33,7 @@ __all__ = [
     "WRITE",
     "ExitCode",
     "Live",
+    "LiveError",
     "Plugin",
     "PluginApi",
     "SideEffectSpec",
@@ -42,6 +43,13 @@ READ: SideEffectSpec = _READ
 WRITE: SideEffectSpec = _WRITE
 DESTRUCTIVE: SideEffectSpec = _DESTRUCTIVE
 
+#: Raised by ``Live.request`` when the Remote Script or the connection fails.
+#: Read ``error_code`` (e.g. ``INVALID_ARGUMENT``, ``TIMEOUT``), ``message``,
+#: ``hint`` and ``details``; ``str(exc)`` is the message. Re-raise anything you
+#: do not handle: the core reports it with the original code and exit code.
+#: Tests build one with ``LiveError(error_code=..., message=..., exit_code=...)``.
+LiveError = AppError
+
 _COMMAND_SEGMENT = re.compile(r"^[a-z][a-z0-9-]*$")
 _ERROR_CODE_SUFFIX = re.compile(r"^[A-Z][A-Z0-9_]*$")
 
@@ -50,7 +58,8 @@ class Live:
     """The connection to Ableton Live handed to a plugin command's action.
 
     ``request`` sends one Remote Script command over the documented TCP JSONL
-    protocol (the same names ``batch`` steps use) and returns its ``result``.
+    protocol (the same names ``batch`` steps use) and returns its ``result``,
+    or raises ``LiveError``.
     The connection opens on the first request, so actions that never talk to
     Live never need it running.
     """

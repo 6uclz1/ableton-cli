@@ -152,6 +152,11 @@ so `remix mastering qa` can read them; `report add` fails with `INVALID_ARGUMENT
 report lacks a field QA reads. `session capture` and `session capture-tracks` return the
 captured `file_path`s for the plugin to measure.
 
+`arrangement clip create --audio-path` sizes the new clip to `--length` by moving its loop end:
+Live first sizes an audio clip to the file's warped length, and a clip's `length` is read-only.
+If Live does not apply the length, the command fails with `INVALID_ARGUMENT` and leaves the
+clip at Live's length. This happens with unwarped clips, which measure their loop in seconds.
+
 Ref-aware track, device, and parameter commands now use mutually exclusive selector flags instead of positional indexes.
 Track selectors: `--track-index`, `--track-name`, `--selected-track`, `--track-query`, `--track-ref`.
 `device` commands also accept `--return-track-index` and `--return-track-name`, so return-track

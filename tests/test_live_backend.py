@@ -273,6 +273,39 @@ class _ArrangementClip(_ExtendedNoteMixin):
     _next_note_id: int = 1
 
 
+class _ArrangementAudioClip:
+    """Live arrangement audio clip: `length` is read-only and follows the loop."""
+
+    def __init__(self, name: str, start_time: float, file_path: str) -> None:
+        self.name = name
+        self.start_time = float(start_time)
+        self.file_path = file_path
+        self.is_audio_clip = True
+        self.is_midi_clip = False
+        self.warping = True
+        self.looping = True
+        # Live sizes a new clip to the file's warped length, not the requested one.
+        self.loop_start = 0.0
+        self.loop_end = 8.0
+        self.start_marker = 0.0
+        self.end_marker = 8.0
+        self.groove: str | None = None
+        self.groove_amount = 0.5
+
+    @property
+    def length(self) -> float:
+        return self.loop_end - self.loop_start
+
+
+class _LoopEndIgnoringArrangementAudioClip(_ArrangementAudioClip):
+    """Live accepts some loop_end writes without raising but leaves the loop as is."""
+
+    def __setattr__(self, name: str, value: Any) -> None:
+        if name == "loop_end" and hasattr(self, "loop_end"):
+            return
+        super().__setattr__(name, value)
+
+
 class _Clip(_ExtendedNoteMixin):
     def __init__(
         self,
@@ -361,7 +394,7 @@ class _Track:
     devices: list[_Device] = field(
         default_factory=lambda: [_Device("Utility", "AudioEffect", [_Parameter("Gain", 0.0)])]
     )
-    arrangement_clips: list[_ArrangementClip] = field(default_factory=list)
+    arrangement_clips: list[_ArrangementClip | _ArrangementAudioClip] = field(default_factory=list)
     arrangement_midi_clips: list[tuple[float, float]] = field(default_factory=list)
     arrangement_audio_clips: list[tuple[str, float]] = field(default_factory=list)
     input_routing_type: str = "Ext. In"
@@ -372,6 +405,7 @@ class _Track:
     output_routing_channel: str = "1/2"
     available_output_routing_types: list[str] = field(default_factory=lambda: ["Master"])
     available_output_routing_channels: list[str] = field(default_factory=lambda: ["1/2", "3/4"])
+    arrangement_audio_clip_type: type[_ArrangementAudioClip] = _ArrangementAudioClip
 
     def create_midi_clip(self, start_time: float, length: float) -> None:
         normalized_start = float(start_time)
@@ -395,15 +429,7 @@ class _Track:
         self.arrangement_audio_clips.append((str(path), normalized_start))
         insert_at = sum(1 for clip in self.arrangement_clips if clip.start_time <= normalized_start)
         self.arrangement_clips.insert(
-            insert_at,
-            _ArrangementClip(
-                name=str(path),
-                start_time=normalized_start,
-                length=0.0,
-                is_audio_clip=True,
-                is_midi_clip=False,
-                file_path=str(path),
-            ),
+            insert_at, self.arrangement_audio_clip_type(str(path), normalized_start, str(path))
         )
 
 
@@ -764,10 +790,12 @@ class _TupleArrangementTrack:
         self.devices = original.devices
         self.arrangement_midi_clips = list(original.arrangement_midi_clips)
         self.arrangement_audio_clips = list(original.arrangement_audio_clips)
-        self._arrangement_clips: list[_ArrangementClip] = list(original.arrangement_clips)
+        self._arrangement_clips: list[_ArrangementClip | _ArrangementAudioClip] = list(
+            original.arrangement_clips
+        )
 
     @property
-    def arrangement_clips(self) -> tuple[_ArrangementClip, ...]:
+    def arrangement_clips(self) -> tuple[_ArrangementClip | _ArrangementAudioClip, ...]:
         return tuple(self._arrangement_clips)
 
     def create_midi_clip(self, start_time: float, length: float) -> None:
@@ -789,14 +817,7 @@ class _TupleArrangementTrack:
         normalized_path = str(path)
         self.arrangement_audio_clips.append((normalized_path, normalized_start))
         self._arrangement_clips.append(
-            _ArrangementClip(
-                name=normalized_path,
-                start_time=normalized_start,
-                length=0.0,
-                is_audio_clip=True,
-                is_midi_clip=False,
-                file_path=normalized_path,
-            )
+            _ArrangementAudioClip(normalized_path, normalized_start, normalized_path)
         )
 
     def delete_clip(self, clip: _ArrangementClip) -> None:
@@ -3356,6 +3377,44 @@ def test_live_backend_arrangement_clip_create_audio_uses_absolute_audio_path(
     assert surface.application().view.focused_views == ["Arranger"]
 
 
+@pytest.mark.parametrize("length", [4.0, 12.0])
+def test_live_backend_arrangement_clip_create_audio_sets_span_through_loop_end(
+    length: float,
+) -> None:
+    surface = _SurfaceStub()
+    backend = LiveBackend(surface)
+
+    result = backend.arrangement_clip_create(
+        track=1, start_time=0.0, length=length, audio_path="/tmp/loop.wav"
+    )
+
+    props = backend.arrangement_clip_props_get(track=1, index=0)
+    assert result["length"] == length
+    assert (props["length"], props["loop_start"], props["loop_end"]) == (length, 0.0, length)
+    assert props["looping"] is True
+
+
+def test_live_backend_arrangement_clip_create_audio_fails_when_live_keeps_the_span() -> None:
+    surface = _SurfaceStub()
+    surface.song().tracks[1].arrangement_audio_clip_type = _LoopEndIgnoringArrangementAudioClip
+    backend = LiveBackend(surface)
+
+    with pytest.raises(CommandError) as exc_info:
+        backend.arrangement_clip_create(
+            track=1, start_time=0.0, length=4.0, audio_path="/tmp/loop.wav"
+        )
+
+    assert exc_info.value.code == "INVALID_ARGUMENT"
+    assert exc_info.value.details == {
+        "track": 1,
+        "index": 0,
+        "requested_length": 4.0,
+        "actual_length": 8.0,
+        "warping": True,
+        "looping": True,
+    }
+
+
 def test_live_backend_arrangement_clip_create_rejects_track_kind_audio_path_mismatch() -> None:
     backend = LiveBackend(_SurfaceStub())
 
@@ -3531,12 +3590,12 @@ def test_live_backend_arrangement_clip_create_writes_notes_to_the_new_clip() -> 
 
 def test_live_backend_arrangement_clip_create_audio_sets_length_on_the_new_clip() -> None:
     backend = LiveBackend(_SurfaceStub())
-    backend.arrangement_clip_create(track=1, start_time=16.0, length=8.0, audio_path="/tmp/a.wav")
+    backend.arrangement_clip_create(track=1, start_time=16.0, length=12.0, audio_path="/tmp/a.wav")
 
     backend.arrangement_clip_create(track=1, start_time=0.0, length=4.0, audio_path="/tmp/b.wav")
 
     clips = backend.services.scenes_arrangement._arrangement_clips(1)  # noqa: SLF001
-    assert [(clip.start_time, clip.length) for clip in clips] == [(0.0, 4.0), (16.0, 8.0)]
+    assert [(clip.start_time, clip.length) for clip in clips] == [(0.0, 4.0), (16.0, 12.0)]
 
 
 def test_live_backend_arrangement_clip_notes_add_not_supported_by_live_api() -> None:

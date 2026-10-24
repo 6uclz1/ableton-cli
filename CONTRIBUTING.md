@@ -116,3 +116,23 @@ gh pr checks --watch
 - `quality-harness`
 
 Do not merge while any required check is pending or failing.
+
+## GitHub Actions Pinning
+
+Every `uses:` in `.github/workflows/` is pinned to a full commit SHA with a version comment,
+managed by [pinact](https://github.com/suzuki-shunsuke/pinact) (configuration: `.pinact.yaml`).
+The `pinact` CI job fails when an action is unpinned or its version comment does not match the SHA.
+
+After adding or changing an action, pin it:
+
+```bash
+pinact run
+```
+
+To move every action to its latest release (releases younger than the `min_age` in `.pinact.yaml` are held back):
+
+```bash
+pinact run --update
+```
+
+Dependabot (`.github/dependabot.yml`) also opens a weekly grouped PR that updates the pinned SHAs.

@@ -132,25 +132,11 @@ Phase 2 report includes:
 - `summary.layer_violation_count`
 - `summary.baseline_used`
 
-## GitHub Actions Example
+## GitHub Actions
 
-```yaml
-quality-harness:
-  runs-on: ubuntu-latest
-  steps:
-    - uses: actions/checkout@v4
-    - uses: actions/setup-python@v5
-      with:
-        python-version: \"3.14\"
-    - uses: astral-sh/setup-uv@v4
-    - run: uv sync --dev
-    - run: uv run python tools/quality_harness.py --config .quality-harness.yml --report quality-harness-report.json
-    - uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: quality-harness-report
-        path: quality-harness-report.json
-```
+CI runs the harness in the `quality-harness` job of `.github/workflows/ci.yml`
+and uploads `quality-harness-report.json` and `quality-harness-action-log.json`
+as artifacts. Use that job as the reference instead of copying a snippet.
 
 ## Module Splitting Policy
 

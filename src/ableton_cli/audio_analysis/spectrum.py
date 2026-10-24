@@ -8,7 +8,7 @@ from typing import Any
 from .ffmpeg import Runner, ffmpeg_output_error, run_ffmpeg
 from .io import (
     audio_error,
-    read_wav,
+    read_audio,
     require_existing_audio_path,
     require_ffmpeg_engine,
     rms_dbfs,
@@ -117,7 +117,7 @@ def analyze_spectrum(
     report_out: str | Path | None = None,
 ) -> dict[str, Any]:
     require_ffmpeg_engine("ffmpeg")
-    data = read_wav(path)
+    data = read_audio(path)
     bands = {
         name: round(level, 3)
         for name, level in measure_band_levels(data.path, channels=data.channels).items()

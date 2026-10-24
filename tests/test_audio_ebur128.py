@@ -153,3 +153,27 @@ def test_analyze_loudness_gates_silence_out_of_integrated_loudness(
         gated_result["integrated_lufs"], tone_result["integrated_lufs"], abs_tol=0.3
     )
     assert gated_result["rms_dbfs"] < tone_result["rms_dbfs"] - 2.5
+
+
+def test_analyze_loudness_decodes_non_wav_input_through_ffmpeg(tmp_path: Path, real_ffmpeg) -> None:
+    import subprocess
+
+    from ableton_cli.audio_analysis import analyze_loudness
+
+    wav_path = tmp_path / "tone.wav"
+    flac_path = tmp_path / "tone.flac"
+    _write_stereo(wav_path, _sine(freq=997.0, amp=0.5, seconds=2.0))
+    subprocess.run(
+        ["ffmpeg", "-nostdin", "-v", "error", "-i", str(wav_path), str(flac_path)],
+        check=True,
+    )
+
+    wav_result = analyze_loudness(wav_path)
+    flac_result = analyze_loudness(flac_path)
+
+    assert flac_result["path"] == str(flac_path)
+    assert flac_result["sample_rate"] == 48000
+    assert flac_result["channels"] == 2
+    assert math.isclose(flac_result["duration_sec"], 2.0, abs_tol=0.01)
+    for key in ("integrated_lufs", "sample_peak_dbfs", "rms_dbfs"):
+        assert math.isclose(flac_result[key], wav_result[key], abs_tol=0.05), key

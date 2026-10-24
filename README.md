@@ -166,6 +166,8 @@ Parameter selectors: `--parameter-index`, `--parameter-name`, `--parameter-query
 stepped parameters (Live reports Beat Repeat Grid or Glue Compressor Ratio as non-quantized,
 but each integer raw value has its own label such as `1/32` or `4`). Set either kind by label
 with `device parameter select`; use `device parameter set-display` for continuous parameters.
+`set-display` takes a bare number in the parameter's display unit (`180` for 180 ms, `2000` for
+2.00 s); unit text such as `180 ms` is rejected, and negative values go after `--`.
 A display value Live rejects fails with `INVALID_ARGUMENT`.
 `tracks list`, `track info`, synth/effect device discovery, and parameter listings emit `stable_ref` fields so later commands can reuse exact session-local objects.
 

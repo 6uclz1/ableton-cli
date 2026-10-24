@@ -1,14 +1,19 @@
 from __future__ import annotations
 
+import dataclasses
 import math
 import shutil
 import struct
+import tempfile
 import wave
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 from ..errors import AppError, ErrorCode, ExitCode
+from .ffmpeg import Runner, run_ffmpeg
+
+_WAV_SUFFIXES = frozenset({".wav", ".wave"})
 
 
 @dataclass(frozen=True, slots=True)
@@ -90,6 +95,36 @@ def wav_duration_sec(path: str | Path) -> float:
             message=f"unsupported audio format for builtin analysis: {audio_path}",
             hint="Use PCM WAV for deterministic offline analysis.",
         ) from exc
+
+
+def read_audio(path: str | Path, *, run: Runner | None = None) -> AudioData:
+    """Read PCM WAV directly; decode any other format to 24-bit PCM WAV through ffmpeg.
+
+    The returned ``path`` is always the input path, so ffmpeg measurements read the
+    original file.
+    """
+    audio_path = require_existing_audio_path(path)
+    if audio_path.suffix.lower() in _WAV_SUFFIXES:
+        return read_wav(audio_path)
+    with tempfile.TemporaryDirectory(prefix="ableton-cli-decode-") as temp_dir:
+        decoded_path = Path(temp_dir) / "decoded.wav"
+        run_ffmpeg(
+            [
+                "ffmpeg",
+                "-nostdin",
+                "-hide_banner",
+                "-v",
+                "error",
+                "-i",
+                str(audio_path),
+                "-c:a",
+                "pcm_s24le",
+                str(decoded_path),
+            ],
+            run=run,
+            hint="Check that ffmpeg can decode this file ('ffprobe <path>').",
+        )
+        return dataclasses.replace(read_wav(decoded_path), path=audio_path)
 
 
 def read_wav(path: str | Path) -> AudioData:

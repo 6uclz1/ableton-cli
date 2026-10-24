@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Any
 
 from .ebur128 import measure_ebur128
-from .io import amplitude_dbfs, read_wav, require_ffmpeg_engine, rms_dbfs, write_report
+from .io import amplitude_dbfs, read_audio, require_ffmpeg_engine, rms_dbfs, write_report
 
 
 def analyze_loudness(
@@ -14,7 +14,7 @@ def analyze_loudness(
     report_out: str | Path | None = None,
 ) -> dict[str, Any]:
     parsed_engine = require_ffmpeg_engine(engine)
-    data = read_wav(path)
+    data = read_audio(path)
     all_samples = [sample for channel in data.samples for sample in channel]
     peak = max((abs(sample) for sample in all_samples), default=0.0)
     sample_peak_dbfs = amplitude_dbfs(peak)

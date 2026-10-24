@@ -10,6 +10,7 @@ Verified with Ableton Live 12.4, Remote Script 0.5.0, and Serum 2 (VST3).
 | Map a modulator (LFO, Shaper, Envelope Follower) to a parameter | The Max for Live `Map` button cannot be pressed through the API | [ableton-live.md](ableton-live.md#map-a-modulator) |
 | Write arrangement automation into the open set | The Remote Script writes session clip envelopes only. Live 12 refuses envelopes on arrangement clips | [ableton-live.md](ableton-live.md#draw-arrangement-automation) |
 | Save the set | `song save` fails with `not_supported_by_live_api` | [ableton-live.md](ableton-live.md#save-the-set) |
+| Return to arrangement playback after `session capture` | No CLI command turns Back to Arrangement off; `session stop-all-clips` only stops the take | [ableton-live.md](ableton-live.md#return-to-arrangement-playback) |
 
 ## What stays on the CLI
 

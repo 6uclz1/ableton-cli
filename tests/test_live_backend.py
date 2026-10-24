@@ -377,20 +377,25 @@ class _Track:
         normalized_start = float(start_time)
         normalized_length = float(length)
         self.arrangement_midi_clips.append((normalized_start, normalized_length))
-        self.arrangement_clips.append(
+        # Live keeps arrangement_clips in start-time order.
+        insert_at = sum(1 for clip in self.arrangement_clips if clip.start_time <= normalized_start)
+        self.arrangement_clips.insert(
+            insert_at,
             _ArrangementClip(
                 name=f"MIDI {len(self.arrangement_clips)}",
                 start_time=normalized_start,
                 length=normalized_length,
                 is_audio_clip=False,
                 is_midi_clip=True,
-            )
+            ),
         )
 
     def create_audio_clip(self, path: str, start_time: float) -> None:
         normalized_start = float(start_time)
         self.arrangement_audio_clips.append((str(path), normalized_start))
-        self.arrangement_clips.append(
+        insert_at = sum(1 for clip in self.arrangement_clips if clip.start_time <= normalized_start)
+        self.arrangement_clips.insert(
+            insert_at,
             _ArrangementClip(
                 name=str(path),
                 start_time=normalized_start,
@@ -398,7 +403,7 @@ class _Track:
                 is_audio_clip=True,
                 is_midi_clip=False,
                 file_path=str(path),
-            )
+            ),
         )
 
 
@@ -3499,6 +3504,39 @@ def test_live_backend_arrangement_clip_create_midi_accepts_notes_payload() -> No
 
     assert created["notes_added"] == 1
     assert notes["note_count"] == 1
+
+
+def test_live_backend_arrangement_clip_create_writes_notes_to_the_new_clip() -> None:
+    backend = LiveBackend(_SurfaceStub())
+    backend.arrangement_clip_create(track=0, start_time=8.0, length=4.0, audio_path=None)
+
+    backend.arrangement_clip_create(
+        track=0,
+        start_time=0.0,
+        length=4.0,
+        audio_path=None,
+        notes=[_note()],
+    )
+
+    def note_count(index: int) -> int:
+        return backend.arrangement_clip_notes_get(
+            track=0, index=index, start_time=None, end_time=None, pitch=None
+        )["note_count"]
+
+    clips = backend.services.scenes_arrangement._arrangement_clips(0)  # noqa: SLF001
+    assert [clip.start_time for clip in clips] == [0.0, 8.0]
+    assert note_count(0) == 1
+    assert note_count(1) == 0
+
+
+def test_live_backend_arrangement_clip_create_audio_sets_length_on_the_new_clip() -> None:
+    backend = LiveBackend(_SurfaceStub())
+    backend.arrangement_clip_create(track=1, start_time=16.0, length=8.0, audio_path="/tmp/a.wav")
+
+    backend.arrangement_clip_create(track=1, start_time=0.0, length=4.0, audio_path="/tmp/b.wav")
+
+    clips = backend.services.scenes_arrangement._arrangement_clips(1)  # noqa: SLF001
+    assert [(clip.start_time, clip.length) for clip in clips] == [(0.0, 4.0), (16.0, 8.0)]
 
 
 def test_live_backend_arrangement_clip_notes_add_not_supported_by_live_api() -> None:

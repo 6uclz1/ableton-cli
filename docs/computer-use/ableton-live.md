@@ -53,6 +53,15 @@ Verified with Ableton Live 12.4 on macOS.
 
        uv run ableton-cli --output json set lint --path "<saved set>.als"
 
+## Return to arrangement playback
+
+`session capture` leaves its take in the session slot and lights Back to Arrangement, so the take
+plays over the arrangement on the next play.
+
+1. Stop the take on the CLI: `uv run ableton-cli session stop-all-clips`.
+2. Take a screenshot, find the lit (orange) Back to Arrangement button, and click it.
+3. Confirm the button is unlit before the next playback.
+
 ## Input tips
 
 - Knobs and sliders: use `left_mouse_down`, several small `mouse_move` steps, then `left_mouse_up`.

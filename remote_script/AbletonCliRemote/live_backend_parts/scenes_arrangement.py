@@ -40,6 +40,24 @@ class LiveBackendScenesArrangementMixin:
                 hint="Use a Live version exposing iterable track.arrangement_clips.",
             ) from exc
 
+    def _created_arrangement_clip_index(self, track: int, start_time: float) -> int:
+        # arrangement_clips is in start-time order, so a new clip is found by its
+        # start, not at the previous clip count.
+        indexes = [
+            index
+            for index, clip in enumerate(self._arrangement_clips(track))
+            if abs(float(getattr(clip, "start_time", -1.0)) - start_time) < 1e-6
+        ]
+        if len(indexes) != 1:
+            raise _invalid_argument(
+                message=(
+                    "Arrangement clip creation did not produce exactly one clip "
+                    f"at start_time {start_time}"
+                ),
+                hint="Retry arrangement clip creation.",
+            )
+        return indexes[0]
+
     def _arrangement_clip_at(self, track: int, index: int) -> Any:
         clips = self._arrangement_clips(track)
         if index < 0 or index >= len(clips):
@@ -182,7 +200,6 @@ class LiveBackendScenesArrangementMixin:
     ) -> dict[str, Any]:
         self._focus_arranger_view()
         target_track = self._ctx._track_at(track)
-        before_count = len(self._arrangement_clips(track))
         is_midi_track = bool(getattr(target_track, "has_midi_input", False))
         is_audio_track = bool(getattr(target_track, "has_audio_input", False))
         normalized_start_time = float(start_time)
@@ -203,13 +220,9 @@ class LiveBackendScenesArrangementMixin:
             create_midi_clip(normalized_start_time, normalized_length)
             notes_added: int | None = None
             if notes is not None:
-                clips = self._arrangement_clips(track)
-                if len(clips) <= before_count:
-                    raise _invalid_argument(
-                        message="Arrangement MIDI clip creation did not produce a clip",
-                        hint="Retry arrangement clip creation before adding notes.",
-                    )
-                created_clip = clips[before_count]
+                created_clip = self._arrangement_clips(track)[
+                    self._created_arrangement_clip_index(track, normalized_start_time)
+                ]
                 add_new_notes = getattr(created_clip, "add_new_notes", None)
                 if not callable(add_new_notes):
                     raise _not_supported_by_live_api(
@@ -262,13 +275,9 @@ class LiveBackendScenesArrangementMixin:
                     hint="Use a Live version exposing track.create_audio_clip.",
                 )
             create_audio_clip(normalized_audio_path, normalized_start_time)
-            clips = self._arrangement_clips(track)
-            if len(clips) <= before_count:
-                raise _invalid_argument(
-                    message="Arrangement audio clip creation did not produce a clip",
-                    hint="Retry arrangement clip creation.",
-                )
-            created_clip = clips[before_count]
+            created_clip = self._arrangement_clips(track)[
+                self._created_arrangement_clip_index(track, normalized_start_time)
+            ]
             length_set = False
             end_marker_set = False
             if hasattr(created_clip, "length"):
@@ -797,7 +806,6 @@ class LiveBackendScenesArrangementMixin:
         duration_beats: float,
         source_clip: Any,
     ) -> tuple[int, int]:
-        before_count = len(self._arrangement_clips(track_index))
         self.arrangement_clip_create(
             track=track_index,
             start_time=arrangement_cursor,
@@ -805,7 +813,7 @@ class LiveBackendScenesArrangementMixin:
             audio_path=None,
             notes=None,
         )
-        target_index = before_count
+        target_index = self._created_arrangement_clip_index(track_index, float(arrangement_cursor))
         source_notes = list(self._ctx.services.clip_notes._clip_notes_extended(source_clip))
         source_length = self._arrangement_from_session_source_midi_length(
             source_clip=source_clip,

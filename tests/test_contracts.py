@@ -113,7 +113,7 @@ def test_doctor_contract_rejects_invalid_summary_structure(runner, cli_app, monk
     monkeypatch.setattr(
         setup,
         "run_doctor",
-        lambda _settings, *, platform_paths: {  # noqa: ANN001
+        lambda _settings, *, platform_paths, plugin_health: {  # noqa: ANN001
             "summary": {"pass": "bad", "warn": 0, "fail": 0},
             "checks": [],
         },

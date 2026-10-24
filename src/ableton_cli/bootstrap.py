@@ -7,6 +7,7 @@ from .config import resolve_settings
 from .logging_setup import configure_logging
 from .output import OutputMode
 from .platform_detection import build_platform_paths_for_current_os
+from .plugins.model import PluginLoadReport
 from .runtime import RuntimeContext
 
 
@@ -31,7 +32,10 @@ def build_runtime_context(
     plan: bool = False,
     dry_run: bool = False,
     compact: bool = False,
+    plugins: PluginLoadReport,
 ) -> RuntimeContext:
+    if plugins.error is not None:
+        raise plugins.error
     cli_overrides: dict[str, Any] = {
         "host": host,
         "port": port,
@@ -59,4 +63,5 @@ def build_runtime_context(
         plan=plan,
         dry_run=dry_run,
         compact=compact,
+        plugins=plugins,
     )

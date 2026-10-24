@@ -45,6 +45,7 @@ layers:
         - "src/ableton_cli/app_factory.py"
         - "src/ableton_cli/app.py"
         - "src/ableton_cli/cli.py"
+        - "src/ableton_cli/plugin_api/testing.py"
     - name: core
       include:
         - "src/ableton_cli/**/*.py"

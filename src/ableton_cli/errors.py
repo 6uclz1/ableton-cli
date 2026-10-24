@@ -44,6 +44,9 @@ class ErrorCode(StrEnum):
     SET_FILE_INVALID = "SET_FILE_INVALID"
     SET_SCHEMA_UNSUPPORTED = "SET_SCHEMA_UNSUPPORTED"
     SET_INTEGRITY_FAILED = "SET_INTEGRITY_FAILED"
+    PLUGIN_LOAD_FAILED = "PLUGIN_LOAD_FAILED"
+    PLUGIN_INVALID = "PLUGIN_INVALID"
+    PLUGIN_INSTALL_FAILED = "PLUGIN_INSTALL_FAILED"
     INTERNAL_ERROR = "INTERNAL_ERROR"
 
 
@@ -75,6 +78,9 @@ class AppError(Exception):
     hint: str | None = None
     exit_code: ExitCode = ExitCode.INTERNAL_ERROR
     details: dict[str, Any] = field(default_factory=dict)
+
+    def __str__(self) -> str:
+        return self.message
 
     def to_payload(self) -> dict[str, Any]:
         return {
@@ -122,6 +128,9 @@ REMOTE_ERROR_TO_EXIT_CODE: dict[ErrorCode, ExitCode] = {
     ErrorCode.SET_FILE_INVALID: ExitCode.INVALID_ARGUMENT,
     ErrorCode.SET_SCHEMA_UNSUPPORTED: ExitCode.INVALID_ARGUMENT,
     ErrorCode.SET_INTEGRITY_FAILED: ExitCode.EXECUTION_FAILED,
+    ErrorCode.PLUGIN_LOAD_FAILED: ExitCode.EXECUTION_FAILED,
+    ErrorCode.PLUGIN_INVALID: ExitCode.EXECUTION_FAILED,
+    ErrorCode.PLUGIN_INSTALL_FAILED: ExitCode.EXECUTION_FAILED,
     ErrorCode.INTERNAL_ERROR: ExitCode.INTERNAL_ERROR,
 }
 

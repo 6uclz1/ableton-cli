@@ -29,12 +29,14 @@ Use these repository-relative documents before changing behavior:
 - `docs/skills/examples/*.json` — machine-oriented examples.
 - `.cursor/rules/ableton-cli.mdc` — Cursor-specific conventions mirroring this file.
 - `.quality-harness.yml` and `docs/quality-harness-phase2.md` — quality harness thresholds and limits.
+- `docs/plugins.md` — plugin API, packaging and GitHub installation.
 - `docs/computer-use/README.md` — Computer Use fallback policy and GUI playbooks for operations the CLI cannot perform.
 
 ## Repository Map
 
 - `src/ableton_cli/` — CLI, command specs, client/runtime code, contracts, output formatting, quality harness, remix/audio modules.
 - `src/ableton_cli/commands/` — command implementations and command grouping.
+- `src/ableton_cli/plugin_api/` — the only interface plugins may import; `src/ableton_cli/plugins/` — plugin host, GitHub installer, manifest.
 - `remote_script/AbletonCliRemote/` — Ableton Live Remote Script server, handlers, validators, backend registry, Live API integration.
 - `tests/` — unit, contract, CLI, remote backend, docs, quality harness, and snapshot tests.
 - `tests/snapshots/public_contract_snapshot.json` — public contract snapshot; update only for intentional public contract changes.
@@ -65,6 +67,7 @@ Treat these as public/stable contracts:
 - TCP JSONL protocol request/response envelope and protocol-version behavior.
 - `tests/snapshots/public_contract_snapshot.json`.
 - Stable action names and CLI mappings in `docs/skills/skill-actions.md`.
+- The plugin API (`ableton_cli.plugin_api`, the `ableton_cli.plugins` entry-point group, `PLUGIN_API_VERSION`).
 
 When a public contract intentionally changes:
 

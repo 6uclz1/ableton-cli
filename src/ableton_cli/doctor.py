@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from . import __version__
 from .capabilities import (
     missing_required_commands,
     parse_supported_commands,
@@ -42,6 +43,105 @@ def _warn(name: str, hint: str, details: dict[str, Any]) -> DoctorCheck:
 
 def _fail(name: str, hint: str, details: dict[str, Any]) -> DoctorCheck:
     return DoctorCheck(name=name, status="FAIL", hint=hint, details=details)
+
+
+def _remote_script_version_check(ping_result: dict[str, Any]) -> DoctorCheck:
+    remote_script_version = ping_result.get("remote_script_version")
+    version_details = {
+        "cli_version": __version__,
+        "remote_script_version": remote_script_version,
+    }
+    if remote_script_version != __version__:
+        return _fail(
+            "remote_script_version",
+            (
+                "The Remote Script running in Live is not the one bundled with this CLI. "
+                "Run 'ableton-cli install-remote-script --yes' and restart Ableton Live."
+            ),
+            version_details,
+        )
+    return _pass("remote_script_version", version_details)
+
+
+def _remote_checks(settings: Settings, ping_result: dict[str, Any]) -> list[DoctorCheck]:
+    checks: list[DoctorCheck] = []
+    checks.append(
+        _pass(
+            "remote_ping",
+            {
+                "host": settings.host,
+                "port": settings.port,
+                "protocol_version": ping_result.get("protocol_version"),
+                "remote_script_version": ping_result.get("remote_script_version"),
+            },
+        )
+    )
+
+    remote_protocol = ping_result.get("protocol_version")
+    if remote_protocol != settings.protocol_version:
+        checks.append(
+            _fail(
+                "protocol_version",
+                (
+                    "Align protocol_version between CLI and Remote Script "
+                    "(use --protocol-version or 'ableton-cli config set protocol_version <n>')."
+                ),
+                {
+                    "cli_protocol_version": settings.protocol_version,
+                    "remote_protocol_version": remote_protocol,
+                },
+            )
+        )
+    else:
+        checks.append(
+            _pass(
+                "protocol_version",
+                {
+                    "cli_protocol_version": settings.protocol_version,
+                    "remote_protocol_version": remote_protocol,
+                },
+            )
+        )
+
+    checks.append(_remote_script_version_check(ping_result))
+
+    try:
+        supported_commands = parse_supported_commands(ping_result)
+        missing_commands = missing_required_commands(supported_commands)
+        details = {
+            "required_command_count": len(required_remote_commands()),
+            "supported_command_count": len(supported_commands),
+            "missing_commands": missing_commands,
+            "supported_commands": sorted(supported_commands),
+            "command_set_hash": ping_result.get("command_set_hash"),
+        }
+        if missing_commands:
+            checks.append(
+                _fail(
+                    "remote_capabilities",
+                    (
+                        "Remote Script command set is incomplete. "
+                        "Reinstall Remote Script and restart Ableton Live."
+                    ),
+                    details,
+                )
+            )
+        else:
+            checks.append(_pass("remote_capabilities", details))
+    except AppError as exc:
+        checks.append(
+            _fail(
+                "remote_capabilities",
+                exc.hint
+                or "Remote Script capability payload is incompatible with this CLI version.",
+                {
+                    "error_code": exc.error_code,
+                    "message": exc.message,
+                    "supported_commands": [],
+                },
+            )
+        )
+    return checks
 
 
 def run_doctor(settings: Settings, *, platform_paths: PlatformPaths) -> dict[str, Any]:
@@ -159,80 +259,7 @@ def run_doctor(settings: Settings, *, platform_paths: PlatformPaths) -> dict[str
     client = AbletonClient(settings)
     try:
         ping_result = client.ping()
-        checks.append(
-            _pass(
-                "remote_ping",
-                {
-                    "host": settings.host,
-                    "port": settings.port,
-                    "protocol_version": ping_result.get("protocol_version"),
-                    "remote_script_version": ping_result.get("remote_script_version"),
-                },
-            )
-        )
-
-        remote_protocol = ping_result.get("protocol_version")
-        if remote_protocol != settings.protocol_version:
-            checks.append(
-                _fail(
-                    "protocol_version",
-                    (
-                        "Align protocol_version between CLI and Remote Script "
-                        "(use --protocol-version or 'ableton-cli config set protocol_version <n>')."
-                    ),
-                    {
-                        "cli_protocol_version": settings.protocol_version,
-                        "remote_protocol_version": remote_protocol,
-                    },
-                )
-            )
-        else:
-            checks.append(
-                _pass(
-                    "protocol_version",
-                    {
-                        "cli_protocol_version": settings.protocol_version,
-                        "remote_protocol_version": remote_protocol,
-                    },
-                )
-            )
-
-        try:
-            supported_commands = parse_supported_commands(ping_result)
-            missing_commands = missing_required_commands(supported_commands)
-            details = {
-                "required_command_count": len(required_remote_commands()),
-                "supported_command_count": len(supported_commands),
-                "missing_commands": missing_commands,
-                "supported_commands": sorted(supported_commands),
-                "command_set_hash": ping_result.get("command_set_hash"),
-            }
-            if missing_commands:
-                checks.append(
-                    _fail(
-                        "remote_capabilities",
-                        (
-                            "Remote Script command set is incomplete. "
-                            "Reinstall Remote Script and restart Ableton Live."
-                        ),
-                        details,
-                    )
-                )
-            else:
-                checks.append(_pass("remote_capabilities", details))
-        except AppError as exc:
-            checks.append(
-                _fail(
-                    "remote_capabilities",
-                    exc.hint
-                    or "Remote Script capability payload is incompatible with this CLI version.",
-                    {
-                        "error_code": exc.error_code,
-                        "message": exc.message,
-                        "supported_commands": [],
-                    },
-                )
-            )
+        checks.extend(_remote_checks(settings, ping_result))
 
     except AppError as exc:
         checks.append(
@@ -254,6 +281,13 @@ def run_doctor(settings: Settings, *, platform_paths: PlatformPaths) -> dict[str
                 {
                     "cli_protocol_version": settings.protocol_version,
                 },
+            )
+        )
+        checks.append(
+            _warn(
+                "remote_script_version",
+                "Version check skipped because remote endpoint was unreachable.",
+                {"cli_version": __version__},
             )
         )
         checks.append(

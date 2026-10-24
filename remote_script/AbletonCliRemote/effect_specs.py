@@ -65,6 +65,13 @@ _DETECTION_LABELS: dict[str, tuple[str, ...]] = {
     "utility": ("utility",),
 }
 
+# Devices whose labels contain a supported signature but whose parameters do not
+# match that type's key catalog. Glue Compressor has no Makeup and uses raw dB and
+# stepped values, so it must not be treated as Compressor even when renamed.
+_DETECTION_EXCLUSIONS: dict[str, tuple[str, ...]] = {
+    "compressor": ("glue compressor", "gluecompressor"),
+}
+
 
 def _normalize_label(value: str) -> str:
     return " ".join(value.strip().lower().split())
@@ -86,6 +93,9 @@ def detect_effect_type(device: Any) -> str | None:
     normalized_labels = [_normalize_label(label) for label in labels if str(label).strip()]
     for effect_type in SUPPORTED_EFFECT_TYPES:
         signatures = _DETECTION_LABELS[effect_type]
+        exclusions = _DETECTION_EXCLUSIONS.get(effect_type, ())
+        if any(exclusion in label for label in normalized_labels for exclusion in exclusions):
+            continue
         if any(signature in label for label in normalized_labels for signature in signatures):
             return effect_type
     return None

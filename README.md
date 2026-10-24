@@ -167,6 +167,8 @@ stepped parameters (Live reports Beat Repeat Grid or Glue Compressor Ratio as no
 but each integer raw value has its own label such as `1/32` or `4`). Set either kind by label
 with `device parameter select`; use `device parameter set-display` for continuous parameters.
 A display value Live rejects fails with `INVALID_ARGUMENT`.
+Glue Compressor is not a `compressor` wrapper target: it has no Makeup parameter and uses raw dB
+and stepped values. `effect find` skips it; edit it with `device parameter set-display` / `select`.
 `tracks list`, `track info`, synth/effect device discovery, and parameter listings emit `stable_ref` fields so later commands can reuse exact session-local objects.
 
 Complete command coverage:
@@ -667,7 +669,8 @@ Development workflows (local checks, quality gates, and merge criteria) are docu
 2. Confirm Ableton is running and `AbletonCliRemote` is selected as Control Surface.
 3. Confirm host/port (`127.0.0.1:8765` by default).
 4. Try a longer timeout: `--timeout-ms 30000`.
-5. If protocol mismatches, the installed Remote Script is from a different release:
+5. If `doctor` fails `remote_script_version` or the protocol mismatches, the Remote Script
+   running in Live is from a different release than this CLI:
    run `uv run ableton-cli install-remote-script --yes`, restart Ableton Live, and re-select
    `AbletonCliRemote` as Control Surface. Use `--protocol-version <n>` or
    `uv run ableton-cli config set protocol_version <n>` only to talk to a deliberately pinned

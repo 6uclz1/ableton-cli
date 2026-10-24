@@ -95,6 +95,10 @@ PLUGIN = Plugin(
 - `Live.request(name, args)` sends one Remote Script command over the documented TCP JSONL
   protocol and returns its `result`. The names are the protocol command names that `batch`
   steps use. The connection opens on the first request.
+- A failed request raises `LiveError` with `error_code` (for example `INVALID_ARGUMENT`,
+  `TIMEOUT`), `message`, `hint` and `details`. Catch it only to branch on a failure you
+  expect (an index out of range, a device of another type); let everything else
+  propagate so the core reports the original code and exit code.
 - `api.error(code, message, hint=..., exit_code=...)` builds the error to raise. The code is
   prefixed with the plugin name (`EXAMPLE_TEMPO_TOO_HIGH`), and `exit_code` is one of the fixed
   `ExitCode` values (default `EXECUTION_FAILED`). Any other exception becomes
@@ -145,7 +149,9 @@ def test_nudge_reads_then_sets() -> None:
 
 - `create_plugin_test_app(*plugins)` builds the full CLI with exactly those plugins loaded.
 - `FakeLive(responses)` answers `request` from canned results (or functions of the args) and
-  records every request; an unexpected command fails the test.
+  records every request; an unexpected command fails the test. A response function can
+  raise `LiveError(error_code=..., message=..., exit_code=ExitCode...)` to simulate a
+  failure.
 - For end-to-end runs against recorded Live traffic, use the global `--record` / `--replay`
   options.
 

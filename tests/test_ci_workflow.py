@@ -74,7 +74,9 @@ def test_ci_workflow_has_summary_job() -> None:
     assert "--pytest-junit-report" in run
     assert '--summary-file "$GITHUB_STEP_SUMMARY"' in run
 
-    download_steps = [step for step in steps if step.get("uses") == "actions/download-artifact@v4"]
+    download_steps = [
+        step for step in steps if step.get("uses", "").startswith("actions/download-artifact@")
+    ]
     assert len(download_steps) >= 1
     assert all("if-no-files-found" not in step.get("with", {}) for step in download_steps)
 
@@ -86,3 +88,14 @@ def test_ci_workflow_verifies_generated_client_methods() -> None:
     verify = next(step for step in steps if step.get("name") == "Verify generated client methods")
     assert "python tools/generate_client_methods.py" in verify["run"]
     assert "git diff --exit-code" in verify["run"]
+
+
+def test_ci_workflow_verifies_actions_are_pinned_with_pinact() -> None:
+    workflow = _load_ci_workflow()
+    steps = workflow["jobs"]["pinact"]["steps"]
+
+    pinact = next(
+        step for step in steps if step.get("name") == "Verify actions are pinned to commit SHAs"
+    )
+    assert pinact["uses"].startswith("suzuki-shunsuke/pinact-action@")
+    assert pinact["with"] == {"fix": "false", "verify": "true"}

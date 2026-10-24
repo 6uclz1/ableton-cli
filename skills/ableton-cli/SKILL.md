@@ -470,6 +470,8 @@ scripts for that device alone; take `--type`/`--channel` exactly from `device si
 `device insert` needs Live 12.3+ and accepts native Live device names only; use
 `browser load` for plug-ins and Max for Live devices. For pitch correction, insert
 Auto Shift and set `song scale set` so it can follow the Set's scale.
+`device move --to-index` is the device's final index on its track (`0..device_count-1`), in
+either direction: on `[A, B, C]`, moving `A` with `--to-index 2` gives `[B, C, A]`.
 
 ### Synth
 

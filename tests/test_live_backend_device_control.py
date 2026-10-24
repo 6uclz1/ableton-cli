@@ -479,27 +479,66 @@ def test_device_delete_rejects_chain_nested_device() -> None:
     assert exc_info.value.code == "INVALID_ARGUMENT"
 
 
-def test_device_move_uses_song_move_device() -> None:
+def _backend_with_movable_devices(
+    names: list[str],
+) -> tuple[LiveBackend, Any, list[tuple[Any, Any, int]]]:
     backend = LiveBackend(_SurfaceStub())
     song = backend.context._song()
     track = song.tracks[0]
-    first = _Device("A", "AudioEffect", [])
-    second = _Device("B", "AudioEffect", [])
-    track.devices = [first, second]
+    track.devices = [_Device(name, "AudioEffect", []) for name in names]
     calls: list[tuple[Any, Any, int]] = []
 
     def move_device(device: Any, target: Any, target_position: int) -> None:
+        # Live treats target_position as an insertion point in the list before the
+        # device is removed, so 0..len(devices) is valid.
         calls.append((device, target, target_position))
-        target.devices.remove(device)
+        if not 0 <= target_position <= len(target.devices):
+            raise _LiveArgumentError("target_position out of range")
+        source_index = target.devices.index(device)
         target.devices.insert(target_position, device)
+        del target.devices[source_index + 1 if target_position <= source_index else source_index]
 
     song.move_device = move_device
+    return backend, track, calls
 
-    result = backend.device_move(0, 0, 1)
 
-    assert calls == [(first, track, 1)]
-    assert [device.name for device in track.devices] == ["B", "A"]
-    assert result == {"track": 0, "device": 0, "to_index": 1, "name": "A"}
+@pytest.mark.parametrize(
+    ("names", "device", "to_index", "target_position", "expected"),
+    [
+        (["A", "B"], 1, 0, 0, ["B", "A"]),
+        (["A", "B"], 0, 1, 2, ["B", "A"]),
+        (["A", "B", "C"], 0, 1, 2, ["B", "A", "C"]),
+        (["A", "B", "C"], 0, 2, 3, ["B", "C", "A"]),
+        (["A", "B", "C"], 2, 0, 0, ["C", "A", "B"]),
+        (["A", "B", "C"], 1, 1, 1, ["A", "B", "C"]),
+    ],
+)
+def test_device_move_places_device_at_final_index(
+    names: list[str],
+    device: int,
+    to_index: int,
+    target_position: int,
+    expected: list[str],
+) -> None:
+    backend, track, calls = _backend_with_movable_devices(names)
+    moved = track.devices[device]
+
+    result = backend.device_move(0, device, to_index)
+
+    assert calls == [(moved, track, target_position)]
+    assert [item.name for item in track.devices] == expected
+    assert result == {"track": 0, "device": device, "to_index": to_index, "name": moved.name}
+
+
+@pytest.mark.parametrize("to_index", [-1, 2])
+def test_device_move_rejects_out_of_range_to_index(to_index: int) -> None:
+    backend, _, calls = _backend_with_movable_devices(["A", "B"])
+
+    with pytest.raises(CommandError) as exc_info:
+        backend.device_move(0, 0, to_index)
+
+    assert exc_info.value.code == "INVALID_ARGUMENT"
+    assert calls == []
 
 
 def test_device_move_not_supported_without_song_move_device() -> None:

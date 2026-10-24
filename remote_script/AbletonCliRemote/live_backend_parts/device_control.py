@@ -417,7 +417,9 @@ class LiveBackendDeviceControlMixin:
                 message="Song.move_device is not available in Live API",
                 hint="Move the device manually in Ableton Live.",
             )
-        move_device(target_device, target_track, to_index)
+        # Live inserts before removing the device, so moving down skips past its old slot.
+        target_position = to_index + 1 if to_index > device_index else to_index
+        move_device(target_device, target_track, target_position)
         return {
             "track": self._ctx._track_field(track),
             "device": device_index,

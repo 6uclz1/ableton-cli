@@ -471,7 +471,15 @@ def device_parameter_select(
 @parameter_app.command("set-display")
 def device_parameter_set_display(
     ctx: typer.Context,
-    value: Annotated[float, typer.Argument(help="Value in display units")],
+    value: Annotated[
+        float,
+        typer.Argument(
+            help=(
+                "Bare number in the parameter's display unit, without the unit text: "
+                "180 for 180 ms, 2000 for 2.00 s, -6 for -6 dB. Put negatives after --."
+            )
+        ),
+    ],
     track_index: TrackIndexOption = None,
     track_name: TrackNameOption = None,
     selected_track: SelectedTrackOption = False,

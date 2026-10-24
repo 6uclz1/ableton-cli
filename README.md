@@ -152,6 +152,11 @@ so `remix mastering qa` can read them; `report add` fails with `INVALID_ARGUMENT
 report lacks a field QA reads. `session capture` and `session capture-tracks` return the
 captured `file_path`s for the plugin to measure.
 
+`arrangement clip create --audio-path` sizes the new clip to `--length` by moving its loop end:
+Live first sizes an audio clip to the file's warped length, and a clip's `length` is read-only.
+If Live does not apply the length, the command fails with `INVALID_ARGUMENT` and leaves the
+clip at Live's length. This happens with unwarped clips, which measure their loop in seconds.
+
 Ref-aware track, device, and parameter commands now use mutually exclusive selector flags instead of positional indexes.
 Track selectors: `--track-index`, `--track-name`, `--selected-track`, `--track-query`, `--track-ref`.
 `device` commands also accept `--return-track-index` and `--return-track-name`, so return-track
@@ -169,6 +174,8 @@ Parameter selectors: `--parameter-index`, `--parameter-name`, `--parameter-query
 stepped parameters (Live reports Beat Repeat Grid or Glue Compressor Ratio as non-quantized,
 but each integer raw value has its own label such as `1/32` or `4`). Set either kind by label
 with `device parameter select`; use `device parameter set-display` for continuous parameters.
+`set-display` takes a bare number in the parameter's display unit (`180` for 180 ms, `2000` for
+2.00 s); unit text such as `180 ms` is rejected, and negative values go after `--`.
 A display value Live rejects fails with `INVALID_ARGUMENT`.
 Glue Compressor is not a `compressor` wrapper target: it has no Makeup parameter and uses raw dB
 and stepped values. `effect find` skips it; edit it with `device parameter set-display` / `select`.
